@@ -186,6 +186,7 @@ def test_parse_measure(text: str, quantity: float, unit: str | None, size: str |
         ("to glaze", 1, "tsp"),
         ("for brushing", 1, "tsp"),
         ("topping", 1, "tsp"),
+        ("5 drops", 0.05, "tsp"),
         ("", 1, None),
     ],
 )

@@ -70,13 +70,17 @@ def test_per_serving_rejects_zero() -> None:
 
 @pytest.mark.parametrize(
     ("kcal", "expected"),
-    [(0, 1), (300, 1), (1300, 2), (2600, 4), (3900, 6), (20000, 8)],
+    [(0, 1), (300, 1), (1300, 2), (2600, 4), (3900, 6), (20000, 12)],
 )
 def test_estimate_servings(kcal: float, expected: int) -> None:
     assert estimate_servings(kcal) == expected
 
 
+def test_estimate_servings_uses_the_portion_size() -> None:
+    assert estimate_servings(2800, kcal_per_serving=350) == 8
+
+
 @given(st.floats(min_value=0, max_value=1e6), st.floats(min_value=0, max_value=1e6))
 def test_estimate_servings_is_monotonic_and_bounded(a: float, b: float) -> None:
     lo, hi = sorted((a, b))
-    assert 1 <= estimate_servings(lo) <= estimate_servings(hi) <= 8
+    assert 1 <= estimate_servings(lo) <= estimate_servings(hi) <= 12

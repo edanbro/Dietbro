@@ -138,6 +138,7 @@ _VAGUE: dict[str, tuple[float, str]] = {
     "for frying": (1, "tbsp"),
     "knob": (15, "g"),
     "handful": (30, "g"),
+    "drop": (0.01, "tsp"),
 }
 _VAGUE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^pinch(es)?\b"), "pinch"),
@@ -153,6 +154,7 @@ _VAGUE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^(to|for) (glaze|glazing|brush|greas|drizzl)|^top(ping)?\b"), "garnish"),
     (re.compile(r"^knobs?\b"), "knob"),
     (re.compile(r"^handful"), "handful"),
+    (re.compile(r"^drops?\b"), "drop"),
 ]
 
 _UNICODE_FRACTIONS = {
