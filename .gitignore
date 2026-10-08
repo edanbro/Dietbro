@@ -33,3 +33,4 @@ coverage/
 
 # Data pipeline downloads (USDA zips, TheMealDB responses, embedding models)
 /data/cache/
+/data/reports/

@@ -9,9 +9,12 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 
 # Third-party deps first: this layer is reused until the lockfile or a manifest changes.
+# uv needs every workspace member's manifest to read the lockfile; only the API's deps install.
 COPY pyproject.toml uv.lock ./
 COPY apps/api/pyproject.toml apps/api/
 COPY packages/core/pyproject.toml packages/core/
+COPY packages/db/pyproject.toml packages/db/
+COPY packages/data/pyproject.toml packages/data/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package larder-api --no-install-workspace
 
