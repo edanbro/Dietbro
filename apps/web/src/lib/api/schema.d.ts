@@ -165,6 +165,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cuisines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Cuisines
+         * @description Cuisines of the seeded recipes, for preference pickers.
+         */
+        get: operations["listCuisines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/allergens": {
         parameters: {
             query?: never;
@@ -291,6 +311,8 @@ export interface components {
             allergens?: components["schemas"]["Allergen"][];
             /** Avoid Food Ids */
             avoid_food_ids?: number[];
+            /** Avoid Foods */
+            avoid_foods?: components["schemas"]["FoodSummary"][];
         };
         /** BodyIn */
         BodyIn: {
@@ -965,6 +987,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listCuisines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };
