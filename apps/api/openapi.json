@@ -483,6 +483,32 @@
         ]
       }
     },
+    "/cuisines": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Cuisines",
+        "description": "Cuisines of the seeded recipes, for preference pickers.",
+        "operationId": "listCuisines",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Listcuisines"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/allergens": {
       "get": {
         "tags": [
@@ -899,6 +925,13 @@
             "type": "array",
             "maxItems": 200,
             "title": "Avoid Food Ids"
+          },
+          "avoid_foods": {
+            "items": {
+              "$ref": "#/components/schemas/FoodSummary"
+            },
+            "type": "array",
+            "title": "Avoid Foods"
           }
         },
         "type": "object",

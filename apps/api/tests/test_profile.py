@@ -3,6 +3,9 @@ from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from larder_db.models import Recipe
 
 Auth = Callable[..., dict[str, str]]
 
@@ -89,7 +92,9 @@ async def test_preferences_and_allergies(api: httpx.AsyncClient, auth: Auth) -> 
     a = await api.put("/me/allergies", json=allergies, headers=auth())
 
     assert p.json()["liked_cuisines"] == ["Italian", "Thai"]
-    assert a.json() == {"allergens": ["milk", "peanuts"], "avoid_food_ids": [3]}
+    assert a.json()["allergens"] == ["milk", "peanuts"]
+    assert a.json()["avoid_food_ids"] == [3]
+    assert a.json()["avoid_foods"] == []  # unknown ids are kept but not described
     assert (
         await api.put("/me/allergies", json={"allergens": ["kale"]}, headers=auth())
     ).status_code == 422
@@ -137,3 +142,15 @@ async def test_export_and_delete_account(api: httpx.AsyncClient, auth: Auth) -> 
     me = (await api.get("/me", headers=auth())).json()  # signs in again: a fresh, empty user
     assert me["id"] != first_id
     assert me["profile"]["has_goals"] is False
+
+
+async def test_cuisines(api: httpx.AsyncClient, db_session: AsyncSession) -> None:
+    db_session.add_all(
+        [
+            Recipe(source="t", source_id=str(i), name=f"r{i}", cuisine=c)
+            for i, c in enumerate(["Thai", "British", "Thai", None])
+        ]
+    )
+    await db_session.commit()
+
+    assert (await api.get("/cuisines")).json() == ["British", "Thai"]

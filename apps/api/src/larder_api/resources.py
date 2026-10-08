@@ -22,9 +22,9 @@ class Resources:
 
 
 def make_verifier(settings: Settings, client: httpx.AsyncClient) -> TokenVerifier | None:
-    if not settings.clerk_issuer or not settings.jwks_url:
+    issuer, url = settings.issuer, settings.jwks_url
+    if not issuer or not url:
         return None
-    url = settings.jwks_url
 
     async def fetch() -> dict[str, Any]:
         response = await client.get(url, timeout=5)
@@ -32,7 +32,7 @@ def make_verifier(settings: Settings, client: httpx.AsyncClient) -> TokenVerifie
         return response.json()
 
     return TokenVerifier(
-        issuer=settings.clerk_issuer,
+        issuer=issuer,
         jwks=JWKSCache(fetch),
         authorized_parties=settings.clerk_authorized_parties or settings.cors_origins,
     )

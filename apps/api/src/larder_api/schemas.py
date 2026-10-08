@@ -96,7 +96,7 @@ class AllergiesIn(BaseModel):
 
 
 class AllergiesOut(AllergiesIn):
-    model_config = ConfigDict(from_attributes=True)
+    avoid_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
 
 
 class AllergenOption(BaseModel):

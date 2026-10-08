@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
+from larder_api.routers.foods import summary
 from larder_api.schemas import (
     AllergenOption,
     AllergiesIn,
@@ -24,7 +25,7 @@ from larder_api.schemas import (
     ProfileStatus,
     SuggestedTargets,
 )
-from larder_core.allergens import LABELS
+from larder_core.allergens import LABELS, Allergen
 from larder_core.energy import (
     Activity,
     Body,
@@ -36,7 +37,17 @@ from larder_core.energy import (
     validate_body,
     validate_targets,
 )
-from larder_db.models import Allergies, Base, BodyProfile, Goals, PantryItem, Preferences, User
+from larder_db.models import (
+    Allergies,
+    Base,
+    BodyProfile,
+    Food,
+    Goals,
+    PantryItem,
+    Preferences,
+    Recipe,
+    User,
+)
 
 router = APIRouter(prefix="/me", tags=["profile"])
 allergens_router = APIRouter(tags=["profile"])
@@ -214,10 +225,19 @@ async def put_preferences(
     return PreferencesOut.model_validate(row)
 
 
+async def _allergies_out(session: AsyncSession, row: Allergies) -> AllergiesOut:
+    foods = await session.scalars(select(Food).where(Food.id.in_(row.avoid_food_ids)))
+    return AllergiesOut(
+        allergens=[Allergen(a) for a in row.allergens],
+        avoid_food_ids=row.avoid_food_ids,
+        avoid_foods=[summary(f) for f in foods],
+    )
+
+
 @router.get("/allergies", operation_id="getAllergies")
 async def get_allergies(user: CurrentUser, session: Session) -> AllergiesOut | None:
     row = await session.get(Allergies, user.id)
-    return AllergiesOut.model_validate(row) if row else None
+    return await _allergies_out(session, row) if row else None
 
 
 @router.put("/allergies", operation_id="putAllergies")
@@ -228,7 +248,19 @@ async def put_allergies(body: AllergiesIn, user: CurrentUser, session: Session) 
     row.avoid_food_ids = sorted(set(body.avoid_food_ids))
     session.add(row)
     await session.commit()
-    return AllergiesOut.model_validate(row)
+    return await _allergies_out(session, row)
+
+
+@allergens_router.get("/cuisines", operation_id="listCuisines")
+async def list_cuisines(session: Session) -> list[str]:
+    """Cuisines of the seeded recipes, for preference pickers."""
+    rows = await session.scalars(
+        select(Recipe.cuisine)
+        .where(Recipe.cuisine.is_not(None))
+        .distinct()
+        .order_by(Recipe.cuisine)
+    )
+    return [c for c in rows if c]
 
 
 @allergens_router.get("/allergens", operation_id="listAllergens")
