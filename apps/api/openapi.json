@@ -58,10 +58,1381 @@
           }
         }
       }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Me",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Delete Me",
+        "description": "Delete the account and all its data (GDPR). The identity-provider account is deleted\nby the client with its own SDK.",
+        "operationId": "deleteMe",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/export": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Export Me",
+        "description": "Everything stored about the user, as JSON (GDPR data portability).",
+        "operationId": "exportMe",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Exportme"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/goals": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Goals",
+        "operationId": "getGoals",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GoalsOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getgoals"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Goals",
+        "description": "Refuses unsafe or impossible targets (calorie floor, max deficit vs estimated needs).",
+        "operationId": "putGoals",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalsOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/body": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Body",
+        "operationId": "getBody",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BodyOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getbody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Body",
+        "operationId": "putBody",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BodyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BodyOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Delete Body",
+        "operationId": "deleteBody",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/preferences": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Preferences",
+        "operationId": "getPreferences",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PreferencesOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getpreferences"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Preferences",
+        "operationId": "putPreferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/allergies": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Allergies",
+        "operationId": "getAllergies",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AllergiesOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getallergies"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Allergies",
+        "description": "Hard constraints: no planned recipe will contain these (enforced by the solver, M3).",
+        "operationId": "putAllergies",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllergiesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllergiesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/allergens": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Allergens",
+        "operationId": "listAllergens",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AllergenOption"
+                  },
+                  "type": "array",
+                  "title": "Response Listallergens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/foods/search": {
+      "get": {
+        "tags": [
+          "foods"
+        ],
+        "summary": "Search",
+        "description": "Curated ingredient names first (\"onion\" -> \"Onions, raw\"), then trigram matches.",
+        "operationId": "searchFoods",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 25,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FoodSummary"
+                  },
+                  "title": "Response Searchfoods"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/foods/{food_id}": {
+      "get": {
+        "tags": [
+          "foods"
+        ],
+        "summary": "Get Food",
+        "operationId": "getFood",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "food_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Food Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoodDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pantry": {
+      "get": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "List Items",
+        "description": "Soonest-expiring first; items without a date last.",
+        "operationId": "listPantry",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PantryItemOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listpantry"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "Add Item",
+        "operationId": "addPantryItem",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PantryItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PantryItemOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/pantry/{item_id}": {
+      "patch": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "Update Item",
+        "operationId": "updatePantryItem",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PantryItemPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PantryItemOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "Delete Item",
+        "operationId": "deletePantryItem",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Activity": {
+        "type": "string",
+        "enum": [
+          "sedentary",
+          "light",
+          "moderate",
+          "active",
+          "very_active"
+        ],
+        "title": "Activity"
+      },
+      "Allergen": {
+        "type": "string",
+        "enum": [
+          "celery",
+          "gluten",
+          "crustaceans",
+          "eggs",
+          "fish",
+          "lupin",
+          "milk",
+          "molluscs",
+          "mustard",
+          "tree_nuts",
+          "peanuts",
+          "sesame",
+          "soy",
+          "sulphites"
+        ],
+        "title": "Allergen"
+      },
+      "AllergenOption": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Allergen"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "AllergenOption"
+      },
+      "AllergiesIn": {
+        "properties": {
+          "allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Allergens"
+          },
+          "avoid_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Avoid Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "AllergiesIn"
+      },
+      "AllergiesOut": {
+        "properties": {
+          "allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Allergens"
+          },
+          "avoid_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Avoid Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "AllergiesOut"
+      },
+      "BodyIn": {
+        "properties": {
+          "sex": {
+            "$ref": "#/components/schemas/Sex"
+          },
+          "age": {
+            "type": "integer",
+            "maximum": 130.0,
+            "minimum": 0.0,
+            "title": "Age"
+          },
+          "height_cm": {
+            "type": "number",
+            "maximum": 300.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Height Cm"
+          },
+          "weight_kg": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Weight Kg"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/Activity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sex",
+          "age",
+          "height_cm",
+          "weight_kg",
+          "activity"
+        ],
+        "title": "BodyIn"
+      },
+      "BodyOut": {
+        "properties": {
+          "sex": {
+            "$ref": "#/components/schemas/Sex"
+          },
+          "age": {
+            "type": "integer",
+            "maximum": 130.0,
+            "minimum": 0.0,
+            "title": "Age"
+          },
+          "height_cm": {
+            "type": "number",
+            "maximum": 300.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Height Cm"
+          },
+          "weight_kg": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Weight Kg"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/Activity"
+          },
+          "tdee_kcal": {
+            "type": "number",
+            "title": "Tdee Kcal"
+          },
+          "suggestions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SuggestedTargets"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Goal"
+            },
+            "type": "object",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sex",
+          "age",
+          "height_cm",
+          "weight_kg",
+          "activity",
+          "tdee_kcal",
+          "suggestions"
+        ],
+        "title": "BodyOut"
+      },
+      "FoodDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "kcal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/FoodUnit"
+            },
+            "type": "array",
+            "title": "Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "category",
+          "kcal",
+          "units"
+        ],
+        "title": "FoodDetail"
+      },
+      "FoodSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "kcal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "category",
+          "kcal"
+        ],
+        "title": "FoodSummary"
+      },
+      "FoodUnit": {
+        "properties": {
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "grams_each": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams Each"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unit"
+        ],
+        "title": "FoodUnit",
+        "description": "A unit the user can enter for this food, with its weight when one unit is known."
+      },
+      "Goal": {
+        "type": "string",
+        "enum": [
+          "lose",
+          "maintain",
+          "gain"
+        ],
+        "title": "Goal"
+      },
+      "GoalsIn": {
+        "properties": {
+          "goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Goal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kcal_min": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Kcal Max"
+          },
+          "calorie_floor": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Calorie Floor",
+            "default": 1200
+          },
+          "max_daily_deficit": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Max Daily Deficit",
+            "default": 1000
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "protein_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Max"
+          },
+          "fat_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fat G Min"
+          },
+          "fat_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fat G Max"
+          },
+          "carbs_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbs G Min"
+          },
+          "carbs_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbs G Max"
+          },
+          "weekly_budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Budget Minor"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency",
+            "default": "GBP"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kcal_min",
+          "kcal_max"
+        ],
+        "title": "GoalsIn"
+      },
+      "GoalsOut": {
+        "properties": {
+          "goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Goal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kcal_min": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Kcal Max"
+          },
+          "calorie_floor": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Calorie Floor",
+            "default": 1200
+          },
+          "max_daily_deficit": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Max Daily Deficit",
+            "default": 1000
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "protein_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Max"
+          },
+          "fat_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fat G Min"
+          },
+          "fat_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fat G Max"
+          },
+          "carbs_g_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbs G Min"
+          },
+          "carbs_g_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbs G Max"
+          },
+          "weekly_budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Budget Minor"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency",
+            "default": "GBP"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kcal_min",
+          "kcal_max",
+          "updated_at"
+        ],
+        "title": "GoalsOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -73,6 +1444,352 @@
         },
         "type": "object",
         "title": "Health"
+      },
+      "Me": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ProfileStatus"
+          },
+          "setup_complete": {
+            "type": "boolean",
+            "title": "Setup Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "profile",
+          "setup_complete"
+        ],
+        "title": "Me"
+      },
+      "PantryItemIn": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "quantity": {
+            "type": "number",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Unit"
+          },
+          "approx": {
+            "type": "boolean",
+            "title": "Approx",
+            "default": false
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "quantity",
+          "unit"
+        ],
+        "title": "PantryItemIn"
+      },
+      "PantryItemOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodSummary"
+          },
+          "grams": {
+            "type": "number",
+            "title": "Grams"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "approx": {
+            "type": "boolean",
+            "title": "Approx"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "food",
+          "grams",
+          "quantity",
+          "unit",
+          "approx",
+          "expires_on",
+          "source",
+          "created_at"
+        ],
+        "title": "PantryItemOut"
+      },
+      "PantryItemPatch": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "approx": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approx"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          }
+        },
+        "type": "object",
+        "title": "PantryItemPatch"
+      },
+      "PreferencesIn": {
+        "properties": {
+          "diet": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vegetarian",
+                  "vegan",
+                  "pescatarian"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diet"
+          },
+          "liked_cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Liked Cuisines"
+          },
+          "disliked_cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Disliked Cuisines"
+          },
+          "liked_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Liked Food Ids"
+          },
+          "disliked_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Disliked Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "PreferencesIn"
+      },
+      "PreferencesOut": {
+        "properties": {
+          "diet": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vegetarian",
+                  "vegan",
+                  "pescatarian"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diet"
+          },
+          "liked_cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Liked Cuisines"
+          },
+          "disliked_cuisines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Disliked Cuisines"
+          },
+          "liked_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Liked Food Ids"
+          },
+          "disliked_food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Disliked Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "PreferencesOut"
+      },
+      "Problems": {
+        "properties": {
+          "detail": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "Problems",
+        "description": "422 body for domain-rule failures (e.g. unsafe calorie targets)."
+      },
+      "ProfileStatus": {
+        "properties": {
+          "has_goals": {
+            "type": "boolean",
+            "title": "Has Goals"
+          },
+          "has_body": {
+            "type": "boolean",
+            "title": "Has Body"
+          },
+          "has_allergies": {
+            "type": "boolean",
+            "title": "Has Allergies"
+          },
+          "has_preferences": {
+            "type": "boolean",
+            "title": "Has Preferences"
+          },
+          "pantry_items": {
+            "type": "integer",
+            "title": "Pantry Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_goals",
+          "has_body",
+          "has_allergies",
+          "has_preferences",
+          "pantry_items"
+        ],
+        "title": "ProfileStatus"
       },
       "Readiness": {
         "properties": {
@@ -102,6 +1819,90 @@
           "checks"
         ],
         "title": "Readiness"
+      },
+      "Sex": {
+        "type": "string",
+        "enum": [
+          "female",
+          "male"
+        ],
+        "title": "Sex"
+      },
+      "SuggestedTargets": {
+        "properties": {
+          "kcal_min": {
+            "type": "number",
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "type": "number",
+            "title": "Kcal Max"
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kcal_min",
+          "kcal_max",
+          "protein_g_min"
+        ],
+        "title": "SuggestedTargets"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

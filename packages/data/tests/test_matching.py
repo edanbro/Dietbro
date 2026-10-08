@@ -5,8 +5,6 @@ from larder_data import embeddings, matching
 from larder_data.matching import Candidate, best, rewrite, score
 from larder_db.models import Food
 
-from .fakes import FakeEmbedder
-
 
 def cand(
     food_id: int, description: str, *, similarity: float = 0.8, has_macros: bool = True
@@ -56,7 +54,9 @@ def test_rewrite(name: str, expected: str) -> None:
     assert rewrite(name) == expected
 
 
-async def test_hybrid_retrieval_finds_lexical_matches(db_session: AsyncSession) -> None:
+async def test_hybrid_retrieval_finds_lexical_matches(
+    db_session: AsyncSession, embedder: embeddings.Embedder
+) -> None:
     db_session.add_all(
         [
             Food(id=1, description="Spices, paprika", data_type="sr_legacy", kcal=282),
@@ -69,7 +69,6 @@ async def test_hybrid_retrieval_finds_lexical_matches(db_session: AsyncSession) 
         ]
     )
     await db_session.commit()
-    embedder = FakeEmbedder()
     await embeddings.embed_foods(db_session, embedder)
 
     [vector] = embedder.embed(["paprika"])

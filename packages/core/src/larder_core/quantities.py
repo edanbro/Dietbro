@@ -131,19 +131,24 @@ def grams_for(
             return q * median(same)
         return q * COUNT_DEFAULT_G[unit] if unit in COUNT_DEFAULT_G else None
 
-    each = _each_weight(portions, measure.size, name)
+    each = each_weight(portions, measure.size, name)
     if each is None:
         each = next((g for key, g in PIECE_G.items() if key in name), None)
     return None if each is None else q * each
 
 
-def _each_weight(portions: Sequence[Portion], size: str | None, name: str) -> float | None:
-    """Weight of "one" of the food, e.g. one medium onion, one large egg, one garlic clove."""
-    each = [
+def count_portions(portions: Sequence[Portion]) -> list[Portion]:
+    """Portions that weigh "one of the thing" (clove, large, fruit), not volumes or packaging."""
+    return [
         p
         for p in portions
         if p.unit not in VOLUME_UNITS and p.unit not in MASS_UNITS and p.unit not in _NOT_EACH
     ]
+
+
+def each_weight(portions: Sequence[Portion], size: str | None, name: str) -> float | None:
+    """Weight of "one" of the food, e.g. one medium onion, one large egg, one garlic clove."""
+    each = count_portions(portions)
     if not each:
         return None
 
