@@ -8,16 +8,20 @@ requires-python = ">=3.12"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/api", "packages/core"]
+members = ["apps/api", "packages/core", "packages/db", "packages/data"]
 
 [tool.uv.sources]
 larder-api = { workspace = true }
 larder-core = { workspace = true }
+larder-data = { workspace = true }
+larder-db = { workspace = true }
 
 [dependency-groups]
 dev = [
     "larder-api",
     "larder-core",
+    "larder-data",
+    "larder-db",
     "hypothesis>=6.168",
     "httpx>=0.28",
     "pre-commit>=4.6",
@@ -46,7 +50,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["larder_api", "larder_core"]
+known-first-party = ["larder_api", "larder_core", "larder_data", "larder_db"]
 
 [tool.pyright]
 include = ["apps/api", "packages"]
@@ -57,7 +61,7 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "packages/core/tests"]
+testpaths = ["apps/api/tests", "packages/core/tests", "packages/db/tests", "packages/data/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = ["--import-mode=importlib", "-ra"]

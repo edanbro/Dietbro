@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api up down
+.PHONY: install check check-py check-web gen-api migrate up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -21,6 +21,9 @@ check-web:
 gen-api: ## Regenerate OpenAPI schema and web client types
 	uv run python -m larder_api.openapi
 	pnpm -C apps/web gen:api
+
+migrate: ## Apply DB migrations to $$DATABASE_URL (default: compose db)
+	uv run alembic -c packages/db/alembic.ini upgrade head
 
 up: ## Build and start the full stack (web :3000, api :8000)
 	docker compose up --build
