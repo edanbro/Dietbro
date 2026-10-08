@@ -9,13 +9,14 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from larder_core.aliases import load_aliases
+from larder_core.names import normalise_name
 from larder_core.nutrition import Nutrients, estimate_servings, total
+from larder_core.quantities import Portion, grams_for
 from larder_core.units import parse_measure
 from larder_data import matching
 from larder_data.embeddings import Embedder
 from larder_data.matching import Match, Method
-from larder_data.quantities import Portion, grams_for
-from larder_data.text import normalise_name
 from larder_db.models import Food, FoodPortion, IngredientMatch, Recipe, RecipeIngredient
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ async def match_names(
     use_cache: bool = True,
 ) -> dict[str, Match]:
     """Alias table first, then cached results, then retrieval + rerank for the rest."""
-    aliases = matching.load_aliases()
+    aliases = load_aliases()
     cached = (
         {
             m.name: Match(m.food_id, cast(Method, m.method), m.score)

@@ -56,15 +56,6 @@ def test_rewrite(name: str, expected: str) -> None:
     assert rewrite(name) == expected
 
 
-def test_aliases_are_well_formed() -> None:
-    rows = matching.load_alias_rows()
-    names = [a.name for a in rows]
-    assert len(names) == len(set(names))
-    assert len(rows) > 500
-    assert all(a.fdc_id > 0 and a.description for a in rows)
-    assert matching.load_aliases()["onion"] == 170000
-
-
 async def test_hybrid_retrieval_finds_lexical_matches(db_session: AsyncSession) -> None:
     db_session.add_all(
         [

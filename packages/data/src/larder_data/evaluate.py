@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from larder_core.aliases import load_alias_rows
 from larder_data import matching
 from larder_data.embeddings import Embedder
 from larder_db.models import Food
@@ -67,7 +68,7 @@ def _equivalent(c: matching.Candidate, gold: Food) -> bool:
 
 
 async def evaluate(session: AsyncSession, embedder: Embedder) -> Evaluation:
-    gold = [a for a in matching.load_alias_rows() if not a.approximation]
+    gold = [a for a in load_alias_rows() if not a.approximation]
     foods = {
         f.id: f
         for f in await session.scalars(select(Food).where(Food.id.in_([a.fdc_id for a in gold])))

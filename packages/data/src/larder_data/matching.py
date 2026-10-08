@@ -5,16 +5,14 @@ Pipeline (docs/DESIGN.md §6): normalise (text.py) -> curated alias table -> hyb
 Below the threshold the name stays unresolved; an LLM tiebreak plugs in here in M4.
 """
 
-import csv
 import re
 from dataclasses import dataclass
-from importlib import resources
 from typing import Literal
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_data.text import singular
+from larder_core.names import singular
 
 type Method = Literal["alias", "embedding", "unmatched"]
 
@@ -224,28 +222,6 @@ def score(query: str, c: Candidate) -> float:
 def best(query: str, candidates: list[Candidate]) -> tuple[Candidate, float] | None:
     scored = [(c, score(query, c)) for c in candidates]
     return max(scored, key=lambda cs: (cs[1], -cs[0].food_id)) if scored else None
-
-
-@dataclass(frozen=True, slots=True)
-class Alias:
-    name: str
-    fdc_id: int
-    description: str
-    approximation: bool  # nearest nutritional stand-in, not the same food
-
-
-def load_alias_rows() -> list[Alias]:
-    """Curated table (resources/aliases.csv): normalised name -> FDC food, hand-reviewed."""
-    path = resources.files("larder_data") / "resources" / "aliases.csv"
-    with path.open(encoding="utf-8") as f:
-        return [
-            Alias(r["name"], int(r["fdc_id"]), r["description"], r["note"].startswith("approx"))
-            for r in csv.DictReader(f)
-        ]
-
-
-def load_aliases() -> dict[str, int]:
-    return {a.name: a.fdc_id for a in load_alias_rows()}
 
 
 _CANDIDATES_SQL = text(
