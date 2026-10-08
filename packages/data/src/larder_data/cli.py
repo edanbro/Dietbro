@@ -1,6 +1,7 @@
 """Data pipeline CLI: `uv run larder-data --help`.
 
-Steps run in order by `pipeline`: import-usda -> embed-foods -> import-mealdb -> resolve -> report.
+`pipeline` runs every step in order: import-usda -> embed-foods -> import-mealdb -> resolve
+-> embed-recipes -> report. `evaluate` scores the automatic matcher against the curated aliases.
 """
 
 import argparse
@@ -13,7 +14,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_data import mealdb, usda
+from larder_data import embeddings, evaluate, mealdb, report, resolve, usda
 from larder_db.engine import make_engine, make_sessionmaker
 
 DEFAULT_CACHE = Path("data/cache")
@@ -39,9 +40,45 @@ async def import_mealdb(session: AsyncSession, args: argparse.Namespace) -> None
     logger.info("mealdb: %d recipes", count)
 
 
+def embedder(args: argparse.Namespace) -> embeddings.FastEmbedder:
+    return embeddings.FastEmbedder(args.cache / "models")
+
+
+async def embed_foods(session: AsyncSession, args: argparse.Namespace) -> None:
+    logger.info("embedded %d foods", await embeddings.embed_foods(session, embedder(args)))
+
+
+async def resolve_lines(session: AsyncSession, args: argparse.Namespace) -> None:
+    stats = await resolve.resolve_all(session, embedder(args), use_cache=not args.rematch)
+    logger.info("%s", stats)
+
+
+async def embed_recipes(session: AsyncSession, args: argparse.Namespace) -> None:
+    logger.info("embedded %d recipes", await embeddings.embed_recipes(session, embedder(args)))
+
+
+async def write_report(session: AsyncSession, args: argparse.Namespace) -> None:
+    r = await report.build_report(session)
+    text = report.render(r)
+    if args.evaluate:
+        text += "\n" + evaluate.render(await evaluate.evaluate(session, embedder(args)))
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(text)
+    print(text)
+    if r.food_coverage < args.min_coverage:
+        raise SystemExit(
+            f"food coverage {100 * r.food_coverage:.1f}% < required {100 * args.min_coverage:.1f}%"
+        )
+
+
 STEPS: dict[str, Step] = {
     "import-usda": import_usda,
+    "embed-foods": embed_foods,
     "import-mealdb": import_mealdb,
+    "resolve": resolve_lines,
+    "embed-recipes": embed_recipes,
+    "report": write_report,
 }
 
 
@@ -50,6 +87,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("step", choices=[*STEPS, "pipeline"])
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE, help="download cache dir")
     parser.add_argument("--refresh", action="store_true", help="re-fetch TheMealDB responses")
+    parser.add_argument("--rematch", action="store_true", help="ignore cached name matches")
+    parser.add_argument("--out", type=Path, help="report: also write Markdown here")
+    parser.add_argument(
+        "--evaluate", action="store_true", help="report: add matcher accuracy vs curated aliases"
+    )
+    parser.add_argument(
+        "--min-coverage",
+        type=float,
+        default=0.0,
+        help="report: exit non-zero if the share of lines resolved to a food is below this",
+    )
     return parser.parse_args(argv)
 
 
