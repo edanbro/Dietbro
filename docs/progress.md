@@ -62,3 +62,41 @@ posts the report to the job summary.
 (TheMealDB has none); 123 recipes still have an unresolved line. LLM tiebreak lands in M4.
 
 **Next (M2)**: auth, user scoping, pantry/goals/preferences/allergies CRUD + mobile UI.
+
+## M2 — Accounts, profile, pantry
+
+**What works**
+- Sign-up / sign-in with Clerk; the API verifies session JWTs itself and scopes every query to
+  the signed-in user (cross-user reads are 404s, tested).
+- Mobile-first web app (installable PWA): 5-step setup on first sign-in, then Pantry and
+  Profile tabs.
+  - Goals: daily kcal band, optional protein minimum, weekly budget; unsafe targets are refused
+    with the reason (calorie floor, max deficit vs estimated needs, impossible macros).
+  - Optional body stats → estimated daily needs and one-tap suggested targets.
+  - Allergies (EU/UK 14 + any specific foods) as hard constraints; diet and cuisine likes.
+  - Pantry: type-ahead USDA search (curated names first), quantity in the food's own units
+    ("2 large" onions = 300 g, "3 cloves" garlic), use-by dates with expiry badges, rough-amount
+    flag.
+  - Download my data (JSON) and delete my account.
+- `docker compose up` now runs migrations first; `make seed` loads foods + recipes (~1 min).
+
+**Tests**: 42 API tests (auth edge cases, scoping, safety rules, pantry conversions), property
+tests for the energy maths, 21 web component tests, and a Playwright onboarding test on a Pixel 7
+profile (CI job enabled by Clerk secrets).
+
+**See it**
+```sh
+cp .env.example .env   # add your Clerk dev instance keys
+docker compose up --build
+make seed              # in another terminal
+open http://localhost:3000
+```
+
+**Docs**: DESIGN §5, §7, §10; ADRs [0007](adr/0007-clerk-auth-and-user-scoping.md),
+[0008](adr/0008-calorie-target-safety.md).
+
+**Known gaps**: the e2e test needs `CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` repo secrets to
+run in CI; liked/disliked *foods* are stored but have no UI yet (cuisines and diet do); no offline
+mode in the PWA.
+
+**Next (M3)**: CP-SAT weekly plan, independent validator, shopping list, plan view.

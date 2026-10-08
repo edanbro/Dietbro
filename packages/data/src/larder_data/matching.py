@@ -1,6 +1,6 @@
 """Ingredient name -> USDA food.
 
-Pipeline (docs/DESIGN.md §6): normalise (text.py) -> curated alias table -> hybrid retrieval
+Pipeline (docs/DESIGN.md §6): normalise (larder_core.names) -> curated aliases -> hybrid retrieval
 (pgvector nearest neighbours + lexical word match) -> rerank -> accept above a threshold.
 Below the threshold the name stays unresolved; an LLM tiebreak plugs in here in M4.
 """
