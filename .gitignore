@@ -30,3 +30,7 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 .DS_Store
+
+# Data pipeline downloads (USDA zips, TheMealDB responses, embedding models)
+/data/cache/
+/data/reports/

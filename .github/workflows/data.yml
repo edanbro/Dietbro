@@ -1,0 +1,65 @@
+name: Data pipeline
+
+# Full import -> resolve -> report against real USDA + TheMealDB data. Enforces the M1
+# acceptance target (>= 95% of recipe ingredient lines resolve to a USDA food).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1" # weekly, Monday 04:17 UTC
+  pull_request:
+    paths:
+      - "packages/core/**"
+      - "packages/db/**"
+      - "packages/data/**"
+      - ".github/workflows/data.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline:
+    name: Import, resolve, report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: larder
+          POSTGRES_PASSWORD: larder
+          POSTGRES_DB: larder
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U larder" --health-interval 5s --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://larder:larder@localhost:5432/larder
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - name: Cache downloads (USDA zips, TheMealDB responses, embedding model)
+        uses: actions/cache@v6
+        with:
+          path: data/cache
+          key: data-cache-${{ hashFiles('packages/data/src/larder_data/usda.py', 'packages/data/src/larder_data/embeddings.py') }}
+      - run: uv sync --locked
+      - run: uv run alembic -c packages/db/alembic.ini upgrade head
+      - name: Run pipeline (fails below 95% food coverage)
+        run: >-
+          uv run larder-data pipeline --evaluate --min-coverage 0.95
+          --out data/reports/resolution.md
+      - name: Job summary
+        if: always()
+        run: cat data/reports/resolution.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: resolution-report
+          path: data/reports/resolution.md
+          if-no-files-found: ignore
