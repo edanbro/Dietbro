@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY apps/api apps/api
 COPY packages/core packages/core
+COPY packages/db packages/db
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package larder-api --no-editable
 
@@ -27,6 +28,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.12-slim-trixie AS runtime
 RUN useradd --system --uid 10001 --no-create-home app
 COPY --from=build --chown=app:app /app/.venv /app/.venv
+# For the one-shot `migrate` service: `alembic -c /app/alembic.ini upgrade head`.
+COPY --chown=app:app packages/db/alembic.ini /app/alembic.ini
+WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 USER app

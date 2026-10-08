@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate data up down
+.PHONY: install check check-py check-web gen-api migrate seed data up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -24,6 +24,10 @@ gen-api: ## Regenerate OpenAPI schema and web client types
 
 migrate: ## Apply DB migrations to $$DATABASE_URL (default: compose db)
 	uv run alembic -c packages/db/alembic.ini upgrade head
+
+seed: migrate ## Load USDA foods + TheMealDB recipes (enough for the app; no embeddings, ~1 min)
+	uv run larder-data import-usda
+	uv run larder-data import-mealdb
 
 data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report (~5 min)
 	uv run larder-data pipeline --evaluate --min-coverage 0.95 --out data/reports/resolution.md
