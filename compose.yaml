@@ -1,0 +1,61 @@
+# Local stack: `docker compose up` → web on :3000, API on :8000.
+# Values come from `.env` when present (see .env.example), else the defaults below.
+name: larder
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-larder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-larder}
+      POSTGRES_DB: ${POSTGRES_DB:-larder}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-larder}:${POSTGRES_PASSWORD:-larder}@db:5432/${POSTGRES_DB:-larder}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

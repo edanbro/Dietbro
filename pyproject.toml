@@ -1,0 +1,63 @@
+[project]
+name = "larder"
+version = "0.0.0"
+description = "AI meal planner: LLM for language, constraint solver for guarantees."
+requires-python = ">=3.12"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/core"]
+
+[tool.uv.sources]
+larder-api = { workspace = true }
+larder-core = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "larder-api",
+    "larder-core",
+    "hypothesis>=6.168",
+    "httpx>=0.28",
+    "pre-commit>=4.6",
+    "pyright>=1.1.414",
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "ruff>=0.16",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "RUF", # ruff-specific
+    "ASYNC",
+    "PT",  # pytest style
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["larder_api", "larder_core"]
+
+[tool.pyright]
+include = ["apps/api", "packages"]
+exclude = ["**/.venv", "**/__pycache__"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests", "packages/core/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = ["--import-mode=importlib", "-ra"]
