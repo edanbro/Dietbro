@@ -1,0 +1,13 @@
+{"meals": [
+  {"idMeal": "52772", "strMeal": "Teriyaki Chicken Casserole", "strCategory": "Chicken",
+   "strArea": "Japanese", "strInstructions": "Preheat oven.", "strMealThumb": "https://example.test/t.jpg",
+   "strTags": "Meat,Casserole, meat", "strSource": null,
+   "strIngredient1": "soy sauce", "strMeasure1": "3/4 cup",
+   "strIngredient2": "Chicken Breasts", "strMeasure2": "2",
+   "strIngredient3": " ", "strMeasure3": " ",
+   "strIngredient4": "Garlic", "strMeasure4": "1 clove",
+   "strIngredient5": null, "strMeasure5": null},
+  {"idMeal": "53000", "strMeal": "Plain Rice", "strCategory": "Side", "strArea": null,
+   "strCountry": "Indian", "strInstructions": "Boil.", "strMealThumb": "", "strTags": null,
+   "strIngredient1": "Rice", "strMeasure1": "200g"}
+]}
