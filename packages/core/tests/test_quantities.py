@@ -2,8 +2,8 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from larder_core.quantities import Portion, density, grams_for
 from larder_core.units import parse_measure
-from larder_data.quantities import Portion, density, grams_for
 
 ONION = [
     Portion(1, "cup", "chopped", 160),

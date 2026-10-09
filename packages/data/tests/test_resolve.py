@@ -4,16 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_data import embeddings, report, resolve
+from larder_data.embeddings import Embedder
 from larder_db.models import Food, FoodPortion, IngredientMatch, Recipe, RecipeIngredient
-
-from .fakes import FakeEmbedder
 
 # Real FDC ids so the curated alias table resolves "onion" and "olive oil".
 ONION, OLIVE_OIL = 170000, 171413
 
 
 @pytest.fixture
-async def seeded(db_session: AsyncSession) -> AsyncSession:
+async def seeded(db_session: AsyncSession, embedder: Embedder) -> AsyncSession:
     db_session.add_all(
         [
             Food(
@@ -67,12 +66,12 @@ async def seeded(db_session: AsyncSession) -> AsyncSession:
         ]
     )
     await db_session.commit()
-    await embeddings.embed_foods(db_session, FakeEmbedder())
+    await embeddings.embed_foods(db_session, embedder)
     return db_session
 
 
-async def test_resolve_all(seeded: AsyncSession) -> None:
-    stats = await resolve.resolve_all(seeded, FakeEmbedder())
+async def test_resolve_all(seeded: AsyncSession, embedder: Embedder) -> None:
+    stats = await resolve.resolve_all(seeded, embedder)
 
     assert stats.lines == 4
     assert stats.recipes_complete == 1
@@ -102,8 +101,8 @@ async def test_resolve_all(seeded: AsyncSession) -> None:
     assert cached == {"onion": "alias", "olive oil": "alias", "unobtainium": "unmatched"}
 
 
-async def test_report(seeded: AsyncSession) -> None:
-    await resolve.resolve_all(seeded, FakeEmbedder())
+async def test_report(seeded: AsyncSession, embedder: Embedder) -> None:
+    await resolve.resolve_all(seeded, embedder)
 
     r = await report.build_report(seeded)
 

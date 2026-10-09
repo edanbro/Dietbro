@@ -1,13 +1,15 @@
 """Relational schema. Quantities are grams; food nutrients are per 100 g.
 
-Tables for users, pantry, plans and LLM calls arrive with the milestones that use them (M2+).
+Data (M1): foods, recipes, embeddings. Users (M2): profile, goals, allergies, pantry; every user
+table is keyed or filtered by `user_id`. Plans and LLM calls arrive with M3/M4.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -19,6 +21,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -54,6 +57,15 @@ class Food(NutrientColumns, Base):
     """A USDA FoodData Central food. `id` is the FDC id; nutrients are per 100 g."""
 
     __tablename__ = "foods"
+    __table_args__ = (
+        # Trigram index for type-ahead food search (pg_trgm).
+        Index(
+            "ix_foods_description_trgm",
+            "description",
+            postgresql_using="gin",
+            postgresql_ops={"description": "gin_trgm_ops"},
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     description: Mapped[str] = mapped_column(Text)
@@ -194,3 +206,110 @@ class IngredientMatch(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+# --- users (M2) -------------------------------------------------------------------------------
+
+
+def _now() -> Mapped[datetime]:
+    return mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class User(Base):
+    """An account. `auth_subject` is the identity provider's user id (Clerk JWT `sub`)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    auth_subject: Mapped[str] = mapped_column(String(255), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = _now()
+
+
+class Goals(Base):
+    """Daily energy/macro bands (validated by larder_core.energy) and a weekly budget."""
+
+    __tablename__ = "goals"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    goal: Mapped[str | None] = mapped_column(String(16))  # lose | maintain | gain
+    kcal_min: Mapped[float] = mapped_column(Float)
+    kcal_max: Mapped[float] = mapped_column(Float)
+    calorie_floor: Mapped[float] = mapped_column(Float)
+    max_daily_deficit: Mapped[float] = mapped_column(Float)
+    protein_g_min: Mapped[float | None] = mapped_column(Float)
+    protein_g_max: Mapped[float | None] = mapped_column(Float)
+    fat_g_min: Mapped[float | None] = mapped_column(Float)
+    fat_g_max: Mapped[float | None] = mapped_column(Float)
+    carbs_g_min: Mapped[float | None] = mapped_column(Float)
+    carbs_g_max: Mapped[float | None] = mapped_column(Float)
+    weekly_budget_minor: Mapped[int | None] = mapped_column(Integer)  # pence / cents
+    currency: Mapped[str] = mapped_column(String(3), default="GBP")
+    updated_at: Mapped[datetime] = _now()
+
+
+class BodyProfile(Base):
+    """Optional body stats for the TDEE estimate. Birth year, not age, so it stays correct."""
+
+    __tablename__ = "body_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    sex: Mapped[str] = mapped_column(String(8))
+    birth_year: Mapped[int] = mapped_column(Integer)
+    height_cm: Mapped[float] = mapped_column(Float)
+    weight_kg: Mapped[float] = mapped_column(Float)
+    activity: Mapped[str] = mapped_column(String(16))
+    updated_at: Mapped[datetime] = _now()
+
+
+class Preferences(Base):
+    """Soft preferences: the solver rewards likes and penalises dislikes, never forbids."""
+
+    __tablename__ = "preferences"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    diet: Mapped[str | None] = mapped_column(String(16))  # vegetarian | vegan | pescatarian
+    liked_cuisines: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
+    disliked_cuisines: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
+    liked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    disliked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    updated_at: Mapped[datetime] = _now()
+
+
+class Allergies(Base):
+    """Hard exclusions: allergen codes (larder_core.allergens) and specific foods."""
+
+    __tablename__ = "allergies"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    allergens: Mapped[list[str]] = mapped_column(ARRAY(String(32)), default=list)
+    avoid_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    updated_at: Mapped[datetime] = _now()
+
+
+class PantryItem(Base):
+    """Food on hand. `grams` is canonical; `quantity` + `unit` are kept as the user typed them."""
+
+    __tablename__ = "pantry_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    food_id: Mapped[int] = mapped_column(ForeignKey("foods.id"))
+    grams: Mapped[float] = mapped_column(Float)
+    quantity: Mapped[float] = mapped_column(Float)
+    unit: Mapped[str] = mapped_column(String(32))
+    approx: Mapped[bool] = mapped_column(Boolean, default=False)
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(16), default="manual")  # manual | receipt (M6)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = _now()
+
+    food: Mapped[Food] = relationship()

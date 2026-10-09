@@ -2,7 +2,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from larder_data.text import normalise_name
+from larder_core.names import normalise_name
 
 
 @pytest.mark.parametrize(

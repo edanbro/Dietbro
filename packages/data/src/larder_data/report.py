@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_data.text import normalise_name
+from larder_core.names import normalise_name
 from larder_db.models import Recipe, RecipeIngredient
 
 

@@ -9,13 +9,6 @@ from sqlalchemy.orm import selectinload
 from larder_data import usda
 from larder_db.models import Food
 
-from .fdc_fixture import write_fdc_zip
-
-
-@pytest.fixture
-def fdc_zip(tmp_path: Path) -> Path:
-    return write_fdc_zip(tmp_path / "sr.zip")
-
 
 def test_read_dataset_keeps_only_the_dataset_type(fdc_zip: Path) -> None:
     foods = {f.id: f for f in usda.read_dataset(fdc_zip, "sr_legacy")}
