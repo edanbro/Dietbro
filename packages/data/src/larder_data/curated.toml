@@ -1,0 +1,2 @@
+# Curated breakfasts and snacks: see larder_data/curated.py and docs/adr/0010.
+# Every ingredient name must be a curated alias (larder_core/data/aliases.csv).
