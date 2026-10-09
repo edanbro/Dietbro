@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from datetime import date
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -18,6 +19,7 @@ from larder_solver.problem import (
     SlotSpec,
     Targets,
 )
+from larder_solver.scenarios import planted
 from larder_solver.shopping import ShoppingLine, shopping_list
 
 
@@ -120,3 +122,19 @@ def test_lines_always_sum_to_the_total(lines: list[tuple[int, int]]) -> None:
     assert sum(line.cost_millipence for line in s.lines) == millipence
     for line in s.lines:
         assert abs(line.cost_minor * 1000 - line.cost_millipence) < 1000
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_planted_witness_shopping_list(seed: int) -> None:
+    s = planted(seed)
+    assert s.witness is not None
+    shop = shopping_list(s.problem, s.witness)
+    bought = allocate(s.problem, s.witness).buy
+    assert {line.food_id: line.grams for line in shop.lines if not line.staple} == bought
+    assert shop.total_minor == to_minor(cost_millipence(s.problem, bought))
+    assert sum(line.cost_minor for line in shop.lines) == shop.total_minor
+    staple_lines = [line for line in shop.lines if line.staple]
+    assert all(line.grams == line.cost_minor == line.cost_millipence == 0 for line in staple_lines)
+    assert shop.lines[: len(shop.lines) - len(staple_lines)] == tuple(
+        line for line in shop.lines if not line.staple
+    )

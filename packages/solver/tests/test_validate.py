@@ -29,6 +29,7 @@ from larder_solver.problem import (
     SlotSpec,
     Targets,
 )
+from larder_solver.scenarios import planted
 from larder_solver.validate import (
     HARD_FILTER_CODES,
     SAFETY_CODES,
@@ -429,16 +430,29 @@ def test_validate_never_raises(
 # --- scenarios and independence ------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("seed", range(50))
+def test_planted_witnesses_have_no_hard_violations(seed: int) -> None:
+    s = planted(seed)
+    assert s.witness is not None
+    assert hard(validate(s.problem, s.witness)) == []
 
-def test_validator_imports_only_problem_and_metrics() -> None:
-    source = cast(str, importlib.import_module("larder_solver.validate").__file__)
-    tree = ast.parse(Path(source).read_text())
+
+def imports(module: str) -> set[str]:
+    """The larder_solver modules `module` imports directly."""
+    source = cast(str, importlib.import_module(module).__file__)
     imported: set[str] = set()
-    for node in ast.walk(tree):
+    for node in ast.walk(ast.parse(Path(source).read_text())):
         if isinstance(node, ast.Import):
             imported |= {alias.name for alias in node.names}
         elif isinstance(node, ast.ImportFrom):
             assert node.level == 0, "no relative imports"
             imported.add(node.module or "")
-    ours = {name for name in imported if name.split(".")[0] == "larder_solver"}
-    assert ours <= {"larder_solver.metrics", "larder_solver.problem"}
+    return {name for name in imported if name.split(".")[0] == "larder_solver"}
+
+
+def test_validator_imports_only_problem_and_metrics() -> None:
+    # Not the planners, the prefilter (whose hard filters it re-implements), the scenarios or
+    # the diagnostics; and metrics, which it does use, imports only the problem.
+    assert imports("larder_solver.validate") <= {"larder_solver.metrics", "larder_solver.problem"}
+    assert imports("larder_solver.metrics") <= {"larder_solver.problem"}
+    assert imports("larder_solver.problem") == set()
