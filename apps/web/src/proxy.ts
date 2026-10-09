@@ -2,7 +2,12 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Signed-out visitors to app pages are sent to sign-in. The API independently verifies the
 // session token on every request, so this is a UX redirect, not the security boundary.
-const isAppRoute = createRouteMatcher(["/setup(.*)", "/pantry(.*)", "/profile(.*)"]);
+const isAppRoute = createRouteMatcher([
+  "/plan(.*)",
+  "/setup(.*)",
+  "/pantry(.*)",
+  "/profile(.*)",
+]);
 
 export default clerkMiddleware(
   async (auth, request) => {
