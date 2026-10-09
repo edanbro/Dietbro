@@ -866,7 +866,7 @@
             }
           },
           "400": {
-            "description": "no plan fits; reasons",
+            "description": "bad start date, or no plan fits (reasons)",
             "content": {
               "application/json": {
                 "schema": {
@@ -876,7 +876,7 @@
             }
           },
           "409": {
-            "description": "profile incomplete (goals)",
+            "description": "setup incomplete (goals, allergies, preferences) or goals need review",
             "content": {
               "application/json": {
                 "schema": {
@@ -919,7 +919,7 @@
           "plans"
         ],
         "summary": "Current Plan",
-        "description": "The most recently created plan (404 if none).",
+        "description": "The most recently created plan, or null if there is none.",
         "operationId": "getCurrentPlan",
         "responses": {
           "200": {
@@ -927,7 +927,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanOut"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getcurrentplan"
                 }
               }
             }
@@ -2235,6 +2243,29 @@
             "type": "integer",
             "title": "Shopping Items"
           },
+          "excluded_allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Excluded Allergens"
+          },
+          "diet": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "vegetarian",
+                  "vegan",
+                  "pescatarian"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diet"
+          },
           "violations": {
             "items": {
               "$ref": "#/components/schemas/ViolationOut"
@@ -2268,6 +2299,8 @@
           "pantry_used_g",
           "waste_g",
           "shopping_items",
+          "excluded_allergens",
+          "diet",
           "violations",
           "notes"
         ],
@@ -2286,7 +2319,7 @@
               }
             ],
             "title": "Start",
-            "description": "first day (the user's local date); defaults to today (UTC)"
+            "description": "first day (the user's local date, from yesterday to a week ahead); defaults to today (UTC)"
           }
         },
         "type": "object",
@@ -2768,11 +2801,17 @@
           },
           "cost_minor": {
             "type": "integer",
-            "title": "Cost Minor"
+            "title": "Cost Minor",
+            "description": "share of total_minor; lines sum exactly to the total"
           },
           "checked": {
             "type": "boolean",
             "title": "Checked"
+          },
+          "staple": {
+            "type": "boolean",
+            "title": "Staple",
+            "description": "store-cupboard item to check you have; no grams or cost"
           },
           "approx_units": {
             "anyOf": [
@@ -2793,7 +2832,8 @@
           "category",
           "grams",
           "cost_minor",
-          "checked"
+          "checked",
+          "staple"
         ],
         "title": "ShoppingItemOut"
       },
@@ -2827,7 +2867,8 @@
           },
           "total_minor": {
             "type": "integer",
-            "title": "Total Minor"
+            "title": "Total Minor",
+            "description": "estimated cost of every non-staple line (= plan cost)"
           },
           "budget_minor": {
             "anyOf": [
@@ -2971,6 +3012,10 @@
             "type": "string",
             "title": "Message"
           },
+          "hard": {
+            "type": "boolean",
+            "title": "Hard"
+          },
           "day": {
             "anyOf": [
               {
@@ -2991,15 +3036,27 @@
                 "type": "null"
               }
             ]
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
           }
         },
         "type": "object",
         "required": [
           "code",
-          "message"
+          "message",
+          "hard"
         ],
         "title": "ViolationOut",
-        "description": "A hard rule the plan breaks (only the baseline planner can produce these)."
+        "description": "A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the\nbaseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.\nSafety rules (allergens, diet, calorie floor) are never broken in a saved plan."
       }
     },
     "securitySchemes": {

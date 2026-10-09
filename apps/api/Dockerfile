@@ -15,12 +15,14 @@ COPY apps/api/pyproject.toml apps/api/
 COPY packages/core/pyproject.toml packages/core/
 COPY packages/db/pyproject.toml packages/db/
 COPY packages/data/pyproject.toml packages/data/
+COPY packages/solver/pyproject.toml packages/solver/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package larder-api --no-install-workspace
 
 COPY apps/api apps/api
 COPY packages/core packages/core
 COPY packages/db packages/db
+COPY packages/solver packages/solver
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package larder-api --no-editable
 

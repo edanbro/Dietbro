@@ -2,7 +2,7 @@
 
 Revision ID: 0003
 Revises: 0002
-Create Date: 2026-10-09 09:28:13.958689
+Create Date: 2026-10-09 14:35:12.362599
 """
 
 from collections.abc import Sequence
@@ -67,6 +67,10 @@ def upgrade() -> None:
         sa.Column("slot", sa.String(length=16), nullable=False),
         sa.Column("recipe_id", sa.Integer(), nullable=False),
         sa.Column("portions", sa.SmallInteger(), nullable=False),
+        sa.Column("kcal", sa.Integer(), nullable=False),
+        sa.Column("protein_g", sa.Integer(), nullable=False),
+        sa.Column("fat_g", sa.Integer(), nullable=False),
+        sa.Column("carbs_g", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("locked", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -88,6 +92,7 @@ def upgrade() -> None:
         sa.Column("food_id", sa.Integer(), nullable=False),
         sa.Column("grams", sa.Integer(), nullable=False),
         sa.Column("cost_minor", sa.Integer(), nullable=False),
+        sa.Column("staple", sa.Boolean(), nullable=False),
         sa.Column("checked", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["food_id"], ["foods.id"], name=op.f("fk_shopping_items_food_id_foods")

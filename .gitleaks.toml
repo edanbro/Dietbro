@@ -1,0 +1,9 @@
+# Default gitleaks rules plus providers it doesn't know about.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "clerk-secret-key"
+description = "Clerk secret key"
+regex = '''\bsk_(?:test|live)_[A-Za-z0-9]{20,}\b'''
+keywords = ["sk_test_", "sk_live_"]

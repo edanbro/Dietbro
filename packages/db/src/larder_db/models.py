@@ -344,7 +344,8 @@ class MealPlan(Base):
     objective: Mapped[int | None] = mapped_column(BigInteger)
     solve_ms: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3))
-    # Score terms, validator violations, planner notes, inputs summary (JSON-safe).
+    # Snapshot of everything PlanOut shows that isn't a column (larder_api.planning.PlanStats):
+    # targets, cost, pantry use, waste, score terms, violations, notes. Never recomputed.
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -357,7 +358,9 @@ class MealPlan(Base):
 
 
 class PlanMeal(Base):
-    """A planned meal. `portions` are half-servings (2 = one serving)."""
+    """A planned meal. `portions` are half-servings (2 = one serving). The macros are a snapshot
+    of what the planner and validator used, so old plans never drift when recipes are re-imported.
+    """
 
     __tablename__ = "plan_meals"
     __table_args__ = (UniqueConstraint("plan_id", "day", "slot"),)
@@ -368,6 +371,10 @@ class PlanMeal(Base):
     slot: Mapped[str] = mapped_column(String(16))  # breakfast | lunch | dinner | snack
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"))
     portions: Mapped[int] = mapped_column(SmallInteger)
+    kcal: Mapped[int] = mapped_column(Integer)
+    protein_g: Mapped[int] = mapped_column(Integer)
+    fat_g: Mapped[int] = mapped_column(Integer)
+    carbs_g: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16), default="planned")  # eaten | skipped (M5)
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -376,7 +383,8 @@ class PlanMeal(Base):
 
 
 class ShoppingItem(Base):
-    """What to buy for a plan: grams beyond what the pantry covers, with an estimated cost."""
+    """What to buy for a plan: grams beyond what the pantry covers, with an estimated cost.
+    Staples (salt, spices, ...) are listed to check, with no grams or cost."""
 
     __tablename__ = "shopping_items"
     __table_args__ = (UniqueConstraint("plan_id", "food_id"),)
@@ -386,6 +394,7 @@ class ShoppingItem(Base):
     food_id: Mapped[int] = mapped_column(ForeignKey("foods.id"))
     grams: Mapped[int] = mapped_column(Integer)
     cost_minor: Mapped[int] = mapped_column(Integer)
+    staple: Mapped[bool] = mapped_column(Boolean, default=False)
     checked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     plan: Mapped[MealPlan] = relationship(back_populates="shopping")

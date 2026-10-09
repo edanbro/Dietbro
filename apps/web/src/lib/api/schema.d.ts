@@ -304,7 +304,7 @@ export interface paths {
         };
         /**
          * Current Plan
-         * @description The most recently created plan (404 if none).
+         * @description The most recently created plan, or null if there is none.
          */
         get: operations["getCurrentPlan"];
         put?: never;
@@ -756,6 +756,10 @@ export interface components {
             waste_g: number;
             /** Shopping Items */
             shopping_items: number;
+            /** Excluded Allergens */
+            excluded_allergens: components["schemas"]["Allergen"][];
+            /** Diet */
+            diet: ("vegetarian" | "vegan" | "pescatarian") | null;
             /** Violations */
             violations: components["schemas"]["ViolationOut"][];
             /** Notes */
@@ -765,7 +769,7 @@ export interface components {
         PlanRequest: {
             /**
              * Start
-             * @description first day (the user's local date); defaults to today (UTC)
+             * @description first day (the user's local date, from yesterday to a week ahead); defaults to today (UTC)
              */
             start?: string | null;
         };
@@ -903,10 +907,18 @@ export interface components {
             category: string | null;
             /** Grams */
             grams: number;
-            /** Cost Minor */
+            /**
+             * Cost Minor
+             * @description share of total_minor; lines sum exactly to the total
+             */
             cost_minor: number;
             /** Checked */
             checked: boolean;
+            /**
+             * Staple
+             * @description store-cupboard item to check you have; no grams or cost
+             */
+            staple: boolean;
             /** Approx Units */
             approx_units?: string | null;
         };
@@ -924,7 +936,10 @@ export interface components {
              * @enum {string}
              */
             currency: "GBP" | "EUR" | "USD";
-            /** Total Minor */
+            /**
+             * Total Minor
+             * @description estimated cost of every non-staple line (= plan cost)
+             */
             total_minor: number;
             /** Budget Minor */
             budget_minor: number | null;
@@ -971,16 +986,22 @@ export interface components {
         };
         /**
          * ViolationOut
-         * @description A hard rule the plan breaks (only the baseline planner can produce these).
+         * @description A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the
+         *     baseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.
+         *     Safety rules (allergens, diet, calorie floor) are never broken in a saved plan.
          */
         ViolationOut: {
             /** Code */
             code: string;
             /** Message */
             message: string;
+            /** Hard */
+            hard: boolean;
             /** Day */
             day?: number | null;
             slot?: components["schemas"]["Slot"] | null;
+            /** Recipe Id */
+            recipe_id?: number | null;
         };
     };
     responses: never;
@@ -1608,7 +1629,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlanOut"];
                 };
             };
-            /** @description no plan fits; reasons */
+            /** @description bad start date, or no plan fits (reasons) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1617,7 +1638,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problems"];
                 };
             };
-            /** @description profile incomplete (goals) */
+            /** @description setup incomplete (goals, allergies, preferences) or goals need review */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1661,7 +1682,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanOut"];
+                    "application/json": components["schemas"]["PlanOut"] | null;
                 };
             };
         };

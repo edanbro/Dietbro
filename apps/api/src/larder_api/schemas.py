@@ -214,17 +214,23 @@ class DayOut(BaseModel):
 
 
 class ViolationOut(BaseModel):
-    """A hard rule the plan breaks (only the baseline planner can produce these)."""
+    """A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the
+    baseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.
+    Safety rules (allergens, diet, calorie floor) are never broken in a saved plan."""
 
     code: str
     message: str
+    hard: bool
     day: int | None = None
     slot: Slot | None = None
+    recipe_id: int | None = None
 
 
 class PlanRequest(BaseModel):
     start: date | None = Field(
-        default=None, description="first day (the user's local date); defaults to today (UTC)"
+        default=None,
+        description="first day (the user's local date, from yesterday to a week ahead); "
+        "defaults to today (UTC)",
     )
 
 
@@ -245,6 +251,9 @@ class PlanOut(BaseModel):
     pantry_used_g: int
     waste_g: int = Field(description="pantry food that will expire unused within the plan")
     shopping_items: int
+    # The hard exclusions this plan was made under (shown prominently, PLAN §8).
+    excluded_allergens: list[Allergen]
+    diet: Diet | None
     violations: list[ViolationOut]
     notes: list[str]
 
@@ -254,16 +263,17 @@ class ShoppingItemOut(BaseModel):
     name: str
     category: str | None
     grams: int
-    cost_minor: int
+    cost_minor: int = Field(description="share of total_minor; lines sum exactly to the total")
     checked: bool
-    # A friendlier amount when the food has a natural unit, e.g. "2 medium" onions.
+    staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
+    # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
     approx_units: str | None = None
 
 
 class ShoppingListOut(BaseModel):
     plan_id: int
     currency: Currency
-    total_minor: int
+    total_minor: int = Field(description="estimated cost of every non-staple line (= plan cost)")
     budget_minor: int | None
     items: list[ShoppingItemOut]
 
