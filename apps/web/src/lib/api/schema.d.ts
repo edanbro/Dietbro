@@ -278,6 +278,111 @@ export interface paths {
         patch: operations["updatePantryItem"];
         trace?: never;
     };
+    "/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Plan */
+        post: operations["createPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current Plan
+         * @description The most recently created plan (404 if none).
+         */
+        get: operations["getCurrentPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Plan */
+        get: operations["getPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}/shopping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Shopping List */
+        get: operations["getShoppingList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}/shopping/{food_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Shopping Item */
+        patch: operations["patchShoppingItem"];
+        trace?: never;
+    };
+    "/recipes/{recipe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recipe */
+        get: operations["getRecipe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -314,6 +419,13 @@ export interface components {
             /** Avoid Foods */
             avoid_foods?: components["schemas"]["FoodSummary"][];
         };
+        /** BandOut */
+        BandOut: {
+            /** Min */
+            min?: number | null;
+            /** Max */
+            max?: number | null;
+        };
         /** BodyIn */
         BodyIn: {
             sex: components["schemas"]["Sex"];
@@ -341,6 +453,19 @@ export interface components {
             suggestions: {
                 [key: string]: components["schemas"]["SuggestedTargets"];
             };
+        };
+        /** DayOut */
+        DayOut: {
+            /** Day */
+            day: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Meals */
+            meals: components["schemas"]["MealOut"][];
+            totals: components["schemas"]["MacrosOut"];
         };
         /** FoodDetail */
         FoodDetail: {
@@ -476,6 +601,20 @@ export interface components {
              */
             status: "ok";
         };
+        /**
+         * MacrosOut
+         * @description Energy and macros as whole numbers (kcal, grams).
+         */
+        MacrosOut: {
+            /** Kcal */
+            kcal: number;
+            /** Protein G */
+            protein_g: number;
+            /** Fat G */
+            fat_g: number;
+            /** Carbs G */
+            carbs_g: number;
+        };
         /** Me */
         Me: {
             /** Id */
@@ -488,6 +627,37 @@ export interface components {
             profile: components["schemas"]["ProfileStatus"];
             /** Setup Complete */
             setup_complete: boolean;
+        };
+        /** MealOut */
+        MealOut: {
+            slot: components["schemas"]["Slot"];
+            recipe: components["schemas"]["RecipeCard"];
+            /**
+             * Portions
+             * @description half-servings: 2 = one serving
+             */
+            portions: number;
+            /** Servings */
+            servings: number;
+            nutrition: components["schemas"]["MacrosOut"];
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /**
+             * Status
+             * @default planned
+             * @enum {string}
+             */
+            status: "planned" | "eaten" | "skipped" | "off_plan";
+        };
+        /** NutrientBands */
+        NutrientBands: {
+            kcal?: components["schemas"]["BandOut"] | null;
+            protein_g?: components["schemas"]["BandOut"] | null;
+            fat_g?: components["schemas"]["BandOut"] | null;
+            carbs_g?: components["schemas"]["BandOut"] | null;
         };
         /** PantryItemIn */
         PantryItemIn: {
@@ -538,6 +708,66 @@ export interface components {
             approx?: boolean | null;
             /** Expires On */
             expires_on?: string | null;
+        };
+        /** PlanOut */
+        PlanOut: {
+            /** Id */
+            id: number;
+            /** Version */
+            version: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Days */
+            days: components["schemas"]["DayOut"][];
+            /** Planner */
+            planner: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Solve Ms */
+            solve_ms: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "GBP" | "EUR" | "USD";
+            targets: components["schemas"]["TargetsOut"];
+            week_totals: components["schemas"]["MacrosOut"];
+            /**
+             * Cost Minor
+             * @description estimated shopping cost
+             */
+            cost_minor: number;
+            /** Budget Minor */
+            budget_minor: number | null;
+            /** Pantry Used G */
+            pantry_used_g: number;
+            /**
+             * Waste G
+             * @description pantry food that will expire unused within the plan
+             */
+            waste_g: number;
+            /** Shopping Items */
+            shopping_items: number;
+            /** Violations */
+            violations: components["schemas"]["ViolationOut"][];
+            /** Notes */
+            notes: string[];
+        };
+        /** PlanRequest */
+        PlanRequest: {
+            /**
+             * Start
+             * @description first day (the user's local date); defaults to today (UTC)
+             */
+            start?: string | null;
         };
         /** PreferencesIn */
         PreferencesIn: {
@@ -598,11 +828,115 @@ export interface components {
                 [key: string]: "ok" | "error";
             };
         };
+        /** RecipeCard */
+        RecipeCard: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string | null;
+            /** Cuisine */
+            cuisine: string | null;
+            /** Image Url */
+            image_url: string | null;
+        };
+        /** RecipeDetail */
+        RecipeDetail: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string | null;
+            /** Cuisine */
+            cuisine: string | null;
+            /** Image Url */
+            image_url: string | null;
+            /** Instructions */
+            instructions: string;
+            /** Source */
+            source: string;
+            /** Source Url */
+            source_url: string | null;
+            /** Servings */
+            servings: number | null;
+            /** Servings Estimated */
+            servings_estimated: boolean;
+            per_serving: components["schemas"]["MacrosOut"] | null;
+            /** Meal Types */
+            meal_types: components["schemas"]["Slot"][];
+            /** Allergens */
+            allergens: components["schemas"]["Allergen"][];
+            /** Allergens Complete */
+            allergens_complete: boolean;
+            /** Suitable For */
+            suitable_for: ("vegetarian" | "vegan" | "pescatarian")[];
+            /** Ingredients */
+            ingredients: components["schemas"]["RecipeIngredientOut"][];
+        };
+        /** RecipeIngredientOut */
+        RecipeIngredientOut: {
+            /** Name */
+            name: string;
+            /** Measure */
+            measure: string;
+            /** Food Id */
+            food_id: number | null;
+            /** Food Name */
+            food_name: string | null;
+            /** Grams */
+            grams: number | null;
+        };
         /**
          * Sex
          * @enum {string}
          */
         Sex: "female" | "male";
+        /** ShoppingItemOut */
+        ShoppingItemOut: {
+            /** Food Id */
+            food_id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string | null;
+            /** Grams */
+            grams: number;
+            /** Cost Minor */
+            cost_minor: number;
+            /** Checked */
+            checked: boolean;
+            /** Approx Units */
+            approx_units?: string | null;
+        };
+        /** ShoppingItemPatch */
+        ShoppingItemPatch: {
+            /** Checked */
+            checked: boolean;
+        };
+        /** ShoppingListOut */
+        ShoppingListOut: {
+            /** Plan Id */
+            plan_id: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "GBP" | "EUR" | "USD";
+            /** Total Minor */
+            total_minor: number;
+            /** Budget Minor */
+            budget_minor: number | null;
+            /** Items */
+            items: components["schemas"]["ShoppingItemOut"][];
+        };
+        /**
+         * Slot
+         * @description A meal of the day, in eating order.
+         * @enum {string}
+         */
+        Slot: "breakfast" | "lunch" | "dinner" | "snack";
         /** SuggestedTargets */
         SuggestedTargets: {
             /** Kcal Min */
@@ -611,6 +945,16 @@ export interface components {
             kcal_max: number;
             /** Protein G Min */
             protein_g_min: number | null;
+        };
+        /**
+         * TargetsOut
+         * @description What the planner aimed for: per-day bands, whole-plan bands, and the calorie floor.
+         */
+        TargetsOut: {
+            daily: components["schemas"]["NutrientBands"];
+            weekly: components["schemas"]["NutrientBands"];
+            /** Calorie Floor */
+            calorie_floor: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -624,6 +968,19 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * ViolationOut
+         * @description A hard rule the plan breaks (only the baseline planner can produce these).
+         */
+        ViolationOut: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Day */
+            day?: number | null;
+            slot?: components["schemas"]["Slot"] | null;
         };
     };
     responses: never;
@@ -1216,6 +1573,215 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description no plan fits; reasons */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description profile incomplete (goals) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description the planner found no plan in time */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+        };
+    };
+    getCurrentPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+        };
+    };
+    getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getShoppingList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patchShoppingItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingItemPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRecipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeDetail"];
                 };
             };
             /** @description Validation Error */

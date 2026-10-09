@@ -836,6 +836,311 @@
           }
         }
       }
+    },
+    "/plans": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Create Plan",
+        "operationId": "createPlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "no plan fits; reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "profile incomplete (goals)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "the planner found no plan in time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/plans/current": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Current Plan",
+        "description": "The most recently created plan (404 if none).",
+        "operationId": "getCurrentPlan",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Plan",
+        "operationId": "getPlan",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/shopping": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Shopping List",
+        "operationId": "getShoppingList",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/shopping/{food_id}": {
+      "patch": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Patch Shopping Item",
+        "operationId": "patchShoppingItem",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "food_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Food Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingItemPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}": {
+      "get": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Get Recipe",
+        "operationId": "getRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -937,6 +1242,34 @@
         "type": "object",
         "title": "AllergiesOut"
       },
+      "BandOut": {
+        "properties": {
+          "min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "title": "BandOut"
+      },
       "BodyIn": {
         "properties": {
           "sex": {
@@ -1026,6 +1359,37 @@
           "suggestions"
         ],
         "title": "BodyOut"
+      },
+      "DayOut": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/MealOut"
+            },
+            "type": "array",
+            "title": "Meals"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/MacrosOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "date",
+          "meals",
+          "totals"
+        ],
+        "title": "DayOut"
       },
       "FoodDetail": {
         "properties": {
@@ -1478,6 +1842,35 @@
         "type": "object",
         "title": "Health"
       },
+      "MacrosOut": {
+        "properties": {
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein_g": {
+            "type": "integer",
+            "title": "Protein G"
+          },
+          "fat_g": {
+            "type": "integer",
+            "title": "Fat G"
+          },
+          "carbs_g": {
+            "type": "integer",
+            "title": "Carbs G"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kcal",
+          "protein_g",
+          "fat_g",
+          "carbs_g"
+        ],
+        "title": "MacrosOut",
+        "description": "Energy and macros as whole numbers (kcal, grams)."
+      },
       "Me": {
         "properties": {
           "id": {
@@ -1505,6 +1898,99 @@
           "setup_complete"
         ],
         "title": "Me"
+      },
+      "MealOut": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions",
+            "description": "half-servings: 2 = one serving"
+          },
+          "servings": {
+            "type": "number",
+            "title": "Servings"
+          },
+          "nutrition": {
+            "$ref": "#/components/schemas/MacrosOut"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "eaten",
+              "skipped",
+              "off_plan"
+            ],
+            "title": "Status",
+            "default": "planned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "recipe",
+          "portions",
+          "servings",
+          "nutrition"
+        ],
+        "title": "MealOut"
+      },
+      "NutrientBands": {
+        "properties": {
+          "kcal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BandOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protein_g": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BandOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fat_g": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BandOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "carbs_g": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BandOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "NutrientBands"
       },
       "PantryItemIn": {
         "properties": {
@@ -1665,6 +2151,146 @@
         },
         "type": "object",
         "title": "PantryItemPatch"
+      },
+      "PlanOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DayOut"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "planner": {
+            "type": "string",
+            "title": "Planner"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "solve_ms": {
+            "type": "integer",
+            "title": "Solve Ms"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "targets": {
+            "$ref": "#/components/schemas/TargetsOut"
+          },
+          "week_totals": {
+            "$ref": "#/components/schemas/MacrosOut"
+          },
+          "cost_minor": {
+            "type": "integer",
+            "title": "Cost Minor",
+            "description": "estimated shopping cost"
+          },
+          "budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Minor"
+          },
+          "pantry_used_g": {
+            "type": "integer",
+            "title": "Pantry Used G"
+          },
+          "waste_g": {
+            "type": "integer",
+            "title": "Waste G",
+            "description": "pantry food that will expire unused within the plan"
+          },
+          "shopping_items": {
+            "type": "integer",
+            "title": "Shopping Items"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/ViolationOut"
+            },
+            "type": "array",
+            "title": "Violations"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "start",
+          "days",
+          "planner",
+          "status",
+          "created_at",
+          "solve_ms",
+          "currency",
+          "targets",
+          "week_totals",
+          "cost_minor",
+          "budget_minor",
+          "pantry_used_g",
+          "waste_g",
+          "shopping_items",
+          "violations",
+          "notes"
+        ],
+        "title": "PlanOut"
+      },
+      "PlanRequest": {
+        "properties": {
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "first day (the user's local date); defaults to today (UTC)"
+          }
+        },
+        "type": "object",
+        "title": "PlanRequest"
       },
       "PreferencesIn": {
         "properties": {
@@ -1853,6 +2479,260 @@
         ],
         "title": "Readiness"
       },
+      "RecipeCard": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "cuisine",
+          "image_url"
+        ],
+        "title": "RecipeCard"
+      },
+      "RecipeDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          },
+          "servings_estimated": {
+            "type": "boolean",
+            "title": "Servings Estimated"
+          },
+          "per_serving": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MacrosOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meal_types": {
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            },
+            "type": "array",
+            "title": "Meal Types"
+          },
+          "allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Allergens"
+          },
+          "allergens_complete": {
+            "type": "boolean",
+            "title": "Allergens Complete"
+          },
+          "suitable_for": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "vegetarian",
+                "vegan",
+                "pescatarian"
+              ]
+            },
+            "type": "array",
+            "title": "Suitable For"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "cuisine",
+          "image_url",
+          "instructions",
+          "source",
+          "source_url",
+          "servings",
+          "servings_estimated",
+          "per_serving",
+          "meal_types",
+          "allergens",
+          "allergens_complete",
+          "suitable_for",
+          "ingredients"
+        ],
+        "title": "RecipeDetail"
+      },
+      "RecipeIngredientOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "measure": {
+            "type": "string",
+            "title": "Measure"
+          },
+          "food_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Id"
+          },
+          "food_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Name"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "measure",
+          "food_id",
+          "food_name",
+          "grams"
+        ],
+        "title": "RecipeIngredientOut"
+      },
       "Sex": {
         "type": "string",
         "enum": [
@@ -1860,6 +2740,134 @@
           "male"
         ],
         "title": "Sex"
+      },
+      "ShoppingItemOut": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "grams": {
+            "type": "integer",
+            "title": "Grams"
+          },
+          "cost_minor": {
+            "type": "integer",
+            "title": "Cost Minor"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          },
+          "approx_units": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approx Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "name",
+          "category",
+          "grams",
+          "cost_minor",
+          "checked"
+        ],
+        "title": "ShoppingItemOut"
+      },
+      "ShoppingItemPatch": {
+        "properties": {
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked"
+        ],
+        "title": "ShoppingItemPatch"
+      },
+      "ShoppingListOut": {
+        "properties": {
+          "plan_id": {
+            "type": "integer",
+            "title": "Plan Id"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "total_minor": {
+            "type": "integer",
+            "title": "Total Minor"
+          },
+          "budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Minor"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShoppingItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "currency",
+          "total_minor",
+          "budget_minor",
+          "items"
+        ],
+        "title": "ShoppingListOut"
+      },
+      "Slot": {
+        "type": "string",
+        "enum": [
+          "breakfast",
+          "lunch",
+          "dinner",
+          "snack"
+        ],
+        "title": "Slot",
+        "description": "A meal of the day, in eating order."
       },
       "SuggestedTargets": {
         "properties": {
@@ -1890,6 +2898,28 @@
           "protein_g_min"
         ],
         "title": "SuggestedTargets"
+      },
+      "TargetsOut": {
+        "properties": {
+          "daily": {
+            "$ref": "#/components/schemas/NutrientBands"
+          },
+          "weekly": {
+            "$ref": "#/components/schemas/NutrientBands"
+          },
+          "calorie_floor": {
+            "type": "integer",
+            "title": "Calorie Floor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily",
+          "weekly",
+          "calorie_floor"
+        ],
+        "title": "TargetsOut",
+        "description": "What the planner aimed for: per-day bands, whole-plan bands, and the calorie floor."
       },
       "ValidationError": {
         "properties": {
@@ -1930,6 +2960,46 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ViolationOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ViolationOut",
+        "description": "A hard rule the plan breaks (only the baseline planner can produce these)."
       }
     },
     "securitySchemes": {
