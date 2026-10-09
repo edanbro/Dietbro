@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import delete, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
@@ -43,6 +44,7 @@ from larder_db.models import (
     BodyProfile,
     Food,
     Goals,
+    MealPlan,
     PantryItem,
     Preferences,
     Recipe,
@@ -59,7 +61,7 @@ def _year() -> int:
     return datetime.now(UTC).year
 
 
-def _body(row: BodyProfile) -> Body:
+def body_from_row(row: BodyProfile) -> Body:
     return Body(
         sex=Sex(row.sex),
         age=_year() - row.birth_year,
@@ -70,7 +72,7 @@ def _body(row: BodyProfile) -> Body:
 
 
 def _body_out(row: BodyProfile) -> BodyOut:
-    body = _body(row)
+    body = body_from_row(row)
     suggestions = {
         goal: SuggestedTargets(
             kcal_min=t.kcal_min, kcal_max=t.kcal_max, protein_g_min=t.protein_g_min
@@ -136,6 +138,12 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         return {a.key: getattr(obj, a.key) for a in attrs if a.key not in exclude}
 
     pantry = await session.scalars(select(PantryItem).where(PantryItem.user_id == user.id))
+    plans = await session.scalars(
+        select(MealPlan)
+        .where(MealPlan.user_id == user.id)
+        .order_by(MealPlan.created_at)
+        .options(selectinload(MealPlan.meals), selectinload(MealPlan.shopping))
+    )
     response.headers["Content-Disposition"] = 'attachment; filename="larder-export.json"'
     return {
         "exported_at": datetime.now(UTC),
@@ -145,6 +153,14 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "preferences": row(await session.get(Preferences, user.id), "user_id"),
         "allergies": row(await session.get(Allergies, user.id), "user_id"),
         "pantry": [row(p, "user_id") for p in pantry],
+        "plans": [
+            (row(p, "user_id") or {})
+            | {
+                "meals": [row(m, "plan_id") for m in p.meals],
+                "shopping": [row(s, "plan_id") for s in p.shopping],
+            }
+            for p in plans
+        ],
     }
 
 
@@ -161,7 +177,7 @@ async def put_goals(body: GoalsIn, user: CurrentUser, session: Session) -> Goals
     targets = Targets(
         **body.model_dump(exclude={"goal", "weekly_budget_minor", "currency"}),
     )
-    problems = validate_targets(targets, tdee(_body(stats)) if stats else None)
+    problems = validate_targets(targets, tdee(body_from_row(stats)) if stats else None)
     if problems:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, problems)
     goals = await session.get(Goals, user.id) or Goals(user_id=user.id)

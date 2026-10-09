@@ -17,6 +17,9 @@ dependencies = [
     "uvicorn[standard]>=0.54",
 ]
 
+[project.scripts]
+larder-bench = "larder_api.bench:main"
+
 [tool.uv.sources]
 larder-core = { workspace = true }
 larder-db = { workspace = true }

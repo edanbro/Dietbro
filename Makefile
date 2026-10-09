@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed data up down
+.PHONY: install check check-py check-web gen-api migrate seed data bench up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -33,6 +33,10 @@ seed: migrate ## Load foods + recipes and resolve via curated aliases (no embedd
 
 data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report (~5 min)
 	uv run larder-data pipeline --evaluate --min-coverage 0.95 --out data/reports/resolution.md
+
+PLANNER ?= auto
+bench: ## Planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
+	uv run larder-bench --planner $(PLANNER) --n 20 --out docs/solver-bench-$(PLANNER).md
 
 up: ## Build and start the full stack (web :3000, api :8000)
 	docker compose up --build
