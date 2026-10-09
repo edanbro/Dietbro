@@ -36,7 +36,8 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     await page.getByLabel("Min kcal / day").fill("900");
     await page.getByLabel("Max kcal / day").fill("1100");
     await page.getByRole("button", { name: "Save goals" }).click();
-    await expect(page.getByRole("alert")).toContainText("calorie floor");
+    // Next.js also renders a route announcer with role="alert"; match ours by its text.
+    await expect(page.getByRole("alert").filter({ hasText: "calorie floor" })).toBeVisible();
     await page.getByLabel("Min kcal / day").fill("1800");
     await page.getByLabel("Max kcal / day").fill("2200");
     await page.getByRole("button", { name: "Save goals" }).click();
