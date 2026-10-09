@@ -33,21 +33,24 @@ class ResolveStats:
 async def match_names(
     session: AsyncSession,
     names: set[str],
-    embedder: Embedder,
+    embedder: Embedder | None,
     threshold: float = matching.ACCEPT_THRESHOLD,
     *,
     use_cache: bool = True,
 ) -> dict[str, Match]:
-    """Alias table first, then cached results, then retrieval + rerank for the rest."""
+    """Alias table first, then cached results, then retrieval + rerank for the rest.
+
+    Without an embedder (`resolve --aliases-only`, e.g. a quick seed), names that are neither
+    aliases nor cached stay unmatched and nothing new is written to the cache.
+    """
     aliases = load_aliases()
+    query = select(IngredientMatch).where(IngredientMatch.name.in_(names))
+    if embedder is not None:
+        query = query.where(IngredientMatch.model == embedder.model)
     cached = (
         {
             m.name: Match(m.food_id, cast(Method, m.method), m.score)
-            for m in await session.scalars(
-                select(IngredientMatch).where(
-                    IngredientMatch.name.in_(names), IngredientMatch.model == embedder.model
-                )
-            )
+            for m in await session.scalars(query)
         }
         if use_cache
         else {}
@@ -62,6 +65,9 @@ async def match_names(
         elif name:
             todo.append(name)
 
+    if embedder is None:
+        logger.info("matched %d names; %d left unmatched (no embedder)", len(out), len(todo))
+        return out | {name: Match(None, "unmatched") for name in todo}
     vectors = embedder.embed([matching.rewrite(n) for n in todo]) if todo else []
     for name, vector in zip(todo, vectors, strict=True):
         found = await matching.rank(session, name, vector)
@@ -96,7 +102,7 @@ async def match_names(
 
 
 async def resolve_all(
-    session: AsyncSession, embedder: Embedder, *, use_cache: bool = True
+    session: AsyncSession, embedder: Embedder | None, *, use_cache: bool = True
 ) -> ResolveStats:
     lines = (
         await session.execute(
@@ -143,14 +149,20 @@ async def resolve_all(
     if updates:
         await session.execute(update(RecipeIngredient), updates)
 
-    categories = {
-        rid: cat for rid, cat in (await session.execute(select(Recipe.id, Recipe.category))).all()
-    }
+    rows = (
+        await session.execute(
+            select(Recipe.id, Recipe.category, Recipe.servings, Recipe.servings_estimated)
+        )
+    ).all()
+    categories = {rid: cat for rid, cat, _, _ in rows}
+    # Explicit serving counts (curated recipes) are kept; others are estimated from energy.
+    explicit = {rid: n for rid, _, n, estimated in rows if n is not None and not estimated}
     recipe_updates: list[dict[str, object]] = []
     for recipe_id, items in by_recipe.items():
-        recipe_updates.append(
-            {"id": recipe_id, **recipe_nutrition(items, foods, categories.get(recipe_id))}
+        nutrition = recipe_nutrition(
+            items, foods, categories.get(recipe_id), servings=explicit.get(recipe_id)
         )
+        recipe_updates.append({"id": recipe_id, **nutrition})
     if recipe_updates:
         await session.execute(update(Recipe), recipe_updates)
     await session.commit()
@@ -171,25 +183,35 @@ def food_nutrients(food: Food) -> Nutrients | None:
 
 
 # Typical energy of one portion by recipe category, for sources without serving counts.
-KCAL_PER_SERVING = {"Dessert": 350.0, "Side": 250.0, "Starter": 300.0, "Breakfast": 450.0}
+KCAL_PER_SERVING = {
+    "Dessert": 350.0,
+    "Side": 250.0,
+    "Starter": 300.0,
+    "Breakfast": 450.0,
+    "Snack": 200.0,
+}
 
 
 def recipe_nutrition(
     items: list[tuple[int | None, float | None]],
     foods: dict[int, Food],
     category: str | None = None,
+    servings: int | None = None,
 ) -> dict[str, object]:
-    """Per-serving nutrition, or nulls when any line lacks a food, grams or energy data."""
+    """Per-serving nutrition, or nulls when any line lacks a food, grams or energy data.
+    `servings` is an explicit count; without one it is estimated from the recipe's energy."""
     resolved: list[tuple[Nutrients, float]] = []
     out: dict[str, object] = {"servings_estimated": False, "nutrition_complete": False}
     for food_id, grams in items:
         n = food_nutrients(foods[food_id]) if food_id is not None else None
         if n is None or grams is None:
-            return out | dict.fromkeys(Nutrients.FIELDS) | {"servings": None}
+            return out | dict.fromkeys(Nutrients.FIELDS) | {"servings": servings}
         resolved.append((n, grams))
     totals = total(resolved)
-    servings = estimate_servings(totals.kcal, KCAL_PER_SERVING.get(category or "", 650.0))
+    estimated = servings is None
+    if servings is None:
+        servings = estimate_servings(totals.kcal, KCAL_PER_SERVING.get(category or "", 650.0))
     per = totals.per_serving(servings)
     out |= {f: getattr(per, f) for f in Nutrients.FIELDS}
-    out |= {"servings": servings, "servings_estimated": True, "nutrition_complete": True}
+    out |= {"servings": servings, "servings_estimated": estimated, "nutrition_complete": True}
     return out

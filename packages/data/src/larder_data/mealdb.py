@@ -48,6 +48,7 @@ class RecipeDraft:
     source_url: str | None
     tags: tuple[str, ...]
     ingredients: tuple[IngredientLine, ...]
+    servings: int | None = None  # explicit count (curated); None = estimate from energy
 
 
 async def fetch_meals(
@@ -98,7 +99,9 @@ def parse_meal(meal: dict[str, Any]) -> RecipeDraft:
     )
 
 
-async def load_recipes(session: AsyncSession, drafts: Iterable[RecipeDraft]) -> int:
+async def load_recipes(
+    session: AsyncSession, drafts: Iterable[RecipeDraft], source: str = SOURCE
+) -> int:
     """Insert or update recipes by (source, source_id). Ingredient lines are replaced, so
     their resolution must be recomputed afterwards."""
     drafts = list(drafts)
@@ -106,14 +109,14 @@ async def load_recipes(session: AsyncSession, drafts: Iterable[RecipeDraft]) -> 
         r.source_id: r
         for r in await session.scalars(
             select(Recipe)
-            .where(Recipe.source == SOURCE)
+            .where(Recipe.source == source)
             .options(selectinload(Recipe.ingredients), selectinload(Recipe.tags))
         )
     }
     for d in drafts:
         recipe = existing.get(d.source_id)
         if recipe is None:
-            recipe = Recipe(source=SOURCE, source_id=d.source_id)
+            recipe = Recipe(source=source, source_id=d.source_id)
         else:
             # Delete old lines first: (recipe_id, position) and (recipe_id, tag) are unique.
             recipe.ingredients.clear()
@@ -126,6 +129,9 @@ async def load_recipes(session: AsyncSession, drafts: Iterable[RecipeDraft]) -> 
         recipe.image_url = d.image_url
         recipe.source_url = d.source_url
         recipe.nutrition_complete = False
+        if d.servings is not None:
+            recipe.servings = d.servings
+            recipe.servings_estimated = False
         recipe.ingredients = [
             RecipeIngredient(position=line.position, raw_name=line.name, raw_measure=line.measure)
             for line in d.ingredients

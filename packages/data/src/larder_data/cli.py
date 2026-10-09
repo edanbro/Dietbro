@@ -1,7 +1,8 @@
 """Data pipeline CLI: `uv run larder-data --help`.
 
-`pipeline` runs every step in order: import-usda -> embed-foods -> import-mealdb -> resolve
--> embed-recipes -> report. `evaluate` scores the automatic matcher against the curated aliases.
+`pipeline` runs every step in order: import-usda -> embed-foods -> import-mealdb ->
+import-curated -> resolve -> embed-recipes -> report. `evaluate` scores the automatic matcher
+against the curated aliases.
 """
 
 import argparse
@@ -14,7 +15,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_data import embeddings, evaluate, mealdb, report, resolve, usda
+from larder_data import curated, embeddings, evaluate, mealdb, report, resolve, usda
 from larder_db.engine import make_engine, make_sessionmaker
 
 DEFAULT_CACHE = Path("data/cache")
@@ -40,6 +41,11 @@ async def import_mealdb(session: AsyncSession, args: argparse.Namespace) -> None
     logger.info("mealdb: %d recipes", count)
 
 
+async def import_curated(session: AsyncSession, args: argparse.Namespace) -> None:
+    count = await mealdb.load_recipes(session, curated.load(), source=curated.SOURCE)
+    logger.info("curated: %d recipes", count)
+
+
 def embedder(args: argparse.Namespace) -> embeddings.FastEmbedder:
     return embeddings.FastEmbedder(args.cache / "models")
 
@@ -49,7 +55,8 @@ async def embed_foods(session: AsyncSession, args: argparse.Namespace) -> None:
 
 
 async def resolve_lines(session: AsyncSession, args: argparse.Namespace) -> None:
-    stats = await resolve.resolve_all(session, embedder(args), use_cache=not args.rematch)
+    model = None if args.aliases_only else embedder(args)
+    stats = await resolve.resolve_all(session, model, use_cache=not args.rematch)
     logger.info("%s", stats)
 
 
@@ -76,6 +83,7 @@ STEPS: dict[str, Step] = {
     "import-usda": import_usda,
     "embed-foods": embed_foods,
     "import-mealdb": import_mealdb,
+    "import-curated": import_curated,
     "resolve": resolve_lines,
     "embed-recipes": embed_recipes,
     "report": write_report,
@@ -88,6 +96,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE, help="download cache dir")
     parser.add_argument("--refresh", action="store_true", help="re-fetch TheMealDB responses")
     parser.add_argument("--rematch", action="store_true", help="ignore cached name matches")
+    parser.add_argument(
+        "--aliases-only",
+        action="store_true",
+        help="resolve: curated aliases and cached matches only (no embedding model; fast seed)",
+    )
     parser.add_argument("--out", type=Path, help="report: also write Markdown here")
     parser.add_argument(
         "--evaluate", action="store_true", help="report: add matcher accuracy vs curated aliases"
