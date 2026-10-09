@@ -3,7 +3,7 @@
 Living design doc. Update it in the same PR as the change it describes. Decisions between real
 alternatives get an ADR in [`adr/`](adr/); this doc links to them rather than repeating them.
 
-Status: **M2 (accounts, profile, pantry)**. Sections marked _TBD (Mn)_ are filled in at that milestone.
+Status: **M3 (planning, validator, shopping list, plan view)**. Sections marked _TBD (Mn)_ are filled in at that milestone.
 
 ## 1. Problem
 
@@ -36,7 +36,7 @@ See [ADR-0002](adr/0002-hybrid-llm-constraint-solver.md).
   packages/core    units, measures, names, grams, nutrition, energy/safety (pure)
   packages/db      SQLAlchemy models + Alembic migrations
   packages/data    USDA + recipe importers, normaliser, embeddings (CLI: larder-data)
-  packages/solver  CP-SAT model + validator (pure)          — M3
+  packages/solver  problem contract, CP-SAT model, validator, prefilter, baseline (pure)
   packages/llm     Claude client, tools, schemas            — M4
   apps/worker      arq jobs (receipts, plan gen, embeddings) — when first needed
 ```
@@ -66,7 +66,7 @@ Rules:
 
 ## 5. Data model
 
-Tables exist for what each milestone uses; plans (M3) and LLM calls (M4) come later.
+Tables exist for what each milestone uses; LLM calls (M4) come later.
 
 | Table | Holds |
 |---|---|
@@ -83,12 +83,21 @@ Tables exist for what each milestone uses; plans (M3) and LLM calls (M4) come la
 | `preferences` | Soft: diet, liked/disliked cuisines and foods |
 | `allergies` | Hard: EU/UK 14 allergen codes + specific foods to avoid |
 | `pantry_items` | Food, grams (canonical) + quantity/unit as typed, approx flag, use-by date, source |
+| `meal_plans` | One version of a plan: user, start date, days, version, parent, planner, status, objective, solve time, currency, stats snapshot (targets, cost, waste, score terms, violations, exclusions) |
+| `plan_meals` | Day, slot, recipe, portions (half-servings) + macro snapshot |
+| `shopping_items` | Food, grams to buy, estimated cost, staple flag, ticked |
 
 All user tables cascade on account deletion and are only read with `user_id = current user`.
 
 Conventions: quantities are grams (liquids too: ml × density); food nutrients per 100 g, recipe
 nutrients per serving. Only recipes with `nutrition_complete` (every line has a food and grams)
-are plannable. Plans will be versioned: every replan writes a new version.
+are plannable. Plans are versioned: every (re)plan writes a new version and never edits an old
+one (except shopping ticks).
+
+**Derived at runtime, not stored**: allergen/animal tags (`larder_core.tagging` + reviewed CSVs),
+prices (`larder_core.prices`), which slots a recipe can fill and data-quality exclusions
+(`larder_core.meals` + `recipe_overrides.csv`). Curated breakfasts and snacks
+(`larder_data/curated.toml`) are imported like TheMealDB recipes, with explicit servings.
 
 ## 6. Units and ingredient normalisation
 
@@ -166,6 +175,9 @@ user, so other users' records are indistinguishable from missing ones (404).
 | `GET/POST /pantry`, `PATCH/DELETE /pantry/{id}` | Pantry; quantity + unit → grams via USDA portions |
 | `GET /foods/search?q=`, `GET /foods/{id}` | Type-ahead (curated names first, then pg_trgm); units a food can be entered in |
 | `GET /allergens`, `GET /cuisines` | Vocabularies (public) |
+| `POST /plans`, `GET /plans/current`, `GET /plans/{id}` | Make a plan (409 until setup is complete; 400 with reasons when no plan fits); the latest plan (or null) |
+| `GET /plans/{id}/shopping`, `PATCH /plans/{id}/shopping/{food_id}` | Shopping list (to buy + "check you have"), tick items |
+| `GET /recipes/{id}` | Recipe with derived allergens and suitable diets (public) |
 
 **Targets** ([ADR-0008](adr/0008-calorie-target-safety.md)): `larder_core.energy` refuses
 minimums under the user's floor (never under 1000 kcal), more than the max deficit below
@@ -174,8 +186,10 @@ estimated TDEE when body stats exist, maxima over 6000 kcal and impossible macro
 **UI**: mobile-first Next.js PWA (installable manifest), shadcn/ui on Base UI, native selects for
 phone pickers, TanStack Query over a typed openapi-fetch client that attaches the session token.
 Screens: landing → Clerk sign-up → 5-step setup (body stats optional, goals, allergies,
-preferences, first pantry items) → pantry (search, per-food units like "large" or "clove", use-by
-badges) and profile (edit everything, download data, delete account). App routes are guarded by
+preferences, first pantry items) → plan (day strip and week grid, meal cards, macro bars against
+the targets, cost against budget, "planned without" exclusions) → shopping list (by aisle, tick
+as you shop, staples to check) → recipe pages; plus pantry (search, per-food units like "large"
+or "clove", use-by badges) and profile (edit everything, download data, delete account). App routes are guarded by
 Clerk's middleware for UX; the API is the security boundary.
 
 **Tests**: API tests mint JWTs with a local RSA key (bad signature, wrong issuer/origin, expired,
@@ -183,10 +197,57 @@ unknown key, cross-user access); component tests run forms against a stubbed fet
 drives the whole onboarding on a Pixel 7 profile against a Clerk dev instance (CI job runs when
 the Clerk secrets are configured).
 
-## 8. Solver
+## 8. Planning
 
-_TBD (M3)._ Pure `solve(problem, previous, time_limit_ms) -> PlanResult`. Variables, hard
-constraints, weighted objective, replan via churn penalty + hints: PLAN.md §6.
+Contract and rationale: [ADR-0009](adr/0009-planning-contract.md). Slots and curated recipes:
+[ADR-0010](adr/0010-meal-slots-and-curated-recipes.md). Tags: [ADR-0011](adr/0011-allergen-diet-tagging.md).
+Prices: [ADR-0012](adr/0012-price-estimates.md).
+
+```
+goals, allergies, prefs, pantry ─┐
+recipe catalog (tags, prices) ───┼─► make_problem ─► Problem ─► planner ─► Plan ─► validate ─┬─► save
+                                 │   (prefilter:                (solve: CP-SAT;              │   (meals +
+                                 │    top-k per slot)            greedy: baseline)           │    shopping +
+                                 │                                                           │    snapshot)
+                                 └───────────────────── diagnose (why no plan) ◄─────────────┘ refuse
+```
+
+**Problem** (`larder_solver.problem`, pure, all integers): days from a start date; slots
+(breakfast, lunch, dinner required; snack optional), each with candidate recipes, a portion range
+in half-servings and a repeat cap; recipes with per-portion macros and per-portion ingredient
+grams (staples 0 g); foods with allergen/animal tags and a price per kg; pantry lots with expiry
+day indices; targets (daily and weekly bands, calorie floor); budget; locks; off-plan intake;
+objective weights in millipence.
+
+**Hard vs soft.** Hard: one meal per required slot, eligibility, portion ranges, allergens, diet,
+avoided foods, locks, repeat caps, daily kcal band, calorie floor, budget. Soft (priced in the
+objective): protein, fat and carbs bands. The objective (`Weights`) maximises preference and
+pantry use and minimises cost, waste of expiring pantry food, repeats, snacks, macro misses and
+churn, all priced in millipence.
+
+**Prefilter** (`candidates.select`): per slot, the allowed eligible recipes. It reserves the most
+protein-dense ones (when there is a protein target) and the cheapest per kcal (when there is a
+budget), then ranks the rest by preference + pantry overlap with a seeded tiebreak and a cuisine
+cap: top 40.
+
+**Planners.** `solve()` is the CP-SAT model (Eduard's; modelling guide in
+[`packages/solver/README.md`](../packages/solver/README.md), spec in
+`packages/solver/tests/test_solve.py`). `baseline.greedy` enumerates each day's meal
+combinations; it stands in until `solve()` exists and is an eval baseline. `PLANNER=auto` uses
+CP-SAT and falls back to greedy if it isn't implemented or finds nothing within 3.5 s.
+
+**Validator** (`larder_solver.validate`): written independently of the prefilter and the
+planners, with one code per rule and a hard/soft flag. Metrics (`larder_solver.metrics`) give day
+and week totals, an earliest-deadline-first pantry allocation (optimal for a fixed plan), the
+shopping list, cost, waste and the score. The API never saves a plan with a safety or structural
+violation. A CP-SAT plan with any hard violation is a bug (500). The baseline's kcal, budget or
+repeat misses are saved and shown as warnings.
+
+**Scenarios** (`larder_solver.scenarios`): seeded generators. A *planted* problem has a known
+valid plan, so a correct solver must find one; it includes decoy recipes that break each hard
+filter. *Infeasible* problems have a reachable-kcal ceiling below the band. *Realistic* problems
+are user-like profiles over the real catalog. They feed the tests, `make bench` (p50/p95 end to
+end, hard-validity %) and the M7 evals.
 
 ## 9. LLM layer
 
