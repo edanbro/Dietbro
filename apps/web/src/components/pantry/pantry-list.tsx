@@ -6,15 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type PantryItem, useDeletePantryItem, usePantry } from "@/lib/api/hooks";
-
-const DAY_MS = 86_400_000;
+import { daysBetween, localISODate } from "@/lib/dates";
 
 /** Days until `isoDate` (local midnight to local midnight); negative when past. */
 export function daysUntil(isoDate: string, today: Date = new Date()): number {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const target = Date.UTC(y, m - 1, d);
-  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((target - now) / DAY_MS);
+  return daysBetween(localISODate(today), isoDate);
 }
 
 export function ExpiryBadge({ date, today }: { date: string | null; today?: Date }) {

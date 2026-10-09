@@ -9,7 +9,7 @@ export function HomeActions() {
   const { isLoaded, isSignedIn } = useAuth();
   if (isLoaded && isSignedIn) {
     return (
-      <Link href="/pantry" className={buttonVariants({ size: "lg" })}>
+      <Link href="/plan" className={buttonVariants({ size: "lg" })}>
         Open Larder
       </Link>
     );

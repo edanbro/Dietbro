@@ -61,8 +61,11 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("Onions, raw");
     await page.getByRole("button", { name: "Done" }).click();
 
-    await expect(page).toHaveURL(/\/pantry$/);
+    // Setup done: the app opens on the (empty) plan.
+    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page.getByRole("button", { name: "Plan my week" })).toBeVisible();
     await expect(page.getByText("Finish setting up")).toHaveCount(0);
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Pantry" }).click();
     await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("2 large");
 
     // GDPR: delete the account from the profile page.

@@ -24,7 +24,7 @@ export function SetupWizard() {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const step = STEPS[index];
-  const next = () => (index + 1 < STEPS.length ? setIndex(index + 1) : router.push("/pantry"));
+  const next = () => (index + 1 < STEPS.length ? setIndex(index + 1) : router.push("/plan"));
 
   return (
     <div className="flex flex-col gap-5">
