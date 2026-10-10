@@ -227,7 +227,7 @@ class _Greedy:
                 self.notes.append(f"{self.day_name(day)} {slot}: the fixed meal isn't allowed")
                 return None
         if self.hall(-1, Counter()) is not None:
-            self.notes.append("not enough recipes within the repeat limits")
+            self.notes.append("too few allowed recipes to fill every slot within the repeat limits")
             return None
         for day in range(self.p.days):
             chosen = self.plan_day(day)

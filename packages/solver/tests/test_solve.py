@@ -388,14 +388,14 @@ def test_returns_within_the_time_limit(seed: int) -> None:
 @pytest.mark.perf
 def test_realistic_size_p95() -> None:
     """13. Realistic size (synthetic catalogue, k=40, 4 slots, 7 days, pantry), 20 seeds at
-    the production limit of 3.5 s: each call <= 4 s wall, nearest-rank p95 < 4 s. Run with
-    `uv run pytest -m perf packages/solver`."""
+    the production limit of 3.5 s and 4 workers: each call <= 4 s wall, nearest-rank p95 <
+    4 s. Run with `uv run pytest -m perf packages/solver`."""
     catalog = synthetic_catalog(0)
     walls: list[float] = []
     for seed in range(20):
         p = realistic(seed, catalog).problem
         started = perf_counter()
-        run(p, time_limit_ms=3_500, workers=8)
+        run(p, time_limit_ms=3_500)  # the API's plan_workers is 4 too
         walls.append((perf_counter() - started) * 1000)
         assert walls[-1] <= 4_000, (seed, walls[-1])
     walls.sort()
