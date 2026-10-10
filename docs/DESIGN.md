@@ -254,7 +254,93 @@ end, hard-validity %) and the M7 evals.
 
 ## 9. LLM layer
 
-_TBD (M4)._ Agent loop with tools, Pydantic-validated outputs, deterministic fallback, cost logging.
+The chat is where the user tells Larder what changed: a craving, food eaten off-plan, a skipped
+meal, a swap, or a question about the plan. The model understands and explains; it never writes
+a plan ([ADR-0013](adr/0013-llm-layer.md)).
+
+### 9.1 One turn
+
+```
+POST /chat/messages {text, today}            (SSE: thread, status*, text*, plan*, recipe*, done|error)
+  gate: daily message limit (429), one turn per user (Redis lock, 409), thread is yours (404)
+  online?  key set, llm_mode=auto, under the monthly cost cap
+    yes: agent loop  (Claude Sonnet 5.5, effort low, strict typed tools, <= 6 responses)
+         history = this thread's earlier turns, replayed append-only
+         user turn = <context> block (today, plan, targets, allergies, expiring food) + words
+    no / agent failed before replying: offline path
+         rule parser -> typed changes -> same executor -> templated reply
+  persist: chat_messages (display text + exact API transcript), cravings, meal_logs,
+           llm_calls (tokens, cost, latency), new plan version
+```
+
+`larder_llm` is pure (no database): typed changes and tool inputs (`schemas`), tool definitions
+(`tools`), the agent loop (`agent`), model clients behind two protocols (`client`), prices
+(`pricing`), the rule parser (`rules`), prompts and templated replies. `larder_api.chat` binds
+tool handlers to the signed-in user and the database.
+
+### 9.2 Tools
+
+| Tool | Does | Writes |
+|---|---|---|
+| `get_plan`, `get_pantry` | Current plan (ids, meals, kcal per day vs targets); pantry with expiry | - |
+| `search_recipes(query, slot?)` | Recipes that pass the planner's hard filters for this user and match the words (name, cuisine, tags, ingredients, a small synonym table) | - |
+| `explain_meal(when)` | Why a meal is there: pantry food used, cost, kcal/protein, liked cuisine | - |
+| `request_replan(changes[])` | Typed changes -> executor -> new plan version + diff | plan, logs |
+| `create_recipe(draft)` | Names + quantities -> USDA match, our nutrition and tags, safety check -> private recipe | recipe |
+| `explain_plan_diff(plan_id?)` | Meal-by-meal diff vs the parent version, with reasons | - |
+
+No tool takes a user id. Inputs are strict JSON schemas generated from Pydantic models and
+re-validated server-side; an invalid input gets one corrective retry, a second sends the turn to
+the offline path (PLAN §7).
+
+### 9.3 Changes and the executor
+
+A change is `{intent, when: {date, slot?}, ...}` with intent `craving` (dish, tags, recipe_id,
+strength hard|soft), `ate_off_plan` (description, items), `skip` (eating_elsewhere) or `swap`
+(dish, tags, recipe_id). The executor (`larder_api.chat.replan`) turns all changes of a message
+into one replan of the current plan:
+
+- Past days stay as they are (locked); on today, slots before the earliest one being changed are
+  locked too. The previous version is passed as `previous`, so the churn weight keeps unrelated
+  meals.
+- Craving / swap: lock the slot to a safe matching recipe (given id, else the best of the top 5
+  search hits that yields a valid plan). Hard cravings that fit nowhere fail with the reason;
+  soft ones leave the plan as it is.
+- Off-plan: nutrition estimated from USDA foods (alias -> trigram -> fast-model choice among our
+  candidates; grams from USDA portions), logged, added to that day's intake (`extra`); the slot,
+  if given, is locked empty.
+- Skip: the slot is locked empty; eating elsewhere counts the planned meal's macros as eaten so
+  the rest of the day doesn't change.
+- Then the planner runs once, the validator applies the usual outcome rules (safety or
+  structural violations are never saved), and the plan is saved as version + 1 with `parent_id`.
+
+M5 replaces "simple replan" with the latency target, warm starts, a craving bonus in the
+objective and the diff view; the change types stay.
+
+### 9.4 Generated recipes
+
+`create_recipe` saves `source="generated"` recipes with `owner_user_id` set: only their owner can
+see, search or be planned them. Only names and quantities come from the model; every ingredient
+must match a USDA food, nutrition and allergen/diet tags are computed by us, and a recipe that
+conflicts with the user's allergens or diet is rejected with the reason.
+
+### 9.5 Models, cost and limits
+
+- Chat: `claude-sonnet-5-5`, adaptive thinking at effort `low`, server-side refusal fallback,
+  automatic prompt caching (tools + system prompt are byte-stable; volatile context is in the
+  user turn), `block_binding: drop_block` so prompt changes between deploys don't break replayed
+  threads. Fast choices: `claude-haiku-5-5` structured outputs. Both configurable.
+- Every request is logged to `llm_calls` with tokens, cost (micro-dollars, list prices) and
+  latency. Per user: 60 messages a day (429 beyond), $1 a month (offline beyond).
+- Without `ANTHROPIC_API_KEY` the whole chat runs offline: CI and the e2e test use this path.
+
+### 9.6 Testing
+
+Scripted fake models (`larder_llm.fake`) drive the agent loop and the API in tests; adversarial
+scripts try to lock or create unsafe recipes, reach another user's recipe, or inject
+instructions through recipe text, and the tests assert no saved plan or recipe breaks the
+user's allergies or diet. `make llm-smoke` runs a few real conversations against Claude locally
+(needs a key; costs cents).
 
 ## 10. Safety and privacy
 
