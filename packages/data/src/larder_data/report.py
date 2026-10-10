@@ -102,9 +102,8 @@ async def planning_eligibility(
         slots = recipe_slots(r.source, r.source_id, r.category, r.kcal, share)
         per_slot.update(s.value for s in slots)
         if (o := overrides.get((r.source, r.source_id))) is not None:
-            excluded.append(
-                (r.name, f"override ({', '.join(sorted(o.slots)) or 'none'}): {o.note}")
-            )
+            where = ", ".join(sorted(o.slots)) + " only" if o.slots else "not planned"
+            excluded.append((r.name, f"{where} (reviewed: {o.note.split(': ', 1)[-1]})"))
         elif not slots and (r.kcal or 0) > MAX_KCAL_PER_SERVING:
             excluded.append((r.name, f"{r.kcal:,.0f} kcal per serving"))
         elif not slots and share > MAX_OIL_SHARE:
