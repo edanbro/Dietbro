@@ -234,14 +234,17 @@ cap: top 40.
 [`packages/solver/README.md`](../packages/solver/README.md), spec in
 `packages/solver/tests/test_solve.py`). `baseline.greedy` enumerates each day's meal
 combinations; it stands in until `solve()` exists and is an eval baseline. `PLANNER=auto` uses
-CP-SAT and falls back to greedy if it isn't implemented or finds nothing within 3.5 s.
+CP-SAT and falls back to greedy if it isn't implemented or finds nothing within 3.5 s. On the
+real catalog the baseline plans in ~25 ms (p95 ~40 ms) and meets every hard rule on planted and
+realistic scenarios; it misses only tight budgets (`make bench PLANNER=greedy`).
 
 **Validator** (`larder_solver.validate`): written independently of the prefilter and the
 planners, with one code per rule and a hard/soft flag. Metrics (`larder_solver.metrics`) give day
 and week totals, an earliest-deadline-first pantry allocation (optimal for a fixed plan), the
 shopping list, cost, waste and the score. The API never saves a plan with a safety or structural
-violation. A CP-SAT plan with any hard violation is a bug (500). The baseline's kcal, budget or
-repeat misses are saved and shown as warnings.
+violation. A CP-SAT plan with any hard violation is a bug (500). The baseline never breaks a
+safety, structural or repeat rule by construction; its kcal-band or budget misses are saved and
+shown as warnings.
 
 **Scenarios** (`larder_solver.scenarios`): seeded generators. A *planted* problem has a known
 valid plan, so a correct solver must find one; it includes decoy recipes that break each hard

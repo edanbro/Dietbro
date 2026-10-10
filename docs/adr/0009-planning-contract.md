@@ -45,8 +45,8 @@ For macros: hard bands, or soft bands with a penalty.
   than sharing the prefilter's code (a test checks they agree). It is used by tests, evals and
   the API as a runtime assertion. Plans with a safety violation (allergen, diet, avoided food,
   unverifiable ingredients, calorie floor) or a structural one are never saved, whatever the
-  planner. A CP-SAT plan with any hard violation is a bug (500). The baseline's misses on kcal
-  band, budget or repeats are saved and shown.
+  planner. A CP-SAT plan with any hard violation is a bug (500). The baseline's misses on the
+  kcal band or budget are saved and shown.
 - **Planner selection**: `PLANNER=auto` uses `solve()` and falls back to the greedy baseline when
   it isn't implemented yet or finds no plan in time (UNKNOWN). The baseline enumerates each day's
   meal combinations, treats the floor as hard and is never trusted: the same validator gates it.

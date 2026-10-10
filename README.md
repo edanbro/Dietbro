@@ -3,7 +3,8 @@
 AI meal planner: plans your week around what's already in your kitchen, then re-plans in real time
 when you get a craving or eat off-plan. **LLM for language, constraint solver for guarantees.**
 
-> Status: M2 — sign up, set up goals/allergies/preferences and a pantry on your phone. Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
+> Status: M3 (in progress) — plan a week of meals on your phone with a shopping list; the CP-SAT
+> planner is being written (a greedy baseline stands in, checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
 > Progress: [docs/progress.md](docs/progress.md).
 
 ## Run it
@@ -41,7 +42,9 @@ pnpm -C apps/web e2e                           # Playwright, needs CLERK_* keys 
 make check            # lint, types, tests (what CI runs, minus Docker)
 make gen-api          # after changing API routes: regenerate OpenAPI + web types
 make migrate          # apply DB migrations
-make data             # import USDA + TheMealDB, resolve ingredients, write report (~4 min)
+make data             # import USDA + TheMealDB + curated recipes, resolve, write report (~4 min)
+make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
+uv run pytest packages/solver/tests/test_solve.py   # the spec the CP-SAT solve() must pass
 ```
 
 ## Layout
@@ -49,8 +52,10 @@ make data             # import USDA + TheMealDB, resolve ingredients, write repo
 ```
 apps/api        FastAPI app
 apps/web        Next.js app
-packages/core   units, measure parsing, nutrition math (pure)
+packages/core   units, measure parsing, nutrition math, allergen/diet tags, prices (pure)
 packages/db     SQLAlchemy models + Alembic migrations
-packages/data   importers, ingredient normaliser, embeddings (CLI: larder-data)
+packages/data   importers, ingredient normaliser, embeddings, curated recipes (CLI: larder-data)
+packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT solve() (pure)
+                — modelling guide: packages/solver/README.md
 docs/           DESIGN.md, ADRs, progress notes
 ```
