@@ -535,6 +535,75 @@ ingredients = [
   ["lemon juice", "1 tbsp"],
 ]
 
+[[recipe]]
+slug = "quinoa-apple-porridge"
+name = "Quinoa porridge with apple and cinnamon"
+category = "Breakfast"
+cuisine = "American"
+servings = 2
+instructions = """
+Simmer the quinoa in the water and coconut milk with the cinnamon for 15 minutes until creamy.
+Stir in the grated apple and serve with a drizzle of maple syrup.
+"""
+ingredients = [
+  ["quinoa", "100g"],
+  ["water", "250ml"],
+  ["coconut milk", "150ml"],
+  ["ground cinnamon", "1 tsp"],
+  ["apple", "1"],
+  ["maple syrup", "2 tsp"],
+]
+
+[[recipe]]
+slug = "sweet-potato-bean-hash"
+name = "Sweet potato and baked bean hash"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the diced sweet potato and onion in the oil for 12 minutes until tender. Stir in the beans
+and spinach and heat through.
+"""
+ingredients = [
+  ["sweet potato", "200g"],
+  ["red onion", "1/2"],
+  ["olive oil", "2 tsp"],
+  ["baked beans", "150g"],
+  ["spinach", "40g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-peanut-butter-banana"
+name = "Rice cakes with peanut butter and banana"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = "Spread the peanut butter on the rice cakes and top with sliced banana."
+ingredients = [
+  ["rice cakes", "30g"],
+  ["peanut butter", "25g"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "mango-coconut-chia-pots"
+name = "Mango and coconut chia pots"
+category = "Breakfast"
+cuisine = "Thai"
+servings = 2
+instructions = """
+Stir the chia seeds into the coconut milk and water with the maple syrup. Chill for at least 4
+hours. Top with diced mango and pumpkin seeds.
+"""
+ingredients = [
+  ["chia seeds", "50g"],
+  ["coconut milk", "200ml"],
+  ["water", "150ml"],
+  ["maple syrup", "2 tsp"],
+  ["mango", "1"],
+  ["pumpkin seeds", "20g"],
+]
+
 # --- snacks -----------------------------------------------------------------------------------
 
 [[recipe]]
