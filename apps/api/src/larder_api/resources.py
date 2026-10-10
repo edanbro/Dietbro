@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -6,9 +8,10 @@ from typing import Any, cast
 import httpx
 from fastapi import FastAPI, Request
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from larder_api.auth import JWKSCache, TokenVerifier
+from larder_api.planning import CatalogCache
 from larder_api.settings import Settings, get_settings
 from larder_db.engine import make_engine, make_sessionmaker
 
@@ -38,6 +41,16 @@ def make_verifier(settings: Settings, client: httpx.AsyncClient) -> TokenVerifie
     )
 
 
+logger = logging.getLogger(__name__)
+
+
+async def _warm(cache: CatalogCache, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+    try:
+        await cache.get(sessionmaker)
+    except Exception:  # the DB may not be ready yet; the first plan request loads it instead
+        logger.warning("planning catalog warm-up failed", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings = get_settings()
@@ -51,9 +64,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.resources = resources
     app.state.sessionmaker = make_sessionmaker(resources.engine)
     app.state.verifier = make_verifier(settings, http)
+    # Build the planning catalog in the background so the first plan doesn't pay for it.
+    app.state.catalog = CatalogCache()
+    warm = asyncio.create_task(_warm(app.state.catalog, app.state.sessionmaker))
     try:
         yield
     finally:
+        warm.cancel()
         await http.aclose()
         await resources.redis.aclose()
         await resources.engine.dispose()

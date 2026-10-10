@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Larder",
     short_name: "Larder",
     description: "Plans your week around what's already in your kitchen.",
-    start_url: "/pantry",
+    start_url: "/plan",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",

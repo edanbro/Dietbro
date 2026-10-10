@@ -86,6 +86,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the secret scan reads the new commits' history
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
@@ -101,6 +103,21 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
       - run: uv run pre-commit run --all-files --show-diff-on-failure
+      # The gitleaks hook only sees staged files, so it can't check commits made elsewhere
+      # (e.g. GitHub's web editor). Scan every commit this PR or push adds.
+      - name: Secret scan (new commits)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            range="HEAD~1..HEAD"
+          else
+            range="$BASE..HEAD"
+          fi
+          docker run --rm -v "$PWD:/repo" \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            zricethezav/gitleaks:v8.30.1 git /repo --config /repo/.gitleaks.toml --redact \
+            --no-banner --log-opts="$range"
 
   docker:
     name: Docker (build + compose smoke test)
@@ -124,9 +141,13 @@ jobs:
         run: curl --fail --silent --show-error http://localhost:3000/ | grep -q 'data-api-status="ok"'
       - name: App pages redirect signed-out visitors to sign-in
         run: |
-          location=$(curl --silent --output /dev/null --write-out '%{redirect_url}' http://localhost:3000/pantry)
-          echo "$location"
-          case "$location" in http://localhost:3000/sign-in*) ;; *) exit 1 ;; esac
+          for page in plan pantry; do
+            location=$(curl --silent --output /dev/null --write-out '%{redirect_url}' "http://localhost:3000/$page")
+            echo "$page -> $location"
+            case "$location" in http://localhost:3000/sign-in*) ;; *) exit 1 ;; esac
+          done
+      - name: Planner dependencies are in the API image
+        run: docker compose exec -T api python -c "import ortools, larder_solver.problem"
       - name: Logs on failure
         if: failure()
         run: docker compose logs
@@ -148,6 +169,12 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U larder" --health-interval 5s --health-timeout 3s
           --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql+asyncpg://larder:larder@localhost:5432/larder
       # A Clerk *development* instance; add both as repository secrets to enable this job.
@@ -155,6 +182,7 @@ jobs:
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      PLAN_TIME_LIMIT_MS: "2000"
     steps:
       - name: Check for Clerk keys
         id: clerk

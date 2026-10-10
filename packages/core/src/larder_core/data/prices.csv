@@ -1,0 +1,445 @@
+kind,key,pence_per_kg,shop,note
+category,American Indian/Alaska Native Foods,1500,true,mostly game and fish
+category,Baby Foods,800,true,jars and pouches
+category,Baked Products,450,true,bread about 180 p/kg; cakes and biscuits more
+category,Beef Products,1300,true,mince 700-1000 p/kg; steaks 2000+
+category,Beverages,250,true,juices and plant milks
+category,Breakfast Cereals,450,true,
+category,Cereal Grains and Pasta,180,true,rice and pasta 120-250 p/kg
+category,Dairy and Egg Products,900,true,cheese 900-2000 p/kg; milk 70 p/kg
+category,Fast Foods,900,true,
+category,Fats and Oils,450,true,
+category,Finfish and Shellfish Products,1600,true,
+category,Fruits and Fruit Juices,350,true,
+category,"Lamb, Veal, and Game Products",1400,true,
+category,Legumes and Legume Products,350,true,dried or canned beans and lentils
+category,"Meals, Entrees, and Side Dishes",700,true,
+category,Nut and Seed Products,1500,true,
+category,Pork Products,800,true,
+category,Poultry Products,700,true,
+category,Restaurant Foods,1200,true,
+category,Sausages and Luncheon Meats,900,true,
+category,Snacks,900,true,
+category,"Soups, Sauces, and Gravies",450,true,
+category,Spices and Herbs,2500,true,own-label jars 30-50 g for about £1
+category,Sweets,450,true,
+category,Vegetables and Vegetable Products,250,true,
+keyword,water tap,0,false,tap water
+keyword,ice cube,0,false,
+keyword,salt table,80,true,750 g for about 65p
+keyword,salt,80,true,
+keyword,sugar granulated,110,true,1 kg for about £1.10
+keyword,sugar brown,200,true,
+keyword,sugar powdered,180,true,icing sugar
+keyword,sugar,150,true,
+keyword,syrup maple,1600,true,
+keyword,syrup corn,300,true,golden syrup stand-in
+keyword,molasses,400,true,black treacle
+keyword,honey,600,true,
+keyword,jam,300,true,
+keyword,chocolate,1200,true,
+keyword,cocoa,1200,true,
+keyword,wheat flour,85,true,plain flour 1.5 kg for about £1.25
+keyword,flour bread,120,true,strong white flour
+keyword,flour,250,true,specialty flours
+keyword,flour almond,1500,true,ground almonds
+keyword,cornstarch,250,true,cornflour 500 g for about £1.20
+keyword,cornmeal,200,true,
+keyword,rice,180,true,long-grain 1 kg for about £1.50-2
+keyword,rice noodle,450,true,
+keyword,noodle,300,true,
+keyword,pasta,150,true,500 g for 65-95p
+keyword,couscous,200,true,
+keyword,bulgur,300,true,
+keyword,quinoa,500,true,
+keyword,oat,110,true,porridge oats 1 kg for about £1
+keyword,semolina,180,true,
+keyword,leavening agent,600,true,baking powder and soda
+keyword,yeast,1500,true,7 g sachets
+keyword,bread,200,true,800 g loaf for about £1.40-1.60
+keyword,bread crumb,450,true,
+keyword,puff pastry,480,true,
+keyword,phyllo dough,600,true,
+keyword,tortilla,500,true,
+keyword,egg,480,true,12 medium free-range eggs for about £3.50
+keyword,milk,70,true,4 pints for about £1.55
+keyword,milk canned condensed,450,true,
+keyword,milk evaporated,300,true,
+keyword,buttermilk,200,true,
+keyword,cream,500,true,double cream 300 ml for about £1.50
+keyword,cream sour,450,true,
+keyword,creme fraiche,450,true,
+keyword,cheese,1000,true,
+keyword,cheese cheddar,900,true,
+keyword,cheese parmesan,2000,true,
+keyword,cheese mozzarella,750,true,
+keyword,cheese feta,950,true,
+keyword,cheese cream,600,true,
+keyword,cheese cottage,350,true,
+keyword,cheese ricotta,700,true,
+keyword,cheese goat,1400,true,
+keyword,yogurt,250,true,
+keyword,yogurt greek,350,true,
+keyword,butter,900,true,250 g for about £2.25
+keyword,ghee,1200,true,
+keyword,margarine,300,true,
+keyword,oil,250,true,vegetable and rapeseed oil
+keyword,oil olive,850,true,1 litre for about £7.50
+keyword,oil sesame,1000,true,
+keyword,oil coconut,1100,true,
+keyword,lard,350,true,
+keyword,mayonnaise,350,true,
+keyword,beef,1200,true,
+keyword,beef ground,750,true,mince 500 g for about £3.75
+keyword,beef steak,2000,true,
+keyword,beef tenderloin,4000,true,fillet
+keyword,beef brisket,1000,true,
+keyword,beef chuck,1000,true,
+keyword,beef suet,600,true,
+keyword,lamb,1300,true,
+keyword,lamb ground,1000,true,
+keyword,pork,800,true,
+keyword,pork ground,700,true,
+keyword,pork belly,800,true,
+keyword,bacon,1000,true,back bacon 300 g for about £3
+keyword,ham,1100,true,
+keyword,sausage,750,true,
+keyword,chorizo,1200,true,
+keyword,chicken,700,true,
+keyword,chicken breast,850,true,
+keyword,chicken thigh,650,true,boneless thighs
+keyword,chicken meat and skin,350,true,whole chicken
+keyword,chicken liver,300,true,
+keyword,turkey,800,true,
+keyword,duck,1100,true,
+keyword,fish,1500,true,
+keyword,fish salmon,1800,true,
+keyword,fish tuna,900,true,
+keyword,fish anchovy,3000,true,
+keyword,fish sardine,700,true,
+keyword,shrimp,1800,true,raw king prawns
+keyword,squid,1000,true,
+keyword,mussel,500,true,
+keyword,clam,1500,true,
+keyword,lobster,3500,true,
+keyword,crab,2500,true,
+keyword,soup stock,100,true,made from cubes or pots
+keyword,broth,100,true,made from cubes or pots
+keyword,bouillon,1000,true,stock cubes
+keyword,sauce,500,true,
+keyword,sauce soy,450,true,
+keyword,soy sauce,450,true,
+keyword,sauce fish,700,true,
+keyword,sauce worcestershire,900,true,
+keyword,sauce oyster,600,true,
+keyword,sauce hoisin,700,true,
+keyword,sauce pepper or hot,1500,true,
+keyword,catsup,300,true,ketchup
+keyword,mustard prepared,650,true,
+keyword,vinegar,300,true,
+keyword,vinegar distilled,100,true,spirit vinegar
+keyword,vinegar balsamic,500,true,
+keyword,vanilla extract,6000,true,38 ml for about £2.50
+keyword,spice,2500,true,ground spices
+keyword,spice pepper black,2000,true,
+keyword,spice bay leaf,15000,true,very light leaves
+keyword,spice cardamom,5000,true,
+keyword,spice clove,4000,true,
+keyword,spice nutmeg,3000,true,
+keyword,spice saffron,600000,true,0.4 g for about £2.50
+keyword,spice oregano,5000,true,dried leafy herb
+keyword,spice marjoram,5000,true,dried leafy herb
+keyword,spice sage,5000,true,dried leafy herb
+keyword,spice savory,5000,true,dried leafy herb
+keyword,spice tarragon,5000,true,dried leafy herb
+keyword,spice dill weed,5000,true,dried leafy herb
+keyword,spearmint dried,5000,true,dried leafy herb
+keyword,basil,2500,true,fresh herbs: 30 g for about 75p
+keyword,parsley,1800,true,
+keyword,coriander leaf,2000,true,
+keyword,spearmint,2500,true,mint
+keyword,dill weed,2500,true,
+keyword,thyme,3000,true,
+keyword,rosemary,2500,true,
+keyword,chive,2500,true,
+keyword,lemon grass,1200,true,
+keyword,garlic,500,true,
+keyword,onion,90,true,
+keyword,onion red,120,true,
+keyword,onion spring,600,true,
+keyword,shallot,400,true,
+keyword,leek,300,true,
+keyword,ginger root,500,true,
+keyword,potato,80,true,2.5 kg for about £1.75
+keyword,potato red,100,true,
+keyword,sweet potato,150,true,
+keyword,potato french fried,200,true,frozen chips
+keyword,carrot,70,true,
+keyword,tomato,250,true,
+keyword,tomato grape,450,true,
+keyword,tomato red ripe canned,140,true,400 g tin for about 55p
+keyword,tomato product canned paste,400,true,
+keyword,tomato product canned puree,250,true,passata
+keyword,tomato product canned sauce,250,true,
+keyword,tomato sun dried,1500,true,
+keyword,pepper sweet,300,true,bell peppers
+keyword,pepper hot chili,1200,true,
+keyword,pepper jalapeno,800,true,
+keyword,cabbage,100,true,
+keyword,cabbage chinese,400,true,
+keyword,celery,180,true,
+keyword,celeriac,150,true,
+keyword,cucumber,200,true,
+keyword,eggplant,300,true,aubergine
+keyword,squash,250,true,
+keyword,squash winter butternut,120,true,
+keyword,pumpkin,150,true,
+keyword,mushroom,300,true,
+keyword,mushroom shiitake,1200,true,
+keyword,mushroom oyster,1200,true,
+keyword,spinach,500,true,
+keyword,kale,400,true,
+keyword,lettuce,300,true,
+keyword,arugula,1200,true,rocket
+keyword,bean snap green,400,true,
+keyword,pea green frozen,150,true,
+keyword,pea green,400,true,
+keyword,corn sweet,300,true,
+keyword,broccoli,200,true,
+keyword,asparagus,1000,true,
+keyword,beet,150,true,
+keyword,fennel bulb,400,true,
+keyword,olive,700,true,
+keyword,lemon,350,true,
+keyword,lemon juice,300,true,
+keyword,lime,400,true,
+keyword,orange,250,true,
+keyword,apple,200,true,
+keyword,banana,100,true,
+keyword,avocado,450,true,
+keyword,mango,300,true,
+keyword,raspberry,1200,true,
+keyword,strawberry,700,true,
+keyword,blueberry,1000,true,
+keyword,blackberry,1200,true,
+keyword,cherry sweet,900,true,
+keyword,raisin,450,true,
+keyword,currant zante dried,600,true,
+keyword,apricot dried,900,true,
+keyword,date,1000,true,
+keyword,coconut milk,300,true,400 ml tin for about £1.20
+keyword,coconut cream,500,true,
+keyword,coconut meat dried,850,true,desiccated coconut
+keyword,nut almond,1250,true,
+keyword,nut walnut,1300,true,
+keyword,nut cashew,1300,true,
+keyword,nut pecan,2200,true,
+keyword,nut pistachio,2500,true,
+keyword,nut pine,3000,true,
+keyword,nut hazelnut,1500,true,
+keyword,peanut,550,true,
+keyword,peanut butter,450,true,
+keyword,seed sesame,900,true,
+keyword,tahini,900,true,
+keyword,chickpea,250,true,
+keyword,lentil,300,true,
+keyword,bean,300,true,
+keyword,bean baked,150,true,415 g tin for about 65p
+keyword,tofu,600,true,
+keyword,hummus,600,true,
+keyword,gelatin,7000,true,
+keyword,wine,800,true,cooking wine about £6 a bottle
+keyword,beer,300,true,
+keyword,distilled,2500,true,spirits
+keyword,almond milk,150,true,
+keyword,soymilk,150,true,
+keyword,rice flour,300,true,
+keyword,corn flour masa,450,true,masa harina
+keyword,oil peanut,350,true,groundnut oil
+keyword,fat goose,1100,true,
+keyword,cheese gruyere,1800,true,
+keyword,cheese romano,1800,true,pecorino
+keyword,cheese blue,1300,true,
+keyword,cheese swiss,1300,true,
+keyword,buckwheat,400,true,
+keyword,tapioca,400,true,
+keyword,cookie,600,true,
+keyword,roll,400,true,bread rolls
+keyword,wonton wrapper,800,true,
+keyword,taco shell,900,true,
+keyword,bread naan,400,true,
+keyword,gravy,800,true,granules
+keyword,beef cured,800,true,corned beef
+keyword,apricot,500,true,
+keyword,cranberry,800,true,
+keyword,currant,1200,true,fresh redcurrants
+keyword,grapefruit,250,true,
+keyword,papaya,600,true,
+keyword,passion fruit,1400,true,
+keyword,peach,400,true,
+keyword,peach canned,200,true,
+keyword,pineapple,200,true,
+keyword,plantain,300,true,
+keyword,plum,400,true,
+keyword,plum dried,600,true,prunes
+keyword,pomegranate,600,true,
+keyword,rhubarb,600,true,
+keyword,tamarind,700,true,
+keyword,candied fruit,900,true,
+keyword,falafel,800,true,
+keyword,tempeh,1100,true,
+keyword,pea green split,200,true,dried split peas
+keyword,nut chestnut,900,true,
+keyword,coconut meat,400,true,fresh coconut
+keyword,seed flaxseed,400,true,
+keyword,caper,1500,true,
+keyword,horseradish,700,true,
+keyword,milk chocolate,1000,true,
+keyword,pudding,400,true,
+keyword,ice cream,350,true,
+keyword,syrup,400,true,
+keyword,jelly,300,true,
+keyword,pepper banana,500,true,
+keyword,pickle,400,true,
+keyword,potato pancake,500,true,
+keyword,rutabaga,100,true,swede
+keyword,turnip,150,true,
+keyword,radish,400,true,
+keyword,sauerkraut,400,true,
+keyword,grape leaf,1000,true,vine leaves in brine
+keyword,hearts of palm,800,true,
+keyword,milk dry,1200,true,milk powder
+keyword,soy milk,150,true,
+keyword,milk shake,300,true,
+keyword,cracker,600,true,
+keyword,muffin,450,true,
+keyword,french toast,450,true,
+keyword,babyfood,800,true,
+fdc,173647,0,false,tap water
+fdc,175103,0,false,tap water
+fdc,175096,0,false,well water
+fdc,173468,80,true,table salt
+fdc,171287,480,true,whole eggs
+fdc,172184,480,true,yolks: priced as whole egg
+fdc,172183,480,true,whites: priced as whole egg
+fdc,173410,900,true,salted butter
+fdc,173430,950,true,unsalted butter
+fdc,168936,85,true,plain flour
+fdc,168895,90,true,self-raising flour
+fdc,171413,850,true,olive oil
+fdc,172336,220,true,rapeseed oil
+fdc,171025,220,true,sunflower oil
+fdc,171265,70,true,whole milk
+fdc,169230,500,true,garlic
+fdc,170000,90,true,onions
+fdc,170026,80,true,potatoes
+fdc,170457,250,true,tomatoes
+fdc,170393,70,true,carrots
+fdc,170859,500,true,double cream
+fdc,174277,450,true,soy sauce
+fdc,168877,180,true,long-grain rice
+fdc,172884,100,true,chicken stock
+fdc,172883,100,true,beef stock
+fdc,172885,150,true,fish stock
+fdc,171583,100,true,vegetable stock
+fdc,170173,300,true,coconut milk
+fdc,171796,750,true,beef mince
+fdc,175179,1800,true,raw prawns
+fdc,174531,700,true,fish sauce
+fdc,169640,600,true,honey
+fdc,169736,150,true,dried pasta
+fdc,170848,2000,true,parmesan
+fdc,174924,180,true,sliced white bread
+fdc,174925,180,true,toast
+fdc,173904,110,true,porridge oats
+fdc,169742,450,true,rice noodles
+fdc,171009,350,true,mayonnaise
+fdc,171562,1000,true,stock cubes
+fdc,171613,1000,true,stock cubes
+fdc,173859,1200,true,chorizo
+fdc,171631,750,true,pork sausages
+fdc,168277,1000,true,bacon
+fdc,173864,1100,true,sliced ham
+fdc,174837,800,true,white wine
+fdc,173190,800,true,red wine
+fdc,169070,800,true,cooking wine
+fdc,167723,1200,true,sake and mirin
+fdc,169656,180,true,icing sugar
+fdc,169655,110,true,granulated sugar
+fdc,168833,200,true,brown sugar
+fdc,175043,1500,true,dried yeast
+fdc,172803,600,true,baking powder
+fdc,175040,400,true,bicarbonate of soda
+fdc,175041,3000,true,cream of tartar
+fdc,169593,1200,true,cocoa powder
+fdc,170273,1300,true,dark chocolate
+fdc,170567,1250,true,almonds
+fdc,173418,600,true,cream cheese
+fdc,171304,350,true,Greek yogurt
+fdc,171284,250,true,natural yogurt
+fdc,171257,450,true,soured cream
+fdc,328637,900,true,cheddar
+fdc,173420,950,true,feta
+fdc,170845,750,true,mozzarella
+fdc,171077,850,true,chicken breast
+fdc,173627,650,true,chicken thighs
+fdc,171447,350,true,whole chicken
+fdc,174370,1000,true,lamb mince
+fdc,167902,700,true,pork mince
+fdc,173756,250,true,chickpeas
+fdc,173744,250,true,kidney beans
+fdc,170016,150,true,frozen peas
+fdc,170051,140,true,canned tomatoes
+fdc,170459,400,true,tomato purée
+fdc,169698,250,true,cornflour
+fdc,170005,600,true,spring onions
+fdc,169997,2000,true,coriander
+fdc,170416,1800,true,parsley
+fdc,170106,1200,true,red chillies
+fdc,170497,1200,true,green chillies
+fdc,169231,500,true,ginger
+fdc,168155,400,true,limes
+fdc,167746,350,true,lemons
+fdc,167747,300,true,lemon juice
+fdc,174190,2000,true,salt cod
+fdc,171610,900,true,Worcestershire sauce
+fdc,172234,650,true,mustard
+fdc,172240,300,true,wine vinegar
+fdc,172237,100,true,spirit vinegar
+fdc,171275,450,true,condensed milk
+fdc,172790,480,true,puff pastry
+fdc,170934,600000,true,saffron
+fdc,171314,1200,true,ghee
+fdc,172225,200,true,buttermilk
+fdc,170193,700,true,shredded suet
+fdc,174777,1500,true,flank steak
+fdc,168609,1500,true,flank steak
+fdc,2727574,2200,true,sirloin steak
+fdc,172137,1500,true,skirt steak
+fdc,174725,900,true,beef shin
+fdc,174014,1000,true,oxtail stand-in
+fdc,169517,1100,true,topside
+fdc,173461,600,true,dulce de leche
+fdc,172608,1000,true,lamb mince
+fdc,174442,600,true,lamb kidney
+fdc,174330,1100,true,lamb shoulder
+fdc,173810,1600,true,lamb loin chops
+fdc,167811,300,true,pork back fat
+fdc,167859,300,true,pig's trotters
+fdc,2646169,900,true,pork tenderloin
+fdc,172373,350,true,chicken drumsticks
+fdc,172855,350,true,chicken drumstick stand-in
+fdc,2727568,400,true,chicken wings
+fdc,173619,450,true,chicken legs
+fdc,171116,750,true,chicken mince
+fdc,174527,1500,true,hot pepper sauce
+fdc,171186,800,true,sriracha
+fdc,168756,1000,true,chocolate nougat bar
+fdc,169586,1000,true,peanut brittle
+fdc,170556,1000,true,pumpkin seed kernels (not the vegetable)
+fdc,170562,500,true,sunflower seed kernels
+fdc,173180,2000,true,whey protein powder
+fdc,173181,1800,true,soy protein powder
+fdc,170250,1000,true,rice cakes
+fdc,173687,3000,true,smoked salmon
+fdc,168411,500,true,frozen edamame

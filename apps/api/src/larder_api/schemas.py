@@ -14,9 +14,10 @@ from larder_core.energy import (
     Goal,
     Sex,
 )
+from larder_core.meals import Slot
+from larder_core.tagging import Diet
 
 Currency = Literal["GBP", "EUR", "USD"]
-Diet = Literal["vegetarian", "vegan", "pescatarian"]
 
 _kcal = Field(ge=0, le=10_000)
 _grams = Field(default=None, ge=0, le=2_000)
@@ -153,3 +154,152 @@ class Problems(BaseModel):
     """422 body for domain-rule failures (e.g. unsafe calorie targets)."""
 
     detail: list[str]
+
+
+# --- plans (M3) -------------------------------------------------------------------------------
+
+
+class MacrosOut(BaseModel):
+    """Energy and macros as whole numbers (kcal, grams)."""
+
+    kcal: int
+    protein_g: int
+    fat_g: int
+    carbs_g: int
+
+
+class BandOut(BaseModel):
+    min: int | None = None
+    max: int | None = None
+
+
+class NutrientBands(BaseModel):
+    kcal: BandOut | None = None
+    protein_g: BandOut | None = None
+    fat_g: BandOut | None = None
+    carbs_g: BandOut | None = None
+
+
+class TargetsOut(BaseModel):
+    """What the planner aimed for: per-day bands, whole-plan bands, and the calorie floor."""
+
+    daily: NutrientBands
+    weekly: NutrientBands
+    calorie_floor: int
+
+
+class RecipeCard(BaseModel):
+    id: int
+    name: str
+    category: str | None
+    cuisine: str | None
+    image_url: str | None
+
+
+class MealOut(BaseModel):
+    slot: Slot
+    recipe: RecipeCard
+    portions: int = Field(description="half-servings: 2 = one serving")
+    servings: float
+    nutrition: MacrosOut
+    locked: bool = False
+    status: Literal["planned", "eaten", "skipped", "off_plan"] = "planned"
+
+
+class DayOut(BaseModel):
+    day: int
+    date: date
+    meals: list[MealOut]
+    totals: MacrosOut
+
+
+class ViolationOut(BaseModel):
+    """A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the
+    baseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.
+    Safety rules (allergens, diet, calorie floor) are never broken in a saved plan."""
+
+    code: str
+    message: str
+    hard: bool
+    day: int | None = None
+    slot: Slot | None = None
+    recipe_id: int | None = None
+
+
+class PlanRequest(BaseModel):
+    start: date | None = Field(
+        default=None,
+        description="first day (the user's local date, from yesterday to a week ahead); "
+        "defaults to today (UTC)",
+    )
+
+
+class PlanOut(BaseModel):
+    id: int
+    version: int
+    start: date
+    days: list[DayOut]
+    planner: str
+    status: str
+    created_at: datetime
+    solve_ms: int
+    currency: Currency
+    targets: TargetsOut
+    week_totals: MacrosOut
+    cost_minor: int = Field(description="estimated shopping cost")
+    budget_minor: int | None
+    pantry_used_g: int
+    waste_g: int = Field(description="pantry food that will expire unused within the plan")
+    shopping_items: int
+    # The hard exclusions this plan was made under (shown prominently, PLAN §8).
+    excluded_allergens: list[Allergen]
+    diet: Diet | None
+    violations: list[ViolationOut]
+    notes: list[str]
+
+
+class ShoppingItemOut(BaseModel):
+    food_id: int
+    name: str
+    category: str | None
+    grams: int
+    cost_minor: int = Field(description="share of total_minor; lines sum exactly to the total")
+    checked: bool
+    staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
+    # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
+    approx_units: str | None = None
+
+
+class ShoppingListOut(BaseModel):
+    plan_id: int
+    currency: Currency
+    total_minor: int = Field(description="estimated cost of every non-staple line (= plan cost)")
+    budget_minor: int | None
+    items: list[ShoppingItemOut]
+
+
+class ShoppingItemPatch(BaseModel):
+    checked: bool
+
+
+class RecipeIngredientOut(BaseModel):
+    name: str
+    measure: str
+    food_id: int | None
+    food_name: str | None
+    grams: float | None
+
+
+class RecipeDetail(RecipeCard):
+    instructions: str
+    source: str
+    source_url: str | None
+    servings: int | None
+    servings_estimated: bool
+    per_serving: MacrosOut | None
+    meal_types: list[Slot]
+    allergens: list[Allergen]
+    # Allergen safety can't be proven when some ingredient lines matched no food.
+    allergens_complete: bool
+    suitable_for: list[Diet]
+    ingredients: list[RecipeIngredientOut]

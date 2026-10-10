@@ -32,13 +32,14 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
 
     // 2. Goals: an unsafe target is refused with a reason, a sensible one is accepted.
     await expect(page.getByRole("heading", { name: "Your goals" })).toBeVisible();
-    await page.getByLabel("Goal").selectOption("maintain");
-    await page.getByLabel("Min kcal / day").fill("900");
-    await page.getByLabel("Max kcal / day").fill("1100");
+    await page.getByLabel("Goal", { exact: true }).selectOption("maintain");
+    await page.getByLabel("Min kcal / day", { exact: true }).fill("900");
+    await page.getByLabel("Max kcal / day", { exact: true }).fill("1100");
     await page.getByRole("button", { name: "Save goals" }).click();
-    await expect(page.getByRole("alert")).toContainText("calorie floor");
-    await page.getByLabel("Min kcal / day").fill("1800");
-    await page.getByLabel("Max kcal / day").fill("2200");
+    // Next.js also renders a route announcer with role="alert"; match ours by its text.
+    await expect(page.getByRole("alert").filter({ hasText: "calorie floor" })).toBeVisible();
+    await page.getByLabel("Min kcal / day", { exact: true }).fill("1800");
+    await page.getByLabel("Max kcal / day", { exact: true }).fill("2200");
     await page.getByRole("button", { name: "Save goals" }).click();
 
     // 3. Allergies.
@@ -48,26 +49,29 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
 
     // 4. Preferences.
     await expect(page.getByRole("heading", { name: "What you like" })).toBeVisible();
-    await page.getByLabel("Diet").selectOption("vegetarian");
+    await page.getByLabel("Diet", { exact: true }).selectOption("vegetarian");
     await page.getByRole("button", { name: "Save preferences" }).click();
 
     // 5. Pantry: search, pick, choose a count unit, add.
     await expect(page.getByRole("heading", { name: "What's in your kitchen" })).toBeVisible();
     await page.getByPlaceholder("Add food, e.g. onions").fill("onion");
     await page.getByRole("button", { name: /^Onions, raw/ }).click();
-    await page.getByLabel("Quantity").fill("2");
-    await page.getByLabel("Unit").selectOption("large");
+    await page.getByLabel("Quantity", { exact: true }).fill("2");
+    await page.getByLabel("Unit", { exact: true }).selectOption("large");
     await page.getByRole("button", { name: "Add to pantry" }).click();
     await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("Onions, raw");
     await page.getByRole("button", { name: "Done" }).click();
 
-    await expect(page).toHaveURL(/\/pantry$/);
+    // Setup done: the app opens on the (empty) plan.
+    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page.getByRole("button", { name: "Plan my week" })).toBeVisible();
     await expect(page.getByText("Finish setting up")).toHaveCount(0);
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Pantry" }).click();
     await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("2 large");
 
     // GDPR: delete the account from the profile page.
     await page.getByRole("link", { name: "Profile" }).click();
-    await page.getByLabel('Type "delete" to confirm').fill("delete");
+    await page.getByLabel('Type "delete" to confirm', { exact: true }).fill("delete");
     await page.getByRole("button", { name: "Delete my account" }).click();
     await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
   } finally {

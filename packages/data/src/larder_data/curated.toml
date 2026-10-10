@@ -1,0 +1,800 @@
+# Curated breakfasts and snacks: see larder_data/curated.py and docs/adr/0010.
+# Every ingredient name must be a curated alias (larder_core/data/aliases.csv), so these resolve
+# without the embedding model. Servings are explicit. Quantities are per recipe.
+
+# --- breakfasts -------------------------------------------------------------------------------
+
+[[recipe]]
+slug = "porridge-with-berries"
+name = "Porridge with blueberries and honey"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the oats in the milk for 4-5 minutes, stirring, until creamy. Top with blueberries and a
+drizzle of honey.
+"""
+ingredients = [
+  ["porridge oats", "50g"],
+  ["semi-skimmed milk", "250ml"],
+  ["blueberries", "60g"],
+  ["honey", "1 tsp"],
+]
+
+[[recipe]]
+slug = "protein-porridge"
+name = "Protein porridge with banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the oats in the milk for 4-5 minutes. Take off the heat, stir in the protein powder with a
+splash of water until smooth, and top with sliced banana.
+"""
+ingredients = [
+  ["porridge oats", "50g"],
+  ["semi-skimmed milk", "250ml"],
+  ["whey protein", "30g"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "vegan-porridge"
+name = "Almond milk porridge with banana and flaxseed"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the oats in the almond milk for 4-5 minutes. Top with sliced banana, ground flaxseed and
+a pinch of cinnamon.
+"""
+ingredients = [
+  ["porridge oats", "50g"],
+  ["almond milk", "250ml"],
+  ["banana", "1"],
+  ["ground flaxseed", "1 tbsp"],
+  ["ground cinnamon", "1/2 tsp"],
+]
+
+[[recipe]]
+slug = "overnight-oats"
+name = "Overnight oats with raspberries"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Stir the oats, yoghurt, milk and chia seeds together. Cover and chill overnight. Top with
+raspberries in the morning.
+"""
+ingredients = [
+  ["porridge oats", "45g"],
+  ["natural yogurt", "100g"],
+  ["semi-skimmed milk", "100ml"],
+  ["chia seeds", "1 tbsp"],
+  ["raspberries", "60g"],
+]
+
+[[recipe]]
+slug = "greek-yogurt-granola"
+name = "Greek yoghurt with granola and strawberries"
+category = "Breakfast"
+cuisine = "Greek"
+servings = 1
+instructions = "Spoon the yoghurt into a bowl and top with granola and sliced strawberries."
+ingredients = [
+  ["greek yogurt", "200g"],
+  ["granola", "40g"],
+  ["strawberries", "80g"],
+]
+
+[[recipe]]
+slug = "skyr-berries-seeds"
+name = "Skyr with berries and pumpkin seeds"
+category = "Breakfast"
+cuisine = "Nordic"
+servings = 1
+instructions = "Top the skyr with the berries and pumpkin seeds, and drizzle with honey."
+ingredients = [
+  ["skyr", "250g"],
+  ["blueberries", "50g"],
+  ["raspberries", "50g"],
+  ["pumpkin seeds", "15g"],
+  ["honey", "1 tsp"],
+]
+
+[[recipe]]
+slug = "cottage-cheese-pineapple"
+name = "Cottage cheese with pineapple and walnuts"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Top the cottage cheese with chopped pineapple and walnuts."
+ingredients = [
+  ["cottage cheese", "200g"],
+  ["pineapple", "100g"],
+  ["walnuts", "15g"],
+]
+
+[[recipe]]
+slug = "scrambled-eggs-on-toast"
+name = "Scrambled eggs on wholemeal toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Whisk the eggs with the milk. Melt the butter in a pan over a low heat, add the eggs and stir
+gently until just set. Serve on the toast with black pepper.
+"""
+ingredients = [
+  ["eggs", "3"],
+  ["semi-skimmed milk", "2 tbsp"],
+  ["butter", "5g"],
+  ["wholemeal bread", "70g"],
+  ["black pepper", "1 pinch"],
+]
+
+[[recipe]]
+slug = "veggie-omelette"
+name = "Spinach, mushroom and tomato omelette"
+category = "Breakfast"
+cuisine = "French"
+servings = 1
+instructions = """
+Soften the mushrooms in the oil, add the spinach and tomatoes until wilted. Pour in the beaten
+eggs, cook until set underneath, fold and serve.
+"""
+ingredients = [
+  ["eggs", "3"],
+  ["mushrooms", "60g"],
+  ["spinach", "40g"],
+  ["cherry tomatoes", "60g"],
+  ["olive oil", "1 tsp"],
+]
+
+[[recipe]]
+slug = "boiled-eggs-soldiers"
+name = "Boiled eggs with toast soldiers"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Lower the eggs into boiling water and cook for 6 minutes. Toast the bread, butter it and cut
+into soldiers.
+"""
+ingredients = [
+  ["eggs", "2"],
+  ["wholemeal bread", "70g"],
+  ["butter", "5g"],
+]
+
+[[recipe]]
+slug = "smoked-salmon-eggs-rye"
+name = "Smoked salmon and scrambled eggs on rye"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Scramble the eggs gently in the butter. Serve on toasted rye bread with the smoked salmon and
+chopped chives.
+"""
+ingredients = [
+  ["eggs", "2"],
+  ["smoked salmon", "50g"],
+  ["rye bread", "60g"],
+  ["butter", "5g"],
+  ["chives", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "avocado-toast-egg"
+name = "Avocado toast with a poached egg"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Mash the avocado with lemon juice and black pepper. Poach the egg for 3 minutes. Spread the
+avocado on toasted sourdough and top with the egg.
+"""
+ingredients = [
+  ["sourdough bread", "80g"],
+  ["avocado", "1/2"],
+  ["eggs", "1"],
+  ["lemon juice", "1 tsp"],
+  ["black pepper", "1 pinch"],
+]
+
+[[recipe]]
+slug = "avocado-toast-chilli"
+name = "Avocado and tomato toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Mash the avocado with lemon juice, spread on toasted sourdough and top with sliced tomatoes and
+a pinch of chilli flakes.
+"""
+ingredients = [
+  ["sourdough bread", "80g"],
+  ["avocado", "1/2"],
+  ["tomato", "1"],
+  ["lemon juice", "1 tsp"],
+  ["chilli flakes", "1 pinch"],
+]
+
+[[recipe]]
+slug = "tofu-scramble"
+name = "Turmeric tofu scramble with spinach"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Crumble the tofu into a hot pan with the oil, add the turmeric and cumin and cook for 5
+minutes. Stir in the spinach and tomatoes until wilted. Serve with toast.
+"""
+ingredients = [
+  ["tofu", "200g"],
+  ["olive oil", "1 tsp"],
+  ["turmeric", "1/2 tsp"],
+  ["ground cumin", "1/4 tsp"],
+  ["spinach", "50g"],
+  ["cherry tomatoes", "60g"],
+  ["wholemeal bread", "40g"],
+]
+
+[[recipe]]
+slug = "tofu-scramble-potatoes"
+name = "Tofu scramble with crispy potatoes"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Dice the potato and fry in the oil for 12-15 minutes until crisp. Push aside, crumble in the
+tofu with the turmeric and cook for 5 minutes, then wilt in the spinach.
+"""
+ingredients = [
+  ["tofu", "180g"],
+  ["potatoes", "150g"],
+  ["olive oil", "2 tsp"],
+  ["turmeric", "1/2 tsp"],
+  ["spinach", "50g"],
+]
+
+[[recipe]]
+slug = "besan-pancakes"
+name = "Gram flour pancakes with spinach (besan chilla)"
+category = "Breakfast"
+cuisine = "Indian"
+servings = 2
+instructions = """
+Whisk the gram flour with the water, cumin and turmeric into a smooth batter. Stir in the
+chopped onion, spinach and tomato. Cook ladlefuls in a lightly oiled pan, 2-3 minutes a side.
+"""
+ingredients = [
+  ["gram flour", "180g"],
+  ["water", "250ml"],
+  ["red onion", "1/2"],
+  ["spinach", "60g"],
+  ["tomato", "1"],
+  ["ground cumin", "1/2 tsp"],
+  ["turmeric", "1/4 tsp"],
+  ["olive oil", "2 tsp"],
+]
+
+[[recipe]]
+slug = "peanut-butter-banana-toast"
+name = "Peanut butter and banana toast"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = "Spread the peanut butter on the toast and top with sliced banana."
+ingredients = [
+  ["wholemeal bread", "70g"],
+  ["peanut butter", "20g"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "almond-butter-pear-toast"
+name = "Almond butter and pear toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Spread the almond butter on the toast, top with sliced pear and a little cinnamon."
+ingredients = [
+  ["sourdough bread", "70g"],
+  ["almond butter", "20g"],
+  ["pear", "1"],
+  ["ground cinnamon", "1 pinch"],
+]
+
+[[recipe]]
+slug = "beans-and-egg-on-toast"
+name = "Baked beans and a fried egg on toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Warm the beans. Fry the egg in the oil. Serve both on the toast."
+ingredients = [
+  ["baked beans", "200g"],
+  ["eggs", "1"],
+  ["wholemeal bread", "40g"],
+  ["olive oil", "1 tsp"],
+]
+
+[[recipe]]
+slug = "banana-oat-pancakes"
+name = "Banana oat pancakes"
+category = "Breakfast"
+cuisine = "American"
+servings = 2
+instructions = """
+Blend the banana, eggs, oats and milk into a batter. Cook small pancakes in a lightly buttered
+pan, 2 minutes a side. Serve with blueberries and maple syrup.
+"""
+ingredients = [
+  ["banana", "2"],
+  ["eggs", "2"],
+  ["porridge oats", "80g"],
+  ["semi-skimmed milk", "60ml"],
+  ["butter", "5g"],
+  ["blueberries", "100g"],
+  ["maple syrup", "2 tsp"],
+]
+
+[[recipe]]
+slug = "chia-pudding-mango"
+name = "Chia pudding with mango"
+category = "Breakfast"
+cuisine = "British"
+servings = 2
+instructions = """
+Stir the chia seeds into the soy milk with the maple syrup. Chill for at least 4 hours or
+overnight, stirring once. Top with diced mango.
+"""
+ingredients = [
+  ["chia seeds", "60g"],
+  ["soy milk", "400ml"],
+  ["maple syrup", "2 tsp"],
+  ["mango", "1"],
+]
+
+[[recipe]]
+slug = "quinoa-breakfast-bowl"
+name = "Warm quinoa bowl with berries and almonds"
+category = "Breakfast"
+cuisine = "American"
+servings = 2
+instructions = """
+Simmer the quinoa in the almond milk with the cinnamon for 15 minutes until tender. Top with
+berries and chopped almonds.
+"""
+ingredients = [
+  ["quinoa", "100g"],
+  ["almond milk", "400ml"],
+  ["ground cinnamon", "1/2 tsp"],
+  ["blueberries", "100g"],
+  ["strawberries", "100g"],
+  ["almonds", "30g"],
+]
+
+[[recipe]]
+slug = "coconut-rice-porridge-mango"
+name = "Coconut rice porridge with mango"
+category = "Breakfast"
+cuisine = "Thai"
+servings = 2
+instructions = """
+Simmer the rice in the water for 15 minutes, add the coconut milk and cook until thick and
+creamy. Serve topped with mango and a few pumpkin seeds.
+"""
+ingredients = [
+  ["rice", "100g"],
+  ["water", "400ml"],
+  ["coconut milk", "200ml"],
+  ["mango", "1"],
+  ["pumpkin seeds", "20g"],
+]
+
+[[recipe]]
+slug = "berry-smoothie-bowl"
+name = "Berry smoothie bowl with seeds"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = """
+Blend the banana, berries and soy milk until thick. Pour into a bowl and top with pumpkin and
+sunflower seeds.
+"""
+ingredients = [
+  ["banana", "1"],
+  ["blueberries", "80g"],
+  ["strawberries", "80g"],
+  ["soy milk", "150ml"],
+  ["pumpkin seeds", "10g"],
+  ["sunflower seeds", "10g"],
+]
+
+[[recipe]]
+slug = "whey-protein-smoothie"
+name = "Banana peanut protein smoothie"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = "Blend everything until smooth."
+ingredients = [
+  ["whey protein", "30g"],
+  ["semi-skimmed milk", "300ml"],
+  ["banana", "1"],
+  ["peanut butter", "15g"],
+]
+
+[[recipe]]
+slug = "soy-protein-smoothie"
+name = "Vegan protein smoothie with oats"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = "Blend everything until smooth."
+ingredients = [
+  ["soy protein", "30g"],
+  ["soy milk", "300ml"],
+  ["banana", "1"],
+  ["porridge oats", "30g"],
+]
+
+[[recipe]]
+slug = "sweet-potato-hash"
+name = "Sweet potato hash with eggs"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = """
+Fry the diced sweet potato and onion in the oil for 12 minutes until tender. Make two wells,
+crack in the eggs, cover and cook until set.
+"""
+ingredients = [
+  ["sweet potato", "200g"],
+  ["red onion", "1/2"],
+  ["olive oil", "2 tsp"],
+  ["eggs", "2"],
+  ["black pepper", "1 pinch"],
+]
+
+[[recipe]]
+slug = "cheese-tomato-toast"
+name = "Cheddar and tomato on toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Top the toast with sliced tomato and grated cheddar and grill until bubbling."
+ingredients = [
+  ["wholemeal bread", "70g"],
+  ["cheddar cheese", "30g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "ham-and-eggs-on-toast"
+name = "Ham and egg on toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Fry the eggs in the butter. Serve on the toast with the ham."
+ingredients = [
+  ["eggs", "2"],
+  ["ham", "40g"],
+  ["wholemeal bread", "70g"],
+  ["butter", "5g"],
+]
+
+[[recipe]]
+slug = "fruit-salad-yogurt"
+name = "Fruit salad with yoghurt"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Chop the fruit, mix and top with the yoghurt and a little honey."
+ingredients = [
+  ["apple", "1"],
+  ["orange", "1"],
+  ["kiwi", "1"],
+  ["natural yogurt", "150g"],
+  ["honey", "1 tsp"],
+]
+
+[[recipe]]
+slug = "granola-milk"
+name = "Granola with milk and raspberries"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = "Pour the milk over the granola and top with raspberries."
+ingredients = [
+  ["granola", "60g"],
+  ["semi-skimmed milk", "200ml"],
+  ["raspberries", "60g"],
+]
+
+[[recipe]]
+slug = "red-lentil-breakfast-dhal"
+name = "Red lentil breakfast dhal with spinach"
+category = "Breakfast"
+cuisine = "Indian"
+servings = 2
+instructions = """
+Simmer the lentils in the water with the turmeric and cumin for 20 minutes until soft. Stir in
+the coconut milk and spinach, season and serve with a squeeze of lemon.
+"""
+ingredients = [
+  ["red lentils", "120g"],
+  ["water", "500ml"],
+  ["turmeric", "1/2 tsp"],
+  ["ground cumin", "1/2 tsp"],
+  ["coconut milk", "100ml"],
+  ["spinach", "60g"],
+  ["lemon juice", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "quinoa-apple-porridge"
+name = "Quinoa porridge with apple and cinnamon"
+category = "Breakfast"
+cuisine = "American"
+servings = 2
+instructions = """
+Simmer the quinoa in the water and coconut milk with the cinnamon for 15 minutes until creamy.
+Stir in the grated apple and serve with a drizzle of maple syrup.
+"""
+ingredients = [
+  ["quinoa", "100g"],
+  ["water", "250ml"],
+  ["coconut milk", "150ml"],
+  ["ground cinnamon", "1 tsp"],
+  ["apple", "1"],
+  ["maple syrup", "2 tsp"],
+]
+
+[[recipe]]
+slug = "sweet-potato-bean-hash"
+name = "Sweet potato and baked bean hash"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the diced sweet potato and onion in the oil for 12 minutes until tender. Stir in the beans
+and spinach and heat through.
+"""
+ingredients = [
+  ["sweet potato", "200g"],
+  ["red onion", "1/2"],
+  ["olive oil", "2 tsp"],
+  ["baked beans", "150g"],
+  ["spinach", "40g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-peanut-butter-banana"
+name = "Rice cakes with peanut butter and banana"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = "Spread the peanut butter on the rice cakes and top with sliced banana."
+ingredients = [
+  ["rice cakes", "30g"],
+  ["peanut butter", "25g"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "mango-coconut-chia-pots"
+name = "Mango and coconut chia pots"
+category = "Breakfast"
+cuisine = "Thai"
+servings = 2
+instructions = """
+Stir the chia seeds into the coconut milk and water with the maple syrup. Chill for at least 4
+hours. Top with diced mango and pumpkin seeds.
+"""
+ingredients = [
+  ["chia seeds", "50g"],
+  ["coconut milk", "200ml"],
+  ["water", "150ml"],
+  ["maple syrup", "2 tsp"],
+  ["mango", "1"],
+  ["pumpkin seeds", "20g"],
+]
+
+# --- snacks -----------------------------------------------------------------------------------
+
+[[recipe]]
+slug = "apple-peanut-butter"
+name = "Apple slices with peanut butter"
+category = "Snack"
+servings = 1
+instructions = "Slice the apple and serve with the peanut butter for dipping."
+ingredients = [["apple", "1"], ["peanut butter", "20g"]]
+
+[[recipe]]
+slug = "hummus-carrot-cucumber"
+name = "Hummus with carrot and cucumber sticks"
+category = "Snack"
+servings = 1
+instructions = "Cut the vegetables into sticks and serve with the hummus."
+ingredients = [["hummus", "60g"], ["carrots", "80g"], ["cucumber", "80g"]]
+
+[[recipe]]
+slug = "greek-yogurt-berries"
+name = "Greek yoghurt with berries"
+category = "Snack"
+servings = 1
+instructions = "Top the yoghurt with the berries."
+ingredients = [["greek yogurt", "150g"], ["blueberries", "50g"], ["raspberries", "50g"]]
+
+[[recipe]]
+slug = "skyr-honey"
+name = "Skyr with honey"
+category = "Snack"
+servings = 1
+instructions = "Stir a little honey into the skyr."
+ingredients = [["skyr", "150g"], ["honey", "1 tsp"]]
+
+[[recipe]]
+slug = "cottage-cheese-pineapple-cup"
+name = "Cottage cheese and pineapple"
+category = "Snack"
+servings = 1
+instructions = "Spoon the cottage cheese into a bowl and top with the pineapple."
+ingredients = [["cottage cheese", "150g"], ["pineapple", "80g"]]
+
+[[recipe]]
+slug = "boiled-eggs-snack"
+name = "Two boiled eggs"
+category = "Snack"
+servings = 1
+instructions = "Boil the eggs for 8 minutes, cool in cold water, peel and season."
+ingredients = [["eggs", "2"], ["black pepper", "1 pinch"]]
+
+[[recipe]]
+slug = "edamame-sea-salt"
+name = "Edamame with sea salt"
+category = "Snack"
+servings = 1
+instructions = "Boil the edamame for 4 minutes, drain and sprinkle with salt."
+ingredients = [["edamame", "150g"], ["salt", "1 pinch"]]
+
+[[recipe]]
+slug = "roasted-chickpeas"
+name = "Smoky roasted chickpeas"
+category = "Snack"
+servings = 2
+instructions = """
+Toss the drained chickpeas with the oil and cumin and roast at 200°C for 25-30 minutes until
+crunchy.
+"""
+ingredients = [["tinned chickpeas", "240g"], ["olive oil", "1 tbsp"], ["ground cumin", "1 tsp"]]
+
+[[recipe]]
+slug = "trail-mix"
+name = "Nut and raisin trail mix"
+category = "Snack"
+servings = 2
+instructions = "Mix and divide into two portions."
+ingredients = [["almonds", "30g"], ["cashew nuts", "20g"], ["raisins", "30g"]]
+
+[[recipe]]
+slug = "seed-and-apricot-mix"
+name = "Seed and apricot mix"
+category = "Snack"
+servings = 2
+instructions = "Mix and divide into two portions."
+ingredients = [["pumpkin seeds", "30g"], ["sunflower seeds", "20g"], ["dried apricots", "40g"]]
+
+[[recipe]]
+slug = "banana-walnuts"
+name = "Banana with walnuts"
+category = "Snack"
+servings = 1
+instructions = "Slice the banana and scatter with the walnuts."
+ingredients = [["banana", "1"], ["walnuts", "15g"]]
+
+[[recipe]]
+slug = "date-energy-balls"
+name = "Date and cocoa energy balls"
+category = "Snack"
+servings = 6
+instructions = """
+Blend the dates, oats, cocoa and peanut butter until sticky. Roll into 12 balls and chill.
+Two balls per serving.
+"""
+ingredients = [
+  ["medjool dates", "150g"],
+  ["porridge oats", "60g"],
+  ["cocoa powder", "15g"],
+  ["peanut butter", "40g"],
+]
+
+[[recipe]]
+slug = "cheese-crackers"
+name = "Cheddar with wholemeal crackers and grapes"
+category = "Snack"
+servings = 1
+instructions = "Serve the cheese with the crackers and grapes."
+ingredients = [["cheddar cheese", "25g"], ["wholemeal crackers", "25g"], ["grapes", "80g"]]
+
+[[recipe]]
+slug = "tuna-rice-cakes"
+name = "Tuna and cucumber rice cakes"
+category = "Snack"
+servings = 1
+instructions = "Mix the tuna with a squeeze of lemon and pile onto the rice cakes with cucumber."
+ingredients = [
+  ["tinned tuna", "80g"],
+  ["rice cakes", "20g"],
+  ["cucumber", "40g"],
+  ["lemon juice", "1 tsp"],
+]
+
+[[recipe]]
+slug = "smoked-salmon-rye-bites"
+name = "Smoked salmon on rye"
+category = "Snack"
+servings = 1
+instructions = "Top the rye bread with the smoked salmon, cucumber and chives."
+ingredients = [
+  ["rye bread", "35g"],
+  ["smoked salmon", "40g"],
+  ["cucumber", "30g"],
+  ["chives", "1 tsp"],
+]
+
+[[recipe]]
+slug = "dark-chocolate-almonds"
+name = "Dark chocolate and almonds"
+category = "Snack"
+servings = 1
+instructions = "A couple of squares of dark chocolate with a small handful of almonds."
+ingredients = [["dark chocolate", "15g"], ["almonds", "15g"]]
+
+[[recipe]]
+slug = "pear-cheddar"
+name = "Pear with cheddar"
+category = "Snack"
+servings = 1
+instructions = "Slice the pear and serve with the cheese."
+ingredients = [["pear", "1"], ["cheddar cheese", "25g"]]
+
+[[recipe]]
+slug = "fruit-cup"
+name = "Kiwi, orange and grape cup"
+category = "Snack"
+servings = 1
+instructions = "Peel and chop the fruit and mix."
+ingredients = [["kiwi", "1"], ["orange", "1"], ["grapes", "60g"]]
+
+[[recipe]]
+slug = "protein-shake"
+name = "Chocolate protein shake"
+category = "Snack"
+servings = 1
+instructions = "Shake the protein powder and cocoa with the milk until smooth."
+ingredients = [
+  ["whey protein", "30g"],
+  ["cocoa powder", "1 tsp"],
+  ["semi-skimmed milk", "250ml"],
+]
+
+[[recipe]]
+slug = "vegan-protein-shake"
+name = "Vegan chocolate protein shake"
+category = "Snack"
+servings = 1
+instructions = "Shake the soy protein and cocoa with the soy milk until smooth."
+ingredients = [["soy protein", "30g"], ["cocoa powder", "1 tsp"], ["soy milk", "250ml"]]
+
+[[recipe]]
+slug = "rice-cakes-almond-butter"
+name = "Rice cakes with almond butter and banana"
+category = "Snack"
+servings = 1
+instructions = "Spread the almond butter on the rice cakes and top with banana slices."
+ingredients = [["rice cakes", "20g"], ["almond butter", "15g"], ["banana", "1/2"]]

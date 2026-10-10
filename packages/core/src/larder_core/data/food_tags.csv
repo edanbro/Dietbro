@@ -1,0 +1,33 @@
+fdc_id,add_allergens,add_animal,remove_allergens,remove_animal,note
+167526,eggs,,,,Salvadoran quesadilla bread is made with eggs
+167532,soy,,,,UK sliced white bread usually contains soya flour
+167940,eggs|milk,,,,Frosted cinnamon buns: enriched dough (egg and milk) and butter frosting
+168567,sulphites,,,,Sun-dried tomatoes are often preserved with sulphur dioxide
+168586,sulphites,,,,UK desiccated coconut often contains sodium metabisulphite
+168756,eggs|gluten|milk|soy,,,,Nougat bar: milk chocolate, egg white, barley malt, soya lecithin
+168905,eggs,,,,Chow mein noodles are usually egg noodles
+169586,milk,,,,Peanut brittle is made with butter
+169642,,,,gelatin,USDA jellies are pectin-set fruit spreads (grape jelly); UK gelatin jelly is a different food
+170170,sulphites,,,,UK desiccated coconut often contains sodium metabisulphite
+171186,sulphites,,,,Sriracha contains sodium bisulphite
+171187,sulphites,,,,Sriracha contains sodium bisulphite
+171188,sulphites,,,,Sriracha contains sodium bisulphite
+171251,,rennet,,,Swiss cheese stands in for Emmental (traditionally made with animal rennet)
+171595,celery,,,,Bottled chilli sauce is ketchup-like (spice blends may contain celery)
+172175,,rennet,,,Blue cheese stands in for gorgonzola and roquefort (animal rennet)
+172234,gluten,,,,Stands in for English mustard (UK English mustard contains wheat flour)
+172438,,meat,,,Traditional-style canned refried beans are made with lard
+172671,milk,,,,Refrigerated biscuit dough contains milk and butter
+172729,eggs|milk,,,,Cookie dough contains egg and butter
+172761,milk,,,,English muffins usually contain milk
+172796,eggs|milk|sesame,,,,Burger buns: often enriched (brioche-style) or sesame-topped
+172814,eggs|milk,,,,Shortcrust pastry stand-in (pastry -> gluten + milk + eggs)
+173731,,meat,,,USDA home recipe for baked beans includes salt pork
+173964,,,sulphites,,"Fresh red and white currants; the sulphite rule is for dried currants"
+174924,soy,,,,UK sliced white bread usually contains soya flour
+174925,soy,,,,UK sliced white bread usually contains soya flour
+174939,eggs|milk|sulphites|tree_nuts,,,,Fruitcake: eggs and butter, dried fruit, often almonds
+175027,milk,,,,Egg dinner rolls are enriched with milk
+175083,,honey,,,Graham crackers are sweetened with honey
+171646,tree_nuts,honey,,,homemade granola is usually made with nuts and honey
+172688,soy,,,,UK sliced wholemeal bread usually contains soya flour

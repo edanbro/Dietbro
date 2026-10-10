@@ -2,6 +2,7 @@
 
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { ErrorAlert, LabeledInput } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,15 @@ export function AccountControls() {
   function deleteAccount() {
     deleter.mutate(undefined, {
       onSuccess: async () => {
-        await user?.delete();
+        try {
+          await user?.delete();
+        } catch {
+          // Our data is already gone. Clerk can refuse to delete the sign-in itself (e.g. it
+          // wants a recent sign-in); sign out anyway rather than strand the user here.
+          toast.error(
+            "Your Larder data is deleted, but your sign-in couldn't be removed. Sign in again and delete it from your account settings.",
+          );
+        }
         await signOut({ redirectUrl: "/" });
       },
     });

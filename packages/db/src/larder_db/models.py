@@ -1,13 +1,16 @@
 """Relational schema. Quantities are grams; food nutrients are per 100 g.
 
 Data (M1): foods, recipes, embeddings. Users (M2): profile, goals, allergies, pantry; every user
-table is keyed or filtered by `user_id`. Plans and LLM calls arrive with M3/M4.
+table is keyed or filtered by `user_id`. Plans (M3): versioned weekly plans and shopping lists.
+LLM calls arrive with M4.
 """
 
 from datetime import date, datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Date,
     DateTime,
@@ -16,12 +19,13 @@ from sqlalchemy import (
     Index,
     Integer,
     MetaData,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -312,4 +316,86 @@ class PantryItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = _now()
 
+    food: Mapped[Food] = relationship()
+
+
+# --- plans (M3) -------------------------------------------------------------------------------
+
+
+class MealPlan(Base):
+    """One version of a user's plan for `days` days from `start_date`. Replans (M5) add a new
+    version (`parent_id` = the plan it replaced); rows are never edited in place, except
+    shopping-list ticks."""
+
+    __tablename__ = "meal_plans"
+    __table_args__ = (
+        UniqueConstraint("user_id", "start_date", "version"),
+        Index("ix_meal_plans_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    start_date: Mapped[date] = mapped_column(Date)
+    days: Mapped[int] = mapped_column(SmallInteger)
+    version: Mapped[int] = mapped_column(Integer)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
+    planner: Mapped[str] = mapped_column(String(16))  # cpsat | greedy
+    status: Mapped[str] = mapped_column(String(16))  # larder_solver.problem.Status
+    objective: Mapped[int | None] = mapped_column(BigInteger)
+    solve_ms: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    # Snapshot of everything PlanOut shows that isn't a column (larder_api.planning.PlanStats):
+    # targets, cost, pantry use, waste, score terms, violations, notes. Never recomputed.
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    meals: Mapped[list["PlanMeal"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan", order_by="(PlanMeal.day, PlanMeal.id)"
+    )
+    shopping: Mapped[list["ShoppingItem"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan"
+    )
+
+
+class PlanMeal(Base):
+    """A planned meal. `portions` are half-servings (2 = one serving). The macros are a snapshot
+    of what the planner and validator used, so old plans never drift when recipes are re-imported.
+    """
+
+    __tablename__ = "plan_meals"
+    __table_args__ = (UniqueConstraint("plan_id", "day", "slot"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("meal_plans.id", ondelete="CASCADE"))
+    day: Mapped[int] = mapped_column(SmallInteger)
+    slot: Mapped[str] = mapped_column(String(16))  # breakfast | lunch | dinner | snack
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"))
+    portions: Mapped[int] = mapped_column(SmallInteger)
+    kcal: Mapped[int] = mapped_column(Integer)
+    protein_g: Mapped[int] = mapped_column(Integer)
+    fat_g: Mapped[int] = mapped_column(Integer)
+    carbs_g: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="planned")  # eaten | skipped (M5)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    plan: Mapped[MealPlan] = relationship(back_populates="meals")
+    recipe: Mapped[Recipe] = relationship()
+
+
+class ShoppingItem(Base):
+    """What to buy for a plan: grams beyond what the pantry covers, with an estimated cost.
+    Staples (salt, spices, ...) are listed to check, with no grams or cost."""
+
+    __tablename__ = "shopping_items"
+    __table_args__ = (UniqueConstraint("plan_id", "food_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("meal_plans.id", ondelete="CASCADE"))
+    food_id: Mapped[int] = mapped_column(ForeignKey("foods.id"))
+    grams: Mapped[int] = mapped_column(Integer)
+    cost_minor: Mapped[int] = mapped_column(Integer)
+    staple: Mapped[bool] = mapped_column(Boolean, default=False)
+    checked: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    plan: Mapped[MealPlan] = relationship(back_populates="shopping")
     food: Mapped[Food] = relationship()

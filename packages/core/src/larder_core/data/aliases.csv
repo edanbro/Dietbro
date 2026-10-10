@@ -4,8 +4,10 @@ all-purpose seasoning,171331,"Spices, poultry seasoning",approximation
 allspice,171315,"Spices, allspice, ground",
 allspice berry,171315,"Spices, allspice, ground",
 almond,170567,"Nuts, almonds",
+almond butter,168588,"Nuts, almond butter, plain, without salt added",
 almond essence,173471,Vanilla extract,approximation
 almond extract,173471,Vanilla extract,approximation
+almond milk,174832,"Beverages, almond milk, unsweetened, shelf stable",
 anchovy fillet,174183,"Fish, anchovy, european, canned in oil, drained solids",
 apple,171688,"Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",
 apple cider vinegar,173469,"Vinegar, cider",
@@ -19,6 +21,7 @@ baby squid,174223,"Mollusks, squid, mixed species, raw",
 bacon,168277,"Pork, cured, bacon, unprepared",
 bacon lardon,168277,"Pork, cured, bacon, unprepared",
 baguette,172675,"Bread, french or vienna (includes sourdough)",
+baked bean,175182,"Beans, baked, canned, plain or vegetarian",UK baked beans are vegetarian
 baking powder,172803,"Leavening agents, baking powder, double-acting, sodium aluminum sulfate",
 balsamic vinegar,172241,"Vinegar, balsamic",
 banana,173944,"Bananas, raw",
@@ -34,6 +37,7 @@ beef fillet,169547,"Beef, tenderloin, separable lean and fat, trimmed to 1/8"" f
 beef stock,172883,"Soup, stock, beef, home-prepared",
 beer,168746,"Alcoholic beverage, beer, regular, all",
 beetroot,169145,"Beets, raw",
+besan,174288,Chickpea flour (besan),
 bicarbonate of soda,175040,"Leavening agents, baking soda",
 birds-eye chilli,170106,"Peppers, hot chili, red, raw",
 biryani masala,170924,"Spices, curry powder",approximation
@@ -44,6 +48,7 @@ black pudding,171618,Blood sausage,
 black treacle,168820,Molasses,
 blackberry,173946,"Blackberries, raw",
 blackcurrant jam,169641,Jams and preserves,
+blueberry,171711,"Blueberries, raw",
 boiling water,173647,"Beverages, water, tap, drinking",
 bok choi,170390,"Cabbage, chinese (pak-choi), raw",
 borlotti bean,175189,"Beans, cranberry (roman), mature seeds, raw",
@@ -60,10 +65,12 @@ broccoli,321900,"Broccoli, raw",
 brown lentil,172420,"Lentils, raw",
 brown sugar,168833,"Sugars, brown",
 bryndza cheese,173420,"Cheese, feta",approximation
+bun,172796,"Rolls, hamburger or hotdog, plain",
 butter,173410,"Butter, salted",
 butter bean,174252,"Lima beans, large, mature seeds, raw",
 butternut squash,169295,"Squash, winter, butternut, raw",
 cabbage,169975,"Cabbage, raw",
+cacao,169593,"Cocoa, dry powder, unsweetened",approximation: cacao powder or nibs
 cajun,171319,"Spices, chili powder",approximation
 callaloo,168385,"Amaranth leaves, raw",
 cannellini bean,2644281,"Beans, cannellini, dry",
@@ -86,9 +93,11 @@ charlotte potato,170029,"Potatoes, red, flesh and skin, raw",
 cheddar cheese,328637,"Cheese, cheddar",
 cheese,328637,"Cheese, cheddar",
 cherry tomato,170457,"Tomatoes, red, ripe, raw, year round average",
+chia seed,170554,"Seeds, chia seeds, dried",
 chicken,171447,"Chicken, broilers or fryers, meat and skin, raw",
 chicken bouillon powder,171562,"Soup, chicken broth or bouillon, dry",
 chicken breast,171077,"Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",
+chicken drumstick,172373,"Chicken, broilers or fryers, drumstick, meat and skin, raw",
 chicken leg,173619,"Chicken, broilers or fryers, leg, meat only, raw",
 chicken stock,172884,"Soup, stock, chicken, home-prepared",
 chicken stock cube,171562,"Soup, chicken broth or bouillon, dry",
@@ -100,13 +109,16 @@ chilli,170106,"Peppers, hot chili, red, raw",
 chilli flake,170932,"Spices, pepper, red or cayenne",
 chilli powder,171319,"Spices, chili powder",
 chilli sauce,171595,"Sauce, tomato chili sauce, bottled, with salt",
+chinese five spice powder,171316,"Spices, anise seed",approximation: spice blend
 chinese leaf,169979,"Cabbage, chinese (pe-tsai), raw",
 chinese long bean,169222,"Yardlong bean, raw",
 chinese sesame sauce,170189,"Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type)",approximation
 chive,169994,"Chives, raw",
 chocolate chip,167976,"Candies, semisweet chocolate",
 chorizo,173859,"Sausage, pork, chorizo, link or ground, raw",
+christmas pudding,174939,"Cake, fruitcake, commercially prepared",approximation: steamed fruit pudding
 ciabatta,172675,"Bread, french or vienna (includes sourdough)",approximation
+cider,174146,"Beverages, AMBER, hard cider",
 cider vinegar,173469,"Vinegar, cider",
 cilantro,169997,"Coriander (cilantro) leaves, raw",
 cilantro leaf,169997,"Coriander (cilantro) leaves, raw",
@@ -136,6 +148,7 @@ corn on the cob,169998,"Corn, sweet, yellow, raw",
 corned beef,170602,"Beef, cured, corned beef, canned",
 cornmeal,168867,"Cornmeal, degermed, enriched, yellow",
 cornstarch,169698,Cornstarch,
+cottage cheese,173417,"Cheese, cottage, lowfat, 1% milkfat",
 courgette,169291,"Squash, summer, zucchini, includes skin, raw",
 couscous,169699,"Couscous, dry",
 crab meay,174204,"Crustaceans, crab, blue, raw",
@@ -143,6 +156,7 @@ cream,170858,"Cream, fluid, light whipping",
 cream cheese,173418,"Cheese, cream",
 creme fraiche,170859,"Cream, fluid, heavy whipping",approximation
 crusty bread,172675,"Bread, french or vienna (includes sourdough)",
+cuban bread,172675,"Bread, french or vienna (includes sourdough)",approximation: white bread made with lard
 cucumber,169225,"Cucumber, peeled, raw",
 cumin,170923,"Spices, cumin seed",
 cumin seed,170923,"Spices, cumin seed",
@@ -154,6 +168,7 @@ dark beer,168746,"Alcoholic beverage, beer, regular, all",
 dark brown soft sugar,168833,"Sugars, brown",
 dark chocolate,170273,"Chocolate, dark, 70-85% cacao solids",
 dark rum,174817,"Alcoholic beverage, distilled, rum, 80 proof",
+deli ham,173864,"Ham, sliced, regular (approximately 11% fat)",
 demerara sugar,168833,"Sugars, brown",
 desiccated coconut,170170,"Nuts, coconut meat, dried (desiccated), not sweetened",
 digestive biscuit,174957,"Cookies, graham crackers, plain or honey (includes cinnamon)",approximation
@@ -173,10 +188,12 @@ dry white wine,174837,"Alcoholic beverage, wine, table, white",
 duck leg,172408,"Duck, domesticated, meat and skin, raw",
 dulce de leche,173461,Dulce de Leche,
 dutch stroop,168820,Molasses,approximation
+edamame,168411,"Edamame, frozen, prepared",
 egg,171287,"Egg, whole, raw, fresh",
 egg plant,169228,"Eggplant, raw",
 egg white,172183,"Egg, white, raw, fresh",
 egg yolk,172184,"Egg, yolk, raw, fresh",
+emmentaler cheese,171251,"Cheese, swiss",
 english mustard,172234,"Mustard, prepared, yellow",approximation
 extra virgin olive oil,171413,"Oil, olive, salad or cooking",
 fajita seasoning,171319,"Spices, chili powder",approximation
@@ -193,19 +210,24 @@ filo pastry,172791,Phyllo dough,
 fish fillet,171955,"Fish, cod, Atlantic, raw",
 fish sauce,174531,"Sauce, fish, ready-to-serve",
 fish stock,172885,"Soup, stock, fish, home-prepared",
+five spice powder,171316,"Spices, anise seed",approximation: spice blend
 flaked almond,170567,"Nuts, almonds",
+flax egg,169414,"Seeds, flaxseed",approximation: ground flaxseed mixed with water
 flour,168936,"Wheat flour, white, all-purpose, enriched, unbleached",
 floury potato,170027,"Potatoes, russet, flesh and skin, raw (Includes foods for USDA's Food Distribution Program)",
 freekeh,170688,"Bulgur, dry",approximation
 fromage frai,171284,"Yogurt, plain, whole milk",approximation
+frozen mixed berry,168209,"Raspberries, frozen, red, unsweetened",approximation: berry mix
 frozen pea,170016,"Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)",
 frozen seafood mix,175179,"Crustaceans, shrimp, raw",approximation
 fruit mix,168165,"Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",approximation
+fry,168442,"Potatoes, french fried, all types, salt added in processing, frozen, unprepared",french fries
 galangal,169231,"Ginger root, raw",approximation
 galangal paste,169231,"Ginger root, raw",approximation
 garam masala,170924,"Spices, curry powder",approximation: spice blend
 garlic,169230,"Garlic, raw",
 garlic clove,169230,"Garlic, raw",
+garlic granule,171325,"Spices, garlic powder",
 garlic powder,171325,"Spices, garlic powder",
 gelatine leaf,169599,"Gelatins, dry powder, unsweetened",
 ghee,171314,"Butter, Clarified butter (ghee)",
@@ -215,7 +237,10 @@ glace cherry,167781,Candied fruit,approximation
 goats cheese,173435,"Cheese, goat, soft type",
 golden caster sugar,169655,"Sugars, granulated",
 golden syrup,168837,"Syrups, corn, light",approximation
+gram flour,174288,Chickpea flour (besan),
+granola,171646,"Cereals ready-to-eat, granola, homemade",
 granulated sugar,169655,"Sugars, granulated",
+grape,174683,"Grapes, red or green (European type, such as Thompson seedless), raw",
 greek yogurt,171304,"Yogurt, Greek, plain, whole milk",
 green bean,169961,"Beans, snap, green, raw",
 green chilli,170497,"Peppers, hot chili, green, raw",
@@ -232,9 +257,11 @@ ground cinnamon,171320,"Spices, cinnamon, ground",
 ground clove,171321,"Spices, cloves, ground",
 ground coriander,170922,"Spices, coriander seed",
 ground cumin,170923,"Spices, cumin seed",
+ground flaxseed,169414,"Seeds, flaxseed",
 ground ginger,170926,"Spices, ginger, ground",
 ground nut oil,171410,"Oil, peanut, salad or cooking",
 ground nutmeg,171326,"Spices, nutmeg, ground",
+ground oat,173904,"Cereals, oats, regular and quick, not fortified, dry",
 ground pork,2514745,"Pork, ground, raw",
 ground turmeric,172231,"Spices, turmeric, ground",
 ground walnut,170187,"Nuts, walnuts, english",
@@ -245,10 +272,12 @@ haricot bean,173745,"Beans, navy, mature seeds, raw",
 harissa spice,171319,"Spices, chili powder",approximation
 hazlenut,170581,"Nuts, hazelnuts or filberts",
 heavy cream,170859,"Cream, fluid, heavy whipping",
+hispi sweetheart cabbage,169975,"Cabbage, raw",
 honey,169640,Honey,
 hot mint,173475,"Spearmint, fresh",
 hot smoked paprika,171329,"Spices, paprika",
 hotsauce,174527,"Sauce, ready-to-serve, pepper or hot",
+hummus,174289,"Hummus, commercial",
 ice cream,167575,"Ice creams, vanilla",
 ice cube,173647,"Beverages, water, tap, drinking",
 icing sugar,169656,"Sugars, powdered",
@@ -269,6 +298,7 @@ kampot pepper,170931,"Spices, pepper, black",
 khus khus,171330,"Spices, poppy seed",
 kidney bean,173744,"Beans, kidney, red, mature seeds, raw",
 king prawn,175179,"Crustaceans, shrimp, raw",
+kiwi,168153,"Kiwifruit, green, raw",
 kosher salt,173468,"Salt, table",
 lamb,174370,"Lamb, ground, raw",
 lamb leg,172486,"Lamb, leg, shank half, separable lean only, trimmed to 1/4"" fat, choice, raw",
@@ -306,6 +336,7 @@ marzipan,170160,"Nuts, almond paste",
 mascarpone,173418,"Cheese, cream",approximation
 massaman curry paste,170924,"Spices, curry powder",approximation
 mayonnaise,171009,"Salad dressing, mayonnaise, regular",
+medjool date,168191,"Dates, medjool",
 meringue nest,169655,"Sugars, granulated",approximation
 milk,171265,"Milk, whole, 3.25% milkfat, with added vitamin D",
 milk chocolate,167587,"Candies, milk chocolate",
@@ -313,6 +344,7 @@ mincemeat,168165,"Raisins, dark, seedless (Includes foods for USDA's Food Distri
 miniature marshmallow,167995,"Candies, marshmallows",
 mint,173475,"Spearmint, fresh",
 mirin,167723,"Alcoholic beverage, rice (sake)",approximation
+mixed spice,171320,"Spices, cinnamon, ground",approximation: spice blend
 molasses,168820,Molasses,
 morcilla,171618,Blood sausage,
 morning glory,169301,"Water convolvulus,raw",
@@ -323,11 +355,14 @@ muscovado sugar,168833,"Sugars, brown",
 mushroom,169251,"Mushrooms, white, raw",
 mussel,174216,"Mollusks, mussel, blue, raw",
 mustard,172234,"Mustard, prepared, yellow",
+mustard powder,170929,"Spices, mustard seed, ground",
 natural yoghurt,171284,"Yogurt, plain, whole milk",
+natural yogurt,171284,"Yogurt, plain, whole milk",
 new potato,170029,"Potatoes, red, flesh and skin, raw",
 noodle,169731,"Noodles, egg, dry, enriched",
 nutmeg,171326,"Spices, nutmeg, ground",
 oat,173904,"Cereals, oats, regular and quick, not fortified, dry",
+oatmeal,173904,"Cereals, oats, regular and quick, not fortified, dry",UK oatmeal is ground oats
 oil,172336,"Oil, canola",
 olive oil,171413,"Oil, olive, salad or cooking",
 onion,170000,"Onions, raw",
@@ -360,15 +395,19 @@ pea,170016,"Peas, green, frozen, unprepared (Includes foods for USDA's Food Dist
 peanut,2515376,"Peanuts, raw",
 peanut butter,324860,"Peanut butter, smooth style, with salt",
 peanut oil,1750348,"Oil, peanut",
+pear,169118,"Pears, raw",
 pecan nut,170182,"Nuts, pecans",
 pecorino,171249,"Cheese, romano",
 penne rigate,169736,"Pasta, dry, enriched",
 pepper,170931,"Spices, pepper, black",
 peppercorn,170931,"Spices, pepper, black",
+petit poi,170016,"Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)",
 pico de gallo sauce,174524,"Sauce, salsa, ready-to-serve",
 pigs trotter,167859,"Pork, fresh, variety meats and by-products, feet, raw",
 pilchard,175140,"Fish, sardine, Pacific, canned in tomato sauce, drained solids with bone",
 pine nut,2346392,"Nuts, pine nuts, raw",
+pineapple,169124,"Pineapple, raw, all varieties",
+pink food colouring,173647,"Beverages, water, tap, drinking",approximation: a few drops
 pistachio,170184,"Nuts, pistachio nuts, raw",
 pita bread,174915,"Bread, pita, white, enriched",
 pitted black olive,169094,"Olives, ripe, canned (small-extra large)",
@@ -378,10 +417,12 @@ plantain,168215,"Plantains, green, raw",
 plum tomato,170457,"Tomatoes, red, ripe, raw, year round average",
 polish kabano,174577,"Polish sausage, pork",
 pork,167902,"Pork, fresh, ground, raw",
+pork back rib,168299,"Pork, fresh, backribs, separable lean and fat, raw",
 pork chop,2727575,"Pork, chop, center cut, raw",
 pork shoulder,167845,"Pork, fresh, shoulder, whole, separable lean only, raw",
 porridge oat,173904,"Cereals, oats, regular and quick, not fortified, dry",
 potato,170026,"Potatoes, flesh and skin, raw",
+potato starch,169698,Cornstarch,approximation: pure starch
 powdered sugar,169656,"Sugars, powdered",
 prawn,175179,"Crustaceans, shrimp, raw",
 pretzel,169064,"Pretzels, soft",
@@ -390,7 +431,9 @@ prune,168162,"Plums, dried (prunes), uncooked",
 puff pastry,172790,"Puff pastry, frozen, ready-to-bake",
 pul biber,170932,"Spices, pepper, red or cayenne",approximation
 pumpkin,168448,"Pumpkin, raw",
+pumpkin seed,170556,"Seeds, pumpkin and squash seed kernels, dried",
 purple sprouting broccoli,170379,"Broccoli, raw",
+quinoa,168874,"Quinoa, uncooked",
 radish,169276,"Radishes, raw",
 raisin,168165,"Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",
 rapeseed oil,172336,"Oil, canola",
@@ -405,6 +448,7 @@ red cabbage,169977,"Cabbage, red, raw",
 red chilli,170106,"Peppers, hot chili, red, raw",
 red chilli flake,170932,"Spices, pepper, red or cayenne",
 red curry paste,170924,"Spices, curry powder",approximation
+red lentil,174284,"Lentils, pink or red, raw",
 red onion,790577,"Onions, red, raw",
 red pepper,170108,"Peppers, sweet, red, raw",
 red pepper flake,170932,"Spices, pepper, red or cayenne",
@@ -416,9 +460,11 @@ red wine jelly,169642,Jellies,approximation
 red wine vinegar,172240,"Vinegar, red wine",
 redcurrant,173964,"Currants, red and white, raw",
 rice,168877,"Rice, white, long-grain, regular, raw, enriched",
+rice cake,170250,"Snacks, rice cakes, brown rice, plain, unsalted",
 rice flour,169714,"Rice flour, white, unenriched",
 rice noodle,169742,"Rice noodles, dry",
 rice paper sheet,169714,"Rice flour, white, unenriched",approximation
+rice vermicelli,169742,"Rice noodles, dry",
 rice vinegar,172237,"Vinegar, distilled",approximation
 ricotta,170851,"Cheese, ricotta, whole milk",
 rigatoni,169736,"Pasta, dry, enriched",
@@ -436,9 +482,11 @@ saffron,170934,"Spices, saffron",
 sage,170935,"Spices, sage, ground",
 sake,167723,"Alcoholic beverage, rice (sake)",
 salmon,175167,"Fish, salmon, Atlantic, farmed, raw",
+salsa,174524,"Sauce, salsa, ready-to-serve",
 salt,173468,"Salt, table",
 salt cod,174190,"Fish, cod, Atlantic, dried and salted",
 salted butter,173410,"Butter, salted",
+sardine,175139,"Fish, sardine, Atlantic, canned in oil, drained solids with bone",approximation: fresh sardine
 sauerkraut,169279,"Sauerkraut, canned, solids and liquids",
 sausage,171631,"Sausage, Italian, pork, mild, raw",
 sazon,172242,"Seasoning mix, dry, sazon, coriander & annatto",
@@ -448,6 +496,7 @@ scotch bonnet,170106,"Peppers, hot chili, red, raw",approximation
 sea salt,173468,"Salt, table",
 seasoned rice vinegar,172237,"Vinegar, distilled",approximation
 self-raising flour,168895,"Wheat flour, white, all-purpose, self-rising, enriched",
+semi-skimmed milk,171267,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",
 semolina,169715,"Semolina, enriched",
 serrano ham,173864,"Ham, sliced, regular (approximately 11% fat)",approximation
 sesame seed,170150,"Seeds, sesame seeds, whole, dried",
@@ -465,15 +514,21 @@ sichuan pepper,170931,"Spices, pepper, black",approximation
 single cream,170857,"Cream, fluid, light (coffee cream or table cream)",
 sirloin steak,2727574,"Beef, top sirloin steak, raw",
 sirop de liege,168820,Molasses,approximation
+skimmed milk,171269,"Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)",
 skirty steak,172137,"Beef, plate steak, boneless, inside skirt, separable lean only, trimmed to 0"" fat, choice, raw",
+skyr,170894,"Yogurt, Greek, plain, nonfat",
 smoked haddock,174199,"Fish, haddock, smoked",
 smoked paprika,171329,"Spices, paprika",
+smoked salmon,173687,"Fish, salmon, chinook, smoked",
 smoky aioli,171009,"Salad dressing, mayonnaise, regular",approximation
 snow pea,170010,"Peas, edible-podded, raw",
 sorrel jam,169641,Jams and preserves,approximation
 sour cream,171257,"Cream, sour, cultured",
 sour milk,172225,"Milk, buttermilk, fluid, whole",
+sourdough bread,172675,"Bread, french or vienna (includes sourdough)",
 soured cream and chive dip,171257,"Cream, sour, cultured",approximation
+soy milk,172446,"Soymilk, original and vanilla, unfortified",
+soy protein,173181,"Beverages, Protein powder soy based",
 soy sauce,174277,Soy sauce made from soy and wheat (shoyu),
 soya bean,174270,"Soybeans, mature seeds, raw",
 spaghetti,169736,"Pasta, dry, enriched",
@@ -482,6 +537,7 @@ spinach,168462,"Spinach, raw",
 spring onion,170005,"Onions, spring or scallions (includes tops and bulb), raw",
 squash,170487,"Squash, summer, all varieties, raw",
 squid,174223,"Mollusks, squid, mixed species, raw",
+stale bread,174924,"Bread, white, commercially prepared (includes soft bread crumbs)",
 star anise,171316,"Spices, anise seed",approximation
 starch,169698,Cornstarch,
 stilton cheese,172175,"Cheese, blue",
@@ -491,10 +547,13 @@ stout,168746,"Alcoholic beverage, beer, regular, all",
 strained yoghurt,171304,"Yogurt, Greek, plain, whole milk",
 strawberry,167762,"Strawberries, raw",
 strong white bread flour,790146,"Flour, bread, white, enriched, unbleached",
+strong white flour,790146,"Flour, bread, white, enriched, unbleached",
+strong wholemeal flour,168893,"Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",
 suet,170193,"Beef, variety meats and by-products, suet, raw",
 sugar,169655,"Sugars, granulated",
 summer savoury,170936,"Spices, savory, ground",
 sunflower oil,171025,"Oil, sunflower, linoleic, (approx. 65%)",
+sunflower seed,170562,"Seeds, sunflower seed kernels, dried",
 sushi rice,168931,"Rice, white, short-grain, raw, unenriched",
 swede,168454,"Rutabagas, raw",
 sweet chilli sauce,174066,"Sauce, sweet and sour, ready-to-serve",approximation
@@ -509,52 +568,67 @@ tahini paste,170189,"Seeds, sesame butter, tahini, from roasted and toasted kern
 tamarind paste,167763,"Tamarinds, raw",
 tapioca,169717,"Tapioca, pearl, dry",
 tarragon leaf,170937,"Spices, tarragon, dried",approximation
+tempura flour,168936,"Wheat flour, white, all-purpose, enriched, unbleached",approximation: wheat flour blend
 thai green curry paste,170924,"Spices, curry powder",approximation
 thai red curry paste,170924,"Spices, curry powder",approximation
 thyme,173470,"Thyme, fresh",
 tiger prawn,175179,"Crustaceans, shrimp, raw",
+tinned chickpea,173800,"Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained solids",
 tinned tomato,170051,"Tomatoes, red, ripe, canned, packed in tomato juice",
+tinned tuna,173709,"Fish, tuna, light, canned in water, drained solids",
+toast,174925,"Bread, white, commercially prepared, toasted",
+tobasco sauce,174527,"Sauce, ready-to-serve, pepper or hot",misspelling of Tabasco
 tofu,172475,"Tofu, raw, firm, prepared with calcium sulfate",
 tomato,170457,"Tomatoes, red, ripe, raw, year round average",
 tomato ketchup,168556,Catsup,
 tomato puree,170459,"Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)",UK tomato puree is tomato paste
 tomato sauce,170054,"Tomato products, canned, sauce",
 toor dal,172436,"Pigeon peas (red gram), mature seeds, raw",
+tortilla,175037,"Tortillas, ready-to-bake or -fry, flour, refrigerated",UK tortillas are wheat wraps
 truffle oil,171413,"Oil, olive, salad or cooking",approximation
 tuna,334194,"Fish, tuna, light, canned in water, drained solids",
 turkish delight,167989,"Candies, gumdrops, starch jelly pieces",approximation
 turmeric,172231,"Spices, turmeric, ground",
 turmeric powder,172231,"Spices, turmeric, ground",
 turnip,170465,"Turnips, raw",
+udon noodle,168908,"Noodles, japanese, somen, dry",approximation: wheat noodle
 unflavoured gelatin,169599,"Gelatins, dry powder, unsweetened",
 unsalted beef stock,172883,"Soup, stock, beef, home-prepared",
 unsalted butter,173430,"Butter, without salt",
+unsweetened coconut milk,170173,"Nuts, coconut milk, canned (liquid expressed from grated meat and water)",
 vanilla,173471,Vanilla extract,
 vanilla bean paste,173471,Vanilla extract,approximation
 vanilla extract,173471,Vanilla extract,
 vanilla pod,173471,Vanilla extract,approximation
 vanilla powder,173471,Vanilla extract,approximation
 vanilla sugar,169655,"Sugars, granulated",
+vasterbottensost cheese,171242,"Cheese, gruyere",approximation: aged hard cheese
 vegan butter,172346,"Margarine, regular, 80% fat, composite, stick, with salt",approximation
 vegetable millk,172446,"Soymilk, original and vanilla, unfortified",approximation
 vegetable oil,172336,"Oil, canola",
 vegetable stock,171583,"Soup, vegetable broth, ready to serve",
-vegetable stock cube,171562,"Soup, chicken broth or bouillon, dry",approximation
+vegetable stock cube,171613,"Soup, bouillon cubes and granules, low sodium, dry",approximation: no meat
+vermicelli pasta,169736,"Pasta, dry, enriched",
 vinaigrette dressing,171019,"Salad dressing, italian dressing, commercial, regular",approximation
 vinegar,172237,"Vinegar, distilled",
 walnut,170187,"Nuts, walnuts, english",
 warm water,173647,"Beverages, water, tap, drinking",
 water,173647,"Beverages, water, tap, drinking",
 water chestnut,170066,"Waterchestnuts, chinese, (matai), raw",
+whey protein,173180,"Beverages, Protein powder whey based",
 whipping cream,170859,"Cream, fluid, heavy whipping",
 white cabbage,169975,"Cabbage, raw",
 white fish,171955,"Fish, cod, Atlantic, raw",
+white flour,168936,"Wheat flour, white, all-purpose, enriched, unbleached",
 white sauerkraut,169279,"Sauerkraut, canned, solids and liquids",
 white vinegar,172237,"Vinegar, distilled",
 white wine,174837,"Alcoholic beverage, wine, table, white",
 white wine vinegar,172240,"Vinegar, red wine",approximation
 white yam,170071,"Yam, raw",
 whole milk,171265,"Milk, whole, 3.25% milkfat, with added vitamin D",
+wholegrain mustard,172234,"Mustard, prepared, yellow",approximation: prepared mustard
+wholemeal bread,172688,"Bread, whole-wheat, commercially prepared",
+wholemeal cracker,172749,"Crackers, whole-wheat",
 wild garlic leaf,169230,"Garlic, raw",approximation
 wonton skin,172802,Wonton wrappers (includes egg roll wrappers),
 wood ear mushroom,169251,"Mushrooms, white, raw",approximation

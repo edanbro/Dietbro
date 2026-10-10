@@ -1,0 +1,365 @@
+name,allergens,animal,note
+all-purpose seasoning,celery|mustard,-,seasoning blends often include celery and mustard
+almond essence,tree_nuts,-,almond flavouring
+almond extract,tree_nuts,-,almond flavouring
+almond flour,tree_nuts,-,ground almonds
+almond milk,tree_nuts,-,almond drink
+almond paste,tree_nuts,-,almonds and sugar
+ancho chilli,-,-,dried chilli
+apricot jam,-,-,jam
+baby aubergine,-,-,vegetable
+baby lettuce leaf,-,-,vegetable
+baby plum tomato,-,-,vegetable
+baked bean,-,-,UK baked beans in tomato sauce are vegetarian
+bamboo shoot,-,-,vegetable
+banana leaf,-,-,wrapper
+banana pepper,-,-,vegetable
+barbeque sauce,celery|gluten|mustard,-,spices; UK brands often use barley malt vinegar
+barramundi,fish,-,fish
+beef flank steak,-,meat,beef
+beef gravy,celery|gluten,meat,gravy granules or meat gravy
+beef shin,-,meat,beef
+beef tenderloin,-,meat,beef
+beef tomato,-,-,tomato
+beet,-,-,vegetable
+biryani masala,-,-,spice blend
+black eyed pea,-,-,pulse
+blueberry,-,-,fruit
+bread flour,gluten,-,wheat flour
+bread roll,gluten,-,wheat bread
+brie,milk,-,cheese
+brown rice,-,-,grain
+brown rice noodle,-,-,rice noodles
+bryndza cheese,milk,-,sheep's milk cheese
+buckwheat,-,-,gluten-free grain
+buckwheat flour,-,-,gluten-free flour
+bulgur wheat,gluten,-,wheat
+bun,eggs|gluten|milk|sesame,-,burger buns: enriched or sesame-topped
+buttermilk,milk,-,milk
+cabbage leaf,-,-,vegetable
+cacao,-,-,cacao powder or nibs
+cajun,celery|mustard,-,seasoning blends often include celery and mustard
+candied peel,sulphites,-,candied peel is sulphured
+canned bean,-,-,pulse
+caramelized sugar sauce,-,-,sugar cooked with water
+casabe,-,-,cassava flatbread
+cashew,tree_nuts,-,nut
+cassava,-,-,root
+cassava flour,-,-,gluten-free flour
+celery salt,celery,-,salt with ground celery seed
+cheese curd,milk,-,cheese
+cherry,-,-,fruit
+chestnut mushroom,-,-,"mushroom, not a nut"
+chicken drumstick,-,meat,chicken
+chicken liver,-,meat,offal
+chickpea flour,-,-,gram flour
+chinese cabbage,-,-,vegetable
+chinese five spice powder,-,-,spice blend
+chinese sesame sauce,sesame,-,sesame paste
+christmas pudding,eggs|gluten|milk|sulphites|tree_nuts,meat,"suet (may be beef), flour, eggs, dried fruit, nuts"
+chuck roast,-,meat,beef
+ciabatta,gluten,-,wheat bread
+cider,sulphites,-,alcoholic cider
+clotted cream,milk,-,cream
+coco sugar,-,-,coconut sugar
+coconut oil,-,-,oil
+cocoy banana,-,-,fruit
+cod,fish,-,fish
+colby jack cheese,milk,-,cheese
+cooked beetroot,-,-,vegetable
+cooking apple,-,-,fruit
+cooking wine,gluten|sulphites,-,Chinese cooking wine (Shaoxing) is brewed with wheat
+coriander seed,-,-,spice
+corn tortilla,-,-,maize
+cottage cheese,milk,-,cheese
+cranberry,-,-,fruit
+cream of tartar,-,-,potassium bitartrate
+creamed corn,milk,-,creamed corn is often made with cream or butter
+creme fraiche,milk,-,cultured cream
+cuban bread,gluten,meat,white bread traditionally made with lard
+custard,eggs|milk,-,egg custard
+custard powder,-,-,"cornflour, flavouring and colour (no egg or milk)"
+daikon radish,-,-,vegetable
+dark brown sugar,-,-,sugar
+dark chocolate chip,milk|soy,-,chocolate
+dark soft brown sugar,-,-,sugar
+date molasses,-,-,date syrup
+deli ham,sulphites,meat,cured ham
+dessert rice,-,-,rice
+digestive biscuit,gluten|milk,-,wheat biscuit; many brands may contain milk
+dijon mustard,mustard|sulphites,-,mustard with white wine
+doner meat,gluten|soy,meat,lamb with wheat flour and soya protein
+dried dill,-,-,herb
+dried fruit,sulphites,-,dried vine fruits are often sulphured
+dried red chilli,-,-,chilli
+dried sorrel,-,-,dried hibiscus
+dried white corn,-,-,maize
+duck sauce,-,-,plum and apricot sauce
+dutch stroop,-,-,sugar beet syrup
+egg roll,crustaceans|eggs|fish|gluten|soy,meat,"fried rolls: pork, often prawns, fish sauce, wheat wrapper"
+egg roll wrapper,eggs|gluten,-,wheat and egg wrapper
+emmentaler cheese,milk,rennet,Emmental is made with animal rennet
+enchilada sauce,gluten,-,often thickened with wheat flour
+english muffin,gluten|milk,-,bread roll
+english mustard,gluten|mustard,-,UK English mustard contains wheat flour
+evaporated milk,milk,-,milk
+fajita seasoning,celery|mustard,-,seasoning blends often include celery and mustard
+falafel,gluten|sesame,-,may contain wheat flour and sesame
+farine,gluten,-,French for (wheat) flour
+farmers cheese,milk,-,cheese
+fenugreek,-,-,spice
+feta cheese,milk,-,cheese
+five spice powder,-,-,spice blend
+flank steak,-,meat,beef
+flat rice noodle,-,-,rice noodles
+flax egg,-,-,ground flaxseed and water (egg substitute)
+freekeh,gluten,-,green wheat
+french lentil,-,-,pulse
+frogs leg,-,meat,frog
+fromage frai,milk,-,fresh cheese
+frozen mixed berry,-,-,fruit
+frozen seafood mix,crustaceans|fish|molluscs,-,"prawns, mussels, squid and fish"
+fruit mix,sulphites,-,dried fruit mix
+fry,gluten,-,frozen fries; coated fries contain wheat flour
+full fat sour cream,milk,-,cream
+galangal,-,-,root
+galangal paste,-,-,"galangal, oil and salt"
+garam masala,-,-,spice blend
+garlic bulb,-,-,vegetable
+garlic granule,-,-,dried garlic
+garlic sauce,eggs|milk|mustard,-,mayonnaise or yogurt based
+ginger cordial,sulphites,-,cordials are often preserved with sulphites
+gingerbread spice,-,-,spice blend
+glace cherry,sulphites,-,candied cherries are sulphured
+glutinous rice,-,-,rice (no gluten)
+goat meat,-,meat,goat
+golden syrup,-,-,sugar syrup
+goose fat,-,meat,animal fat
+gouda cheese,milk,-,cheese
+graham cracker crumb,gluten|soy,honey,wheat crackers with honey
+grape nut cereal,gluten,-,wheat and malted barley
+grape tomato,-,-,vegetable
+grapefruit,-,-,fruit
+great northern bean,-,-,pulse
+green salsa,-,-,"tomatillo, chilli, onion"
+grits,-,-,maize
+ground annatto,-,-,spice
+ground mustard,mustard,-,mustard
+ground oat,gluten,-,oats
+ground onion,-,-,vegetable
+ground pistachio,tree_nuts,-,nut
+ground poppy seed,-,-,seed
+ground sugar,-,-,sugar
+gruyere cheese,milk,rennet,Gruyere is made with animal rennet
+habanero pepper,-,-,chilli
+haddock,fish,-,fish
+hake,fish,-,fish
+hard taco shell,-,-,maize
+harissa spice,-,-,"chilli, caraway, coriander, cumin, garlic"
+herring,fish,-,fish
+hispi sweetheart cabbage,-,-,cabbage
+hoisin sauce,gluten|sesame|soy,-,"soy, wheat and sesame"
+horseradish,eggs|milk|mustard|sulphites,-,"jarred horseradish sauce contains egg yolk, mustard, often cream"
+hot beef stock,celery,meat,meat stock
+hot chilli powder,-,-,spice
+hot smoked flaked salmon,fish,-,fish
+hummus,sesame,-,tahini
+italian fennel sausage,gluten|sulphites,meat,sausage
+italian seasoning,-,-,dried herbs
+jamaican curry powder,celery|mustard,-,curry powder with mustard seed
+jamon iberico,sulphites,meat,cured ham
+jerk,celery|mustard,-,seasoning blends often include celery and mustard
+jerusalem artichoke,-,-,vegetable
+kabse spice,-,-,spice blend
+kaffir lime leaf,-,-,leaf
+kielbasa,gluten|sulphites,meat,sausage
+lamb fat,-,meat,animal fat
+lamb kidney,-,meat,offal
+lamb stock,celery,meat,meat stock
+lean beef,-,meat,beef
+lean steak,-,meat,beef
+light raisin,sulphites,-,golden raisins are sulphured
+lima bean,-,-,pulse
+lime leaf,-,-,leaf
+liquid cheese,milk,-,processed cheese
+lobster,crustaceans,-,crustacean
+mackerel,fish,-,fish
+madras paste,celery|mustard,-,curry paste: spices often include mustard
+makrut lime leaf,-,-,leaf
+malai,milk,-,cream
+malt vinegar,gluten,-,barley malt
+manchego,milk,rennet,sheep's cheese made with animal rennet
+mars bar,eggs|gluten|milk|soy,-,"milk chocolate, egg white, barley malt, soya lecithin"
+mascarpone,milk,-,cream cheese
+massaman curry paste,crustaceans|fish,-,contains shrimp paste
+meringue nest,eggs,-,egg white and sugar
+mincemeat,gluten|sulphites|tree_nuts,meat,"dried fruit, suet (may be beef), often nuts"
+mirin,-,-,rice seasoning
+mixed beef cut,-,meat,beef
+mixed grain,gluten,-,"grain mixes usually contain wheat, spelt or barley"
+mixed peel,sulphites,-,candied peel is sulphured
+mixed pepper,-,-,vegetable
+mixed spice,-,-,spice blend
+monterey jack cheese,milk,-,cheese
+mung bean paste,-,-,pulse
+mung bean sprout,-,-,vegetable
+mustard powder,gluten|mustard,-,UK mustard powder may contain wheat flour
+mustard seed,mustard,-,mustard
+naan bread,eggs|gluten|milk,-,enriched wheat bread
+oatmeal,gluten,-,ground oats
+onion salt,-,-,salt and onion powder
+orange blossom water,-,-,flower water
+oxtail,-,meat,beef
+palm heart,-,-,vegetable
+palm sugar,-,-,sugar
+panang curry paste,crustaceans|fish|peanuts,-,shrimp paste; some recipes grind peanuts into it
+paneer,milk,-,cheese
+panquehue cheese,milk,-,cheese
+parma ham,sulphites,meat,cured ham
+passion fruit pulp,-,-,fruit
+peach,-,-,fruit
+peach juice,-,-,fruit juice
+peanut brittle,milk|peanuts,-,"peanuts, sugar, butter"
+peanut cookie,eggs|gluten|milk|peanuts,-,cookie
+petit poi,-,-,peas
+phyllo dough,gluten,-,wheat pastry
+pickle juice,-,-,brine
+pickled grape leaf,-,-,leaves in brine
+pimento stuffed olive,-,-,olive
+pineapple chunk,-,-,fruit
+pineapple juice,-,-,fruit juice
+pink food colouring,-,-,colouring
+pinto bean,-,-,pulse
+pistachio paste,tree_nuts,-,nut paste
+plain chocolate,milk|soy,-,chocolate
+plum jam,-,-,jam
+plum sauce,-,-,plum sauce
+pomegranate,-,-,fruit
+poppy seed,-,-,seed
+pork back rib,-,meat,pork
+pork belly slice,-,meat,pork
+pork shoulder steak,-,meat,pork
+pork tenderloin,-,meat,pork
+potato starch,-,-,starch
+prosciutto,sulphites,meat,cured ham
+pul biber,-,-,chilli flakes
+pumpkin puree,-,-,vegetable
+queso fresco,milk,-,cheese
+quinoa,-,-,gluten-free grain
+ras el hanout,-,-,spice blend
+raw frozen prawn,crustaceans,-,crustacean
+raw vegetable,-,-,vegetables
+red chilli powder,-,-,spice
+red curry paste,crustaceans|fish,-,contains shrimp paste
+red pepper paste,-,-,Turkish pepper paste: peppers and salt
+red pepper sauce,-,-,chilli sauce
+red wine jelly,sulphites,-,wine and sugar set with pectin
+refried bean,-,meat,traditionally made with lard
+rhubarb,-,-,vegetable
+rice flour pancake,-,-,rice flour pancakes
+rice paper sheet,-,-,"rice flour, tapioca, salt"
+rice stick noodle,-,-,rice noodles
+rice vermicelli,-,-,rice noodles
+rice vinegar,-,-,vinegar
+rice wine,gluten|sulphites,-,Chinese rice wine may be brewed with wheat
+roasted pepper,-,-,peppers
+roasted vegetable,-,-,vegetables
+rolled oat,gluten,-,oats
+rose water,-,-,flower water
+rye,gluten,-,cereal
+rye flour,gluten,-,cereal
+rye grain,gluten,-,cereal
+sardine,fish,-,fish
+savoy cabbage,-,-,vegetable
+scotch bonnet,-,-,chilli
+sea bass fillet,fish,-,fish
+seasoned rice vinegar,-,-,"vinegar, sugar and salt"
+seasoning,celery|mustard,-,seasoning blends often include celery and mustard
+seed,sesame,-,mixed seeds may include sesame
+semi-skimmed milk,milk,-,milk
+semolina flour,gluten,-,durum wheat
+serrano ham,sulphites,meat,cured ham
+sherry vinegar,sulphites,-,wine vinegar
+shredded coconut,sulphites,-,desiccated coconut is often sulphited
+shredded mexican cheese,milk,-,cheese
+shredded monterey jack cheese,milk,-,cheese
+shrimp paste,crustaceans|fish,-,"fermented shrimp, sometimes fish"
+shrimp stock,celery|crustaceans,-,shellfish stock
+sichuan pepper,-,-,spice
+silken tofu,soy,-,soya
+sirloin steak tip,-,meat,beef
+sirop de liege,-,-,fruit syrup
+smoked ham,sulphites,meat,cured ham
+smoked salmon,fish,-,fish
+smoky aioli,eggs|mustard,-,garlic mayonnaise
+smoky paprika,-,-,spice
+soda water,-,-,water
+sorrel jam,-,-,hibiscus jam
+soured cream and chive dip,eggs|milk,-,soured cream; many dips contain egg yolk
+speculaas spice mix,-,-,spice blend
+sriracha,sulphites,-,contains sodium bisulphite
+stale bread,gluten|soy,-,UK bread often contains soya flour
+star anise,-,-,spice
+stir-fry vegetable,-,-,vegetables
+strong white flour,gluten,-,wheat flour
+strong wholemeal flour,gluten,-,wheat flour
+sugar snap pea,-,-,vegetable
+sugar syrup,-,-,sugar
+sultana,sulphites,-,dried vine fruit
+sun-dried tomato,sulphites,-,often preserved with sulphur dioxide
+sweet chilli sauce,-,-,"sugar, chilli, garlic, vinegar"
+sweet peppadew pepper,-,-,pickled peppers
+sweet quark,milk,-,fresh cheese
+swiss cheese,milk,rennet,"Emmental-style cheese, traditionally animal rennet"
+szechuan peppercorn,-,-,spice
+tamarind ball,-,-,tamarind and sugar
+tamarind pulp,-,-,fruit
+tarragon leaf,-,-,herb
+tempeh,soy,-,soya
+tempura flour,eggs|gluten,-,"wheat flour blend, some contain egg"
+thai chilli jam,crustaceans|fish,-,nam prik pao: dried shrimp and fish sauce
+thai fish sauce,fish,-,fish
+thai green curry paste,crustaceans|fish,-,contains shrimp paste
+thai red curry paste,crustaceans|fish,-,contains shrimp paste
+toast,gluten|soy,-,bread
+tobasco sauce,-,-,"chilli, vinegar, salt"
+tortilla,gluten,-,wheat wraps
+trout,fish,-,fish
+truffle oil,-,-,flavoured olive oil
+turkey,-,meat,poultry
+turkey ham,sulphites,meat,cured meat
+turkey mince,-,meat,poultry
+turkish delight,-,-,starch and sugar sweet
+udon noodle,gluten,-,wheat noodles
+unsalted peanut,peanuts,-,peanuts
+unsweetened cocoa,-,-,cocoa powder
+unsweetened coconut milk,-,-,coconut
+unwaxed lemon,-,-,fruit
+unwaxed lime,-,-,fruit
+vanilla bean paste,-,-,vanilla
+vanilla pod,-,-,vanilla
+vanilla powder,-,-,vanilla
+vasterbottensost cheese,milk,rennet,"aged hard cheese, traditionally animal rennet"
+vegan butter,-,-,plant-based spread
+vegan white wine vinegar,sulphites,-,wine vinegar
+vegetable millk,gluten|soy|tree_nuts,-,"unknown plant milk: oat, soya or nut"
+vegetable stock cube,celery|gluten,-,stock cubes contain celery and often wheat
+vermicelli pasta,gluten,-,wheat pasta
+vinaigrette dressing,mustard|sulphites,-,mustard and wine vinegar
+vine leaf,-,-,leaves
+vine tomato,-,-,vegetable
+wheat flour,gluten,-,wheat flour
+white asparagus,-,-,vegetable
+white bread,gluten|soy,-,UK bread often contains soya flour
+white bread mix,gluten|soy,-,bread mixes often contain soya flour
+white chocolate chip,milk|soy,-,chocolate
+white cornmeal,-,-,maize
+white fish fillet,fish,-,fish
+white flour,gluten,-,wheat flour
+white wine vinegar,sulphites,-,wine vinegar
+whole black peppercorn,-,-,spice
+wholegrain mustard,mustard|sulphites,-,"mustard seeds, wine or vinegar"
+wild garlic leaf,-,-,leaf
+wood ear mushroom,-,-,mushroom
+yellow masarepa,-,-,maize flour
+yellow split pea,-,-,pulse

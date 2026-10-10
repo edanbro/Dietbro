@@ -111,3 +111,37 @@ async def test_report(seeded: AsyncSession, embedder: Embedder) -> None:
     assert (r.recipes, r.recipes_complete) == (2, 1)
     assert r.unmatched == [("unobtainium", 1)]
     assert "75.0%" in report.render(r)
+
+
+async def test_resolve_aliases_only_leaves_unknown_names_unmatched(seeded: AsyncSession) -> None:
+    stats = await resolve.resolve_all(seeded, None)
+
+    assert stats.recipes_complete == 1
+    unknown = await seeded.scalar(
+        select(RecipeIngredient).where(RecipeIngredient.raw_name == "Unobtainium")
+    )
+    assert unknown is not None
+    assert unknown.food_id is None
+    # Nothing new is cached without a model, so a later full resolve still tries the matcher.
+    cached = {m.name for m in await seeded.scalars(select(IngredientMatch))}
+    assert "unobtainium" not in cached
+
+
+async def test_explicit_servings_are_kept(seeded: AsyncSession, embedder: Embedder) -> None:
+    fried = await seeded.scalar(select(Recipe).where(Recipe.name == "Fried onions"))
+    assert fried is not None
+    fried.servings, fried.servings_estimated = 3, False
+    await seeded.commit()
+
+    await resolve.resolve_all(seeded, embedder)
+
+    await seeded.refresh(fried)
+    assert (fried.servings, fried.servings_estimated) == (3, False)
+    assert fried.kcal == pytest.approx((300 * 0.40 + 27 * 8.84) / 3)
+
+
+def test_recipe_nutrition_estimates_snack_servings() -> None:
+    food = Food(id=1, description="x", data_type="sr_legacy", kcal=400, protein_g=10, fat_g=10)
+    out = resolve.recipe_nutrition([(1, 100)], {1: food}, "Snack")
+    assert out["servings"] == 2  # 400 kcal at ~200 kcal per snack
+    assert out["servings_estimated"] is True
