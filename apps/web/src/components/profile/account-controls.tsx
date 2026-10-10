@@ -39,8 +39,12 @@ export function AccountControls() {
           toast.error(
             "Your Larder data is deleted, but your sign-in couldn't be removed. Sign in again and delete it from your account settings.",
           );
+          await signOut({ redirectUrl: "/" });
+          return;
         }
-        await signOut({ redirectUrl: "/" });
+        // Deleting the user ends its sessions, so signOut() would have nothing to do and
+        // wouldn't redirect. A full load also drops everything cached in this tab.
+        window.location.replace("/");
       },
     });
   }

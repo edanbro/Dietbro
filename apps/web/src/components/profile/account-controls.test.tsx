@@ -40,12 +40,16 @@ function deleteViaUi() {
 }
 
 describe("AccountControls", () => {
-  it("deletes the sign-in and signs out after our data is deleted", async () => {
+  it("deletes the sign-in, then leaves with a full page load", async () => {
+    // Clerk's signOut() is a no-op once the user (and so every session) is deleted.
+    const replace = vi.fn();
+    vi.stubGlobal("location", { ...window.location, replace });
     clerk.deleteUser.mockResolvedValue();
     deleteViaUi();
 
-    await waitFor(() => expect(clerk.signOut).toHaveBeenCalledWith({ redirectUrl: "/" }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"));
     expect(clerk.deleteUser).toHaveBeenCalled();
+    expect(clerk.signOut).not.toHaveBeenCalled();
   });
 
   it("still signs out when the identity provider refuses to delete the sign-in", async () => {
