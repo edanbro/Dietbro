@@ -982,6 +982,9 @@
               }
             }
           },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1028,6 +1031,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
           },
           "422": {
             "description": "Validation Error",
@@ -1095,6 +1101,9 @@
               }
             }
           },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1114,6 +1123,7 @@
           "recipes"
         ],
         "summary": "Get Recipe",
+        "description": "A recipe with allergens and suitable diets derived the same way the planner derives them\n(never TheMealDB's category, which isn't a diet claim).",
         "operationId": "getRecipe",
         "parameters": [
           {
@@ -1136,6 +1146,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "no such recipe"
           },
           "422": {
             "description": "Validation Error",
@@ -1398,6 +1411,15 @@
           "totals"
         ],
         "title": "DayOut"
+      },
+      "Diet": {
+        "type": "string",
+        "enum": [
+          "vegetarian",
+          "vegan",
+          "pescatarian"
+        ],
+        "title": "Diet"
       },
       "FoodDetail": {
         "properties": {
@@ -2253,18 +2275,12 @@
           "diet": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "vegetarian",
-                  "vegan",
-                  "pescatarian"
-                ]
+                "$ref": "#/components/schemas/Diet"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Diet"
+            ]
           },
           "violations": {
             "items": {
@@ -2330,18 +2346,12 @@
           "diet": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "vegetarian",
-                  "vegan",
-                  "pescatarian"
-                ]
+                "$ref": "#/components/schemas/Diet"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Diet"
+            ]
           },
           "liked_cuisines": {
             "items": {
@@ -2384,18 +2394,12 @@
           "diet": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "vegetarian",
-                  "vegan",
-                  "pescatarian"
-                ]
+                "$ref": "#/components/schemas/Diet"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Diet"
+            ]
           },
           "liked_cuisines": {
             "items": {
@@ -2673,12 +2677,7 @@
           },
           "suitable_for": {
             "items": {
-              "type": "string",
-              "enum": [
-                "vegetarian",
-                "vegan",
-                "pescatarian"
-              ]
+              "$ref": "#/components/schemas/Diet"
             },
             "type": "array",
             "title": "Suitable For"

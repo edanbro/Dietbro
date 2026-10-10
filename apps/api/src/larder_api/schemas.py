@@ -15,9 +15,9 @@ from larder_core.energy import (
     Sex,
 )
 from larder_core.meals import Slot
+from larder_core.tagging import Diet
 
 Currency = Literal["GBP", "EUR", "USD"]
-Diet = Literal["vegetarian", "vegan", "pescatarian"]
 
 _kcal = Field(ge=0, le=10_000)
 _grams = Field(default=None, ge=0, le=2_000)

@@ -373,7 +373,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Recipe */
+        /**
+         * Get Recipe
+         * @description A recipe with allergens and suitable diets derived the same way the planner derives them
+         *     (never TheMealDB's category, which isn't a diet claim).
+         */
         get: operations["getRecipe"];
         put?: never;
         post?: never;
@@ -467,6 +471,11 @@ export interface components {
             meals: components["schemas"]["MealOut"][];
             totals: components["schemas"]["MacrosOut"];
         };
+        /**
+         * Diet
+         * @enum {string}
+         */
+        Diet: "vegetarian" | "vegan" | "pescatarian";
         /** FoodDetail */
         FoodDetail: {
             /** Id */
@@ -758,8 +767,7 @@ export interface components {
             shopping_items: number;
             /** Excluded Allergens */
             excluded_allergens: components["schemas"]["Allergen"][];
-            /** Diet */
-            diet: ("vegetarian" | "vegan" | "pescatarian") | null;
+            diet: components["schemas"]["Diet"] | null;
             /** Violations */
             violations: components["schemas"]["ViolationOut"][];
             /** Notes */
@@ -775,8 +783,7 @@ export interface components {
         };
         /** PreferencesIn */
         PreferencesIn: {
-            /** Diet */
-            diet?: ("vegetarian" | "vegan" | "pescatarian") | null;
+            diet?: components["schemas"]["Diet"] | null;
             /** Liked Cuisines */
             liked_cuisines?: string[];
             /** Disliked Cuisines */
@@ -788,8 +795,7 @@ export interface components {
         };
         /** PreferencesOut */
         PreferencesOut: {
-            /** Diet */
-            diet?: ("vegetarian" | "vegan" | "pescatarian") | null;
+            diet?: components["schemas"]["Diet"] | null;
             /** Liked Cuisines */
             liked_cuisines?: string[];
             /** Disliked Cuisines */
@@ -875,7 +881,7 @@ export interface components {
             /** Allergens Complete */
             allergens_complete: boolean;
             /** Suitable For */
-            suitable_for: ("vegetarian" | "vegan" | "pescatarian")[];
+            suitable_for: components["schemas"]["Diet"][];
             /** Ingredients */
             ingredients: components["schemas"]["RecipeIngredientOut"][];
         };
@@ -1707,6 +1713,13 @@ export interface operations {
                     "application/json": components["schemas"]["PlanOut"];
                 };
             };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1737,6 +1750,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ShoppingListOut"];
                 };
+            };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1774,6 +1794,13 @@ export interface operations {
                     "application/json": components["schemas"]["ShoppingItemOut"];
                 };
             };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1804,6 +1831,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RecipeDetail"];
                 };
+            };
+            /** @description no such recipe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

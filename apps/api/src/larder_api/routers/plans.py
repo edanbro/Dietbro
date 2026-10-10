@@ -22,6 +22,7 @@ from larder_api.auth import CurrentUser
 from larder_api.db import Session, get_sessionmaker
 from larder_api.schemas import (
     DayOut,
+    MacrosOut,
     MealOut,
     PlanOut,
     PlanRequest,
@@ -119,7 +120,7 @@ def plan_out(row: MealPlan) -> PlanOut:
                         recipe=_card(m),
                         portions=m.portions,
                         servings=m.portions / 2,
-                        nutrition=planning.MacrosOut(
+                        nutrition=MacrosOut(
                             kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g
                         ),
                         locked=m.locked,
@@ -130,7 +131,7 @@ def plan_out(row: MealPlan) -> PlanOut:
                 totals=stats.day_totals[d],
             )
         )
-    week = planning.MacrosOut(
+    week = MacrosOut(
         kcal=sum(t.kcal for t in stats.day_totals),
         protein_g=sum(t.protein_g for t in stats.day_totals),
         fat_g=sum(t.fat_g for t in stats.day_totals),
@@ -228,19 +229,19 @@ async def create_plan(
     )
     stats.total_ms = round((time.perf_counter() - started) * 1000)
 
-    for attempt in range(2):
+    row = planning.save_plan(
+        session, user.id, prepared, result, plan, stats, currency, catalog.unshoppable
+    )
+    try:
+        await session.commit()
+    except IntegrityError:
+        # Two plans for the same start at once: take the next version and retry once.
+        await session.rollback()
+        prepared.version = await planning.next_version(session, user.id, start)
         row = planning.save_plan(
             session, user.id, prepared, result, plan, stats, currency, catalog.unshoppable
         )
-        try:
-            await session.commit()
-            break
-        except IntegrityError:
-            # Two plans for the same start at once: take the next version and retry once.
-            await session.rollback()
-            if attempt:
-                raise
-            prepared.version = await planning.next_version(session, user.id, start)
+        await session.commit()
     return plan_out(await _load_plan(session, user, row.id))
 
 

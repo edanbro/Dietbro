@@ -14,16 +14,17 @@ from larder_api.main import app
 from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_db.engine import make_sessionmaker
 from larder_db.models import Food, Goals, MealPlan, Recipe, RecipeIngredient
-from larder_solver import Meal, Plan, PlanResult, Problem, Slot, Status
+from larder_solver import Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
 
 Auth = Callable[..., dict[str, str]]
 
 # Foods with unambiguous tags (no allergens unless named), real FDC ids and categories.
-RICE, BROCCOLI, CHICKEN, PEANUTS, APPLE, LENTILS = 169704, 170379, 171477, 172430, 171688, 172421
+# Ids match the curated aliases, so recipe lines count as exact matches (reviewed tags).
+RICE, BROCCOLI, CHICKEN, PEANUTS, APPLE, LENTILS = 168877, 321900, 171447, 2515376, 171688, 172420
 FOODS = [
     (
         RICE,
-        "Rice, white, long-grain, regular, cooked",
+        "Rice, white, long-grain, regular, raw, enriched",
         "Cereal Grains and Pasta",
         130,
         2.7,
@@ -33,18 +34,26 @@ FOODS = [
     (BROCCOLI, "Broccoli, raw", "Vegetables and Vegetable Products", 34, 2.8, 0.4, 7),
     (
         CHICKEN,
-        "Chicken, broilers or fryers, breast, meat only, raw",
+        "Chicken, broilers or fryers, meat and skin, raw",
         "Poultry Products",
         120,
         23,
         2.6,
         0,
     ),
-    (PEANUTS, "Peanuts, all types, raw", "Legumes and Legume Products", 567, 26, 49, 16),
-    (APPLE, "Apples, raw, with skin", "Fruits and Fruit Juices", 52, 0.3, 0.2, 14),
+    (PEANUTS, "Peanuts, raw", "Legumes and Legume Products", 567, 26, 49, 16),
+    (
+        APPLE,
+        "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",
+        "Fruits and Fruit Juices",
+        52,
+        0.3,
+        0.2,
+        14,
+    ),
     (
         LENTILS,
-        "Lentils, mature seeds, cooked, boiled",
+        "Lentils, raw",
         "Legumes and Legume Products",
         116,
         9,
@@ -114,9 +123,9 @@ def _catalog() -> list[Recipe]:
         n += 1
         recipes.append(_recipe(n, f"Apple slices {i}", "Snack", 120, 1, [("apple", APPLE, 300)]))
     n += 1
-    recipes.append(_recipe(n, "Satay noodles", "Vegetarian", 650, 25, [("peanuts", PEANUTS, 150)]))
+    recipes.append(_recipe(n, "Satay noodles", "Vegetarian", 650, 25, [("peanut", PEANUTS, 150)]))
     n += 1
-    recipes.append(_recipe(n, "Lentil stew", "Vegetarian", 550, 30, [("lentils", LENTILS, 500)]))
+    recipes.append(_recipe(n, "Lentil stew", "Vegetarian", 550, 30, [("lentil", LENTILS, 500)]))
     return recipes
 
 
@@ -215,7 +224,9 @@ async def test_replanning_adds_a_version(api: httpx.AsyncClient, auth: Auth) -> 
 async def test_allergens_are_excluded(api: httpx.AsyncClient, auth: Auth) -> None:
     await set_up(api, auth, allergens=["peanuts"])
 
-    plan = (await api.post("/plans", json={}, headers=auth())).json()
+    response = await api.post("/plans", json={}, headers=auth())
+    assert response.status_code == 201, response.text
+    plan = response.json()
 
     names = {m["recipe"]["name"] for d in plan["days"] for m in d["meals"]}
     assert "Satay noodles" not in names
@@ -233,7 +244,7 @@ async def test_no_plan_until_setup_is_complete(api: httpx.AsyncClient, auth: Aut
 
 async def test_stale_goals_are_sent_back_for_review(api: httpx.AsyncClient, auth: Auth) -> None:
     await set_up(api, auth, goals={"kcal_min": 1200, "kcal_max": 1300})
-    body = {"sex": "male", "age": 30, "height_cm": 190, "weight_kg": 110, "activity": "very"}
+    body = {"sex": "male", "age": 30, "height_cm": 190, "weight_kg": 110, "activity": "very_active"}
     assert (await api.put("/me/body", json=body, headers=auth())).status_code == 200
 
     response = await api.post("/plans", json={}, headers=auth())
@@ -256,9 +267,10 @@ def _result(plan: Plan | None, status: Status, planner: str = "greedy") -> PlanR
     return PlanResult(status=status, plan=plan, planner=planner, wall_ms=1)
 
 
-def _first_candidates(problem: Problem, portions: int = 2) -> Plan:
+def _first_candidates(problem: Problem, portions: int | None = None) -> Plan:
+    """The first candidate in every required slot; smallest allowed portions by default."""
     meals = [
-        Meal(d, spec.slot, spec.candidates[0], portions)
+        Meal(d, spec.slot, spec.candidates[0], portions or problem.portion_range(spec.slot)[0])
         for d in range(problem.days)
         for spec in problem.slots
         if spec.required
@@ -316,7 +328,7 @@ async def test_a_plan_below_the_calorie_floor_is_refused(
     api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
 ) -> None:
     await set_up(api, auth)
-    use_planner(lambda p: _result(_first_candidates(p, portions=1), Status.FEASIBLE))
+    use_planner(lambda p: _result(_first_candidates(p), Status.FEASIBLE))
 
     response = await api.post("/plans", json={}, headers=auth())
 
@@ -410,19 +422,19 @@ def test_targets_round_and_widen_daily_macro_bands() -> None:
 
     t = planning.targets_from(goals, days=7)
 
-    assert (t.daily[planning.Nutrient.KCAL].min, t.daily[planning.Nutrient.KCAL].max) == (
+    assert (t.daily[Nutrient.KCAL].min, t.daily[Nutrient.KCAL].max) == (
         1800,
         2200,
     )
-    assert t.daily[planning.Nutrient.PROTEIN].min == 80  # 0.8 x 100.4
-    assert t.weekly[planning.Nutrient.PROTEIN].min == 703  # 7 x 100.4
-    assert planning.Nutrient.FAT not in t.daily
+    assert t.daily[Nutrient.PROTEIN].min == 80  # 0.8 x 100.4
+    assert t.weekly[Nutrient.PROTEIN].min == 703  # 7 x 100.4
+    assert Nutrient.FAT not in t.daily
     assert t.calorie_floor == 1200
 
 
 def test_kcal_band_never_starts_below_the_floor() -> None:
     t = planning.targets_from(_goals(kcal_min=1100, kcal_max=1500, calorie_floor=1300), days=7)
-    assert t.daily[planning.Nutrient.KCAL].min == 1300
+    assert t.daily[Nutrient.KCAL].min == 1300
 
 
 def _goals(**kw: Any) -> Goals:
