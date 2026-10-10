@@ -8,6 +8,16 @@
 
 Each scripted step is one assistant response. A step may also be a callable that receives the
 messages sent so far and returns a response, so a test can react to tool results.
+
+To add (M4 implementation): a `think()` block (`{"type": "thinking", "thinking": "",
+"signature": "sig-N"}`) prepended to every step by default, so thinking round-trips through
+persistence; `fail(after_text=...)`; `fallback(declined_text, then=step)` (emits text, calls
+on_reset, then the step, with a `fallback` block in the content); globally unique tool ids;
+streamed chunks that join back to exactly the scripted text; and `strict=True` (default):
+every respond() asserts the transcript rules - user first, roles alternate, every tool_use
+answered by matching tool_results in the next message, and each request's messages start with
+the previous request's messages (append-only), so transcript bugs that would 400 in production
+fail in CI.
 """
 
 from collections.abc import Callable, Sequence
@@ -16,7 +26,15 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from larder_llm.client import LLMUnavailable, ModelCall, TextSink, Turn, Usage
+from larder_llm.client import (
+    CallSink,
+    LLMUnavailable,
+    ModelCall,
+    ResetSink,
+    TextSink,
+    Turn,
+    Usage,
+)
 
 __all__ = [
     "Script",
@@ -81,6 +99,8 @@ class ScriptedChatModel:
         tools: list[Block],
         messages: list[Block],
         on_text: TextSink,
+        on_reset: ResetSink,
+        on_call: CallSink,
     ) -> Turn:
         self.requests.append({"system": system, "tools": tools, "messages": list(messages)})
         if not self.script:
@@ -94,8 +114,9 @@ class ScriptedChatModel:
             latency_ms=1,
             status="error" if step.error else _status(step.stop_reason),
         )
+        await on_call(call)
         if step.error is not None:
-            raise LLMUnavailable(step.error, call)
+            raise LLMUnavailable(step.error)
         for block in step.content:
             if block["type"] == "text":
                 for word in str(block["text"]).split(" "):
@@ -120,10 +141,12 @@ class ScriptedStructuredModel:
     prompts: list[tuple[str, str]] = field(default_factory=list[tuple[str, str]])
 
     async def parse[T: BaseModel](
-        self, *, purpose: str, system: str, prompt: str, schema: type[T]
-    ) -> tuple[T | None, list[ModelCall]]:
+        self, *, purpose: str, system: str, prompt: str, schema: type[T], on_call: CallSink
+    ) -> T | None:
         self.prompts.append((purpose, prompt))
-        call = ModelCall(purpose, self.model, Usage(input_tokens=50, output_tokens=10), 1, "ok")
+        await on_call(
+            ModelCall(purpose, self.model, Usage(input_tokens=50, output_tokens=10), 1, "ok")
+        )
         if self.answer is not None:
             got: BaseModel | Exception | None = self.answer(purpose, prompt)
         elif self.answers:
@@ -133,5 +156,5 @@ class ScriptedStructuredModel:
         if isinstance(got, Exception):
             raise got
         if got is None:
-            return None, [call]
-        return schema.model_validate(got.model_dump()), [call]
+            return None
+        return schema.model_validate(got.model_dump())

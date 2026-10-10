@@ -1,6 +1,7 @@
 """search_recipes: recipes safe for this user that match a query, for cravings and swaps.
 
-Pool: the plannable catalog plus the user's private recipes, filtered by the planner's hard
+Pool: the shared plannable catalog (owner IS NULL) plus this user's private recipes (loaded per
+request, never cached across users), filtered by the planner's hard
 filters (larder_solver.candidates.allowed: allergens incl. text-derived, diet, avoided foods,
 unverifiable ingredients for restricted users) and, if given, slot eligibility. No embeddings in
 the API (ADR-0013): the model supplies words; we score them against recipe name, category,

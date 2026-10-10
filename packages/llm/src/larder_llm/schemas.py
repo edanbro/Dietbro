@@ -1,10 +1,11 @@
 """The typed contract between the language model and the app.
 
 The model never edits a plan. It asks for *changes* (PLAN §7: craving, ate off-plan, skip, swap)
-through tools whose inputs are these models. Deterministic code then checks them (dates inside
-the plan, slots, recipe visibility), builds a planning problem with locks, runs the planner and
-the independent validator, and saves a new plan version. The same types come out of the offline
-rule parser (`larder_llm.rules`), so both paths share one executor.
+through tools whose inputs are these models. Changes are *facts* (AteOffPlan, Skip: what the
+user did or will do; always recorded) or *wishes* (Craving, Swap: preferences; may fail).
+Deterministic code checks them (dates, slots, recipe visibility), builds a planning problem,
+runs the planner and the independent validator, and saves a new plan version. The same types
+come out of the offline rule parser (`larder_llm.rules`), so both paths share one executor.
 
 Tool schemas sent to the API are generated from these models by `larder_llm.tools.tool_schema`,
 which keeps only what strict tool use supports; Pydantic re-validates every input here
@@ -61,7 +62,7 @@ class When(Strict):
 class Craving(Strict):
     """The user wants something particular at a meal ("something spicy tonight")."""
 
-    intent: Literal["craving"] = "craving"
+    intent: Literal["craving"]
     when: When
     dish: str | None = Field(
         default=None, max_length=120, description="A named dish, if any: 'lasagne', 'ramen'."
@@ -73,10 +74,9 @@ class Craving(Strict):
     )
     recipe_id: int | None = Field(
         default=None,
-        description="Lock this exact recipe (an id returned by search_recipes or create_recipe).",
+        description="This exact recipe (an id returned by search_recipes or create_recipe).",
     )
     strength: Literal["hard", "soft"] = Field(
-        default="soft",
         description=(
             "hard: the user insists; fail and say why if no safe match fits the plan. "
             "soft: a preference; keep the plan if nothing suitable fits."
@@ -94,7 +94,7 @@ class OffPlanItem(Strict):
 class AteOffPlan(Strict):
     """The user ate (or will eat) something that isn't in the plan."""
 
-    intent: Literal["ate_off_plan"] = "ate_off_plan"
+    intent: Literal["ate_off_plan"]
     when: When
     description: str = Field(max_length=MAX_TEXT, description="What they said they ate.")
     items: list[OffPlanItem] = Field(
@@ -107,13 +107,13 @@ class AteOffPlan(Strict):
 class Skip(Strict):
     """The user won't eat a planned meal (eating out, not hungry, away)."""
 
-    intent: Literal["skip"] = "skip"
+    intent: Literal["skip"]
     when: When
     eating_elsewhere: bool = Field(
-        default=True,
         description=(
-            "True if they will eat a similar meal somewhere else (counted as a meal of the same "
-            "size); false if they will not eat at all."
+            "true only if the user said they'll eat somewhere else (eating out, at a friend's, "
+            "takeaway): a meal of the same size is counted. false if they won't eat (not hungry, "
+            "fasting) or didn't say. Never change it to make a re-plan succeed."
         ),
     )
 
@@ -121,7 +121,7 @@ class Skip(Strict):
 class Swap(Strict):
     """Replace a planned meal with something else, optionally something particular."""
 
-    intent: Literal["swap"] = "swap"
+    intent: Literal["swap"]
     when: When
     dish: str | None = Field(default=None, max_length=120)
     tags: list[Annotated[str, Field(max_length=40)]] = Field(
@@ -154,7 +154,11 @@ class ExplainMealInput(Strict):
 
 
 class ReplanInput(Strict):
-    changes: list[Change] = Field(min_length=1, max_length=MAX_CHANGES)
+    changes: list[Change] = Field(
+        min_length=1,
+        max_length=MAX_CHANGES,
+        description="Everything the user's message asks for, in the order they said it.",
+    )
 
 
 class DraftIngredient(Strict):

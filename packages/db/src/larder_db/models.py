@@ -6,6 +6,7 @@ Chat (M4): threads and messages, requested changes, meals logged off-plan, LLM c
 assistant drafts are private to their owner.
 """
 
+import uuid
 from datetime import date, datetime
 from typing import Any
 
@@ -25,8 +26,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -234,6 +236,11 @@ class User(Base):
     auth_subject: Mapped[str] = mapped_column(String(255), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = _now()
+    # The chat turn in progress (one per user): taken with a conditional UPDATE, released by
+    # token; a lock older than the turn deadline is stale and may be taken over.
+    chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    chat_turn_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    chat_turn_message_id: Mapped[int | None] = mapped_column(Integer)  # the user's message
 
 
 class Goals(Base):
@@ -429,22 +436,41 @@ class ChatThread(Base):
 class ChatMessage(Base):
     """One side of a chat turn. `text` is what the user saw; `api_messages` is the exact Messages
     API transcript this row added (the user message with its context block; or the assistant
-    responses and tool results), replayed append-only on the next turn. Offline turns store a
-    plain-text equivalent so a later model turn still has the context."""
+    responses and tool results), replayed append-only on the next turn of the same `api_epoch`.
+    It is JSON, not JSONB, so the replayed bytes (key order) match what was sent and cached.
+    Refused turns and turns that never reached the model store `[]` (never replayed); offline
+    replies store a plain assistant text message. `attachments` holds the outcome / recipe cards
+    shown with the reply, so a reloaded thread looks like the live one."""
 
     __tablename__ = "chat_messages"
-    __table_args__ = (Index("ix_chat_messages_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_chat_messages_thread_id_id", "thread_id", "id"),
+        Index(
+            "ix_chat_messages_user_created_user_role",
+            "user_id",
+            "created_at",
+            postgresql_where=text("role = 'user'"),
+        ),
+        Index("ix_chat_messages_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
+        UniqueConstraint("user_id", "client_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    thread_id: Mapped[int] = mapped_column(
-        ForeignKey("chat_threads.id", ondelete="CASCADE"), index=True
-    )
+    thread_id: Mapped[int] = mapped_column(ForeignKey("chat_threads.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     role: Mapped[str] = mapped_column(String(16))  # user | assistant
+    # The client's id for a user message (idempotent resend); NULL on assistant rows.
+    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     text: Mapped[str] = mapped_column(Text)
-    api_messages: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    api_messages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    # Transcript segment: replay covers only rows of the thread's current epoch. A new epoch
+    # starts after an idle gap or when the segment gets long, or after a rejected replay.
+    api_epoch: Mapped[int] = mapped_column(Integer, default=0)
     mode: Mapped[str | None] = mapped_column(String(16))  # llm | offline (assistant rows)
-    # The plan version this turn created, if any.
+    offline_reason: Mapped[str | None] = mapped_column(String(16))  # no_key | budget | model_error
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    suggestions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    # The last plan version this turn created, if any.
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -453,10 +479,16 @@ class ChatMessage(Base):
 
 class Craving(Base):
     """A plan change the user asked for (PLAN §5 "cravings"): any intent - craving, off-plan,
-    skip, swap - as typed by the model or the offline parser, and what became of it."""
+    skip, swap - as typed by the model or the offline parser, and what became of it.
+    (message_id, change_key) is unique: the same change applied twice for one message (a
+    repeated tool call) returns the first result instead of applying it again."""
 
     __tablename__ = "cravings"
-    __table_args__ = (Index("ix_cravings_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_cravings_user_created", "user_id", "created_at"),
+        Index("ix_cravings_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
+        UniqueConstraint("message_id", "change_key"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -466,17 +498,29 @@ class Craving(Base):
     intent: Mapped[str] = mapped_column(String(16))  # craving | ate_off_plan | skip | swap
     raw_text: Mapped[str] = mapped_column(Text)  # the user's message
     parsed: Mapped[dict[str, Any]] = mapped_column(JSONB)  # larder_llm.schemas.Change
+    change_key: Mapped[str] = mapped_column(String(64))  # sha256 of the canonical change JSON
     status: Mapped[str] = mapped_column(String(16))  # applied | failed | unchanged
+    message: Mapped[str] = mapped_column(Text, default="")  # larder_llm.outcome.ChangeResult
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class MealLog(Base):
     """Food eaten off-plan, or a planned meal skipped. Nutrition is computed by the app from
-    USDA data (never taken from a model) and is an estimate unless `estimated` is false."""
+    USDA data (never taken from a model) and is an estimate unless `estimated` is false. A
+    skipped meal stores the planned meal's macros when eaten elsewhere, else zeros. Active logs
+    (voided_at IS NULL) are facts every replan rebuilds from: their kcal count as eaten on that
+    day and a slotted log keeps that slot free of planned meals. A newer slotted log for the
+    same (day, slot), or a craving/swap there after a skip, voids the earlier one."""
 
     __tablename__ = "meal_logs"
-    __table_args__ = (Index("ix_meal_logs_user_eaten_on", "user_id", "eaten_on"),)
+    __table_args__ = (
+        Index("ix_meal_logs_user_eaten_on", "user_id", "eaten_on"),
+        Index("ix_meal_logs_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
+        Index(
+            "ix_meal_logs_craving_id", "craving_id", postgresql_where=text("craving_id IS NOT NULL")
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -492,7 +536,9 @@ class MealLog(Base):
     # How the estimate was made: [{"name", "food_id", "food", "grams"}].
     items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     source: Mapped[str] = mapped_column(String(16))  # chat | offline
+    craving_id: Mapped[int | None] = mapped_column(ForeignKey("cravings.id", ondelete="SET NULL"))
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
+    voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -501,7 +547,12 @@ class LlmCall(Base):
     cost cap and the M7/M8 cost-per-plan numbers."""
 
     __tablename__ = "llm_calls"
-    __table_args__ = (Index("ix_llm_calls_user_created", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_llm_calls_user_created", "user_id", "created_at"),
+        Index(
+            "ix_llm_calls_thread_id", "thread_id", postgresql_where=text("thread_id IS NOT NULL")
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -516,7 +567,7 @@ class LlmCall(Base):
     cache_write_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_micro_usd: Mapped[int] = mapped_column(BigInteger)
     latency_ms: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(16))  # ok | refusal | max_tokens | error
+    status: Mapped[str] = mapped_column(String(16))  # ok | refusal | max_tokens | error | cancelled
     request_id: Mapped[str | None] = mapped_column(String(64))
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -248,6 +248,18 @@ class Problem:
         default_factory=dict[tuple[int, Slot], Meal | None]
     )
     extra: Mapping[int, Macros] = field(default_factory=dict[int, Macros])  # eaten off-plan
+    # Per-day kcal band (day -> Band) for days whose intake is partly fixed by what the user
+    # reported (off-plan food, skipped meals, meals already eaten today). It replaces both the
+    # daily kcal band and the calorie floor for that day (min may be below the floor: the plan
+    # can't un-eat or force-feed); other days keep both. Set only by replans (ADR-0013).
+    day_kcal: Mapping[int, Band] = field(default_factory=dict[int, Band])
+    # Per-cell recipe choices: the meal at (day, slot) must exist and be one of these recipes
+    # (a craving, a swap, a meal the user pinned). Unlike `locked`, eligibility, portion ranges
+    # and every hard filter still apply, and the planner picks which recipe and how much.
+    # Validator code CHOICE (structural). A cell is never both locked and chosen.
+    choices: Mapping[tuple[int, Slot], tuple[int, ...]] = field(
+        default_factory=dict[tuple[int, Slot], tuple[int, ...]]
+    )
     min_portions: int = 1
     max_portions: int = 4
     max_repeats: int = 2
@@ -350,6 +362,15 @@ def check_problem(problem: Problem) -> list[str]:
         errors.append("negative pantry grams")
     if any(d not in range(problem.days) for d in problem.extra):
         errors.append("extra intake outside the plan")
+    if any(d not in range(problem.days) for d in problem.day_kcal):
+        errors.append("day_kcal outside the plan")
+    for (day, slot), ids in problem.choices.items():
+        if not 0 <= day < problem.days or slot not in slots:
+            errors.append(f"choice outside the plan: day {day} {slot}")
+        if not ids or any(r not in problem.recipes for r in ids):
+            errors.append(f"bad choice at day {day} {slot}")
+        if (day, slot) in problem.locked:
+            errors.append(f"day {day} {slot} is both locked and chosen")
     if any(getattr(problem.weights, f.name) < 0 for f in fields(problem.weights)):
         errors.append("weights must be >= 0")
     if problem.budget is not None and problem.budget < 0:

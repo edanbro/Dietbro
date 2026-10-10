@@ -40,12 +40,22 @@ class Settings(BaseSettings):
     llm_fast_model: str = "claude-haiku-5-5"  # small structured choices (which USDA food?)
     llm_chat_effort: Literal["low", "medium", "high"] = "low"
     llm_max_rounds: int = 6  # model responses per chat turn
-    llm_timeout_s: float = 60.0
-    # Per-user limits: over the cost cap the chat runs offline; over the message limit it says
-    # so (HTTP 429). Costs come from llm_calls.
+    llm_timeout_s: float = 30.0  # per request (connect 5 s); the SDK retries once
+    # Per-user limits (costs from llm_calls). Messages: 60 per rolling 24 h (HTTP 429), offline
+    # turns included (they run the planner). Model budget: $1 per calendar month (UTC), paced -
+    # the model is used while today's spend is under what's left of the month divided by the
+    # days left - and at most $0.10 per turn; otherwise the turn runs offline.
     llm_monthly_cap_usd: float = 1.0
+    llm_turn_cap_usd: float = 0.10
     llm_daily_messages: int = 60
-    chat_history_turns: int = 20  # earlier turns replayed to the model; older ones are dropped
+    # A chat turn runs detached from the HTTP stream, under this deadline (and the turn lock
+    # expires after deadline + 30 s).
+    chat_turn_deadline_s: float = 90.0
+    # Transcript epochs: replay the thread's current epoch only while its last message is newer
+    # than this and the epoch is under the token estimate; otherwise start a new epoch.
+    chat_epoch_idle_min: int = 30
+    chat_epoch_max_tokens: int = 12_000
+    replan_time_limit_ms: int = 1_500  # per planner run in a replan (at most 3 runs)
 
     @property
     def llm_enabled(self) -> bool:

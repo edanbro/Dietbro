@@ -1,8 +1,8 @@
-"""chat, change requests, meal logs, llm calls, private recipes
+"""chat, change requests, meal logs, llm calls, private recipes, chat turn lock
 
 Revision ID: 0004
 Revises: 0003
-Create Date: 2026-10-10 14:10:08.826133
+Create Date: 2026-10-10 19:11:44.099052
 """
 
 from collections.abc import Sequence
@@ -52,9 +52,14 @@ def upgrade() -> None:
         sa.Column("thread_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("role", sa.String(length=16), nullable=False),
+        sa.Column("client_id", sa.UUID(), nullable=True),
         sa.Column("text", sa.Text(), nullable=False),
-        sa.Column("api_messages", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("api_messages", postgresql.JSON(astext_type=sa.Text()), nullable=False),
+        sa.Column("api_epoch", sa.Integer(), nullable=False),
         sa.Column("mode", sa.String(length=16), nullable=True),
+        sa.Column("offline_reason", sa.String(length=16), nullable=True),
+        sa.Column("attachments", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("suggestions", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("plan_id", sa.Integer(), nullable=True),
         sa.Column(
             "created_at",
@@ -81,12 +86,26 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_chat_messages")),
+        sa.UniqueConstraint(
+            "user_id", "client_id", name=op.f("uq_chat_messages_user_id_client_id")
+        ),
     )
     op.create_index(
-        op.f("ix_chat_messages_thread_id"), "chat_messages", ["thread_id"], unique=False
+        "ix_chat_messages_plan_id",
+        "chat_messages",
+        ["plan_id"],
+        unique=False,
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
     )
     op.create_index(
-        "ix_chat_messages_user_created", "chat_messages", ["user_id", "created_at"], unique=False
+        "ix_chat_messages_thread_id_id", "chat_messages", ["thread_id", "id"], unique=False
+    )
+    op.create_index(
+        "ix_chat_messages_user_created_user_role",
+        "chat_messages",
+        ["user_id", "created_at"],
+        unique=False,
+        postgresql_where=sa.text("role = 'user'"),
     )
     op.create_table(
         "llm_calls",
@@ -122,42 +141,15 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_llm_calls")),
     )
     op.create_index(
+        "ix_llm_calls_thread_id",
+        "llm_calls",
+        ["thread_id"],
+        unique=False,
+        postgresql_where=sa.text("thread_id IS NOT NULL"),
+    )
+    op.create_index(
         "ix_llm_calls_user_created", "llm_calls", ["user_id", "created_at"], unique=False
     )
-    op.create_table(
-        "meal_logs",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("eaten_on", sa.Date(), nullable=False),
-        sa.Column("slot", sa.String(length=16), nullable=True),
-        sa.Column("kind", sa.String(length=16), nullable=False),
-        sa.Column("description", sa.Text(), nullable=False),
-        sa.Column("kcal", sa.Integer(), nullable=False),
-        sa.Column("protein_g", sa.Integer(), nullable=False),
-        sa.Column("fat_g", sa.Integer(), nullable=False),
-        sa.Column("carbs_g", sa.Integer(), nullable=False),
-        sa.Column("estimated", sa.Boolean(), nullable=False),
-        sa.Column("items", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("source", sa.String(length=16), nullable=False),
-        sa.Column("plan_id", sa.Integer(), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.ForeignKeyConstraint(
-            ["plan_id"],
-            ["meal_plans.id"],
-            name=op.f("fk_meal_logs_plan_id_meal_plans"),
-            ondelete="SET NULL",
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], name=op.f("fk_meal_logs_user_id_users"), ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_meal_logs")),
-    )
-    op.create_index("ix_meal_logs_user_eaten_on", "meal_logs", ["user_id", "eaten_on"], unique=False)
     op.create_table(
         "cravings",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -166,7 +158,9 @@ def upgrade() -> None:
         sa.Column("intent", sa.String(length=16), nullable=False),
         sa.Column("raw_text", sa.Text(), nullable=False),
         sa.Column("parsed", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("change_key", sa.String(length=64), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("message", sa.Text(), nullable=False),
         sa.Column("plan_id", sa.Integer(), nullable=True),
         sa.Column(
             "created_at",
@@ -190,8 +184,76 @@ def upgrade() -> None:
             ["user_id"], ["users.id"], name=op.f("fk_cravings_user_id_users"), ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_cravings")),
+        sa.UniqueConstraint(
+            "message_id", "change_key", name=op.f("uq_cravings_message_id_change_key")
+        ),
+    )
+    op.create_index(
+        "ix_cravings_plan_id",
+        "cravings",
+        ["plan_id"],
+        unique=False,
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
     )
     op.create_index("ix_cravings_user_created", "cravings", ["user_id", "created_at"], unique=False)
+    op.create_table(
+        "meal_logs",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("eaten_on", sa.Date(), nullable=False),
+        sa.Column("slot", sa.String(length=16), nullable=True),
+        sa.Column("kind", sa.String(length=16), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("kcal", sa.Integer(), nullable=False),
+        sa.Column("protein_g", sa.Integer(), nullable=False),
+        sa.Column("fat_g", sa.Integer(), nullable=False),
+        sa.Column("carbs_g", sa.Integer(), nullable=False),
+        sa.Column("estimated", sa.Boolean(), nullable=False),
+        sa.Column("items", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("source", sa.String(length=16), nullable=False),
+        sa.Column("craving_id", sa.Integer(), nullable=True),
+        sa.Column("plan_id", sa.Integer(), nullable=True),
+        sa.Column("voided_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["craving_id"],
+            ["cravings.id"],
+            name=op.f("fk_meal_logs_craving_id_cravings"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["plan_id"],
+            ["meal_plans.id"],
+            name=op.f("fk_meal_logs_plan_id_meal_plans"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name=op.f("fk_meal_logs_user_id_users"), ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_meal_logs")),
+    )
+    op.create_index(
+        "ix_meal_logs_craving_id",
+        "meal_logs",
+        ["craving_id"],
+        unique=False,
+        postgresql_where=sa.text("craving_id IS NOT NULL"),
+    )
+    op.create_index(
+        "ix_meal_logs_plan_id",
+        "meal_logs",
+        ["plan_id"],
+        unique=False,
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
+    )
+    op.create_index(
+        "ix_meal_logs_user_eaten_on", "meal_logs", ["user_id", "eaten_on"], unique=False
+    )
     op.add_column("recipes", sa.Column("owner_user_id", sa.Integer(), nullable=True))
     op.create_index(op.f("ix_recipes_owner_user_id"), "recipes", ["owner_user_id"], unique=False)
     op.create_foreign_key(
@@ -202,22 +264,59 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
+    op.add_column("users", sa.Column("chat_turn_token", sa.UUID(), nullable=True))
+    op.add_column(
+        "users", sa.Column("chat_turn_started_at", sa.DateTime(timezone=True), nullable=True)
+    )
+    op.add_column("users", sa.Column("chat_turn_message_id", sa.Integer(), nullable=True))
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_column("users", "chat_turn_message_id")
+    op.drop_column("users", "chat_turn_started_at")
+    op.drop_column("users", "chat_turn_token")
     op.drop_constraint(op.f("fk_recipes_owner_user_id_users"), "recipes", type_="foreignkey")
     op.drop_index(op.f("ix_recipes_owner_user_id"), table_name="recipes")
     op.drop_column("recipes", "owner_user_id")
-    op.drop_index("ix_cravings_user_created", table_name="cravings")
-    op.drop_table("cravings")
     op.drop_index("ix_meal_logs_user_eaten_on", table_name="meal_logs")
+    op.drop_index(
+        "ix_meal_logs_plan_id",
+        table_name="meal_logs",
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
+    )
+    op.drop_index(
+        "ix_meal_logs_craving_id",
+        table_name="meal_logs",
+        postgresql_where=sa.text("craving_id IS NOT NULL"),
+    )
     op.drop_table("meal_logs")
+    op.drop_index("ix_cravings_user_created", table_name="cravings")
+    op.drop_index(
+        "ix_cravings_plan_id",
+        table_name="cravings",
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
+    )
+    op.drop_table("cravings")
     op.drop_index("ix_llm_calls_user_created", table_name="llm_calls")
+    op.drop_index(
+        "ix_llm_calls_thread_id",
+        table_name="llm_calls",
+        postgresql_where=sa.text("thread_id IS NOT NULL"),
+    )
     op.drop_table("llm_calls")
-    op.drop_index("ix_chat_messages_user_created", table_name="chat_messages")
-    op.drop_index(op.f("ix_chat_messages_thread_id"), table_name="chat_messages")
+    op.drop_index(
+        "ix_chat_messages_user_created_user_role",
+        table_name="chat_messages",
+        postgresql_where=sa.text("role = 'user'"),
+    )
+    op.drop_index("ix_chat_messages_thread_id_id", table_name="chat_messages")
+    op.drop_index(
+        "ix_chat_messages_plan_id",
+        table_name="chat_messages",
+        postgresql_where=sa.text("plan_id IS NOT NULL"),
+    )
     op.drop_table("chat_messages")
     op.drop_index("ix_chat_threads_user_updated", table_name="chat_threads")
     op.drop_table("chat_threads")

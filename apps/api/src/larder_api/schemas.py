@@ -1,8 +1,9 @@
 """Request/response models. Field constraints here are the first line of input validation;
 domain rules (calorie floor, deficit) live in larder_core.energy."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +17,7 @@ from larder_core.energy import (
 )
 from larder_core.meals import Slot
 from larder_core.tagging import Diet
+from larder_llm.outcome import Logged, ReplanOutcome
 
 Currency = Literal["GBP", "EUR", "USD"]
 
@@ -202,19 +204,13 @@ class MealOut(BaseModel):
     portions: int = Field(description="half-servings: 2 = one serving")
     servings: float
     nutrition: MacrosOut
-    locked: bool = False
-    status: Literal["planned", "eaten", "skipped", "off_plan"] = "planned"
+    locked: bool = Field(default=False, description="pinned by the user (a craving or swap)")
+    status: Literal["planned"] = "planned"  # M5 adds eaten / skipped
 
 
-class MealLogOut(BaseModel):
-    """Food eaten off-plan, or a planned meal skipped (told to the chat)."""
-
-    id: int
-    slot: Slot | None
-    kind: Literal["off_plan", "skipped"]
-    description: str
-    kcal: int
-    estimated: bool
+class MealLogOut(Logged):
+    """Food eaten off-plan, or a planned meal skipped (told to the chat), as snapshotted with
+    the plan version: `DayOut.totals` = its meals + these."""
 
 
 class DayOut(BaseModel):
@@ -325,8 +321,38 @@ class RecipeDetail(RecipeCard):
 
 class ChatMessageIn(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+    client_id: UUID = Field(description="the client's id for this message: resending is safe")
     thread_id: int | None = Field(default=None, description="omit to continue the latest thread")
     today: date = Field(description="the user's local date (dates like 'tonight' resolve to it)")
+    local_time: time | None = Field(
+        default=None,
+        description="the user's local time: today's meals whose time has passed count as eaten",
+    )
+
+
+class ChatProblem(BaseModel):
+    """Body of the chat gate's 400/404/409/429 answers."""
+
+    detail: list[str]
+    code: Literal["bad_today", "thread_not_found", "busy", "duplicate", "daily_limit"]
+    retry_at: datetime | None = None  # daily_limit: when sending works again
+    message_id: int | None = None  # busy / duplicate: the message being (or already) answered
+
+
+class RecipeCreatedOut(BaseModel):
+    type: Literal["recipe"] = "recipe"
+    recipe_id: int
+    name: str
+
+
+class OutcomeOut(ReplanOutcome):
+    """What one plan change request did (also sent live as the `outcome` event)."""
+
+    type: Literal["outcome"] = "outcome"
+
+
+Attachment = Annotated[OutcomeOut | RecipeCreatedOut, Field(discriminator="type")]
+OfflineReason = Literal["no_key", "budget", "model_error"]
 
 
 class ChatMessageOut(BaseModel):
@@ -334,35 +360,40 @@ class ChatMessageOut(BaseModel):
     role: Literal["user", "assistant"]
     text: str
     created_at: datetime
-    plan_id: int | None = Field(default=None, description="plan version this turn created")
-    mode: Literal["llm", "offline"] | None = None
+    plan_id: int | None = Field(description="last plan version this turn created")
+    mode: Literal["llm", "offline"] | None
+    offline_reason: OfflineReason | None
+    attachments: list[Attachment]
+    suggestions: list[str] = Field(description="tap-to-send replies")
+
+
+class PendingTurn(BaseModel):
+    message_id: int
+    started_at: datetime
 
 
 class ThreadOut(BaseModel):
     thread_id: int | None
-    messages: list[ChatMessageOut]
+    messages: list[ChatMessageOut] = Field(description="oldest first")
+    has_more: bool = Field(description="older messages exist (page with before_id)")
+    pending: PendingTurn | None = Field(description="a reply is still being worked on")
     llm_available: bool = Field(description="false: replies come from the offline parser")
+    offline_reason: OfflineReason | None
+    llm_resets_at: datetime | None = Field(description="when model replies come back (budget)")
     messages_today: int
     daily_limit: int
 
 
-class PlanChangeOut(BaseModel):
-    date: date
-    slot: Slot
-    before: str | None
-    after: str | None
-    after_recipe_id: int | None = None
-    reason: str
-
-
-# Server-sent events of POST /chat/messages, in order: thread, then any of status/text/plan/
-# recipe, then exactly one of done/error. Each is one `data:` line of JSON.
+# Server-sent events of POST /chat/messages, in order: thread, then any of status / text /
+# text_reset / outcome / recipe, then exactly one of done / error. Each is one `data:` line.
 
 
 class ThreadEvent(BaseModel):
     type: Literal["thread"] = "thread"
     thread_id: int
     message_id: int  # the user's message
+    mode: Literal["llm", "offline"]
+    offline_reason: OfflineReason | None
 
 
 class StatusEvent(BaseModel):
@@ -375,23 +406,24 @@ class TextEvent(BaseModel):
     delta: str
 
 
-class PlanEvent(BaseModel):
-    type: Literal["plan"] = "plan"
-    plan_id: int
-    version: int
-    changes: list[PlanChangeOut]
-    failures: list[str]
+class TextResetEvent(BaseModel):
+    """Discard the reply text streamed so far (a declined or dropped model response)."""
+
+    type: Literal["text_reset"] = "text_reset"
 
 
-class RecipeEvent(BaseModel):
-    type: Literal["recipe"] = "recipe"
-    recipe_id: int
-    name: str
+class OutcomeEvent(OutcomeOut):
+    pass
+
+
+class RecipeEvent(RecipeCreatedOut):
+    pass
 
 
 class DoneEvent(BaseModel):
     type: Literal["done"] = "done"
-    message: ChatMessageOut  # the assistant's message as stored
+    message: ChatMessageOut  # the assistant's message as stored (replaces streamed text)
+    messages_today: int
 
 
 class ErrorEvent(BaseModel):
@@ -400,6 +432,13 @@ class ErrorEvent(BaseModel):
 
 
 ChatEvent = Annotated[
-    ThreadEvent | StatusEvent | TextEvent | PlanEvent | RecipeEvent | DoneEvent | ErrorEvent,
+    ThreadEvent
+    | StatusEvent
+    | TextEvent
+    | TextResetEvent
+    | OutcomeEvent
+    | RecipeEvent
+    | DoneEvent
+    | ErrorEvent,
     Field(discriminator="type"),
 ]

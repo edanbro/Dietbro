@@ -7,7 +7,7 @@ import math
 from dataclasses import dataclass
 from decimal import Decimal
 
-from larder_llm.client import Usage
+from larder_llm.client import ModelCall, Usage
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +56,9 @@ def cost_micro_usd(model: str, usage: Usage) -> int:
         + p.cache_read * usage.cache_read_input_tokens
     )
     return math.ceil(total)
+
+
+def call_cost_micro_usd(call: ModelCall) -> int:
+    """A request's cost: each fallback attempt at its own model's price, else the one model."""
+    parts = call.parts or ((call.model, call.usage),)
+    return sum(cost_micro_usd(model, usage) for model, usage in parts)

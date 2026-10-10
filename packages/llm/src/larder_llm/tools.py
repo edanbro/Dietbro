@@ -119,9 +119,23 @@ def _clean(node: Any) -> Any:
 
 
 def tool_schema(model: type[BaseModel]) -> dict[str, Any]:
-    """The model's JSON schema, reduced to what strict tool use accepts: every object closed
-    (`additionalProperties: false`), `oneOf` -> `anyOf`, length/range/count constraints and
-    defaults dropped (validated client-side instead)."""
+    """The model's JSON schema, reduced to what strict tool use accepts (Pydantic still
+    validates everything server-side):
+
+    - every object closed (`additionalProperties: false`); `oneOf` -> `anyOf`; `discriminator`,
+      `title`, `default` dropped - only at schema positions, never inside `properties` or
+      `$defs` maps (a field named "title" survives);
+    - a non-required nullable property (`X | None = None`) is rendered as plain `X` and left out
+      of `required` (omitted = None): strict schemas allow at most 24 optional and 16 union-typed
+      parameters per request across all tools, and each nullable optional counts as both;
+    - every property carrying a `const` (the `intent` discriminator) is required;
+    - `minItems` kept when 0 or 1; other limits (`maxLength`, `minimum`/`maximum`, `maxItems`,
+      ...) removed and appended to the property's description ("(1-8)", "(at most 6)"), so the
+      model sees them.
+
+    Tests: a snapshot of `api_tools()`; no unsupported keyword anywhere; every `anyOf` branch
+    under `changes.items` requires its `const`; optional/union counts across all tools (with
+    `$ref`s expanded) leave headroom (<= 18 optional, <= 10 union)."""
     return _clean(model.model_json_schema(mode="validation"))
 
 

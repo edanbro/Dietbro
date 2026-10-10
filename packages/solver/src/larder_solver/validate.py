@@ -51,6 +51,7 @@ class Code(StrEnum):
     DIET = "diet"
     UNKNOWN_FOOD = "unknown_food"
     LOCKED = "locked"
+    CHOICE = "choice"  # a chosen cell (Problem.choices) is empty or holds another recipe
     REPEATS = "repeats"
     CALORIE_FLOOR = "calorie_floor"
     DAILY_BAND = "daily_band"
@@ -75,6 +76,7 @@ STRUCTURAL_CODES = frozenset(
         Code.NOT_ELIGIBLE,
         Code.PORTIONS,
         Code.LOCKED,
+        Code.CHOICE,
     }
 )
 

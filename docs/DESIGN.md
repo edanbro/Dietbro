@@ -261,86 +261,93 @@ a plan ([ADR-0013](adr/0013-llm-layer.md)).
 ### 9.1 One turn
 
 ```
-POST /chat/messages {text, today}            (SSE: thread, status*, text*, plan*, recipe*, done|error)
-  gate: daily message limit (429), one turn per user (Redis lock, 409), thread is yours (404)
-  online?  key set, llm_mode=auto, under the monthly cost cap
-    yes: agent loop  (Claude Sonnet 5.5, effort low, strict typed tools, <= 6 responses)
-         history = this thread's earlier turns, replayed append-only
-         user turn = <context> block (today, plan, targets, allergies, expiring food) + words
-    no / agent failed before replying: offline path
-         rule parser -> typed changes -> same executor -> templated reply
-  persist: chat_messages (display text + exact API transcript), cravings, meal_logs,
-           llm_calls (tokens, cost, latency), new plan version
+POST /chat/messages {text, client_id, today, local_time}
+  gate (dependency, real 4xx): today plausible, thread is yours, client_id not seen, turn lock
+       (Postgres row lock on users), 60 messages / 24 h, model budget -> online or offline
+  turn task (detached from the HTTP stream, 90 s deadline; the SSE response only relays):
+    online: agent loop (Claude Sonnet 5.5, effort low, strict typed tools, <= 6 responses)
+            history = the thread's current transcript epoch, replayed append-only
+            user turn = <context> (today, plan from today, targets, allergies, expiring food)
+                        + <user_message> (escaped)
+    offline / model failed before any change: rule parser -> same executor -> templated reply
+  persist: chat_messages (display text, exact API transcript, cards), cravings, meal_logs,
+           llm_calls (written as each call happens), new plan version
+SSE: thread, status*, text*, text_reset?, outcome*, recipe*, done | error
 ```
 
 `larder_llm` is pure (no database): typed changes and tool inputs (`schemas`), tool definitions
-(`tools`), the agent loop (`agent`), model clients behind two protocols (`client`), prices
-(`pricing`), the rule parser (`rules`), prompts and templated replies. `larder_api.chat` binds
-tool handlers to the signed-in user and the database.
+and strict schemas (`tools`), the agent loop and transcript checks (`agent`), model clients
+behind two protocols (`client`), prices (`pricing`), the rule parser (`rules`), prompts and
+templated replies. `larder_api.chat` binds tool handlers to the signed-in user and the database.
 
 ### 9.2 Tools
 
 | Tool | Does | Writes |
 |---|---|---|
-| `get_plan`, `get_pantry` | Current plan (ids, meals, kcal per day vs targets); pantry with expiry | - |
+| `get_plan`, `get_pantry` | Current plan from today (ids, meals, kcal per day vs targets); pantry with expiry | - |
 | `search_recipes(query, slot?)` | Recipes that pass the planner's hard filters for this user and match the words (name, cuisine, tags, ingredients, a small synonym table) | - |
 | `explain_meal(when)` | Why a meal is there: pantry food used, cost, kcal/protein, liked cuisine | - |
-| `request_replan(changes[])` | Typed changes -> executor -> new plan version + diff | plan, logs |
-| `create_recipe(draft)` | Names + quantities -> USDA match, our nutrition and tags, safety check -> private recipe | recipe |
-| `explain_plan_diff(plan_id?)` | Meal-by-meal diff vs the parent version, with reasons | - |
+| `request_replan(changes[])` | Typed changes -> executor -> new plan version + per-change results | plan, logs |
+| `create_recipe(draft)` | Names + quantities -> USDA match, our nutrition and tags, the planner's own safety gate -> private recipe | recipe |
+| `explain_plan_diff(plan_id?)` | Meal-by-meal diff vs the parent version, with reasons (stored with the version) | - |
 
-No tool takes a user id. Inputs are strict JSON schemas generated from Pydantic models and
-re-validated server-side; an invalid input gets one corrective retry, a second sends the turn to
-the offline path (PLAN §7).
+No tool takes a user id; every id the model passes is checked for visibility, eligibility and
+safety. Inputs are strict JSON schemas generated from Pydantic models and re-validated
+server-side; an invalid input gets one corrective retry, a second ends the turn (PLAN §7). Tools
+of one response run in order; at most 2 replans and 3 new recipes per turn.
 
 ### 9.3 Changes and the executor
 
-A change is `{intent, when: {date, slot?}, ...}` with intent `craving` (dish, tags, recipe_id,
-strength hard|soft), `ate_off_plan` (description, items), `skip` (eating_elsewhere) or `swap`
-(dish, tags, recipe_id). The executor (`larder_api.chat.replan`) turns all changes of a message
-into one replan of the current plan:
+A change is `{intent, when: {date, slot?}, ...}`: *facts* - `ate_off_plan` (description, items)
+and `skip` (eating_elsewhere) - are always recorded; *wishes* - `craving` (dish, tags,
+recipe_id, strength hard|soft) and `swap` - may fail with a reason. The executor
+(`larder_api.chat.replan`) turns all changes of a message into one replan:
 
-- Past days stay as they are (locked); on today, slots before the earliest one being changed are
-  locked too. The previous version is passed as `previous`, so the churn weight keeps unrelated
-  meals.
-- Craving / swap: lock the slot to a safe matching recipe (given id, else the best of the top 5
-  search hits that yields a valid plan). Hard cravings that fit nowhere fail with the reason;
-  soft ones leave the plan as it is.
-- Off-plan: nutrition estimated from USDA foods (alias -> trigram -> fast-model choice among our
-  candidates; grams from USDA portions), logged, added to that day's intake (`extra`); the slot,
-  if given, is locked empty.
-- Skip: the slot is locked empty; eating elsewhere counts the planned meal's macros as eaten so
-  the rest of the day doesn't change.
-- Then the planner runs once, the validator applies the usual outcome rules (safety or
-  structural violations are never saved), and the plan is saved as version + 1 with `parent_id`.
+- Only the open horizon (today to the plan's end) is planned; past days and today's meals that
+  are already over are copied into the new version unchanged, so they're never re-judged
+  against a profile that changed mid-week.
+- State is rebuilt from the database each time: every active meal log keeps its slot empty and
+  its kcal counted (`Problem.extra`), every meal the user pinned stays pinned.
+- Wishes become `Problem.choices` (the slot must be one of these safe recipes; the planner
+  picks which and how much). Days with reported intake get a per-day kcal band
+  (`Problem.day_kcal`) so a pizza lunch or a skipped dinner can't make the week infeasible.
+- At most 3 planner runs (all, without soft wishes, facts only), each validated with the usual
+  outcome rules; then one transaction saves version + 1 under a per-user advisory lock, with
+  shopping ticks carried over. Repeating the same change for the same message is a no-op.
 
-M5 replaces "simple replan" with the latency target, warm starts, a craving bonus in the
-objective and the diff view; the change types stay.
+M5 adds the latency target, warm starts, a craving bonus in the objective and the diff view;
+the change types stay.
 
 ### 9.4 Generated recipes
 
 `create_recipe` saves `source="generated"` recipes with `owner_user_id` set: only their owner can
-see, search or be planned them. Only names and quantities come from the model; every ingredient
-must match a USDA food, nutrition and allergen/diet tags are computed by us, and a recipe that
-conflicts with the user's allergens or diet is rejected with the reason.
+see, search or be planned them (the shared catalogue and `GET /recipes/{id}` exclude them for
+everyone else). Only names and quantities come from the model; every ingredient must match a
+USDA food, nutrition and allergen/diet tags are computed by us, and the recipe must pass the
+same `allowed()` gate the planner applies, or it is rejected with the reason.
 
 ### 9.5 Models, cost and limits
 
-- Chat: `claude-sonnet-5-5`, adaptive thinking at effort `low`, server-side refusal fallback,
-  automatic prompt caching (tools + system prompt are byte-stable; volatile context is in the
-  user turn), `block_binding: drop_block` so prompt changes between deploys don't break replayed
-  threads. Fast choices: `claude-haiku-5-5` structured outputs. Both configurable.
-- Every request is logged to `llm_calls` with tokens, cost (micro-dollars, list prices) and
-  latency. Per user: 60 messages a day (429 beyond), $1 a month (offline beyond).
+- Chat: `claude-sonnet-5-5`, adaptive thinking at effort `low`, `max_tokens` 4096, server-side
+  refusal fallback, strict tools. Fast choices: `claude-haiku-5-5` structured outputs, only
+  picking among database candidates. Both configurable.
+- Caching: an explicit breakpoint after the (byte-stable) tools and system prompt, shared by all
+  users, plus automatic caching of the conversation tail. The transcript is replayed only within
+  an epoch (new epoch after 30 idle minutes or ~12k tokens), never slid, so cached prefixes and
+  replayed thinking stay valid; stored as JSON (not JSONB) to keep the exact bytes.
+- Every request is logged to `llm_calls` as it happens (tokens, list-price cost in micro-dollars,
+  latency, status). Per user: 60 messages per 24 h (429), $1 per month paced over the days left
+  and at most $0.10 per turn (offline beyond).
 - Without `ANTHROPIC_API_KEY` the whole chat runs offline: CI and the e2e test use this path.
 
 ### 9.6 Testing
 
-Scripted fake models (`larder_llm.fake`) drive the agent loop and the API in tests; adversarial
-scripts try to lock or create unsafe recipes, reach another user's recipe, or inject
-instructions through recipe text, and the tests assert no saved plan or recipe breaks the
-user's allergies or diet. `make llm-smoke` runs a few real conversations against Claude locally
-(needs a key; costs cents).
+Scripted fake models (`larder_llm.fake`) check the transcript rules on every call and drive the
+agent loop and the API in tests. `assert_user_safe` recomputes allergens, diet and avoided foods
+from stored rows for every plan meal and owned recipe after each chat/plan API test; adversarial
+scripts try unsafe or foreign recipe ids, disguised allergens in drafted recipes, injected
+instructions in recipe text and user messages, and failures after a write. `make llm-smoke` runs
+a few real conversations against Claude locally (needs a key; costs cents).
 
 ## 10. Safety and privacy
 

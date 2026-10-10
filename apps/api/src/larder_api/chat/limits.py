@@ -1,30 +1,72 @@
-"""Per-user LLM limits (settings.llm_daily_messages, llm_monthly_cap_usd) and call logging.
+"""Per-user limits, the chat turn lock, and call logging.
 
-- Daily messages: the user's chat messages (role=user) since 00:00 UTC. At the limit the chat
-  endpoint answers HTTP 429 before streaming, with a message saying when it resets.
-- Monthly cost: sum of llm_calls.cost_micro_usd since the 1st (UTC). At or over the cap the turn
-  runs offline (same plan changes, templated reply) and says so once in the reply.
-- One turn at a time per user: a Redis lock `chat:{user_id}` (SET NX, 120 s TTL), else 409.
+- Messages: the user's chat messages (role=user) in the last 24 hours (rolling), offline turns
+  included. At the limit the gate answers 429 code=daily_limit with `retry_at` = when the oldest
+  of them turns 24 h old.
+- Model budget (UTC calendar month, from llm_calls.cost_micro_usd): the model is used while
+  spent_month < monthly cap AND spent_today < (cap - spent_before_today) / days_left_in_month
+  (pacing, so $1 lasts the month). Otherwise the turn runs offline with reason "budget" and
+  `resets_at` = next UTC midnight (pacing) or the 1st of next month (cap). Within a turn, the
+  agent stops starting new model rounds once the turn's cost passes llm_turn_cap_usd.
+- Turn lock (Postgres, no Redis): users.chat_turn_token/started_at/message_id taken with
+  `UPDATE users SET ... WHERE id = :id AND (chat_turn_token IS NULL OR chat_turn_started_at <
+  now() - (deadline + 30 s)) RETURNING id`; released by token in the turn task's `finally`
+  (shielded from cancellation, 5 s timeout).
+- log_call: one llm_calls row per ModelCall in its own short transaction, written as soon as
+  the call is reported (shielded), priced with larder_llm.pricing.call_cost_micro_usd.
 """
 
-from collections.abc import Sequence
+import uuid
+from dataclasses import dataclass
+from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from larder_db import models as db
+from larder_api.settings import Settings
 from larder_llm.client import ModelCall
+from larder_llm.reply import OfflineReason
 
 
-async def messages_today(session: AsyncSession, user_id: int) -> int:
+@dataclass(frozen=True, slots=True)
+class Budget:
+    online: bool
+    reason: OfflineReason | None  # None when online
+    resets_at: datetime | None
+    turn_cap_micro_usd: int  # min(llm_turn_cap, what pacing allows today)
+
+
+async def messages_last_24h(
+    session: AsyncSession, user_id: int, now: datetime
+) -> tuple[int, datetime | None]:
+    """(count, when the oldest counted message turns 24 h old)."""
     raise NotImplementedError
 
 
-async def spent_this_month_micro_usd(session: AsyncSession, user_id: int) -> int:
+async def budget(session: AsyncSession, user_id: int, settings: Settings, now: datetime) -> Budget:
     raise NotImplementedError
 
 
-def log_calls(
-    session: AsyncSession, user_id: int, thread_id: int | None, calls: Sequence[ModelCall]
-) -> list[db.LlmCall]:
-    """Add one llm_calls row per call, priced with larder_llm.pricing.cost_micro_usd."""
+async def acquire_turn(
+    session: AsyncSession, user_id: int, token: uuid.UUID, settings: Settings, now: datetime
+) -> bool:
+    raise NotImplementedError
+
+
+async def set_turn_message(session: AsyncSession, user_id: int, token: uuid.UUID, mid: int) -> None:
+    raise NotImplementedError
+
+
+async def release_turn(
+    sessionmaker: async_sessionmaker[AsyncSession], user_id: int, token: uuid.UUID
+) -> None:
+    raise NotImplementedError
+
+
+async def log_call(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    user_id: int,
+    thread_id: int | None,
+    call: ModelCall,
+) -> int:
+    """Insert the llm_calls row; returns its cost in micro-dollars."""
     raise NotImplementedError
