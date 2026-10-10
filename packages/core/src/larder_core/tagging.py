@@ -283,8 +283,8 @@ _RULES: tuple[tuple[str, str], ...] = (
         "eggs",
     ),
     (
-        "mayonnaise, mayonaise, mayo, aioli, remoulade, tartare sauce, tartar sauce, "
-        "salad cream, coleslaw, thousand island",
+        "mayonnaise, mayonaise, mayo, aioli, remoulade, tartare sauce, tartar sauce, salad cream, "
+        "coleslaw, thousand island",
         "eggs mustard",
     ),
     (
@@ -319,8 +319,8 @@ _RULES: tuple[tuple[str, str], ...] = (
         "milk",
     ),
     (
-        "parmesan, parmigiano, parmigiana, grana padano, pecorino, romano, gorgonzola, "
-        "roquefort, gruyere, emmental, emmentaler, comte, manchego, asiago, provolone, taleggio",
+        "parmesan, parmigiano, parmigiana, grana padano, pecorino, romano, gorgonzola, roquefort, "
+        "gruyere, emmental, emmentaler, comte, manchego, asiago, provolone, taleggio",
         "milk rennet",
     ),
     ("pesto", "tree_nuts milk rennet"),
@@ -345,25 +345,24 @@ _RULES: tuple[tuple[str, str], ...] = (
         "malted, multigrain, cereal, beer, ale, stout, lager, porter, bread, loaf, breadcrumb, "
         "crumb, panko, rusk, crouton, stuffing, tempura, batter, dough, biscuit, digestive, "
         "cracker, cookie, wafer, cake, muffin, scone, crumpet, bagel, baguette, ciabatta, "
-        "focaccia, sourdough, pumpernickel, breadstick, grissini, pretzel, matzo, matzah, pita, "
-        "chapati, roti, puri, lavash, khobz, injera, tortilla, wrap, pizza, calzone, empanada, "
-        "samosa, spring roll, gyoza, dumpling, bao, pierogi, pierogy, halusky, spaetzle, "
+        "focaccia, sourdough, smorrebrod, pumpernickel, breadstick, grissini, pretzel, matzo, "
+        "matzah, pita, chapati, roti, puri, lavash, khobz, injera, tortilla, wrap, pizza, calzone, "
+        "empanada, samosa, spring roll, gyoza, dumpling, bao, pierogi, pierogy, halusky, spaetzle, "
         "spatzle, gnocchi, strudel, churro, crumble, flapjack, granola, muesli, bun, pie, pasty, "
-        "tart, tarte, tartlet, galette, pithivier, vol au vent, croquette, katsu, kiev, "
-        "schnitzel, tabbouleh, tabouleh, tabouli, fattoush, panzanella, ribollita, gazpacho, "
-        "gozleme, lahmacun, pide, kataifi, "
-        "pasta, noodle, udon, ramen, soba, chow mein, lo mein, vermicelli, spaghetti, "
-        "spaghettini, penne, linguine, lasagne, macaroni, maccheroni, orzo, cannelloni, "
-        "manicotti, rigatoni, paccheri, farfalle, conchiglie, orecchiette, ziti, bucatini, "
-        "capellini, ditalini, gemelli, cavatappi, casarecce, strozzapreti, trofie, mafaldine, "
-        "radiatori, campanelle, lumache, tortiglioni, anelli, stelline, pastina, angel hair, "
-        "gravy, bouillon, stock cube, roux, brown sauce, hp sauce, on toast, slice of toast, "
-        "buttered toast, melba toast, toast soldier, vegemite",
+        "tart, tarte, tartlet, galette, pithivier, vol au vent, croquette, katsu, kiev, schnitzel, "
+        "tabbouleh, tabouleh, tabouli, fattoush, panzanella, ribollita, gazpacho, gozleme, "
+        "lahmacun, pide, kataifi, pasta, noodle, udon, ramen, soba, chow mein, lo mein, "
+        "vermicelli, spaghetti, spaghettini, penne, linguine, fusilli, lasagne, macaroni, "
+        "maccheroni, orzo, cannelloni, manicotti, rigatoni, paccheri, farfalle, conchiglie, "
+        "orecchiette, ziti, bucatini, capellini, ditalini, gemelli, cavatappi, casarecce, "
+        "strozzapreti, trofie, mafaldine, radiatori, campanelle, lumache, tortiglioni, anelli, "
+        "stelline, pastina, angel hair, gravy, bouillon, stock cube, roux, brown sauce, hp sauce, "
+        "on toast, slice of toast, buttered toast, melba toast, toast soldier, vegemite",
         "gluten",
     ),
     (
-        "pastry, puff, shortcrust, filo, naan, brioche, croissant, spanakopita, tiropita, "
-        "borek, burek",
+        "pastry, puff, shortcrust, filo, naan, brioche, croissant, spanakopita, tiropita, borek, "
+        "burek",
         "gluten milk eggs",
     ),
     ("shortbread, pizza, calzone, knafeh, kunafa, kanafeh", "gluten milk"),
@@ -440,23 +439,23 @@ _RULES: tuple[tuple[str, str], ...] = (
         "walrus, beaver, squirrel, frog, turtle, alligator, crocodile, carne, pollo, poulet, "
         "boeuf, porc, cerdo, jambon, lardon, lard, dripping, tallow, schmaltz, liver, kidney, "
         "tripe, offal, oxtail, tongue, sweetbread, giblet, gizzard, foie gra, pate, rillette, "
-        "brawn, headcheese, bone marrow, bone broth, mince, sirloin, ribeye, brisket, "
-        "tenderloin, short rib, spare rib, shank, pork belly, trotter, hock, knuckle, "
-        "corned beef, salt beef, pastrami, bresaola, biltong, jerky, pulled pork, carnitas, "
-        "char siu, crackling, scratching, chicharron, doner, shawarma, souvlaki, kebab, kofta, "
-        "kofte, bolognese, ragu",
+        "brawn, headcheese, bone marrow, bone broth, mince, sirloin, ribeye, brisket, tenderloin, "
+        "short rib, spare rib, shank, pork belly, trotter, hock, knuckle, corned beef, salt beef, "
+        "pastrami, bresaola, biltong, jerky, pulled pork, carnitas, char siu, schnitzel, "
+        "crackling, scratching, chicharron, doner, shawarma, souvlaki, kebab, kofta, kofte, "
+        "bolognese, ragu",
         "meat",
     ),
     (
-        "bacon, ham, gammon, salami, chorizo, pepperoni, prosciutto, pancetta, guanciale, "
-        "jamon, nduja, saucisson, coppa, speck, mortadella, sobrasada",
+        "bacon, ham, gammon, salami, chorizo, pepperoni, prosciutto, pancetta, guanciale, jamon, "
+        "nduja, saucisson, coppa, speck, mortadella, sobrasada",
         "meat sulphites",
     ),
     (
-        "sausage, black pudding, white pudding, blood pudding, haggis, burger, hamburger, "
-        "hot dog, frankfurter, wiener, wurst, bratwurst, liverwurst, kielbasa, kabanos, kabano, "
-        "merguez, cotechino, andouille, boudin, morcilla, boerewors, lap cheong, lap chong, "
-        "chipolata, saveloy, banger",
+        "sausage, black pudding, white pudding, blood pudding, haggis, burger, hamburger, hot dog, "
+        "frankfurter, wiener, wurst, bratwurst, liverwurst, kielbasa, kabanos, kabano, merguez, "
+        "cotechino, andouille, boudin, morcilla, boerewors, lap cheong, lap chong, chipolata, "
+        "saveloy, banger",
         "meat gluten sulphites",
     ),
     ("suet", "meat gluten"),
@@ -520,15 +519,15 @@ _EXCEPTIONS: tuple[tuple[str, str], ...] = (
         "beef tomato, lamb lettuce, lamb s lettuce, kidney bean, duck sauce, sauce duck, "
         "bean kidney, pigeon pea, chicken egg, duck egg, quail egg, goose egg, "
         "chicken of the wood, goat cheese, goat s cheese, cheese goat, goat milk, goat s milk, "
-        "goat yogurt, goat butter, buffalo mozzarella, expressed from grated meat, "
-        "buffalo milk, coconut meat, crab meat, lobster meat, clam meat, nut meat, walnut meat, "
-        "pecan meat, fish meat, shrimp meat, prawn meat, crayfish meat, langoustine meat, "
-        "mussel meat, oyster meat, scallop meat, squid meat, whelk meat, snail meat, conch meat, "
-        "abalone meat, poultry seasoning, meat free, meat free *, meatless *, vegetable suet, "
-        "mince garlic, mince ginger, mince the garlic, mince the ginger, mince the onion, "
-        "mince the shallot, tuna steak, salmon steak, fish steak, cod steak, halibut steak, "
-        "cauliflower steak, celeriac steak, cabbage steak, mushroom steak, tofu steak, "
-        "aubergine steak, burger bun, burger roll, hamburger bun, hamburger roll, "
+        "goat yogurt, goat butter, buffalo mozzarella, expressed from grated meat, buffalo milk, "
+        "coconut meat, crab meat, lobster meat, clam meat, nut meat, walnut meat, pecan meat, "
+        "fish meat, shrimp meat, prawn meat, crayfish meat, langoustine meat, mussel meat, "
+        "oyster meat, scallop meat, squid meat, whelk meat, snail meat, conch meat, abalone meat, "
+        "soy mince, quorn mince, poultry seasoning, meat free, meat free *, meatless *, "
+        "vegetable suet, mince garlic, mince ginger, mince the garlic, mince the ginger, "
+        "mince the onion, mince the shallot, tuna steak, salmon steak, fish steak, cod steak, "
+        "halibut steak, cauliflower steak, celeriac steak, cabbage steak, mushroom steak, "
+        "tofu steak, aubergine steak, burger bun, burger roll, hamburger bun, hamburger roll, "
         "roll hamburger, hot dog bun, hot dog roll",
         "meat",
     ),
