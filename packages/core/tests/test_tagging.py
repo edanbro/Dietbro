@@ -430,7 +430,7 @@ NOT_SUBSTRINGS = [
     ("scrambled tofu", "soy"),
     ("shallots", ""),
     ("peas", ""),
-    ("stockpot", ""),
+    ("stockpot", "celery"),
     ("nutritional yeast", ""),
     ("eggless sponge", ""),
     ("caramelised onions", ""),

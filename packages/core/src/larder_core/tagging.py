@@ -384,8 +384,8 @@ _RULES: tuple[tuple[str, str], ...] = (
     ("shaoxing, shaohsing, hsing, rice wine, cooking wine", "gluten sulphites"),
     # Celery
     (
-        "celery, celeriac, celery salt, celery seed, stock, broth, bouillon, gravy, ketchup, "
-        "mirepoix, soffritto",
+        "celery, celeriac, celery salt, celery seed, stock, stockpot, broth, bouillon, gravy, "
+        "ketchup, mirepoix, soffritto",
         "celery",
     ),
     ("barbecue sauce, sauce barbecue", "celery mustard"),
