@@ -7,6 +7,8 @@ def test_public_api_is_re_exported() -> None:
     sources = {
         "problem": ["Problem", "Plan", "Meal", "Recipe", "SlotSpec", "check_problem", "Status"],
         "solve": ["solve"],
+        "baseline": ["greedy"],
+        "diagnose": ["diagnose"],
         "validate": [
             "validate",
             "hard",
