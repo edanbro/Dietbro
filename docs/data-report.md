@@ -2,26 +2,25 @@
 
 | Metric | Value |
 |---|---|
-| Ingredient lines | 8152 |
-| Lines resolved to a USDA food | 8122 (99.6%) |
-| Lines with a gram weight | 8023 (98.4%) |
-| Recipes | 790 |
-| Recipes with complete nutrition | 667 (84.4%) |
+| Ingredient lines | 8381 |
+| Lines resolved to a USDA food | 8352 (99.7%) |
+| Lines with a gram weight | 8253 (98.5%) |
+| Recipes | 847 |
+| Recipes with complete nutrition | 725 (85.6%) |
 
-Lines by match method: alias 7713, embedding 409, unmatched 30
+Lines by match method: alias 8005, embedding 347, unmatched 29
 
 ## Most frequent unmatched names
 
 - chimichurri sauce (3)
 - grand marnier (2)
-- achiote seed (1)
 - corn arepa filled with mozarella cheese (1)
+- high heat cooking oil (1)
 - bouquet garni (1)
 - juniper berry (1)
 - alinos sauce (1)
 - cafe la llave (1)
 - rice krispy (1)
-- sumac (1)
 - salsa lizano (1)
 - gochujang (1)
 - knafeh (1)
@@ -30,13 +29,14 @@ Lines by match method: alias 7713, embedding 409, unmatched 30
 - pickled scallion head (1)
 - pickled scallion head brine (1)
 - pandan leaf (1)
-- ground oat (1)
 - sevaiiya (1)
 - achiote paste (1)
 - prahok (1)
-- petit poi (1)
-- toffee popcorn (1)
+- sumac (1)
 - ackee (1)
+- achiote seed (1)
+- toffee popcorn (1)
+- saskatoon berry (1)
 
 ## Most frequent matched lines without grams
 
@@ -66,17 +66,48 @@ Lines by match method: alias 7713, embedding 409, unmatched 30
 - allspice berry: `4` (1)
 - salsa: `1 x 300ml` (1)
 
-## Matcher accuracy without the alias table
+## Planning
 
-Scored on 463 hand-curated names (approximations excluded). Top-1: 54.0% the curated food, 73.7% the curated food or a nutritional equivalent (same USDA category, energy within 25%).
+Plannable recipes per slot: breakfast 53, lunch 405, dinner 383, snack 159
 
-| Threshold | Accepted | Exact precision | Equivalent precision | Coverage |
-|---|---|---|---|---|
-| 0.80 | 416 | 59.1% | 80.0% | 89.8% |
-| 0.84 | 390 | 61.3% | 82.1% | 84.2% |
-| 0.86 | 358 | 63.1% | 83.2% | 77.3% |
-| 0.88 | 320 | 66.9% | 87.2% | 69.1% |
-| 0.90 | 306 | 67.0% | 87.3% | 66.1% |
-| 0.92 | 293 | 67.6% | 88.1% | 63.3% |
-| 0.95 | 272 | 68.0% | 87.5% | 58.7% |
-| 1.00 | 231 | 67.5% | 87.4% | 49.9% |
+Complete recipes the planner won't use, or uses only in some slots:
+
+- Air fryer patatas bravas: override (lunch): Air fryer patatas bravas: tapas
+- Ají de Aguacate Recipe (Colombian Spicy Avocado Sauce): override (none): Aji de aguacate: a sauce
+- Algerian Flafla (Bell Pepper Salad): override (lunch): Algerian bell pepper salad: a light lunch
+- Avocado dip with new potatoes: override (lunch): Avocado dip with new potatoes: a light lunch
+- Bulgarian Honey Cookies: oil is 36% of the recipe
+- Chick-Fil-A Sandwich: oil is 28% of the recipe
+- Chilean-Style Sopaipillas: oil is 30% of the recipe
+- Chinese Orange Chicken: oil is 25% of the recipe
+- Churros: oil is 50% of the recipe
+- Creamy Aji green sauce: override (none): Creamy aji green sauce: a sauce
+- Cucumber & fennel salad: override (lunch): Cucumber and fennel salad: a light lunch
+- Dominican Bakes: override (none): Dominican bakes: fried bread (side)
+- Duck Confit: 1,058 kcal per serving
+- Egg Foo Young: oil is 28% of the recipe
+- Egyptian Fatteh: oil is 26% of the recipe
+- Flija Layered Pancake / Crepe: 1,086 kcal per serving
+- Fried cocoy banana: oil is 51% of the recipe
+- Jamaican Fried Dumplings: oil is 42% of the recipe
+- Jamon & wild garlic croquetas: override (none): Croquetas: frying oil counted in full
+- Kentucky Fried Chicken: 1,439 kcal per serving
+- Macaroni Pudding: override (none): Macaroni pudding: a dessert
+- Magwinya: Doughnut Bites from Botswana: oil is 49% of the recipe
+- Migas: 1,008 kcal per serving
+- Moroccan Carrot Soup: override (lunch): Moroccan carrot soup: a light lunch
+- Muraba-E-Kadu (Pumpkin Jam): override (none): Pumpkin jam: a preserve
+- Pa Amb Tomaquet (Bread with Tomato): override (none): Pa amb tomaquet: bread with tomato (side)
+- Padron peppers: override (none): Padron peppers: a tapa side
+- Patatas bravas: override (lunch): Patatas bravas: tapas
+- Pomegranate salad: override (lunch): Pomegranate salad: a light lunch
+- Purple sprouting broccoli tempura with nuoc cham: override (lunch): Broccoli tempura: a starter
+- Red onion pickle: override (none): Red onion pickle: a condiment
+- Sauerkraut and Fish Salad: oil is 32% of the recipe
+- Shopska Salad: override (lunch): Shopska salad: a light lunch
+- Slow-cooked, Wadadli-spiced Cubano pork belly: override (none): Cubano pork belly: the pork is missing from the ingredient list
+- Stuffed plantain cups: oil is 45% of the recipe
+- Sushi: override (none): Sushi: the fish is missing from the ingredient list
+- Tangy cabbage slaw: override (none): Tangy cabbage slaw: a side
+- Venetian Duck Ragu: 1,289 kcal per serving
+- Yorkshire Puddings: override (none): Yorkshire puddings: a side
