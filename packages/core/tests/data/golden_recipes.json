@@ -1,0 +1,1562 @@
+[
+ {
+  "name": "Egg Drop Soup",
+  "category": "Vegetarian",
+  "source_id": "52955",
+  "instructions_excerpt": "In a wok add chicken broth and wait for it to boil. Next add salt, sugar, white pepper, sesame seed oil. When the chicken broth is boiling add the vegetables to the wok. Next add 1 egg slightly beaten with a knife or fork and add it to the soup slowly and stir for 8 seconds",
+  "lines": [
+   {
+    "raw_name": "Chicken Stock",
+    "raw_measure": "3 cups",
+    "food_id": 172884,
+    "description": "Soup, stock, chicken, home-prepared",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "1/4 tsp",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sugar",
+    "raw_measure": "1/4 tsp",
+    "food_id": 169655,
+    "description": "Sugars, granulated",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pepper",
+    "raw_measure": "pinch",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sesame Seed Oil",
+    "raw_measure": "1 tsp",
+    "food_id": 171016,
+    "description": "Oil, sesame, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Peas",
+    "raw_measure": "1/3 cup",
+    "food_id": 170016,
+    "description": "Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Mushrooms",
+    "raw_measure": "1/3 cup",
+    "food_id": 169251,
+    "description": "Mushrooms, white, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cornstarch",
+    "raw_measure": "1 tbs",
+    "food_id": 169698,
+    "description": "Cornstarch",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Water",
+    "raw_measure": "2 tbs",
+    "food_id": 173647,
+    "description": "Beverages, water, tap, drinking",
+    "category": "Beverages",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Spring Onions",
+    "raw_measure": "1/4 cup",
+    "food_id": 170005,
+    "description": "Onions, spring or scallions (includes tops and bulb), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "eggs"
+  ],
+  "never": []
+ },
+ {
+  "name": "Hot and Sour Soup",
+  "category": "Pork",
+  "source_id": "52954",
+  "instructions_excerpt": "In a wok add chicken broth and wait for it to boil. Next add salt, sugar, sesame seed oil, white pepper, hot pepper sauce, vinegar and soy sauce and stir for few seconds. Add Tofu, mushrooms, black wood ear mushrooms to the wok. Next add 1 egg slightly beaten with a knife or fork and add it to the soup and stir for 8 seconds Serve the soup in a bowl and add the bbq pork and sliced green onions on top.",
+  "lines": [
+   {
+    "raw_name": "Mushrooms",
+    "raw_measure": "1/3 cup",
+    "food_id": 169251,
+    "description": "Mushrooms, white, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Wood Ear Mushrooms",
+    "raw_measure": "1/3 cup",
+    "food_id": 169251,
+    "description": "Mushrooms, white, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Tofu",
+    "raw_measure": "2/3 Cup",
+    "food_id": 172475,
+    "description": "Tofu, raw, firm, prepared with calcium sulfate",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pork",
+    "raw_measure": "1/2 cup",
+    "food_id": 167902,
+    "description": "Pork, fresh, ground, raw",
+    "category": "Pork Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Chicken Stock",
+    "raw_measure": "2-1/2 cups",
+    "food_id": 172884,
+    "description": "Soup, stock, chicken, home-prepared",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "1/2 tsp",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sugar",
+    "raw_measure": "1/4 tsp",
+    "food_id": 169655,
+    "description": "Sugars, granulated",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sesame Seed Oil",
+    "raw_measure": "1 tsp",
+    "food_id": 171016,
+    "description": "Oil, sesame, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pepper",
+    "raw_measure": "1/4 tsp",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Hotsauce",
+    "raw_measure": "1/2 tsp",
+    "food_id": 174527,
+    "description": "Sauce, ready-to-serve, pepper or hot",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Vinegar",
+    "raw_measure": "1-½ cups",
+    "food_id": 172237,
+    "description": "Vinegar, distilled",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Soy Sauce",
+    "raw_measure": "1 tsp",
+    "food_id": 174277,
+    "description": "Soy sauce made from soy and wheat (shoyu)",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cornstarch",
+    "raw_measure": "1 tbs",
+    "food_id": 169698,
+    "description": "Cornstarch",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Water",
+    "raw_measure": "2 tbs",
+    "food_id": 173647,
+    "description": "Beverages, water, tap, drinking",
+    "category": "Beverages",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Spring Onions",
+    "raw_measure": "1/4 cup",
+    "food_id": 170005,
+    "description": "Onions, spring or scallions (includes tops and bulb), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "eggs"
+  ],
+  "never": []
+ },
+ {
+  "name": "Slow-cooked, Wadadli-spiced Cubano pork belly",
+  "category": "Pork",
+  "source_id": "53432",
+  "instructions_excerpt": "Lay the pork in a large dish, pour over the marinade, then turn the meat in the mixture, rubbing in the marinade all over and making sure every bit of the belly is coated. Lift the meat out of its marinade (don’t wipe off any that sticks to the joint, though; just leave most of the marinade behind in the dish) and transfer to a large roasting dish. Cover with foil, slip into the oven and roast for four and a half hours – every now and then (say, three or four times over the whole cooking period), take the dish out of the oven, lift off the foil lid and spoon the juices from the bottom of the dish over the meat. After the time is up, remove the foil, turn up the heat to 180C (160C fan)/350F/gas 4 and give the pork a final blast – after 15-20 minutes, the top will take on a lovely colour and the meat should be yielding and soft enough to cut with a spoon. To make crackling shards to serve with the meat, heat the oven to 200C (180C fan)/390F/gas 6 and line a roasting tray with baking paper. Lightly score the skin from the pork belly with a sharp knife, then rub it with a three or four fat pinches of salt – I also like to add a few caraway, cumin or fennel seeds at this point (use anything that takes your fancy). Cut the skin into long strips and lay these fat side down on the lined tray (you can, of course, leave it whole, but I think its pleasing to dress the plate with long, golden shards of crackling). Lay a second sheet of baking paper on top of the skin, then put a second baking tray of the same size on top, and roast for 45 minutes to an hour (if by this point the crackling has not gone crisp, just put it back in the oven and carry on roasting it until it has). Cut or pull the pork apart, top with finely chopped coriander and flat-leaf parsley and shards of crackling, if you have made them, and serve at once",
+  "lines": [
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "175ml",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Coriander",
+    "raw_measure": "4 tablespoons",
+    "food_id": 169997,
+    "description": "Coriander (cilantro) leaves, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parsley",
+    "raw_measure": "4 tablespoons",
+    "food_id": 170416,
+    "description": "Parsley, fresh",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Oregano",
+    "raw_measure": "6 tablespoons",
+    "food_id": 171328,
+    "description": "Spices, oregano, dried",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Mint",
+    "raw_measure": "6 tablespoons",
+    "food_id": 173475,
+    "description": "Spearmint, fresh",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Red Chilli",
+    "raw_measure": "2",
+    "food_id": 170106,
+    "description": "Peppers, hot chili, red, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Green Chilli",
+    "raw_measure": "1",
+    "food_id": 170497,
+    "description": "Peppers, hot chili, green, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Orange",
+    "raw_measure": "Zest and juice of 2",
+    "food_id": 169097,
+    "description": "Oranges, raw, all commercial varieties",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lime",
+    "raw_measure": "Zest and juice of 2",
+    "food_id": 168155,
+    "description": "Limes, raw",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Grapefruit",
+    "raw_measure": "Juice of 1",
+    "food_id": 174677,
+    "description": "Grapefruit, raw, white, California",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "40g",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Ground Cumin",
+    "raw_measure": "3 tsp",
+    "food_id": 170923,
+    "description": "Spices, cumin seed",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Ground Allspice",
+    "raw_measure": "2 tablespoons",
+    "food_id": 171315,
+    "description": "Spices, allspice, ground",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "To taste",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Black Pepper",
+    "raw_measure": "To taste",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "meat"
+  ],
+  "never": []
+ },
+ {
+  "name": "Roasted Eggplant With Tahini, Pine Nuts, and Lentils",
+  "category": "Vegetarian",
+  "source_id": "52816",
+  "instructions_excerpt": "Add carrots, celery, and onion and cook, stirring, until softened but not browned, about 4 minutes. Add lentils, bay leaves, stock or water, and a pinch of salt. To Serve: Heat 2 tablespoons olive oil and pine nuts in a medium skillet set over medium heat. Cook, tossing nuts frequently, until golden brown and aromatic, about 4 minutes. Spread a few tablespoons of tahini sauce over each eggplant half and sprinkle with pine nuts.",
+  "lines": [
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "2 tablespoons",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Carrots",
+    "raw_measure": "2 small cut into chunks",
+    "food_id": 170393,
+    "description": "Carrots, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Celery",
+    "raw_measure": "2 small stalks",
+    "food_id": 169988,
+    "description": "Celery, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1 medium finely diced",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "6 medium cloves sliced",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Brown Lentils",
+    "raw_measure": "12 ounces (340g)",
+    "food_id": 172420,
+    "description": "Lentils, raw",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Bay Leaves",
+    "raw_measure": "2",
+    "food_id": 170917,
+    "description": "Spices, bay leaf",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Water",
+    "raw_measure": "4 cups",
+    "food_id": 173647,
+    "description": "Beverages, water, tap, drinking",
+    "category": "Beverages",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "Pinch",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Apple Cider Vinegar",
+    "raw_measure": "2 teaspoons (10ml)",
+    "food_id": 173469,
+    "description": "Vinegar, cider",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pepper",
+    "raw_measure": "Pinch",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Egg Plants",
+    "raw_measure": "2 large",
+    "food_id": 169228,
+    "description": "Eggplant, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Rosemary",
+    "raw_measure": "4 sprigs",
+    "food_id": 173473,
+    "description": "Rosemary, fresh",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pine nuts",
+    "raw_measure": "1/4 cup",
+    "food_id": 2346392,
+    "description": "Nuts, pine nuts, raw",
+    "category": "Nut and Seed Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parsley",
+    "raw_measure": "2 tablespoons",
+    "food_id": 170416,
+    "description": "Parsley, fresh",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "sesame",
+   "tree_nuts"
+  ],
+  "never": [
+   "eggs"
+  ]
+ },
+ {
+  "name": "Smoky Lentil Chili with Squash",
+  "category": "Vegetarian",
+  "source_id": "52784",
+  "instructions_excerpt": "Add the remaining spices – paprika, cinnamon, chilli, cocoa, Worcestershire sauce, salt, and oregano. Next add the can of tomatoes, the water or stock, and carrots. Serve with sliced jalapeno, lime wedges, cilantro, green onions, and cashew sour cream. SIMPLE CASHEW SOUR CREAM 1 Cup Raw Unsalted Cashews Apple Cider Vinegar Bring some water to the boil, and use it to soak the cashews for at least four hours. Alternatively, you can use cold water and let the cashews soak overnight, but I’m forgetful/lazy, so often use the boil method which is much faster. After the cashews have soaked, drain them and add to a high speed blender.",
+  "lines": [
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "1 tbls",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Leek",
+    "raw_measure": "1 chopped",
+    "food_id": 169246,
+    "description": "Leeks, (bulb and lower leaf-portion), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "3 cloves",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cumin",
+    "raw_measure": "4 tsp ground",
+    "food_id": 170923,
+    "description": "Spices, cumin seed",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Coriander",
+    "raw_measure": "2 tsp ground",
+    "food_id": 169997,
+    "description": "Coriander (cilantro) leaves, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Smoked Paprika",
+    "raw_measure": "1 tsp",
+    "food_id": 171329,
+    "description": "Spices, paprika",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cinnamon",
+    "raw_measure": "1/2 tsp",
+    "food_id": 171320,
+    "description": "Spices, cinnamon, ground",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Chili Powder",
+    "raw_measure": "1 tsp",
+    "food_id": 171319,
+    "description": "Spices, chili powder",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cocoa",
+    "raw_measure": "1 tsp",
+    "food_id": 169593,
+    "description": "Cocoa, dry powder, unsweetened",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Dried Oregano",
+    "raw_measure": "1/2 tsp",
+    "food_id": 171328,
+    "description": "Spices, oregano, dried",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Diced Tomatoes",
+    "raw_measure": "1 can",
+    "food_id": 170457,
+    "description": "Tomatoes, red, ripe, raw, year round average",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Water",
+    "raw_measure": "3 cups",
+    "food_id": 173647,
+    "description": "Beverages, water, tap, drinking",
+    "category": "Beverages",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Carrots",
+    "raw_measure": "3 chopped",
+    "food_id": 170393,
+    "description": "Carrots, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Brown Lentils",
+    "raw_measure": "1 1/2 cups",
+    "food_id": 172420,
+    "description": "Lentils, raw",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sea Salt",
+    "raw_measure": "1 tsp",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Squash",
+    "raw_measure": "1 Small",
+    "food_id": 170487,
+    "description": "Squash, summer, all varieties, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cashews",
+    "raw_measure": "1 Cup",
+    "food_id": 170162,
+    "description": "Nuts, cashew nuts, raw",
+    "category": "Nut and Seed Products",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Apple Cider Vinegar",
+    "raw_measure": "1 tsp",
+    "food_id": 173469,
+    "description": "Vinegar, cider",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "fish",
+   "gluten"
+  ],
+  "never": []
+ },
+ {
+  "name": "Sushi",
+  "category": "Seafood",
+  "source_id": "53065",
+  "instructions_excerpt": "Spread over some Japanese mayonnaise. Use a spoon to spread out a thin layer of mayonnaise down the middle of the rice. Get your child to top the mayonnaise with a line of their favourite fillings – here we’ve used tuna and cucumber. TO MAKE PRESSED SUSHI: Layer over some smoked salmon. Line a loaf tin with cling film, then place a thin layer of smoked salmon inside on top of the cling film. Press about 3cm of rice over the fish, fold the cling film over and press down as much as you can, using another tin if you have one. Get a small square of cling film and place a topping, like half a prawn or a small piece of smoked salmon, on it.",
+  "lines": [
+   {
+    "raw_name": "Sushi Rice",
+    "raw_measure": "300ml",
+    "food_id": 168931,
+    "description": "Rice, white, short-grain, raw, unenriched",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Rice wine",
+    "raw_measure": "100ml",
+    "food_id": 167723,
+    "description": "Alcoholic beverage, rice (sake)",
+    "category": "Beverages",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Caster Sugar",
+    "raw_measure": "2 tbs",
+    "food_id": 169655,
+    "description": "Sugars, granulated",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Mayonnaise",
+    "raw_measure": "3 tbs",
+    "food_id": 171009,
+    "description": "Salad dressing, mayonnaise, regular",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Rice wine",
+    "raw_measure": "1 tbs",
+    "food_id": 167723,
+    "description": "Alcoholic beverage, rice (sake)",
+    "category": "Beverages",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Soy Sauce",
+    "raw_measure": "1 tbs",
+    "food_id": 174277,
+    "description": "Soy sauce made from soy and wheat (shoyu)",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cucumber",
+    "raw_measure": "1",
+    "food_id": 169225,
+    "description": "Cucumber, peeled, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "fish",
+   "crustaceans"
+  ],
+  "never": []
+ },
+ {
+  "name": "Antiguan Breakfast (Chop Up and ‘Saltfish’)",
+  "category": "Breakfast",
+  "source_id": "53430",
+  "instructions_excerpt": "Heat butter and add onions and garlic in a medium sized pot set to medium to high heat.",
+  "lines": [
+   {
+    "raw_name": "Egg Plants",
+    "raw_measure": "4",
+    "food_id": 169228,
+    "description": "Eggplant, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Callaloo",
+    "raw_measure": "8 oz",
+    "food_id": 168385,
+    "description": "Amaranth leaves, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pumpkin",
+    "raw_measure": "1 lb",
+    "food_id": 168448,
+    "description": "Pumpkin, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "3 cloves Chopped",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1 Diced",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butter",
+    "raw_measure": "2 oz",
+    "food_id": 173410,
+    "description": "Butter, salted",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "1/2 tsp",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Black Pepper",
+    "raw_measure": "1/4 tsp",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "fish"
+  ],
+  "never": []
+ },
+ {
+  "name": "Lamb Tagine",
+  "category": "Lamb",
+  "source_id": "52843",
+  "instructions_excerpt": "Add the diced lamb and brown all over. Add the honey and apricots, crumble in the stock cube and pour over roughly 500ml boiling water or enough to cover the meat. Cook for 20 – 30 mins more until the squash is soft and the lamb is tender. Serve alongside rice or couscous and sprinkle with parsley and pine nuts, if using.",
+  "lines": [
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "2 tblsp",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1 finely sliced",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Carrots",
+    "raw_measure": "2 chopped",
+    "food_id": 170393,
+    "description": "Carrots, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lamb Leg",
+    "raw_measure": "500g",
+    "food_id": 172486,
+    "description": "Lamb, leg, shank half, separable lean only, trimmed to 1/4\" fat, choice, raw",
+    "category": "Lamb, Veal, and Game Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "2 cloves minced",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cumin",
+    "raw_measure": "½ tsp",
+    "food_id": 170923,
+    "description": "Spices, cumin seed",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Ginger",
+    "raw_measure": "½ tsp",
+    "food_id": 169231,
+    "description": "Ginger root, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Saffron",
+    "raw_measure": "¼ tsp",
+    "food_id": 170934,
+    "description": "Spices, saffron",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cinnamon",
+    "raw_measure": "1 tsp",
+    "food_id": 171320,
+    "description": "Spices, cinnamon, ground",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Honey",
+    "raw_measure": "1 tblsp",
+    "food_id": 169640,
+    "description": "Honey",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Apricot",
+    "raw_measure": "100g",
+    "food_id": 171697,
+    "description": "Apricots, raw",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Vegetable Stock Cube",
+    "raw_measure": "1",
+    "food_id": 171562,
+    "description": "Soup, chicken broth or bouillon, dry",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butternut Squash",
+    "raw_measure": "1 medium chopped",
+    "food_id": 169295,
+    "description": "Squash, winter, butternut, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Couscous",
+    "raw_measure": "Steamed",
+    "food_id": 169699,
+    "description": "Couscous, dry",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parsley",
+    "raw_measure": "Chopped",
+    "food_id": 170416,
+    "description": "Parsley, fresh",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "tree_nuts",
+   "meat"
+  ],
+  "never": []
+ },
+ {
+  "name": "Thai pumpkin soup",
+  "category": "Vegetarian",
+  "source_id": "53210",
+  "instructions_excerpt": "Stir in the curry paste for 1 min, followed by the roasted pumpkin, all but 3 tbsp of the coconut milk and the stock. Bring to a simmer, cook for 5 mins, then fish out the lemongrass.",
+  "lines": [
+   {
+    "raw_name": "Pumpkin",
+    "raw_measure": "1.5kg",
+    "food_id": 168448,
+    "description": "Pumpkin, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sunflower Oil",
+    "raw_measure": "4 tsp",
+    "food_id": 171025,
+    "description": "Oil, sunflower, linoleic, (approx. 65%)",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1 sliced",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Ginger",
+    "raw_measure": "1 tbsp grated",
+    "food_id": 169231,
+    "description": "Ginger root, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lemongrass",
+    "raw_measure": "1",
+    "food_id": 168573,
+    "description": "Lemon grass (citronella), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Thai Red Curry Paste",
+    "raw_measure": "4 tablespoons",
+    "food_id": 170924,
+    "description": "Spices, curry powder",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Coconut Milk",
+    "raw_measure": "400ml",
+    "food_id": 170173,
+    "description": "Nuts, coconut milk, canned (liquid expressed from grated meat and water)",
+    "category": "Nut and Seed Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Vegetable Stock",
+    "raw_measure": "800ml",
+    "food_id": 171583,
+    "description": "Soup, vegetable broth, ready to serve",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lime juice",
+    "raw_measure": "To taste",
+    "food_id": 168156,
+    "description": "Lime juice, raw",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Sugar",
+    "raw_measure": "To taste",
+    "food_id": 169655,
+    "description": "Sugars, granulated",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Red Chilli",
+    "raw_measure": "To serve",
+    "food_id": 170106,
+    "description": "Peppers, hot chili, red, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "crustaceans",
+   "fish"
+  ],
+  "never": []
+ },
+ {
+  "name": "Spanish seafood rice",
+  "category": "Seafood",
+  "source_id": "53182",
+  "instructions_excerpt": "Pour in the stock, add the saffron and bring to the boil. Stir in the seafood and lemon juice and cook for 2 mins or until piping hot and completely cooked through.",
+  "lines": [
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "1 tblsp",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Onion",
+    "raw_measure": "1 chopped",
+    "food_id": 170000,
+    "description": "Onions, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Red Pepper",
+    "raw_measure": "1",
+    "food_id": 170108,
+    "description": "Peppers, sweet, red, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Yellow Pepper",
+    "raw_measure": "1",
+    "food_id": 169383,
+    "description": "Peppers, sweet, yellow, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic Clove",
+    "raw_measure": "2 sliced",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Paella Rice",
+    "raw_measure": "250g",
+    "food_id": 169760,
+    "description": "Rice, white, medium-grain, raw, unenriched",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Vegetable Stock",
+    "raw_measure": "800ml",
+    "food_id": 171583,
+    "description": "Soup, vegetable broth, ready to serve",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Saffron",
+    "raw_measure": "Pinch",
+    "food_id": 170934,
+    "description": "Spices, saffron",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Frozen Seafood mix",
+    "raw_measure": "400g",
+    "food_id": 175179,
+    "description": "Crustaceans, shrimp, raw",
+    "category": "Finfish and Shellfish Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lemon",
+    "raw_measure": "Juice of 1/2",
+    "food_id": 167746,
+    "description": "Lemons, raw, without peel",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parsley",
+    "raw_measure": "Handful",
+    "food_id": 170416,
+    "description": "Parsley, fresh",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "molluscs",
+   "crustaceans",
+   "fish"
+  ],
+  "never": []
+ },
+ {
+  "name": "Tofu, greens & cashew stir-fry",
+  "category": "Vegetarian",
+  "source_id": "53240",
+  "instructions_excerpt": "Add the garlic and chilli, fry for 1 min, then toss through the spring onions, soya beans, pak choi and tofu. Add the hoisin, soy and nuts to warm through.",
+  "lines": [
+   {
+    "raw_name": "Vegetable Oil",
+    "raw_measure": "1 tablespoon",
+    "food_id": 172336,
+    "description": "Oil, canola",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Broccoli",
+    "raw_measure": "1 head",
+    "food_id": 321900,
+    "description": "Broccoli, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic Clove",
+    "raw_measure": "4 sliced",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Red Chilli",
+    "raw_measure": "1 sliced",
+    "food_id": 170106,
+    "description": "Peppers, hot chili, red, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Spring Onions",
+    "raw_measure": "1  bunch",
+    "food_id": 170005,
+    "description": "Onions, spring or scallions (includes tops and bulb), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Soya Bean",
+    "raw_measure": "140g",
+    "food_id": 174270,
+    "description": "Soybeans, mature seeds, raw",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pak Choi",
+    "raw_measure": "2 heads",
+    "food_id": 170390,
+    "description": "Cabbage, chinese (pak-choi), raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Marinated Tofu",
+    "raw_measure": "300g",
+    "food_id": 172475,
+    "description": "Tofu, raw, firm, prepared with calcium sulfate",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Hoisin Sauce",
+    "raw_measure": "1 ½ tbsp",
+    "food_id": 172886,
+    "description": "Sauce, hoisin, ready-to-serve",
+    "category": "Soups, Sauces, and Gravies",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Soy Sauce",
+    "raw_measure": "1 tablespoon",
+    "food_id": 174277,
+    "description": "Soy sauce made from soy and wheat (shoyu)",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cashew Nuts",
+    "raw_measure": "25g",
+    "food_id": 170162,
+    "description": "Nuts, cashew nuts, raw",
+    "category": "Nut and Seed Products",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "soy",
+   "gluten",
+   "sesame",
+   "tree_nuts"
+  ],
+  "never": [
+   "meat",
+   "fish"
+  ]
+ },
+ {
+  "name": "Bean & Sausage Hotpot",
+  "category": "Miscellaneous",
+  "source_id": "52848",
+  "instructions_excerpt": "In a large casserole, fry the sausages until brown all over – about 10 mins. Add the tomato sauce, stirring well, then stir in the beans, treacle or sugar and mustard. Great served with crusty bread or rice.",
+  "lines": [
+   {
+    "raw_name": "Sausages",
+    "raw_measure": "8 large",
+    "food_id": 171631,
+    "description": "Sausage, Italian, pork, mild, raw",
+    "category": "Sausages and Luncheon Meats",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Tomato Sauce",
+    "raw_measure": "1 Jar",
+    "food_id": 170054,
+    "description": "Tomato products, canned, sauce",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butter Beans",
+    "raw_measure": "1200g",
+    "food_id": 174252,
+    "description": "Lima beans, large, mature seeds, raw",
+    "category": "Legumes and Legume Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Black Treacle",
+    "raw_measure": "1 tbls",
+    "food_id": 168820,
+    "description": "Molasses",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "English Mustard",
+    "raw_measure": "1 tsp",
+    "food_id": 172234,
+    "description": "Mustard, prepared, yellow",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "gluten",
+   "meat",
+   "sulphites",
+   "mustard"
+  ],
+  "never": []
+ },
+ {
+  "name": "Grilled corn with garlic mayo & grated cheese",
+  "category": "Vegetarian",
+  "source_id": "53478",
+  "instructions_excerpt": "Mix the garlic and mayonnaise in a small bowl. Just before barbecuing, remove the cobs from the pan, pat dry and rub the mayonnaise into each one. Remove and scatter over the Parmesan and coriander.",
+  "lines": [
+   {
+    "raw_name": "Corn On The Cob",
+    "raw_measure": "6",
+    "food_id": 169998,
+    "description": "Corn, sweet, yellow, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "2 cloves minced",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Mayonnaise",
+    "raw_measure": "6 tablespoons",
+    "food_id": 171009,
+    "description": "Salad dressing, mayonnaise, regular",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parmesan",
+    "raw_measure": "4 tablespoons",
+    "food_id": 170848,
+    "description": "Cheese, parmesan, hard",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Coriander",
+    "raw_measure": "2 tablespoons",
+    "food_id": 169997,
+    "description": "Coriander (cilantro) leaves, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Lime",
+    "raw_measure": "1",
+    "food_id": 168155,
+    "description": "Limes, raw",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "eggs",
+   "rennet",
+   "milk"
+  ],
+  "never": [
+   "meat"
+  ]
+ },
+ {
+  "name": "Frog Legs Recipe in Garlic Butter",
+  "category": "Miscellaneous",
+  "source_id": "53465",
+  "instructions_excerpt": "Let the frog legs soak in the milk in the fridge for an hour (optional). Add the olive oil and half of the garlic butter to a large wok or frying pan. Place it over high heat until the butter starts to foam. Add the frog legs to the pan. Add the rest of the garlic butter right in the end together with the freshly chopped parsley. Divide the frog legs over plates. Serve with grilled bread and a green salad.",
+  "lines": [
+   {
+    "raw_name": "Frogs Legs",
+    "raw_measure": "300g",
+    "food_id": 168148,
+    "description": "Frog legs, raw",
+    "category": "Finfish and Shellfish Products",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Milk",
+    "raw_measure": "3 Cups",
+    "food_id": 171265,
+    "description": "Milk, whole, 3.25% milkfat, with added vitamin D",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Olive Oil",
+    "raw_measure": "1 tablespoon",
+    "food_id": 171413,
+    "description": "Oil, olive, salad or cooking",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Garlic",
+    "raw_measure": "1/2 tbs",
+    "food_id": 169230,
+    "description": "Garlic, raw",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butter",
+    "raw_measure": "2 tablespoons",
+    "food_id": 173410,
+    "description": "Butter, salted",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Parsley",
+    "raw_measure": "1 tablespoon",
+    "food_id": 170416,
+    "description": "Parsley, fresh",
+    "category": "Vegetables and Vegetable Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "Pinch",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Pepper",
+    "raw_measure": "Pinch",
+    "food_id": 170931,
+    "description": "Spices, pepper, black",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "meat"
+  ],
+  "never": [
+   "fish"
+  ]
+ },
+ {
+  "name": "Chelsea Buns",
+  "category": "Dessert",
+  "source_id": "52898",
+  "instructions_excerpt": "Sift the flour and salt into a large bowl. Meanwhile, warm the milk and butter in a saucepan until the butter melts and the mixture is lukewarm. Add the milk mixture and egg to the flour mixture and stir until the contents of the bowl come together as a soft dough. (You may need to add a little extra flour.) Tip the dough onto a generously floured work surface. Knead for five minutes, adding more flour if necessary, until the dough is smooth and elastic and no longer feels sticky. Place the dough into the bowl and turn until it is covered in the oil. Cover the bowl with cling film and set aside in a warm place for one hour, or until the dough has doubled in size. For the filling, knock the dough back to its original size and turn out onto a lightly floured work surface. Roll the dough out into a rectangle 0.5cm/¼in thick. Brush all over with the melted butter, then sprinkle over the brown sugar, cinnamon and dried fruit. Roll the dough up into a tight cylinder , cut ten 4cm/1½in slice and place them onto a lightly greased baking sheet, leaving a little space between each slice. Bake the buns in the oven for 20-25 minutes, or until risen and golden-brown. Meanwhile, for the glaze, heat the milk and sugar in a saucepan until boiling. Remove the buns from the oven and brush with the glaze, then set aside to cool on a wire rack.",
+  "lines": [
+   {
+    "raw_name": "White Flour",
+    "raw_measure": "500g",
+    "food_id": 790214,
+    "description": "Flour, rice, white, unenriched",
+    "category": "Cereal Grains and Pasta",
+    "match_method": "embedding"
+   },
+   {
+    "raw_name": "Salt",
+    "raw_measure": "1 tsp",
+    "food_id": 173468,
+    "description": "Salt, table",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Yeast",
+    "raw_measure": "7g",
+    "food_id": 175043,
+    "description": "Leavening agents, yeast, baker's, active dry",
+    "category": "Baked Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Milk",
+    "raw_measure": "300ml",
+    "food_id": 171265,
+    "description": "Milk, whole, 3.25% milkfat, with added vitamin D",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butter",
+    "raw_measure": "40g",
+    "food_id": 173410,
+    "description": "Butter, salted",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Eggs",
+    "raw_measure": "1",
+    "food_id": 171287,
+    "description": "Egg, whole, raw, fresh",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Vegetable Oil",
+    "raw_measure": "Dash",
+    "food_id": 172336,
+    "description": "Oil, canola",
+    "category": "Fats and Oils",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Butter",
+    "raw_measure": "25g",
+    "food_id": 173410,
+    "description": "Butter, salted",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Brown Sugar",
+    "raw_measure": "75g",
+    "food_id": 168833,
+    "description": "Sugars, brown",
+    "category": "Sweets",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Cinnamon",
+    "raw_measure": "2 tsp",
+    "food_id": 171320,
+    "description": "Spices, cinnamon, ground",
+    "category": "Spices and Herbs",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Dried Fruit",
+    "raw_measure": "150g",
+    "food_id": 168165,
+    "description": "Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",
+    "category": "Fruits and Fruit Juices",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Milk",
+    "raw_measure": "2 tbs",
+    "food_id": 171265,
+    "description": "Milk, whole, 3.25% milkfat, with added vitamin D",
+    "category": "Dairy and Egg Products",
+    "match_method": "alias"
+   },
+   {
+    "raw_name": "Caster Sugar",
+    "raw_measure": "2 tbs",
+    "food_id": 169655,
+    "description": "Sugars, granulated",
+    "category": "Sweets",
+    "match_method": "alias"
+   }
+  ],
+  "expect": [
+   "gluten",
+   "eggs",
+   "milk"
+  ],
+  "never": [
+   "meat"
+  ]
+ }
+]
