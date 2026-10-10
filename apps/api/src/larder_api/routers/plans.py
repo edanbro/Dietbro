@@ -129,6 +129,7 @@ def plan_out(row: MealPlan) -> PlanOut:
                     for m in meals
                 ],
                 totals=stats.day_totals[d],
+                logged=[],  # M4: meal_logs for day_date
             )
         )
     week = MacrosOut(
@@ -140,6 +141,7 @@ def plan_out(row: MealPlan) -> PlanOut:
     return PlanOut(
         id=row.id,
         version=row.version,
+        parent_id=row.parent_id,
         start=row.start_date,
         days=days,
         planner=row.planner,

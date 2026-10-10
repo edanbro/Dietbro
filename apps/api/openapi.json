@@ -1162,6 +1162,197 @@
           }
         }
       }
+    },
+    "/chat/thread": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Get Thread",
+        "description": "The latest thread's messages (oldest first), or an empty thread if there is none.",
+        "operationId": "getChatThread",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/chat/threads": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "New Thread",
+        "description": "Start a fresh conversation (earlier ones are kept for export).",
+        "operationId": "newChatThread",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/chat/messages": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Send Message",
+        "description": "Stream the reply as server-sent events (each `data:` is one ChatEvent as JSON).\n\nChecks that can fail run before the stream starts and are plain HTTP errors: daily limit\n(429), one turn at a time per user (409), thread ownership (404), `today` within a day of\nthe server's UTC date (400). The turn itself (larder_api.chat.service.run_turn) opens its own\ndatabase sessions: the request session is not used after streaming begins.",
+        "operationId": "sendChatMessage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string",
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/ThreadEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/StatusEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/TextEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/PlanEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/RecipeEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/DoneEvent"
+                          },
+                          {
+                            "$ref": "#/components/schemas/ErrorEvent"
+                          }
+                        ],
+                        "discriminator": {
+                          "propertyName": "type",
+                          "mapping": {
+                            "thread": "#/components/schemas/ThreadEvent",
+                            "status": "#/components/schemas/StatusEvent",
+                            "text": "#/components/schemas/TextEvent",
+                            "plan": "#/components/schemas/PlanEvent",
+                            "recipe": "#/components/schemas/RecipeEvent",
+                            "done": "#/components/schemas/DoneEvent",
+                            "error": "#/components/schemas/ErrorEvent"
+                          }
+                        },
+                        "title": "Streamitem Sendchatmessage"
+                      }
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`today` is implausible",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such thread (or not yours)"
+          },
+          "409": {
+            "description": "still answering your previous message, or setup incomplete",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "daily message limit reached",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1381,6 +1572,100 @@
         ],
         "title": "BodyOut"
       },
+      "ChatMessageIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id",
+            "description": "omit to continue the latest thread"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date (dates like 'tonight' resolve to it)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "today"
+        ],
+        "title": "ChatMessageIn"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id",
+            "description": "plan version this turn created"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "llm",
+                  "offline"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "text",
+          "created_at"
+        ],
+        "title": "ChatMessageOut"
+      },
       "DayOut": {
         "properties": {
           "day": {
@@ -1401,6 +1686,13 @@
           },
           "totals": {
             "$ref": "#/components/schemas/MacrosOut"
+          },
+          "logged": {
+            "items": {
+              "$ref": "#/components/schemas/MealLogOut"
+            },
+            "type": "array",
+            "title": "Logged"
           }
         },
         "type": "object",
@@ -1408,7 +1700,8 @@
           "day",
           "date",
           "meals",
-          "totals"
+          "totals",
+          "logged"
         ],
         "title": "DayOut"
       },
@@ -1420,6 +1713,43 @@
           "pescatarian"
         ],
         "title": "Diet"
+      },
+      "DoneEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "done",
+            "title": "Type",
+            "default": "done"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ChatMessageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DoneEvent"
+      },
+      "ErrorEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "error",
+            "title": "Type",
+            "default": "error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ErrorEvent"
       },
       "FoodDetail": {
         "properties": {
@@ -1929,6 +2259,55 @@
         ],
         "title": "Me"
       },
+      "MealLogOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "off_plan",
+              "skipped"
+            ],
+            "title": "Kind"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "estimated": {
+            "type": "boolean",
+            "title": "Estimated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slot",
+          "kind",
+          "description",
+          "kcal",
+          "estimated"
+        ],
+        "title": "MealLogOut",
+        "description": "Food eaten off-plan, or a planned meal skipped (told to the chat)."
+      },
       "MealOut": {
         "properties": {
           "slot": {
@@ -2182,6 +2561,104 @@
         "type": "object",
         "title": "PantryItemPatch"
       },
+      "PlanChangeOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "after_recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Recipe Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "slot",
+          "before",
+          "after",
+          "reason"
+        ],
+        "title": "PlanChangeOut"
+      },
+      "PlanEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "plan",
+            "title": "Type",
+            "default": "plan"
+          },
+          "plan_id": {
+            "type": "integer",
+            "title": "Plan Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PlanChangeOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "version",
+          "changes",
+          "failures"
+        ],
+        "title": "PlanEvent"
+      },
       "PlanOut": {
         "properties": {
           "id": {
@@ -2191,6 +2668,17 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
           },
           "start": {
             "type": "string",
@@ -2301,6 +2789,7 @@
         "required": [
           "id",
           "version",
+          "parent_id",
           "start",
           "days",
           "planner",
@@ -2617,6 +3106,10 @@
             "type": "string",
             "title": "Instructions"
           },
+          "generated": {
+            "type": "boolean",
+            "title": "Generated"
+          },
           "source": {
             "type": "string",
             "title": "Source"
@@ -2698,6 +3191,7 @@
           "cuisine",
           "image_url",
           "instructions",
+          "generated",
           "source",
           "source_url",
           "servings",
@@ -2710,6 +3204,30 @@
           "ingredients"
         ],
         "title": "RecipeDetail"
+      },
+      "RecipeEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "recipe",
+            "title": "Type",
+            "default": "recipe"
+          },
+          "recipe_id": {
+            "type": "integer",
+            "title": "Recipe Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "name"
+        ],
+        "title": "RecipeEvent"
       },
       "RecipeIngredientOut": {
         "properties": {
@@ -2909,6 +3427,25 @@
         "title": "Slot",
         "description": "A meal of the day, in eating order."
       },
+      "StatusEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "status",
+            "title": "Type",
+            "default": "status"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "StatusEvent"
+      },
       "SuggestedTargets": {
         "properties": {
           "kcal_min": {
@@ -2960,6 +3497,93 @@
         ],
         "title": "TargetsOut",
         "description": "What the planner aimed for: per-day bands, whole-plan bands, and the calorie floor."
+      },
+      "TextEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text",
+            "title": "Type",
+            "default": "text"
+          },
+          "delta": {
+            "type": "string",
+            "title": "Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delta"
+        ],
+        "title": "TextEvent"
+      },
+      "ThreadEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "thread",
+            "title": "Type",
+            "default": "thread"
+          },
+          "thread_id": {
+            "type": "integer",
+            "title": "Thread Id"
+          },
+          "message_id": {
+            "type": "integer",
+            "title": "Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "message_id"
+        ],
+        "title": "ThreadEvent"
+      },
+      "ThreadOut": {
+        "properties": {
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "llm_available": {
+            "type": "boolean",
+            "title": "Llm Available",
+            "description": "false: replies come from the offline parser"
+          },
+          "messages_today": {
+            "type": "integer",
+            "title": "Messages Today"
+          },
+          "daily_limit": {
+            "type": "integer",
+            "title": "Daily Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "messages",
+          "llm_available",
+          "messages_today",
+          "daily_limit"
+        ],
+        "title": "ThreadOut"
       },
       "ValidationError": {
         "properties": {

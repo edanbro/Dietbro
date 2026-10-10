@@ -2,7 +2,8 @@
 
 Data (M1): foods, recipes, embeddings. Users (M2): profile, goals, allergies, pantry; every user
 table is keyed or filtered by `user_id`. Plans (M3): versioned weekly plans and shopping lists.
-LLM calls arrive with M4.
+Chat (M4): threads and messages, requested changes, meals logged off-plan, LLM calls; recipes the
+assistant drafts are private to their owner.
 """
 
 from datetime import date, datetime
@@ -121,7 +122,7 @@ class Recipe(NutrientColumns, Base):
     __table_args__ = (UniqueConstraint("source", "source_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    source: Mapped[str] = mapped_column(String(32))  # mealdb | user | generated
+    source: Mapped[str] = mapped_column(String(32))  # mealdb | curated | generated
     source_id: Mapped[str] = mapped_column(String(64))
     name: Mapped[str] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(String(64))
@@ -133,6 +134,11 @@ class Recipe(NutrientColumns, Base):
     servings_estimated: Mapped[bool] = mapped_column(Boolean, default=False)
     # True when every ingredient resolved to a food with grams: only these are plannable.
     nutrition_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Set for recipes drafted for one user (source "generated"): only that user may see, search
+    # or be planned them. NULL = the shared catalogue.
+    owner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -399,3 +405,118 @@ class ShoppingItem(Base):
 
     plan: Mapped[MealPlan] = relationship(back_populates="shopping")
     food: Mapped[Food] = relationship()
+
+
+# --- chat and LLM layer (M4) ------------------------------------------------------------------
+
+
+class ChatThread(Base):
+    """A conversation. The client shows the latest thread; "new chat" starts another."""
+
+    __tablename__ = "chat_threads"
+    __table_args__ = (Index("ix_chat_threads_user_updated", "user_id", "updated_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = _now()
+
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="thread", cascade="all, delete-orphan", order_by="ChatMessage.id"
+    )
+
+
+class ChatMessage(Base):
+    """One side of a chat turn. `text` is what the user saw; `api_messages` is the exact Messages
+    API transcript this row added (the user message with its context block; or the assistant
+    responses and tool results), replayed append-only on the next turn. Offline turns store a
+    plain-text equivalent so a later model turn still has the context."""
+
+    __tablename__ = "chat_messages"
+    __table_args__ = (Index("ix_chat_messages_user_created", "user_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    thread_id: Mapped[int] = mapped_column(
+        ForeignKey("chat_threads.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    role: Mapped[str] = mapped_column(String(16))  # user | assistant
+    text: Mapped[str] = mapped_column(Text)
+    api_messages: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    mode: Mapped[str | None] = mapped_column(String(16))  # llm | offline (assistant rows)
+    # The plan version this turn created, if any.
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    thread: Mapped[ChatThread] = relationship(back_populates="messages")
+
+
+class Craving(Base):
+    """A plan change the user asked for (PLAN §5 "cravings"): any intent - craving, off-plan,
+    skip, swap - as typed by the model or the offline parser, and what became of it."""
+
+    __tablename__ = "cravings"
+    __table_args__ = (Index("ix_cravings_user_created", "user_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    message_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chat_messages.id", ondelete="SET NULL")
+    )
+    intent: Mapped[str] = mapped_column(String(16))  # craving | ate_off_plan | skip | swap
+    raw_text: Mapped[str] = mapped_column(Text)  # the user's message
+    parsed: Mapped[dict[str, Any]] = mapped_column(JSONB)  # larder_llm.schemas.Change
+    status: Mapped[str] = mapped_column(String(16))  # applied | failed | unchanged
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MealLog(Base):
+    """Food eaten off-plan, or a planned meal skipped. Nutrition is computed by the app from
+    USDA data (never taken from a model) and is an estimate unless `estimated` is false."""
+
+    __tablename__ = "meal_logs"
+    __table_args__ = (Index("ix_meal_logs_user_eaten_on", "user_id", "eaten_on"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    eaten_on: Mapped[date] = mapped_column(Date)  # the user's local date
+    slot: Mapped[str | None] = mapped_column(String(16))
+    kind: Mapped[str] = mapped_column(String(16))  # off_plan | skipped (M5 adds eaten)
+    description: Mapped[str] = mapped_column(Text)
+    kcal: Mapped[int] = mapped_column(Integer)
+    protein_g: Mapped[int] = mapped_column(Integer)
+    fat_g: Mapped[int] = mapped_column(Integer)
+    carbs_g: Mapped[int] = mapped_column(Integer)
+    estimated: Mapped[bool] = mapped_column(Boolean, default=True)
+    # How the estimate was made: [{"name", "food_id", "food", "grams"}].
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    source: Mapped[str] = mapped_column(String(16))  # chat | offline
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LlmCall(Base):
+    """One Messages API request: tokens, cost, latency (PLAN §7). Feeds the per-user monthly
+    cost cap and the M7/M8 cost-per-plan numbers."""
+
+    __tablename__ = "llm_calls"
+    __table_args__ = (Index("ix_llm_calls_user_created", "user_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    thread_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chat_threads.id", ondelete="SET NULL")
+    )
+    purpose: Mapped[str] = mapped_column(String(32))  # chat | choose_food | ...
+    model: Mapped[str] = mapped_column(String(64))
+    input_tokens: Mapped[int] = mapped_column(Integer)
+    output_tokens: Mapped[int] = mapped_column(Integer)
+    cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cache_write_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_micro_usd: Mapped[int] = mapped_column(BigInteger)
+    latency_ms: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16))  # ok | refusal | max_tokens | error
+    request_id: Mapped[str | None] = mapped_column(String(64))
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "larder-core",
     "larder-db",
+    "larder-llm",
     "larder-solver",
     "asyncpg>=0.32",
     "fastapi>=0.142",
@@ -23,6 +24,7 @@ larder-bench = "larder_api.bench:main"
 [tool.uv.sources]
 larder-core = { workspace = true }
 larder-db = { workspace = true }
+larder-llm = { workspace = true }
 larder-solver = { workspace = true }
 
 [build-system]

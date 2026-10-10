@@ -387,6 +387,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chat/thread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Thread
+         * @description The latest thread's messages (oldest first), or an empty thread if there is none.
+         */
+        get: operations["getChatThread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New Thread
+         * @description Start a fresh conversation (earlier ones are kept for export).
+         */
+        post: operations["newChatThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Message
+         * @description Stream the reply as server-sent events (each `data:` is one ChatEvent as JSON).
+         *
+         *     Checks that can fail run before the stream starts and are plain HTTP errors: daily limit
+         *     (429), one turn at a time per user (409), thread ownership (404), `today` within a day of
+         *     the server's UTC date (400). The turn itself (larder_api.chat.service.run_turn) opens its own
+         *     database sessions: the request session is not used after streaming begins.
+         */
+        post: operations["sendChatMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -458,6 +523,46 @@ export interface components {
                 [key: string]: components["schemas"]["SuggestedTargets"];
             };
         };
+        /** ChatMessageIn */
+        ChatMessageIn: {
+            /** Text */
+            text: string;
+            /**
+             * Thread Id
+             * @description omit to continue the latest thread
+             */
+            thread_id?: number | null;
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date (dates like 'tonight' resolve to it)
+             */
+            today: string;
+        };
+        /** ChatMessageOut */
+        ChatMessageOut: {
+            /** Id */
+            id: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Text */
+            text: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Plan Id
+             * @description plan version this turn created
+             */
+            plan_id?: number | null;
+            /** Mode */
+            mode?: ("llm" | "offline") | null;
+        };
         /** DayOut */
         DayOut: {
             /** Day */
@@ -470,12 +575,33 @@ export interface components {
             /** Meals */
             meals: components["schemas"]["MealOut"][];
             totals: components["schemas"]["MacrosOut"];
+            /** Logged */
+            logged: components["schemas"]["MealLogOut"][];
         };
         /**
          * Diet
          * @enum {string}
          */
         Diet: "vegetarian" | "vegan" | "pescatarian";
+        /** DoneEvent */
+        DoneEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "done";
+            message: components["schemas"]["ChatMessageOut"];
+        };
+        /** ErrorEvent */
+        ErrorEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            /** Message */
+            message: string;
+        };
         /** FoodDetail */
         FoodDetail: {
             /** Id */
@@ -637,6 +763,26 @@ export interface components {
             /** Setup Complete */
             setup_complete: boolean;
         };
+        /**
+         * MealLogOut
+         * @description Food eaten off-plan, or a planned meal skipped (told to the chat).
+         */
+        MealLogOut: {
+            /** Id */
+            id: number;
+            slot: components["schemas"]["Slot"] | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "off_plan" | "skipped";
+            /** Description */
+            description: string;
+            /** Kcal */
+            kcal: number;
+            /** Estimated */
+            estimated: boolean;
+        };
         /** MealOut */
         MealOut: {
             slot: components["schemas"]["Slot"];
@@ -718,12 +864,47 @@ export interface components {
             /** Expires On */
             expires_on?: string | null;
         };
+        /** PlanChangeOut */
+        PlanChangeOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            slot: components["schemas"]["Slot"];
+            /** Before */
+            before: string | null;
+            /** After */
+            after: string | null;
+            /** After Recipe Id */
+            after_recipe_id?: number | null;
+            /** Reason */
+            reason: string;
+        };
+        /** PlanEvent */
+        PlanEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "plan";
+            /** Plan Id */
+            plan_id: number;
+            /** Version */
+            version: number;
+            /** Changes */
+            changes: components["schemas"]["PlanChangeOut"][];
+            /** Failures */
+            failures: string[];
+        };
         /** PlanOut */
         PlanOut: {
             /** Id */
             id: number;
             /** Version */
             version: number;
+            /** Parent Id */
+            parent_id: number | null;
             /**
              * Start
              * Format: date
@@ -865,6 +1046,8 @@ export interface components {
             image_url: string | null;
             /** Instructions */
             instructions: string;
+            /** Generated */
+            generated: boolean;
             /** Source */
             source: string;
             /** Source Url */
@@ -884,6 +1067,18 @@ export interface components {
             suitable_for: components["schemas"]["Diet"][];
             /** Ingredients */
             ingredients: components["schemas"]["RecipeIngredientOut"][];
+        };
+        /** RecipeEvent */
+        RecipeEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "recipe";
+            /** Recipe Id */
+            recipe_id: number;
+            /** Name */
+            name: string;
         };
         /** RecipeIngredientOut */
         RecipeIngredientOut: {
@@ -958,6 +1153,16 @@ export interface components {
          * @enum {string}
          */
         Slot: "breakfast" | "lunch" | "dinner" | "snack";
+        /** StatusEvent */
+        StatusEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "status";
+            /** Text */
+            text: string;
+        };
         /** SuggestedTargets */
         SuggestedTargets: {
             /** Kcal Min */
@@ -976,6 +1181,44 @@ export interface components {
             weekly: components["schemas"]["NutrientBands"];
             /** Calorie Floor */
             calorie_floor: number;
+        };
+        /** TextEvent */
+        TextEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "text";
+            /** Delta */
+            delta: string;
+        };
+        /** ThreadEvent */
+        ThreadEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "thread";
+            /** Thread Id */
+            thread_id: number;
+            /** Message Id */
+            message_id: number;
+        };
+        /** ThreadOut */
+        ThreadOut: {
+            /** Thread Id */
+            thread_id: number | null;
+            /** Messages */
+            messages: components["schemas"]["ChatMessageOut"][];
+            /**
+             * Llm Available
+             * @description false: replies come from the offline parser
+             */
+            llm_available: boolean;
+            /** Messages Today */
+            messages_today: number;
+            /** Daily Limit */
+            daily_limit: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1846,6 +2089,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getChatThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadOut"];
+                };
+            };
+        };
+    };
+    newChatThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadOut"];
+                };
+            };
+        };
+    };
+    sendChatMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description `today` is implausible */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["Problems"];
+                };
+            };
+            /** @description no such thread (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description still answering your previous message, or setup incomplete */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description daily message limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["Problems"];
                 };
             };
         };

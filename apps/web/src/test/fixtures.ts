@@ -56,10 +56,12 @@ export function makePlan(overrides: Partial<Plan> = {}): Plan {
       meal("dinner", 300 + d, `Dinner ${d + 1}`, { portions: 4 }),
     ],
     totals: { kcal: 1900, protein_g: 95, fat_g: 60, carbs_g: 230 },
+    logged: [],
   }));
   return {
     id: 7,
     version: 1,
+    parent_id: null,
     start,
     days,
     planner: "cpsat",
@@ -155,6 +157,7 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     category: "Vegetarian",
     cuisine: "Egyptian",
     image_url: "https://img.example/shakshuka.jpg",
+    generated: false,
     instructions: "Fry the onion.\r\n\r\nAdd the tomatoes and simmer.\r\nCrack in the eggs.",
     source: "mealdb",
     source_url: "https://www.bbcgoodfood.com/recipes/shakshuka",

@@ -49,6 +49,7 @@ async def get_recipe(recipe_id: int, session: Session) -> RecipeDetail:
         cuisine=recipe.cuisine,
         image_url=recipe.image_url,
         instructions=recipe.instructions,
+        generated=recipe.owner_user_id is not None,
         source=recipe.source,
         source_url=recipe.source_url,
         servings=recipe.servings,

@@ -2,7 +2,7 @@
 domain rules (calorie floor, deficit) live in larder_core.energy."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -206,11 +206,23 @@ class MealOut(BaseModel):
     status: Literal["planned", "eaten", "skipped", "off_plan"] = "planned"
 
 
+class MealLogOut(BaseModel):
+    """Food eaten off-plan, or a planned meal skipped (told to the chat)."""
+
+    id: int
+    slot: Slot | None
+    kind: Literal["off_plan", "skipped"]
+    description: str
+    kcal: int
+    estimated: bool
+
+
 class DayOut(BaseModel):
     day: int
     date: date
     meals: list[MealOut]
     totals: MacrosOut
+    logged: list[MealLogOut]
 
 
 class ViolationOut(BaseModel):
@@ -237,6 +249,7 @@ class PlanRequest(BaseModel):
 class PlanOut(BaseModel):
     id: int
     version: int
+    parent_id: int | None
     start: date
     days: list[DayOut]
     planner: str
@@ -292,6 +305,8 @@ class RecipeIngredientOut(BaseModel):
 
 class RecipeDetail(RecipeCard):
     instructions: str
+    # True for a recipe the assistant drafted for this user (private; nutrition computed by us).
+    generated: bool
     source: str
     source_url: str | None
     servings: int | None
@@ -303,3 +318,88 @@ class RecipeDetail(RecipeCard):
     allergens_complete: bool
     suitable_for: list[Diet]
     ingredients: list[RecipeIngredientOut]
+
+
+# --- chat (M4) --------------------------------------------------------------------------------
+
+
+class ChatMessageIn(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    thread_id: int | None = Field(default=None, description="omit to continue the latest thread")
+    today: date = Field(description="the user's local date (dates like 'tonight' resolve to it)")
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    role: Literal["user", "assistant"]
+    text: str
+    created_at: datetime
+    plan_id: int | None = Field(default=None, description="plan version this turn created")
+    mode: Literal["llm", "offline"] | None = None
+
+
+class ThreadOut(BaseModel):
+    thread_id: int | None
+    messages: list[ChatMessageOut]
+    llm_available: bool = Field(description="false: replies come from the offline parser")
+    messages_today: int
+    daily_limit: int
+
+
+class PlanChangeOut(BaseModel):
+    date: date
+    slot: Slot
+    before: str | None
+    after: str | None
+    after_recipe_id: int | None = None
+    reason: str
+
+
+# Server-sent events of POST /chat/messages, in order: thread, then any of status/text/plan/
+# recipe, then exactly one of done/error. Each is one `data:` line of JSON.
+
+
+class ThreadEvent(BaseModel):
+    type: Literal["thread"] = "thread"
+    thread_id: int
+    message_id: int  # the user's message
+
+
+class StatusEvent(BaseModel):
+    type: Literal["status"] = "status"
+    text: str  # "Looking for spicy dinners…"
+
+
+class TextEvent(BaseModel):
+    type: Literal["text"] = "text"
+    delta: str
+
+
+class PlanEvent(BaseModel):
+    type: Literal["plan"] = "plan"
+    plan_id: int
+    version: int
+    changes: list[PlanChangeOut]
+    failures: list[str]
+
+
+class RecipeEvent(BaseModel):
+    type: Literal["recipe"] = "recipe"
+    recipe_id: int
+    name: str
+
+
+class DoneEvent(BaseModel):
+    type: Literal["done"] = "done"
+    message: ChatMessageOut  # the assistant's message as stored
+
+
+class ErrorEvent(BaseModel):
+    type: Literal["error"] = "error"
+    message: str
+
+
+ChatEvent = Annotated[
+    ThreadEvent | StatusEvent | TextEvent | PlanEvent | RecipeEvent | DoneEvent | ErrorEvent,
+    Field(discriminator="type"),
+]
