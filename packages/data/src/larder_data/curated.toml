@@ -602,7 +602,7 @@ instructions = """
 Toss the drained chickpeas with the oil and cumin and roast at 200°C for 25-30 minutes until
 crunchy.
 """
-ingredients = [["chickpeas", "240g"], ["olive oil", "1 tbsp"], ["ground cumin", "1 tsp"]]
+ingredients = [["tinned chickpeas", "240g"], ["olive oil", "1 tbsp"], ["ground cumin", "1 tsp"]]
 
 [[recipe]]
 slug = "trail-mix"

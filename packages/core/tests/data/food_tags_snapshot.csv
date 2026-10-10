@@ -1,5 +1,4 @@
 fdc_id,description,category,allergens,animal
-167526,"Bread, salvadoran sweet cheese (quesadilla salvadorena)",Baked Products,eggs|gluten|milk,dairy|egg
 167532,"Bread, white wheat",Baked Products,gluten|soy,-
 167571,"Candies, white chocolate",Sweets,milk|soy,dairy
 167575,"Ice creams, vanilla",Sweets,eggs|milk,dairy|egg
@@ -15,17 +14,16 @@ fdc_id,description,category,allergens,animal
 167763,"Tamarinds, raw",Fruits and Fruit Juices,-,-
 167781,Candied fruit,Fruits and Fruit Juices,sulphites,-
 167792,Orange Pineapple Juice Blend,Fruits and Fruit Juices,-,-
-167811,"Pork, fresh, backfat, raw",Pork Products,-,meat
 167845,"Pork, fresh, shoulder, whole, separable lean only, raw",Pork Products,-,meat
 167859,"Pork, fresh, variety meats and by-products, feet, raw",Pork Products,-,meat
 167902,"Pork, fresh, ground, raw",Pork Products,-,meat
-167940,"Cinnamon buns, frosted (includes honey buns)",Baked Products,eggs|gluten|milk,dairy|egg|honey
 167976,"Candies, semisweet chocolate",Sweets,milk|soy,dairy
 167989,"Candies, gumdrops, starch jelly pieces",Sweets,-,gelatin
 167995,"Candies, marshmallows",Sweets,-,gelatin
 168092,"Ham, turkey, sliced, extra lean, prepackaged or deli",Sausages and Luncheon Meats,sulphites,meat
 168148,"Frog legs, raw",Finfish and Shellfish Products,-,meat
 168149,"Fish, mackerel, salted",Finfish and Shellfish Products,fish,fish
+168153,"Kiwifruit, green, raw",Fruits and Fruit Juices,-,-
 168155,"Limes, raw",Fruits and Fruit Juices,-,-
 168156,"Lime juice, raw",Fruits and Fruit Juices,-,-
 168162,"Plums, dried (prunes), uncooked",Fruits and Fruit Juices,-,-
@@ -39,9 +37,9 @@ fdc_id,description,category,allergens,animal
 168299,"Pork, fresh, backribs, separable lean and fat, raw",Pork Products,-,meat
 168385,"Amaranth leaves, raw",Vegetables and Vegetable Products,-,-
 168389,"Asparagus, raw",Vegetables and Vegetable Products,-,-
+168411,"Edamame, frozen, prepared",Vegetables and Vegetable Products,soy,-
 168419,"Jute, potherb, raw",Vegetables and Vegetable Products,-,-
 168421,"Kale, raw",Vegetables and Vegetable Products,-,-
-168438,"Mustard spinach, (tendergreen), raw",Vegetables and Vegetable Products,mustard,-
 168442,"Potatoes, french fried, all types, salt added in processing, frozen, unprepared",Vegetables and Vegetable Products,-,-
 168448,"Pumpkin, raw",Vegetables and Vegetable Products,-,-
 168451,"Radishes, oriental, raw",Vegetables and Vegetable Products,-,-
@@ -57,11 +55,11 @@ fdc_id,description,category,allergens,animal
 168575,"Grape leaves, raw",Vegetables and Vegetable Products,-,-
 168576,"Peppers, jalapeno, raw",Vegetables and Vegetable Products,-,-
 168586,"Nuts, coconut meat, dried (desiccated), sweetened, shredded",Nut and Seed Products,sulphites,-
+168588,"Nuts, almond butter, plain, without salt added",Nut and Seed Products,tree_nuts,-
 168607,"Beef, brisket, whole, separable lean only, all grades, raw",Beef Products,-,meat
 168609,"Beef, flank, steak, separable lean only, trimmed to 0"" fat, choice, raw",Beef Products,-,meat
 168746,"Alcoholic beverage, beer, regular, all",Beverages,gluten,-
 168756,"Candies, MARS SNACKFOOD US, MILKY WAY Bar",Sweets,eggs|gluten|milk|soy,dairy|egg
-168778,"Puddings, chocolate, ready-to-eat",Sweets,milk|soy,dairy
 168820,Molasses,Sweets,-,-
 168833,"Sugars, brown",Sweets,-,-
 168837,"Syrups, corn, light",Sweets,-,-
@@ -74,7 +72,6 @@ fdc_id,description,category,allergens,animal
 168893,"Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",Cereal Grains and Pasta,gluten,-
 168895,"Wheat flour, white, all-purpose, self-rising, enriched",Cereal Grains and Pasta,gluten,-
 168898,"Rice flour, brown",Cereal Grains and Pasta,-,-
-168905,"Noodles, chinese, chow mein",Cereal Grains and Pasta,eggs|gluten,egg
 168908,"Noodles, japanese, somen, dry",Cereal Grains and Pasta,gluten,-
 168920,"Corn grain, white",Cereal Grains and Pasta,-,-
 168931,"Rice, white, short-grain, raw, unenriched",Cereal Grains and Pasta,-,-
@@ -82,13 +79,14 @@ fdc_id,description,category,allergens,animal
 168944,"Wheat flour, whole-grain, soft wheat",Cereal Grains and Pasta,gluten,-
 169064,"Pretzels, soft",Snacks,gluten,-
 169070,"Alcoholic beverage, wine, cooking",Beverages,sulphites,-
-169078,"Cheese, cottage, with vegetables",Dairy and Egg Products,milk,dairy
 169094,"Olives, ripe, canned (small-extra large)",Fruits and Fruit Juices,-,-
 169096,"Olives, pickled, canned or bottled, green",Fruits and Fruit Juices,-,-
 169097,"Oranges, raw, all commercial varieties",Fruits and Fruit Juices,-,-
 169098,"Orange juice, raw (Includes foods for USDA's Food Distribution Program)",Fruits and Fruit Juices,-,-
 169103,"Orange peel, raw",Fruits and Fruit Juices,-,-
 169108,"Passion-fruit, (granadilla), purple, raw",Fruits and Fruit Juices,-,-
+169118,"Pears, raw",Fruits and Fruit Juices,-,-
+169124,"Pineapple, raw, all varieties",Fruits and Fruit Juices,-,-
 169134,"Pomegranates, raw",Fruits and Fruit Juices,-,-
 169145,"Beets, raw",Vegetables and Vegetable Products,-,-
 169146,"Beets, cooked, boiled, drained",Vegetables and Vegetable Products,-,-
@@ -105,7 +103,6 @@ fdc_id,description,category,allergens,animal
 169247,"Lettuce, cos or romaine, raw",Vegetables and Vegetable Products,-,-
 169249,"Lettuce, green leaf, raw",Vegetables and Vegetable Products,-,-
 169251,"Mushrooms, white, raw",Vegetables and Vegetable Products,-,-
-169256,"Mustard greens, raw",Vegetables and Vegetable Products,mustard,-
 169276,"Radishes, raw",Vegetables and Vegetable Products,-,-
 169277,"Salsify, (vegetable oyster), raw",Vegetables and Vegetable Products,-,-
 169279,"Sauerkraut, canned, solids and liquids",Vegetables and Vegetable Products,-,-
@@ -142,7 +139,6 @@ fdc_id,description,category,allergens,animal
 169750,"Cornmeal, whole-grain, white",Cereal Grains and Pasta,-,-
 169760,"Rice, white, medium-grain, raw, unenriched",Cereal Grains and Pasta,-,-
 169878,"Syrups, sugar free",Sweets,-,-
-169884,"Vermicelli, made from soy",Legumes and Legume Products,gluten|soy,-
 169910,"Mangos, raw",Fruits and Fruit Juices,-,-
 169926,"Papayas, raw",Fruits and Fruit Juices,-,-
 169928,"Peaches, yellow, raw",Fruits and Fruit Juices,-,-
@@ -169,7 +165,6 @@ fdc_id,description,category,allergens,animal
 170054,"Tomato products, canned, sauce",Vegetables and Vegetable Products,-,-
 170066,"Waterchestnuts, chinese, (matai), raw",Vegetables and Vegetable Products,-,-
 170071,"Yam, raw",Vegetables and Vegetable Products,-,-
-170092,Potato pancakes,Vegetables and Vegetable Products,eggs|gluten|milk,dairy|egg
 170106,"Peppers, hot chili, red, raw",Vegetables and Vegetable Products,-,-
 170108,"Peppers, sweet, red, raw",Vegetables and Vegetable Products,-,-
 170150,"Seeds, sesame seeds, whole, dried",Nut and Seed Products,sesame,-
@@ -184,6 +179,7 @@ fdc_id,description,category,allergens,animal
 170187,"Nuts, walnuts, english",Nut and Seed Products,tree_nuts,-
 170189,"Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type)",Nut and Seed Products,sesame,-
 170193,"Beef, variety meats and by-products, suet, raw",Beef Products,gluten,meat
+170250,"Snacks, rice cakes, brown rice, plain, unsalted",Snacks,-,-
 170271,"Chocolate, dark, 45- 59% cacao solids",Sweets,milk|soy,dairy
 170273,"Chocolate, dark, 70-85% cacao solids",Sweets,milk|soy,dairy
 170276,"Syrup, maple, Canadian",Sweets,-,-
@@ -191,13 +187,11 @@ fdc_id,description,category,allergens,animal
 170379,"Broccoli, raw",Vegetables and Vegetable Products,-,-
 170388,"Cabbage, savoy, raw",Vegetables and Vegetable Products,-,-
 170390,"Cabbage, chinese (pak-choi), raw",Vegetables and Vegetable Products,-,-
-170392,"Cabbage, kimchi",Vegetables and Vegetable Products,crustaceans|fish,fish|shellfish
 170393,"Carrots, raw",Vegetables and Vegetable Products,-,-
 170400,"Celeriac, raw",Vegetables and Vegetable Products,celery,-
 170416,"Parsley, fresh",Vegetables and Vegetable Products,-,-
 170419,"Peas, green, raw",Vegetables and Vegetable Products,-,-
 170427,"Peppers, sweet, green, raw",Vegetables and Vegetable Products,-,-
-170431,Poi,Vegetables and Vegetable Products,-,-
 170456,"Tomatoes, green, raw",Vegetables and Vegetable Products,-,-
 170457,"Tomatoes, red, ripe, raw, year round average",Vegetables and Vegetable Products,-,-
 170459,"Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)",Vegetables and Vegetable Products,-,-
@@ -209,6 +203,9 @@ fdc_id,description,category,allergens,animal
 170497,"Peppers, hot chili, green, raw",Vegetables and Vegetable Products,-,-
 170499,"Shallots, raw",Vegetables and Vegetable Products,-,-
 170502,"Tomatoes, orange, raw",Vegetables and Vegetable Products,-,-
+170554,"Seeds, chia seeds, dried",Nut and Seed Products,-,-
+170556,"Seeds, pumpkin and squash seed kernels, dried",Nut and Seed Products,-,-
+170562,"Seeds, sunflower seed kernels, dried",Nut and Seed Products,-,-
 170567,"Nuts, almonds",Nut and Seed Products,tree_nuts,-
 170580,"Nuts, coconut cream, raw (liquid expressed from grated meat)",Nut and Seed Products,-,-
 170581,"Nuts, hazelnuts or filberts",Nut and Seed Products,tree_nuts,-
@@ -221,6 +218,7 @@ fdc_id,description,category,allergens,animal
 170857,"Cream, fluid, light (coffee cream or table cream)",Dairy and Egg Products,milk,dairy
 170858,"Cream, fluid, light whipping",Dairy and Egg Products,milk,dairy
 170859,"Cream, fluid, heavy whipping",Dairy and Egg Products,milk,dairy
+170894,"Yogurt, Greek, plain, nonfat (Includes foods for USDA's Food Distribution Program)",Dairy and Egg Products,milk,dairy
 170917,"Spices, bay leaf",Spices and Herbs,-,-
 170918,"Spices, caraway seed",Spices and Herbs,-,-
 170919,"Spices, cardamom",Spices and Herbs,-,-
@@ -232,7 +230,6 @@ fdc_id,description,category,allergens,animal
 170929,"Spices, mustard seed, ground",Spices and Herbs,mustard,-
 170931,"Spices, pepper, black",Spices and Herbs,-,-
 170932,"Spices, pepper, red or cayenne",Spices and Herbs,-,-
-170933,"Spices, pepper, white",Spices and Herbs,-,-
 170934,"Spices, saffron",Spices and Herbs,-,-
 170935,"Spices, sage, ground",Spices and Herbs,-,-
 170936,"Spices, savory, ground",Spices and Herbs,-,-
@@ -243,17 +240,15 @@ fdc_id,description,category,allergens,animal
 171025,"Oil, sunflower, linoleic, (approx. 65%)",Fats and Oils,-,-
 171060,"Chicken, liver, all classes, raw",Poultry Products,-,meat
 171077,"Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",Poultry Products,-,meat
-171116,"Chicken, ground, raw",Poultry Products,-,meat
 171186,"Sauce, hot chile, sriracha","Soups, Sauces, and Gravies",sulphites,-
-171240,"Cheese, gjetost",Dairy and Egg Products,milk,dairy
 171241,"Cheese, gouda",Dairy and Egg Products,milk,dairy
 171242,"Cheese, gruyere",Dairy and Egg Products,milk,dairy|rennet
-171245,"Cheese, muenster",Dairy and Egg Products,milk,dairy
 171249,"Cheese, romano",Dairy and Egg Products,milk,dairy|rennet
 171251,"Cheese, swiss",Dairy and Egg Products,milk,dairy|rennet
 171257,"Cream, sour, cultured",Dairy and Egg Products,milk,dairy
 171265,"Milk, whole, 3.25% milkfat, with added vitamin D",Dairy and Egg Products,milk,dairy
 171267,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",Dairy and Egg Products,milk,dairy
+171269,"Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)",Dairy and Egg Products,milk,dairy
 171275,"Milk, canned, condensed, sweetened",Dairy and Egg Products,milk,dairy
 171284,"Yogurt, plain, whole milk",Dairy and Egg Products,milk,dairy
 171287,"Egg, whole, raw, fresh",Dairy and Egg Products,eggs,egg
@@ -289,6 +284,7 @@ fdc_id,description,category,allergens,animal
 171613,"Soup, bouillon cubes and granules, low sodium, dry","Soups, Sauces, and Gravies",celery|gluten,-
 171618,Blood sausage,Sausages and Luncheon Meats,gluten|sulphites,meat
 171631,"Sausage, Italian, pork, mild, raw",Sausages and Luncheon Meats,gluten|sulphites,meat
+171646,"Cereals ready-to-eat, granola, homemade",Breakfast Cereals,gluten|tree_nuts,honey
 171647,"Cereals ready-to-eat, POST, GRAPE-NUTS Cereal",Breakfast Cereals,gluten,-
 171670,"Cereals, corn grits, yellow, regular and quick, unenriched, dry",Breakfast Cereals,-,-
 171688,"Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",Fruits and Fruit Juices,-,-
@@ -304,7 +300,6 @@ fdc_id,description,category,allergens,animal
 171823,"Sauce, duck, ready-to-serve","Soups, Sauces, and Gravies",-,-
 171845,"Bread, naan, plain, commercially prepared, refrigerated",Baked Products,eggs|gluten|milk,dairy|egg
 171869,"Beverages, carbonated, tonic water",Beverages,-,-
-171942,"Beverages, rice milk, unsweetened",Beverages,-,-
 171955,"Fish, cod, Atlantic, raw",Finfish and Shellfish Products,fish,fish
 171964,"Fish, haddock, raw",Finfish and Shellfish Products,fish,fish
 172137,"Beef, plate steak, boneless, inside skirt, separable lean only, trimmed to 0"" fat, choice, raw",Beef Products,-,meat
@@ -341,12 +336,12 @@ fdc_id,description,category,allergens,animal
 172608,"Lamb, Australian, ground,  85% lean / 15% fat, raw","Lamb, Veal, and Game Products",-,meat
 172671,"Biscuits, mixed grain, refrigerated dough",Baked Products,gluten|milk,dairy
 172675,"Bread, french or vienna (includes sourdough)",Baked Products,gluten,-
-172678,"Bread, oatmeal",Baked Products,gluten,-
 172684,"Bread, rye",Baked Products,gluten,-
+172688,"Bread, whole-wheat, commercially prepared",Baked Products,gluten|soy,-
 172718,"Cookies, chocolate sandwich, with creme filling, regular",Baked Products,gluten|milk|soy,dairy
 172729,"Cookies, peanut butter, refrigerated dough",Baked Products,eggs|gluten|milk|peanuts,dairy|egg
+172749,"Crackers, whole-wheat",Baked Products,gluten,-
 172761,"Muffins, English, wheat",Baked Products,gluten|milk,dairy
-172763,"French toast, frozen, ready-to-heat",Baked Products,eggs|gluten|milk,dairy|egg
 172790,"Puff pastry, frozen, ready-to-bake",Baked Products,eggs|gluten|milk,dairy|egg
 172791,Phyllo dough,Baked Products,eggs|gluten|milk,dairy|egg
 172796,"Rolls, hamburger or hotdog, plain",Baked Products,eggs|gluten|milk|sesame,dairy|egg
@@ -354,19 +349,19 @@ fdc_id,description,category,allergens,animal
 172802,Wonton wrappers (includes egg roll wrappers),Baked Products,eggs|gluten,egg
 172803,"Leavening agents, baking powder, double-acting, sodium aluminum sulfate",Baked Products,gluten,-
 172814,"Pie crust, standard-type, prepared from recipe, unbaked",Baked Products,eggs|gluten|milk,dairy|egg
-172817,"Bread, raisin, unenriched",Baked Products,gluten|sulphites,-
-172855,"Chicken, skin (drumsticks and thighs), raw",Poultry Products,-,meat
 172879,"Sauce, plum, ready-to-serve","Soups, Sauces, and Gravies",-,-
 172883,"Soup, stock, beef, home-prepared","Soups, Sauces, and Gravies",celery,meat
 172884,"Soup, stock, chicken, home-prepared","Soups, Sauces, and Gravies",celery,meat
 172885,"Soup, stock, fish, home-prepared","Soups, Sauces, and Gravies",celery|fish,fish
 172886,"Sauce, hoisin, ready-to-serve","Soups, Sauces, and Gravies",gluten|sesame|soy,-
 173110,"Beef, ground, 93% lean meat / 7% fat, raw",Beef Products,-,meat
-173143,"Tortilla chips, yellow, plain, salted",Snacks,gluten,-
 173176,"Alcoholic beverage, wine, dessert, sweet",Beverages,sulphites,-
+173180,"Beverages, Protein powder whey based",Beverages,milk,dairy
+173181,"Beverages, Protein powder soy based",Beverages,soy,-
 173190,"Alcoholic beverage, wine, table, red",Beverages,sulphites,-
 173410,"Butter, salted",Dairy and Egg Products,milk,dairy
 173416,"Cheese, colby",Dairy and Egg Products,milk,dairy
+173417,"Cheese, cottage, lowfat, 1% milkfat",Dairy and Egg Products,milk,dairy
 173418,"Cheese, cream",Dairy and Egg Products,milk,dairy
 173420,"Cheese, feta",Dairy and Egg Products,milk,dairy
 173430,"Butter, without salt",Dairy and Egg Products,milk,dairy
@@ -381,19 +376,18 @@ fdc_id,description,category,allergens,animal
 173475,"Spearmint, fresh",Spices and Herbs,-,-
 173566,"Shortening industrial, lard and vegetable oil",Fats and Oils,-,meat
 173572,"Fat, goose",Fats and Oils,-,meat
-173578,"Fish oil, sardine",Fats and Oils,fish,fish
-173597,"Shortening, industrial, soy (partially hydrogenated), pourable liquid fry shortening",Fats and Oils,soy,-
 173619,"Chicken, broilers or fryers, leg, meat only, raw",Poultry Products,-,meat
 173627,"Chicken, broilers or fryers, dark meat, thigh, meat only, raw",Poultry Products,-,meat
 173647,"Beverages, water, tap, drinking",Beverages,-,-
 173687,"Fish, salmon, chinook, smoked",Finfish and Shellfish Products,fish,fish
 173698,"Fish, snapper, mixed species, raw",Finfish and Shellfish Products,fish,fish
+173709,"Fish, tuna, light, canned in water, drained solids (Includes foods for USDA's Food Distribution Program)",Finfish and Shellfish Products,fish,fish
 173720,"Mollusks, conch, baked or broiled",Finfish and Shellfish Products,molluscs,shellfish
-173731,"Beans, baked, home prepared",Legumes and Legume Products,-,meat
 173734,"Beans, black, mature seeds, raw",Legumes and Legume Products,-,-
 173744,"Beans, kidney, red, mature seeds, raw",Legumes and Legume Products,-,-
 173745,"Beans, navy, mature seeds, raw",Legumes and Legume Products,-,-
 173756,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",Legumes and Legume Products,-,-
+173800,"Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained solids",Legumes and Legume Products,-,-
 173806,"Peanuts, all types, dry-roasted, without salt",Legumes and Legume Products,peanuts,-
 173810,"Lamb, New Zealand, imported, loin chop, separable lean only, raw","Lamb, Veal, and Game Products",-,meat
 173859,"Sausage, pork, chorizo, link or ground, raw",Sausages and Luncheon Meats,gluten|sulphites,meat
@@ -442,10 +436,12 @@ fdc_id,description,category,allergens,animal
 174577,"Polish sausage, pork",Sausages and Luncheon Meats,gluten|sulphites,meat
 174611,"Ham, honey, smoked, cooked",Sausages and Luncheon Meats,sulphites,honey|meat
 174677,"Grapefruit, raw, white, California",Fruits and Fruit Juices,-,-
+174683,"Grapes, red or green (European type, such as Thompson seedless), raw",Fruits and Fruit Juices,-,-
 174725,"Beef, New Zealand, imported, hind shin, separable lean only, raw",Beef Products,-,meat
 174777,"Beef, flank, steak, separable lean only, trimmed to 0"" fat, select, raw",Beef Products,-,meat
 174815,"Alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 80 proof",Beverages,-,-
 174817,"Alcoholic beverage, distilled, rum, 80 proof",Beverages,-,-
+174832,"Beverages, almond milk, unsweetened, shelf stable",Beverages,tree_nuts,-
 174837,"Alcoholic beverage, wine, table, white",Beverages,sulphites,-
 174915,"Bread, pita, white, enriched",Baked Products,gluten,-
 174924,"Bread, white, commercially prepared (includes soft bread crumbs)",Baked Products,gluten|soy,-
@@ -482,15 +478,12 @@ fdc_id,description,category,allergens,animal
 332791,"Olives, green, Manzanilla, stuffed with pimiento",Fruits and Fruit Juices,-,-
 334194,"Fish, tuna, light, canned in water, drained solids",Finfish and Shellfish Products,fish,fish
 790146,"Flour, bread, white, enriched, unbleached",Cereal Grains and Pasta,gluten,-
-790214,"Flour, rice, white, unenriched",Cereal Grains and Pasta,-,-
 790577,"Onions, red, raw",Vegetables and Vegetable Products,-,-
 790991,"Bananas, ripe and slightly ripe, raw",Fruits and Fruit Juices,-,-
-1104766,"Flour, soy, full-fat",Legumes and Legume Products,soy,-
 1750345,"Mushroom, oyster",Vegetables and Vegetable Products,-,-
 1750348,"Oil, peanut",Fats and Oils,peanuts,-
 2003589,"Flour, semolina, fine",Cereal Grains and Pasta,gluten,-
 2003603,"Mushroom, beech",Vegetables and Vegetable Products,-,-
-2257045,"Almond milk, unsweetened, plain, refrigerated",Beverages,tree_nuts,-
 2259792,"Buttermilk, low fat",Dairy and Egg Products,milk,dairy
 2261420,"Flour, almond",Nut and Seed Products,tree_nuts,-
 2346387,"Cream, sour, full fat",Dairy and Egg Products,milk,dairy
@@ -499,7 +492,6 @@ fdc_id,description,category,allergens,animal
 2346398,"Pineapple, raw",Fruits and Fruit Juices,-,-
 2346401,"Potatoes, russet, without skin, raw",Vegetables and Vegetable Products,-,-
 2346402,"Potatoes, red, without skin, raw",Vegetables and Vegetable Products,-,-
-2512372,"Flour, quinoa",Cereal Grains and Pasta,-,-
 2512374,"Flour, buckwheat",Cereal Grains and Pasta,-,-
 2512377,"Flour, cassava",Vegetables and Vegetable Products,-,-
 2512380,"Rice, brown, long grain, unenriched, raw",Cereal Grains and Pasta,-,-
