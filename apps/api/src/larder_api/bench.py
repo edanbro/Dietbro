@@ -14,11 +14,19 @@ import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import date
+from typing import Any
 
-from larder_api.planning import load_catalog, run_planner
+from larder_api.planning import (
+    PlanningCatalog,
+    UserInputs,
+    load_catalog,
+    make_problem,
+    run_planner,
+)
+from larder_db import models as db
 from larder_db.engine import make_engine, make_sessionmaker
 from larder_solver import (
-    Catalog,
     PlanResult,
     Problem,
     Status,
@@ -112,13 +120,54 @@ def render(planner: str, runs: Sequence[Run]) -> str:
     return "\n".join(lines) + "\n"
 
 
-async def load(database_url: str | None) -> Catalog:
+async def load(database_url: str | None) -> PlanningCatalog:
     engine = make_engine(database_url)
     try:
         async with make_sessionmaker(engine)() as session:
-            return (await load_catalog(session)).catalog
+            return await load_catalog(session)
     finally:
         await engine.dispose()
+
+
+# User-like profiles that go through the API's own make_problem (goals, allergies, diet).
+PROFILES: list[dict[str, Any]] = [
+    {"kcal": (1800, 2200), "protein": 100},
+    {"kcal": (1400, 1600), "protein": 90, "budget": 3500},
+    {"kcal": (2400, 2800), "protein": 140},
+    {"kcal": (1700, 2000), "protein": 80, "diet": "vegetarian"},
+    {"kcal": (1700, 2000), "protein": 70, "diet": "vegan"},
+    {"kcal": (1600, 1900), "protein": 90, "allergens": ["gluten", "milk"]},
+    {"kcal": (1800, 2100), "protein": 100, "allergens": ["peanuts", "tree_nuts"]},
+    {"kcal": (1600, 1900), "protein": 70, "diet": "vegan", "allergens": ["soy"]},
+    {"kcal": (2000, 2300), "protein": 110, "allergens": ["fish", "crustaceans", "molluscs"]},
+    {"kcal": (1500, 1800), "protein": 90, "allergens": ["eggs", "milk"], "budget": 4000},
+]
+
+
+def profile_scenario(seed: int, catalog: PlanningCatalog) -> Scenario:
+    spec = PROFILES[seed % len(PROFILES)]
+    lo, hi = spec["kcal"]
+    inputs = UserInputs(
+        goals=db.Goals(
+            kcal_min=lo,
+            kcal_max=hi,
+            calorie_floor=1200,
+            max_daily_deficit=1000,
+            protein_g_min=spec["protein"],
+            weekly_budget_minor=spec.get("budget"),
+            currency="GBP",
+        ),
+        allergies=db.Allergies(allergens=spec.get("allergens", []), avoid_food_ids=[]),
+        preferences=db.Preferences(
+            diet=spec.get("diet"),
+            liked_cuisines=[],
+            disliked_cuisines=[],
+            liked_food_ids=[],
+            disliked_food_ids=[],
+        ),
+    )
+    start = date(2026, 10, 12)
+    return Scenario(make_problem(inputs, catalog, start, seed=seed), None)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -126,7 +175,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--planner", choices=["auto", "cpsat", "greedy"], default="auto")
     parser.add_argument("--n", type=int, default=20, help="scenarios per kind")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--kinds", default="planted,realistic")
+    parser.add_argument("--kinds", default="planted,realistic,profiles")
     parser.add_argument("--time-limit-ms", type=int, default=3_500)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--concurrency", type=int, default=1, help="plans solved at once")
@@ -134,10 +183,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--out", help="also write the Markdown report here")
     args = parser.parse_args(argv)
 
-    catalog = asyncio.run(load(args.database_url))
+    full = asyncio.run(load(args.database_url))
+    catalog = full.catalog
     builders: dict[str, Callable[[int], Scenario]] = {
         "planted": lambda s: planted(s, catalog),
         "realistic": lambda s: realistic(s, catalog),
+        "profiles": lambda s: profile_scenario(s, full),
     }
 
     def plan(problem: Problem) -> PlanResult:
