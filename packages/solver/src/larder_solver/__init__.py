@@ -1,5 +1,8 @@
-"""Weekly meal planning: the problem contract, the CP-SAT planner, the independent validator."""
+"""Weekly meal planning: the problem contract, the CP-SAT planner, the greedy baseline, the
+independent validator and the infeasibility diagnosis."""
 
+from larder_solver.baseline import greedy
+from larder_solver.diagnose import diagnose
 from larder_solver.metrics import Score, score
 from larder_solver.problem import (
     HARD_NUTRIENTS,
@@ -72,6 +75,8 @@ __all__ = [
     "Violation",
     "Weights",
     "check_problem",
+    "diagnose",
+    "greedy",
     "hard",
     "score",
     "shopping_list",
