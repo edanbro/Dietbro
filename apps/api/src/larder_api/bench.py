@@ -143,15 +143,17 @@ def main(argv: list[str] | None = None) -> None:
     def plan(problem: Problem) -> PlanResult:
         return run_planner(problem, args.planner, args.time_limit_ms, args.workers)
 
+    def run(job: tuple[str, int]) -> Run:
+        kind, seed = job
+        return one(kind, seed, lambda: builders[kind](seed), plan)
+
     jobs = [
         (kind, seed)
         for kind in args.kinds.split(",")
         for seed in range(args.seed, args.seed + args.n)
     ]
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        runs = list(
-            pool.map(lambda job: one(job[0], job[1], lambda: builders[job[0]](job[1]), plan), jobs)
-        )
+        runs = list(pool.map(run, jobs))
     report = render(args.planner, runs)
     print(report)
     if args.out:

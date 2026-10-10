@@ -27,14 +27,12 @@ from larder_api.schemas import (
     TargetsOut,
     ViolationOut,
 )
-from larder_core.aliases import load_alias_rows
 from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
 from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
-from larder_core.names import normalise_name
 from larder_core.prices import Currency, Price, convert, price
-from larder_core.tagging import Diet, FoodTags, Line, RecipeTags, recipe_tags, tag_food
+from larder_core.tagging import Diet, FoodTags, RecipeTags, make_line, recipe_tags, tag_food
 from larder_db import models as db
 from larder_solver import (
     SAFETY_CODES,
@@ -157,15 +155,10 @@ class RecipeFacts:
     per_portion: Macros | None
 
 
-def _approximations() -> frozenset[str]:
-    return frozenset(a.name for a in load_alias_rows() if a.approximation)
-
-
 def recipe_facts(
     recipe: db.Recipe, foods: Mapping[int, db.Food], info: Mapping[int, FoodInfo]
 ) -> RecipeFacts:
     """Slots (with data-quality exclusions), tags and per-portion macros of a recipe."""
-    approx = _approximations()
     total_g = sum(line.grams or 0.0 for line in recipe.ingredients)
     oil_g = sum(
         line.grams or 0.0
@@ -177,10 +170,10 @@ def recipe_facts(
         recipe.source, recipe.source_id, recipe.category, kcal, oil_g / total_g if total_g else 0
     )
     lines = [
-        Line(
-            raw_name=line.raw_name,
-            food=info[line.food_id].tags if line.food_id is not None else None,
-            exact=line.match_method == "alias" and normalise_name(line.raw_name) not in approx,
+        make_line(
+            line.raw_name,
+            line.food_id,
+            info[line.food_id].tags if line.food_id is not None else None,
         )
         for line in recipe.ingredients
     ]
