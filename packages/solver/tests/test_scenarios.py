@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from typing import cast
 
 import pytest
 
@@ -17,7 +18,14 @@ from larder_solver.problem import (
     Slot,
     check_problem,
 )
-from larder_solver.scenarios import DecoyPath, infeasible, planted, realistic, synthetic_catalog
+from larder_solver.scenarios import (
+    DecoyPath,
+    infeasible,
+    planted,
+    realistic,
+    replan,
+    synthetic_catalog,
+)
 from larder_solver.validate import Code, hard, validate
 
 B, L, D, S = Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER, Slot.SNACK
@@ -213,6 +221,69 @@ def test_planted_refuses_an_impossible_catalog() -> None:
         planted(0, Catalog(mains, CATALOG.foods))
 
 
+# --- replans -------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_replan_invariants(seed: int) -> None:
+    s = replan(seed)
+    p = s.problem
+    base = planted(seed)
+    assert s.witness is not None
+    assert base.witness is not None
+    assert check_problem(p) == []
+    assert hard(validate(p, s.witness)) == []
+    assert (p.slots, p.recipes, p.profile, s.decoys) == (
+        base.problem.slots,
+        base.problem.recipes,
+        base.problem.profile,
+        base.decoys,
+    )
+    # A lunch eaten out (its kcal in `extra`) and a skipped dinner, both locked empty, and a
+    # day band on exactly those days; the witness is the planted one without them.
+    assert set(p.locked.values()) == {None}
+    assert len(p.locked) == 2
+    assert {slot for _, slot in p.locked} == {L, D}
+    ((lunch_day, _),) = [at for at in p.locked if at[1] is L]
+    assert set(p.extra) == {lunch_day}
+    assert p.extra[lunch_day].kcal >= 1200
+    assert set(p.day_kcal) == {day for day, _ in p.locked}
+    assert set(s.witness.meals) == {
+        m for m in base.witness.meals if (m.day, m.slot) not in p.locked
+    }
+    # 1-3 chosen cells, each holding the witness's recipe among at most three.
+    assert 1 <= len(p.choices) <= 3
+    for (day, slot), ids in p.choices.items():
+        assert (day, slot) not in p.locked
+        assert 1 <= len(ids) == len(set(ids)) <= 3
+        assert cast(Meal, s.witness.at(day, slot)).recipe_id in ids
+
+
+def test_replan_day_bands_go_beyond_the_usual_rules() -> None:
+    """Across seeds, some day bands sit under the floor (a skipped dinner) and some over the
+    daily maximum (the pizza), and some choices include a decoy."""
+    under = over = decoys = 0
+    for seed in range(30):
+        s = replan(seed)
+        p = s.problem
+        band = p.targets.daily[Nutrient.KCAL]
+        for day_band in p.day_kcal.values():
+            under += day_band.min is not None and day_band.min < p.targets.calorie_floor
+            over += band.max is not None and day_band.max is not None and day_band.max > band.max
+        decoys += any(r in s.decoys for ids in p.choices.values() for r in ids)
+    assert under >= 5
+    assert over >= 5
+    assert decoys >= 2
+
+
+def test_replan_is_deterministic_and_sized() -> None:
+    assert replan(11) == replan(11)
+    assert replan(11) != replan(12)
+    one_day = replan(3, CATALOG, days=1, k=10).problem
+    assert list(one_day.locked) == [(0, L)]
+    assert set(one_day.day_kcal) == {0}
+
+
 # --- infeasible and realistic --------------------------------------------------------------------
 
 
@@ -271,7 +342,7 @@ from dataclasses import fields, is_dataclass
 from datetime import date
 from enum import Enum
 
-from larder_solver.scenarios import infeasible, planted, realistic, synthetic_catalog
+from larder_solver.scenarios import infeasible, planted, realistic, replan, synthetic_catalog
 
 def canon(x):
     if is_dataclass(x) and not isinstance(x, type):
@@ -288,7 +359,7 @@ def canon(x):
         return x.isoformat()
     return x
 
-out = [planted(3), infeasible(4), realistic(5, synthetic_catalog(6))]
+out = [planted(3), infeasible(4), realistic(5, synthetic_catalog(6)), replan(7)]
 print(hashlib.sha256(json.dumps(canon(out)).encode()).hexdigest())
 """
 

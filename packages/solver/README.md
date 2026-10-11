@@ -14,7 +14,7 @@ shopping list and an infeasibility diagnosis. The rationale is in
 | `shopping.py` | `shopping_list(problem, plan)` |
 | `baseline.py` | `greedy(problem, previous, time_limit_ms)`: day-by-day baseline planner |
 | `diagnose.py` | `diagnose(problem)`: why no plan exists, in the user's words |
-| `scenarios.py` | Seeded test problems: `planted`, `infeasible`, `realistic`, `synthetic_catalog` |
+| `scenarios.py` | Seeded test problems: `planted`, `replan`, `infeasible`, `realistic`, `synthetic_catalog` |
 | `solve.py` | `solve(problem, previous, time_limit_ms, *, workers)`: **the CP-SAT model** |
 
 The rest of this file is the modelling guide for `solve()`. It explains the choices and the
@@ -27,9 +27,10 @@ traps; it deliberately doesn't contain the model. The specification is
 `solve(problem, previous=None, time_limit_ms=3500, *, workers=8) -> PlanResult`
 
 - **Input**: a `Problem` (days, slot specs with candidate recipe ids, recipes, foods, targets,
-  profile, pantry lots, budget, locks, off-plan intake, weights). It is already prefiltered
-  (`candidates.select`, about 40 candidates per slot), but **don't trust the candidates**: a
-  candidate can still break a hard filter (the planted scenarios add such decoys on purpose).
+  profile, pantry lots, budget, locks, off-plan intake, and for replans per-cell choices and
+  per-day kcal bands, weights). It is already prefiltered (`candidates.select`, about 40
+  candidates per slot), but **don't trust the candidates**: a candidate (or a chosen recipe)
+  can still break a hard filter (the planted scenarios add such decoys on purpose).
 - **Output**: `PlanResult(status, plan, planner="cpsat", wall_ms, objective, bound, notes)`.
   A plan exactly when the status is OPTIMAL or FEASIBLE. `wall_ms` from entry to return.
 - **Validity**: `hard(validate(problem, plan)) == []` for every plan returned. The API
@@ -62,6 +63,7 @@ validator do exactly the same arithmetic:
 Only create variables for `d in range(days)`, `s` in `problem.slots`, unlocked cells, and
 recipes that are candidates of `s`, eligible (`s in recipe.meal_types`) and allowed
 (`candidates.allowed(recipe, problem.foods, problem.profile)`). Everything else is a constant.
+A chosen cell takes its recipes from its choice instead of the slot's candidates (section 3a).
 
 Two reasonable encodings; try both on the perf test:
 
@@ -78,8 +80,8 @@ Two reasonable encodings; try both on the perf test:
   `Σ_p y` and its portions `Σ_p p·y`. More booleans (≈ 7 × 4 × 40 × 3 ≈ 3,400), but an exact
   linear relaxation, which CP-SAT's LP usually likes.
 
-Per cell: `add_exactly_one` (required slot) or `add_at_most_one` (optional slot) over the
-cell's choice booleans.
+Per cell: `add_exactly_one` (required slot, or any chosen cell) or `add_at_most_one`
+(optional slot) over the cell's choice booleans.
 
 Everything else (day kcal, macros, food usage, cost) is then a *linear expression* in `q` (or
 `p·y`): `Σ per_portion.kcal × q`. No multiplications between variables are needed anywhere.
@@ -94,14 +96,15 @@ Everything else (day kcal, macros, food usage, cost) is then a *linear expressio
 | `unknown_slot` | Variables only for slots in `problem.slots` |
 | `duplicate` | At most one choice per (day, slot) |
 | `missing` | Exactly one choice per unlocked (day, required slot) |
+| `choice` | A chosen cell's variables are exactly its choice's eligible, allowed recipes, with exactly one of them (section 3a) |
 | `unknown_recipe` | Variables only for ids in `problem.recipes` |
 | `not_eligible` | Variables only for recipes with the slot in `meal_types` |
 | `portions` | Portion domain `problem.portion_range(slot)` |
 | `allergen`, `unverified`, `avoided`, `diet`, `unknown_food` | Variables only for `candidates.allowed` recipes; a **locked** meal that isn't allowed makes the problem INFEASIBLE (check before building) |
 | `locked` | Locked cells get no variables: a locked `Meal` is a constant that the returned plan must contain exactly (recipe and portions as given, even outside the slot's range or eligibility); a lock to `None` is an empty cell, even in a required slot |
-| `repeats` | Per recipe: `Σ unlocked uses ≤ max(0, problem.repeat_cap(recipe) − locked uses)` (the validator counts locked meals, and only flags a recipe with an unlocked use) |
-| `calorie_floor` | Per day: `kcal_d ≥ targets.calorie_floor` |
-| `daily_band` (kcal) | Per day: `kcal_d` inside `targets.daily[KCAL]` |
+| `repeats` | Per recipe: `Σ unlocked uses ≤ max(0, problem.repeat_cap(recipe) − locked uses)` (the validator counts locked meals, and only flags a recipe with an unlocked use; chosen meals are unlocked uses) |
+| `calorie_floor` | Per day without a `day_kcal` band: `kcal_d ≥ targets.calorie_floor` |
+| `daily_band` (kcal) | Per day: `kcal_d` inside `targets.daily[KCAL]`, or inside `day_kcal[d]` instead where set (section 3a) |
 | `weekly_band` (kcal) | `Σ_d kcal_d` inside `targets.weekly[KCAL]` |
 | `budget` | `Σ_f price_f × bought_f ≤ budget × 1000` |
 | `daily_band`, `weekly_band` (protein, fat, carbs) | Soft: objective term `macro` (section 4) |
@@ -114,6 +117,52 @@ toward slots: a logged lunch is also locked to `None`.
 pot that is both a breakfast and a snack takes the smaller), else `problem.max_repeats`. One
 cap per recipe, across all slots. There is **no** "a recipe at most once a day" rule (lunch and
 dinner may share leftovers); don't add one.
+
+### 3a. Replans: choices and day bands
+
+A replan from the chat ([ADR-0014](../../docs/adr/0014-chat-replans.md)) adds two inputs. Both
+are small changes to the model above; `scenarios.replan(seed)` builds problems with both and
+a known valid plan. Spec tests 14-16 cover them.
+
+**`problem.choices[(d, s)]`: a domain restriction per cell.** "The meal at (d, s) must be one
+of these recipes" (a craving, a swap, a pinned meal). Unlike a lock it isn't a constant: the
+model still picks which recipe and how many portions.
+
+- The cell's recipe set is the choice tuple filtered exactly like candidates: eligible
+  (`s in recipe.meal_types`) and allowed. **Not** intersected with the slot's candidates: a
+  chosen recipe is usually not one of them. A choice may also hold a recipe that breaks a
+  hard filter; filter it like a decoy.
+- `add_exactly_one` over the cell's booleans, even when `s` is optional (a chosen snack must
+  be planned). The objective is unchanged: a chosen snack still costs `w.optional_meal`,
+  which is a constant here.
+- Portions as usual: `q` in `problem.portion_range(s)`, free for the solver to pick.
+- Chosen meals are ordinary unlocked uses for repeat caps, cost, pantry and churn.
+- An empty filtered set means no plan: return INFEASIBLE before building, like an unsafe
+  lock. `check_problem` guarantees a cell is never both locked and chosen.
+- Hints: the previous plan's recipe at a chosen cell may not be in the choice; skip that
+  hint (or hint the first chosen recipe).
+
+**`problem.day_kcal[d]`: per-day kcal bounds.** On a day where the user reported intake (a
+pizza for lunch, a skipped dinner) the usual rules can be out of reach: the plan can't un-eat
+food or force-feed. Such a day has a band that replaces *both* the daily kcal band and the
+calorie floor; its min may be below the floor and its max above the usual maximum. Compute
+each day's bounds once, before building:
+
+```python
+band = problem.targets.daily.get(Nutrient.KCAL, Band())
+floor = problem.targets.calorie_floor
+day = problem.day_kcal.get(d)
+if day is None:  # the usual rule: the band and the floor
+    lo = floor if band.min is None else max(floor, band.min)
+    hi = band.max
+else:  # the day's band is the whole rule: no floor; None = unbounded
+    lo, hi = day.min, day.max
+```
+
+then `kcal_d ≥ lo` and `kcal_d ≤ hi` (skip a `None` side); use them for `kcal_d`'s domain
+too. Nothing else changes: the weekly kcal band, the soft macro bands (daily and weekly) and
+the objective don't depend on `day_kcal`. The validator reports a miss on such a day as
+`daily_band`, never `calorie_floor`.
 
 ## 4. The objective, term by term
 
@@ -181,8 +230,9 @@ may choose *any* allocation: at the optimum it is worth exactly as much as EDF's
   compare `score(...).terms` with your own per-term values on the solution.
 - Status mapping: `OPTIMAL → Status.OPTIMAL`, `FEASIBLE → FEASIBLE`, `INFEASIBLE →
   INFEASIBLE`, `UNKNOWN → UNKNOWN`, `MODEL_INVALID → INVALID`. Infeasibility you can see
-  before building (an unsafe lock, a required slot with no allowed candidate) → INFEASIBLE
-  without solving. `diagnose(problem)` explains INFEASIBLE to the user; the API calls it.
+  before building (an unsafe lock, a required slot with no allowed candidate, a chosen cell
+  with no allowed eligible recipe) → INFEASIBLE without solving. `diagnose(problem)` explains
+  INFEASIBLE to the user; the API calls it.
 - **Don't expect OPTIMAL at full size within 3.5 s.** Report the gap in `notes`, e.g.
   `("feasible at the time limit, gap 1.8%",)`.
 - `PLANNER=auto` in the API falls back to `greedy` when `solve()` raises NotImplementedError
@@ -222,7 +272,7 @@ budget profiles often ended UNKNOWN, which is why they are soft. Day-symmetry br
 ## 8. Running the specification
 
 ```sh
-uv run pytest packages/solver/tests/test_solve.py   # the spec: 62 tests, xfail until solve() exists
+uv run pytest packages/solver/tests/test_solve.py   # the spec: 75 tests, xfail until solve() exists
 uv run pytest -m perf packages/solver               # realistic size: 20 seeds, p95 < 4 s
 uv run pytest packages/solver                       # everything else (validator, greedy, ...)
 make bench                                          # end to end through the API (bench added with the API work)
@@ -237,5 +287,6 @@ Useful while developing:
 
 - `scenarios.planted(seed, k=10)` has a known valid plan (`scenario.witness`) and decoys
   (`scenario.decoys`); `validate(problem, plan)` says in plain English what is wrong.
+  `scenarios.replan(seed, k=10)` is the same with choices and day bands (section 3a).
 - `score(problem, plan, previous).terms` gives each objective term; compare with the model.
 - `greedy(problem)` is a baseline to beat: `score(...).total` of its plan.

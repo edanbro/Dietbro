@@ -31,7 +31,7 @@ from larder_solver.problem import (
     Status,
     Targets,
 )
-from larder_solver.scenarios import infeasible, planted, realistic, synthetic_catalog
+from larder_solver.scenarios import infeasible, planted, realistic, replan, synthetic_catalog
 from larder_solver.validate import (
     SAFETY_CODES,
     STRUCTURAL_CODES,
@@ -329,6 +329,172 @@ def test_a_snack_only_when_it_earns_its_place() -> None:
     )
     plan = planned(greedy(p))
     assert not any(m.slot is S for m in plan.meals)
+
+
+# --- choices and day bands (replans) -------------------------------------------------------------
+
+
+def test_chosen_cells_hold_one_of_their_recipes() -> None:
+    p = small_world()
+    choices = {(0, B): (3,), (2, D): (105,), (4, L): (101, 102)}
+    plan = planned(greedy(replace(p, choices=choices)))
+    for (day, slot), ids in choices.items():
+        meal = plan.at(day, slot)
+        assert meal is not None
+        assert meal.recipe_id in ids
+        lo, hi = p.portion_range(slot)
+        assert lo <= meal.portions <= hi
+    assert broken(replace(p, choices=choices), plan) == []
+
+
+def test_a_chosen_recipe_need_not_be_a_candidate() -> None:
+    p = small_world()
+    special = rec(150, frozenset({L, D}), 350)
+    p = replace(p, recipes={**p.recipes, 150: special}, choices={(3, D): (150,)})
+    plan = planned(greedy(p))
+    assert plan.at(3, D) == Meal(3, D, 150, cast(Meal, plan.at(3, D)).portions)
+    assert sum(m.recipe_id == 150 for m in plan.meals) == 1
+    assert broken(p, plan) == []
+
+
+def test_a_choice_fills_an_optional_slot() -> None:
+    p = small_world(kcal=Band(1200, 1400))
+    snacks = [rec(201 + i, frozenset({S}), 150) for i in range(3)]
+    p = replace(
+        p,
+        slots=(*p.slots, SlotSpec(S, False, tuple(r.id for r in snacks), 1, 2, 4)),
+        recipes={**p.recipes, **{r.id: r for r in snacks}},
+        choices={(1, S): (202,)},
+    )
+    plan = planned(greedy(p))
+    assert [(m.day, m.recipe_id) for m in plan.meals if m.slot is S] == [(1, 202)]
+    assert hard(validate(p, plan)) == []
+
+
+def test_choices_still_get_the_hard_filters() -> None:
+    p = small_world()
+    satay = Recipe(99, "Satay", frozenset({L, D}), Macros(350, 20, 20, 50), (Ingredient(2, 30),))
+    p = replace(p, recipes={**p.recipes, 99: satay})
+    plan = planned(greedy(replace(p, choices={(2, D): (99, 103)})))
+    assert cast(Meal, plan.at(2, D)).recipe_id == 103
+    for ids, why in (((99,), "is allowed"), ((1, 2), "is a dinner recipe")):
+        result = greedy(replace(p, choices={(2, D): ids}))
+        assert (result.status, result.plan) == (Status.INFEASIBLE, None)
+        assert result.notes == (f"Wed dinner: none of the chosen recipes {why}",)
+
+
+def test_repeat_caps_are_kept_for_later_choices() -> None:
+    # Left alone, the favourite main is used up (cap 2) before Saturday, leaving nothing for
+    # the Saturday and Sunday that chose it. The capacity check after each day keeps it back.
+    p = small_world()
+    favourite = replace(p.recipes[101], preference=100)
+    p = replace(p, recipes={**p.recipes, 101: favourite})
+    assert [m.day for m in planned(greedy(p)).meals if m.recipe_id == 101] == [0, 4]
+    p = replace(p, choices={(5, D): (101,), (6, L): (101,)})
+    plan = planned(greedy(p))
+    assert [(m.day, m.slot) for m in plan.meals if m.recipe_id == 101] == [(5, D), (6, L)]
+    assert broken(p, plan) == []
+
+
+def test_two_cells_chosen_as_the_same_dish() -> None:
+    # Leftovers: Wednesday's lunch and dinner are both the stew. The baseline's own "a recipe
+    # at most once a day" gives way to choices while the repeat cap has room for both.
+    p = replace(small_world(), choices={(2, L): (104,), (2, D): (104,)})
+    plan = planned(greedy(p))
+    assert [(m.day, m.slot) for m in plan.meals if m.recipe_id == 104] == [(2, L), (2, D)]
+    assert broken(p, plan) == []
+    # With the stew already locked on Monday, one use is left: lunch takes the other choice.
+    locked: dict[tuple[int, Slot], Meal | None] = {(0, D): Meal(0, D, 104, 2)}
+    p = replace(p, locked=locked, choices={(2, L): (104, 105), (2, D): (104,)})
+    plan = planned(greedy(p))
+    assert [cast(Meal, plan.at(2, s)).recipe_id for s in (L, D)] == [105, 104]
+    assert broken(p, plan) == []
+
+
+def test_choices_beyond_a_repeat_cap_mean_no_plan() -> None:
+    p = replace(small_world(), choices={(d, D): (101,) for d in (1, 3, 5)})
+    result = greedy(p)
+    assert (result.status, result.plan) == (Status.INFEASIBLE, None)
+    assert result.notes == ("too few allowed recipes to fill every meal within the repeat limits",)
+
+
+def test_replanning_with_a_choice_changes_little_else() -> None:
+    for seed in range(10):
+        scenario = planted(seed)
+        p = scenario.problem
+        first = planned(greedy(p))
+        before = cast(Meal, first.at(3, D)).recipe_id
+        spec = cast(SlotSpec, p.spec(D))
+        wanted = next(r for r in spec.candidates if r not in scenario.decoys and r != before)
+        p = replace(p, choices={(3, D): (wanted,)})
+        again = planned(greedy(p, first))
+        assert cast(Meal, again.at(3, D)).recipe_id == wanted
+        assert broken(p, again) == []
+        # The chosen cell, the chosen recipe's old place and a little rebalancing; without
+        # the previous plan, 4-12 cells change.
+        assert changed_slots(first, again) <= 4, seed
+        assert changed_slots(first, again) < changed_slots(first, planned(greedy(p))), seed
+
+
+def test_a_day_band_above_the_daily_maximum() -> None:
+    # Tuesday's lunch was a 1,800 kcal pizza: the smallest day is 2,700 kcal.
+    p = small_world(days=3, kcal=Band(1500, 1800))
+    p = replace(p, locked={(1, L): None}, extra={1: Macros(1800, 40, 60, 200)})
+    result = greedy(p)
+    assert {v.code for v in hard(validate(p, planned(result)))} == {Code.DAILY_BAND}
+    assert result.notes == ("Tue: the kcal band was out of reach (2,700 kcal)",)
+    p = replace(p, day_kcal={1: Band(1500, 2900)})
+    result = greedy(p)
+    plan = planned(result)
+    assert hard(validate(p, plan)) == []
+    assert result.notes == ()
+    assert [1500 <= t.kcal <= 1800 for t in day_totals(p, plan)] == [True, False, True]
+
+
+def test_a_day_band_below_the_floor() -> None:
+    # Tuesday's lunch and dinner skipped: breakfast reaches 600 kcal at most.
+    p = small_world(days=3)
+    p = replace(p, locked={(1, L): None, (1, D): None})
+    result = greedy(p)
+    assert (result.status, result.notes) == (
+        Status.INFEASIBLE,
+        ("Tue: no meals that fit reach the 1,200 kcal floor",),
+    )
+    p = replace(p, day_kcal={1: Band(600, 2500)})
+    plan = planned(greedy(p))
+    assert hard(validate(p, plan)) == []
+    totals = [t.kcal for t in day_totals(p, plan)]
+    assert totals[1] == 600
+    assert all(1500 <= kcal <= 2500 for i, kcal in enumerate(totals) if i != 1)
+    result = greedy(replace(p, day_kcal={1: Band(700, 2500)}))
+    assert result.notes == ("Tue: no meals that fit reach the 700 kcal minimum for the day",)
+    plan = planned(greedy(replace(p, day_kcal={1: Band(None, 300)})))  # no floor that day
+    assert day_totals(p, plan)[1].kcal == 200
+
+
+def day_minimum(problem: Problem, day: int) -> int:
+    band = problem.day_kcal.get(day)
+    if band is None:
+        return problem.targets.calorie_floor
+    return band.min if band.min is not None else 0
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_replan_scenarios_are_safe_and_well_formed(seed: int) -> None:
+    scenario = replan(seed)
+    p = scenario.problem
+    plan = planned(greedy(p))
+    assert broken(p, plan) == []  # choices honoured (CHOICE is structural), locks, filters
+    assert not any(m.recipe_id in scenario.decoys for m in plan.meals)
+    assert all(t.kcal >= day_minimum(p, d) for d, t in enumerate(day_totals(p, plan)))
+
+
+def test_replan_hard_validity_rate() -> None:
+    """How often the baseline meets every hard rule on replan scenarios. Measured when
+    written: 99 of seeds 0-99 (one weekly kcal band miss)."""
+    plans = ((s.problem, planned(greedy(s.problem))) for s in map(replan, SEEDS))
+    valid = sum(not hard(validate(problem, plan)) for problem, plan in plans)
+    assert valid >= 0.95 * len(SEEDS)
 
 
 # --- independence --------------------------------------------------------------------------------

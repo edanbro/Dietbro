@@ -27,6 +27,7 @@ from larder_solver.metrics import (
     to_minor,
 )
 from larder_solver.problem import (
+    Allergen,
     Band,
     Food,
     Ingredient,
@@ -37,6 +38,7 @@ from larder_solver.problem import (
     Plan,
     PlanResult,
     Problem,
+    Profile,
     Recipe,
     Slot,
     SlotSpec,
@@ -49,6 +51,7 @@ from larder_solver.scenarios import (
     infeasible,
     planted,
     realistic,
+    replan,
     synthetic_catalog,
 )
 from larder_solver.solve import solve
@@ -401,3 +404,136 @@ def test_realistic_size_p95() -> None:
     walls.sort()
     p95 = walls[math.ceil(0.95 * len(walls)) - 1]
     assert p95 < 4_000, walls
+
+
+# --- 14. choices (replans) -----------------------------------------------------------------------
+
+
+def test_choices_are_respected() -> None:
+    """14. A chosen cell (`Problem.choices`) holds one of its choice's recipes, at whatever
+    portions the slot allows (the planner picks them), even a recipe that isn't one of the
+    slot's candidates; the hard filters still apply to the choice. Two days; breakfast and
+    lunch sizes fixed, so only dinner portions move. Tuesday's dinner is chosen as recipe 5
+    (not a candidate): only 3 portions land the day in 2,100-2,300 kcal. Tuesday's lunch is
+    chosen from a peanut dish (preference 100, the profile is peanut-free) or recipe 2. OPTIMAL
+    within 10 s."""
+    foods = [Food(1, "oats", price_per_kg=200), Food(2, "rice", price_per_kg=300)]
+    foods.append(Food(3, "peanuts", allergens=frozenset({Allergen.PEANUTS}), price_per_kg=800))
+    porridge = recipe(1, [B], 400, (1, 80))
+    curry = recipe(2, [L, D], 300, (2, 100))
+    stew = recipe(3, [L, D], 300, (2, 100))
+    pie = recipe(4, [L, D], 350, (2, 100))
+    special = recipe(5, [L, D], 400, (2, 120))
+    satay = replace(recipe(6, [L, D], 300, (2, 80), (3, 30)), preference=100)
+    p = problem(
+        [
+            SlotSpec(B, True, (1,), 1, 1),
+            SlotSpec(L, True, (2, 3, 6), 2, 2),
+            SlotSpec(D, True, (3, 4, 6), 2, 4),
+        ],
+        [porridge, curry, stew, pie, special, satay],
+        foods,
+        days=2,
+        kcal=Band(2100, 2300),
+    )
+    p = replace(
+        p,
+        profile=Profile(allergens=frozenset({Allergen.PEANUTS})),
+        choices={(1, D): (5,), (1, L): (6, 2)},
+    )
+    assert check_problem(p) == []
+    result = run(p, time_limit_ms=10_000)
+    plan = found(result)
+    assert result.status is Status.OPTIMAL
+    assert plan.at(1, D) == Meal(1, D, 5, 3)  # 400 + 600 + 1,200 kcal
+    assert plan.at(1, L) == Meal(1, L, 2, 2)
+
+
+def test_a_chosen_optional_cell_is_planned() -> None:
+    """14. A choice makes even an optional slot's meal required: the snack that would never
+    earn its place (test 9) is planned on the day it was chosen, and only then."""
+    foods = [Food(1, "oats", price_per_kg=200), Food(2, "rice", price_per_kg=300)]
+    foods.append(Food(3, "apples", price_per_kg=250))
+    porridge = recipe(1, [B], 400, (1, 80))
+    curry = recipe(2, [L, D], 300, (2, 100))
+    stew = recipe(3, [L, D], 350, (2, 100))
+    apple = recipe(4, [S], 100, (3, 150))
+    p = problem(
+        [
+            SlotSpec(B, True, (1,), 1, 1),
+            SlotSpec(L, True, (2,), 2, 2),
+            SlotSpec(D, True, (3,), 2, 2),
+            SlotSpec(S, False, (4,), 1, 2, 7),
+        ],
+        [porridge, curry, stew, apple],
+        foods,
+        days=2,
+        kcal=Band(1500, 2500),
+    )
+    p = replace(p, choices={(1, S): (4,)})
+    result = run(p, time_limit_ms=10_000)
+    plan = found(result)
+    assert result.status is Status.OPTIMAL
+    assert plan.at(0, S) is None
+    assert plan.at(1, S) == Meal(1, S, 4, 1)
+
+
+# --- 15. day bands (replans) ---------------------------------------------------------------------
+
+
+def test_day_bands_replace_the_daily_band_and_floor() -> None:
+    """15. `Problem.day_kcal` replaces both the daily kcal band and the calorie floor on its
+    day; other days keep both. Tuesday's lunch was a 1,800 kcal pizza (locked empty, in
+    `extra`), so Tuesday comes to at least 2,450 kcal, over the 2,200 maximum. On Wednesday
+    lunch and dinner are skipped, so breakfast alone reaches 900 kcal at most, under the 1,200
+    floor. Without day bands there is no plan (INFEASIBLE; UNKNOWN tolerated); with
+    Tue Band(1,600, 3,200) and Wed Band(400, 2,200) there is one, and Monday stays within
+    1,600-2,200."""
+    foods = [Food(1, "oats", price_per_kg=200), Food(2, "rice", price_per_kg=300)]
+    recipes = [recipe(1 + i, [B], 150 + 50 * i, (1, 60)) for i in range(4)]
+    recipes += [recipe(11 + i, [L, D], 250 + 40 * i, (2, 100)) for i in range(8)]
+    breakfasts = tuple(r.id for r in recipes if B in r.meal_types)
+    mains = tuple(r.id for r in recipes if L in r.meal_types)
+    p = problem(
+        [
+            SlotSpec(B, True, breakfasts, 1, 3, 4),
+            SlotSpec(L, True, mains, 1, 4),
+            SlotSpec(D, True, mains, 2, 4),
+        ],
+        recipes,
+        foods,
+        days=3,
+        kcal=Band(1600, 2200),
+    )
+    p = replace(
+        p,
+        locked={(1, L): None, (2, L): None, (2, D): None},
+        extra={1: Macros(1800, 60, 70, 200)},
+    )
+    without = run(p)
+    assert without.status in (Status.INFEASIBLE, Status.UNKNOWN)
+    assert without.plan is None
+    p = replace(p, day_kcal={1: Band(1600, 3200), 2: Band(400, 2200)})
+    totals = [t.kcal for t in day_totals(p, found(run(p)))]
+    assert 1600 <= totals[0] <= 2200
+    assert 1600 <= totals[1] <= 3200
+    assert 400 <= totals[2] <= 2200
+
+
+# --- 16. replan scenarios ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_replan_scenarios_get_a_valid_plan(seed: int) -> None:
+    """16. `scenarios.replan`: a planted problem (k=10) as a mid-week replan, with off-plan
+    intake, a skipped dinner, day bands (some under the floor or over the daily maximum) and
+    chosen cells, some of whose choices include a decoy. Its witness is valid, so solve() must
+    return a plan: every chosen cell holds one of its recipes, no decoy is planned."""
+    scenario = replan(seed, k=10)
+    p = scenario.problem
+    plan = found(run(p))
+    for (day, slot), ids in p.choices.items():
+        meal = plan.at(day, slot)
+        assert meal is not None
+        assert meal.recipe_id in ids
+    assert not [m for m in plan.meals if m.recipe_id in scenario.decoys]

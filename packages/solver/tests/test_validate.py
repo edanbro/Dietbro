@@ -168,6 +168,7 @@ MUTATIONS: dict[Code, Mutation] = {
     Code.DIET: lambda p, plan: (p, put(plan, Meal(0, D, 41, 2))),
     Code.UNKNOWN_FOOD: lambda p, plan: (p, put(plan, Meal(0, D, 44, 2))),
     Code.LOCKED: lambda p, plan: (replace(p, locked={(0, L): Meal(0, L, 21, 2)}), plan),
+    Code.CHOICE: lambda p, plan: (replace(p, choices={(0, L): (21, 20)}), plan),
     Code.REPEATS: lambda p, plan: (p, put(plan, Meal(0, L, 20, 2))),
     Code.CALORIE_FLOOR: lambda p, plan: (
         replace(p, targets=replace(p.targets, daily={Nutrient.KCAL: Band(1000, 2000)})),
@@ -212,6 +213,7 @@ def test_code_sets() -> None:
         Code.NOT_ELIGIBLE,
         Code.PORTIONS,
         Code.LOCKED,
+        Code.CHOICE,
     } == STRUCTURAL_CODES
     assert SAFETY_CODES - {Code.CALORIE_FLOOR} == HARD_FILTER_CODES
 
@@ -280,6 +282,146 @@ def test_repeats_need_an_unlocked_meal() -> None:
     assert Code.REPEATS not in codes(replace(BASE, locked=all_locked), plan)
     some_locked = {k: m for k, m in all_locked.items() if k != (0, L)}
     assert Code.REPEATS in codes(replace(BASE, locked=some_locked), plan)
+
+
+# --- choices (replans) ---------------------------------------------------------------------------
+
+
+def test_a_chosen_cell_holding_one_of_its_recipes_is_valid() -> None:
+    p = replace(BASE, choices={(0, L): (21, 22), (1, D): (20,)})
+    assert validate(p, PLAN) == []
+    assert validate(p, put(PLAN, Meal(0, L, 21, 1))) == []  # either recipe, any allowed portions
+
+
+def test_a_chosen_cell_with_another_recipe() -> None:
+    p = replace(BASE, choices={(1, L): (22, 20)})
+    found = validate(p, PLAN)
+    assert [(v.code, v.day, v.slot, v.recipe_id, v.hard) for v in found] == [
+        (Code.CHOICE, 1, L, 21, True)
+    ]
+    assert found[0].message == (
+        "Tue lunch: Bean chilli is planned instead of Lentil soup or Vegetable risotto"
+    )
+
+
+def test_an_empty_chosen_cell_is_a_choice_violation_not_missing() -> None:
+    p = replace(BASE, choices={(1, B): (11,)})
+    found = validate(p, drop(PLAN, 1, B))
+    assert [(v.code, v.day, v.slot, v.recipe_id) for v in found] == [(Code.CHOICE, 1, B, None)]
+    assert found[0].message == "Tue breakfast: no meal planned; it should be Bircher muesli"
+    # A choice makes even an optional slot's meal required.
+    p = replace(BASE, choices={(0, S): (30,)})
+    assert codes(p, PLAN) == {Code.CHOICE}
+    assert validate(p, put(PLAN, Meal(0, S, 30, 1))) == []
+
+
+def test_chosen_meals_still_get_hard_filters() -> None:
+    # Unlike a lock, a choice never vouches for a recipe: the allergen is still reported.
+    p = replace(BASE, choices={(0, D): (40,)})
+    assert codes(p, put(PLAN, Meal(0, D, 40, 2))) == {Code.ALLERGEN}
+
+
+def test_chosen_meals_still_get_eligibility_and_portions() -> None:
+    p = replace(BASE, choices={(0, B): (21,), (1, D): (20,)})
+    plan = put(PLAN, Meal(0, B, 21, 1), Meal(1, D, 20, 1))  # chilli breakfast, 1 dinner portion
+    found = validate(p, plan)
+    assert [(v.code, v.day, v.slot) for v in found] == [
+        (Code.NOT_ELIGIBLE, 0, B),
+        (Code.PORTIONS, 1, D),
+    ]
+
+
+def test_chosen_meals_count_toward_repeats() -> None:
+    p = replace(BASE, choices={(0, L): (20,)})
+    found = codes(p, put(PLAN, Meal(0, L, 20, 2)))  # risotto 3 times, cap 2
+    assert found == {Code.REPEATS}
+
+
+def test_every_wrong_meal_in_a_chosen_cell_is_reported() -> None:
+    p = replace(BASE, choices={(0, L): (22,)})
+    plan = Plan((*put(PLAN, Meal(0, L, 21, 2)).meals, Meal(0, L, 20, 1)))
+    found = [(v.code, v.recipe_id) for v in validate(p, plan) if v.code is Code.CHOICE]
+    assert found == [(Code.CHOICE, 21), (Code.CHOICE, 20)]  # plan order
+
+
+def test_long_choice_lists_are_shortened() -> None:
+    p = replace(BASE, choices={(0, D): (21, 22, 30, 10, 11)})
+    assert [v.message for v in validate(p, PLAN)] == [
+        "Mon dinner: Vegetable risotto is planned instead of Bean chilli, Lentil soup, Fruit pot "
+        "or 2 other recipes"
+    ]
+    p = replace(BASE, choices={(0, D): (21, 22, 30, 10)})
+    assert [v.message for v in validate(p, PLAN)] == [
+        "Mon dinner: Vegetable risotto is planned instead of Bean chilli, Lentil soup, Fruit pot "
+        "or Porridge"
+    ]
+
+
+# --- day_kcal (replans) --------------------------------------------------------------------------
+
+PIZZA = Macros(1800, 20, 70, 200)  # Monday's lunch, eaten out
+
+
+def test_a_day_band_above_the_daily_maximum_passes() -> None:
+    # Mon: 400 + 1,800 pizza + 700 = 2,900 kcal, over the 2,000 maximum.
+    p = replace(BASE, locked={(0, L): None}, extra={0: PIZZA})
+    plan = drop(PLAN, 0, L)
+    found = validate(p, plan)
+    assert [(v.code, v.day, v.hard) for v in found] == [(Code.DAILY_BAND, 0, True)]
+    assert validate(replace(p, day_kcal={0: Band(1200, 3000)}), plan) == []
+
+
+def test_a_day_band_below_the_floor_replaces_the_floor() -> None:
+    # Tuesday's dinner skipped: 440 + 660 = 1,100 kcal, under the 1,200 floor and minimum.
+    p = replace(BASE, locked={(1, D): None})
+    plan = drop(PLAN, 1, D)
+    assert codes(p, plan) == {Code.CALORIE_FLOOR, Code.DAILY_BAND}
+    assert validate(replace(p, day_kcal={1: Band(1000, 2000)}), plan) == []
+
+
+def test_outside_a_day_band_is_daily_band_never_calorie_floor() -> None:
+    p = replace(BASE, locked={(1, D): None}, day_kcal={1: Band(1150, 2000)})
+    found = validate(p, drop(PLAN, 1, D))
+    assert [(v.code, v.day, v.hard) for v in found] == [(Code.DAILY_BAND, 1, True)]
+    assert found[0].message == "Tue: 1,100 kcal is below the 1,150 kcal minimum for this day"
+    p = replace(p, day_kcal={1: Band(1000, 1050)})
+    found = validate(p, drop(PLAN, 1, D))
+    assert [(v.code, v.hard) for v in found] == [(Code.DAILY_BAND, True)]
+    assert found[0].message == "Tue: 1,100 kcal is above the 1,050 kcal maximum for this day"
+    # Even far under the usual floor: the day band is that day's only kcal rule.
+    p = replace(p, day_kcal={1: Band(1150, 2000)}, locked={(1, L): None, (1, D): None})
+    found = hard(validate(p, drop(drop(PLAN, 1, L), 1, D)))  # Tue: 440 kcal
+    assert [(v.code, v.day) for v in found] == [(Code.DAILY_BAND, 1)]
+
+
+def test_an_open_side_of_a_day_band_is_unbounded() -> None:
+    p = replace(BASE, locked={(1, L): None, (1, D): None}, day_kcal={1: Band(None, 2000)})
+    plan = drop(drop(PLAN, 1, L), 1, D)  # Tue: 440 kcal, no floor
+    assert hard(validate(p, plan)) == []  # only the soft protein bands are missed
+
+
+def test_days_without_a_band_keep_the_floor_and_the_daily_band() -> None:
+    p = replace(BASE, locked={(1, D): None}, day_kcal={0: Band(0, 5000)})
+    found = validate(p, drop(PLAN, 1, D))
+    assert [(v.code, v.day) for v in found] == [(Code.CALORIE_FLOOR, 1), (Code.DAILY_BAND, 1)]
+    # The pizza day is fine, its neighbour still gets the usual maximum.
+    p = replace(BASE, day_kcal={0: Band(1200, 3500)}, extra={0: PIZZA, 1: PIZZA})
+    found = validate(p, PLAN)
+    assert [(v.code, v.day) for v in hard(found)] == [(Code.DAILY_BAND, 1)]
+
+
+def test_a_day_band_leaves_the_macro_and_weekly_bands_alone() -> None:
+    targets = replace(
+        BASE.targets,
+        daily={**BASE.targets.daily, Nutrient.PROTEIN: Band(50, None)},
+        weekly={Nutrient.KCAL: Band(None, 3000)},
+    )
+    p = replace(BASE, targets=targets, day_kcal={0: Band(0, 5000), 1: Band(0, 5000)})
+    found = validate(p, PLAN)
+    assert [(v.code, v.day, v.hard) for v in found] == [
+        (Code.DAILY_BAND, 0, False),  # Mon 46 g protein
+        (Code.WEEKLY_BAND, None, True),  # 3,260 kcal
+    ]
 
 
 # --- flags, order, messages ----------------------------------------------------------------------
@@ -405,13 +547,30 @@ locks = st.dictionaries(
     st.none() | st.builds(Meal, st.just(0), st.just(B), st.sampled_from([10, 40, 999]), st.just(2)),
     max_size=3,
 )
+choices = st.dictionaries(
+    st.tuples(st.integers(-1, 2), st.sampled_from([*Slot, cast(Slot, "brunch")])),
+    st.lists(st.sampled_from([*RECIPES, 999]), max_size=3).map(tuple),
+    max_size=3,
+)
+day_bands = st.dictionaries(
+    st.integers(-1, 2),
+    st.tuples(st.none() | st.integers(0, 1500), st.none() | st.integers(1500, 3000)).map(
+        lambda b: Band(*b)
+    ),
+    max_size=2,
+)
 
 
-@given(st.lists(meals, max_size=10), locks, st.none() | st.integers(0, 2000))
+@given(st.lists(meals, max_size=10), locks, st.none() | st.integers(0, 2000), choices, day_bands)
 def test_validate_never_raises(
-    plan_meals: list[Meal], locked: dict[tuple[int, Slot], Meal | None], budget: int | None
+    plan_meals: list[Meal],
+    locked: dict[tuple[int, Slot], Meal | None],
+    budget: int | None,
+    chosen: dict[tuple[int, Slot], tuple[int, ...]],
+    day_kcal: dict[int, Band],
 ) -> None:
-    p = replace(BASE, locked=locked, budget=budget)
+    # Malformed problems too (choices outside the plan, or on locked cells): never a crash.
+    p = replace(BASE, locked=locked, budget=budget, choices=chosen, day_kcal=day_kcal)
     plan = Plan(tuple(plan_meals))
     found = validate(p, plan)
     assert found == validate(p, plan)
@@ -422,6 +581,10 @@ def test_validate_never_raises(
         assert Code.DAY_RANGE in found_codes
     if any(m.slot not in Slot for m in plan_meals):
         assert Code.UNKNOWN_SLOT in found_codes
+    if any(not any(m.day == d and m.slot == s for m in plan_meals) for d, s in chosen):
+        assert Code.CHOICE in found_codes
+    if any(v.code is Code.CALORIE_FLOOR for v in found):
+        assert not {v.day for v in found if v.code is Code.CALORIE_FLOOR} & set(day_kcal)
     for v in found:
         assert v.hard or v.code in {Code.DAILY_BAND, Code.WEEKLY_BAND}
         assert v.message

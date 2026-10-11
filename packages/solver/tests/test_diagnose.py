@@ -31,7 +31,7 @@ from larder_solver.problem import (
     SlotSpec,
     Targets,
 )
-from larder_solver.scenarios import infeasible, planted, synthetic_catalog
+from larder_solver.scenarios import infeasible, planted, replan, synthetic_catalog
 from larder_solver.validate import hard, validate
 
 B, L, D, S = Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER, Slot.SNACK
@@ -84,6 +84,8 @@ def world(
     extra: Mapping[int, Macros] | None = None,
     pantry: Sequence[Lot] = (),
     repeats: Mapping[Slot, int] | None = None,
+    day_kcal: Mapping[int, Band] | None = None,
+    choices: Mapping[tuple[int, Slot], tuple[int, ...]] | None = None,
 ) -> Problem:
     """Breakfast (1-3 portions), lunch (1-4), dinner (2-4), each recipe a candidate of every
     slot it fits; by default 4 breakfasts (300 kcal) and 8 mains (400 kcal), all safe."""
@@ -117,6 +119,8 @@ def world(
         budget=budget,
         locked=locked or {},
         extra=extra or {},
+        day_kcal=day_kcal or {},
+        choices=choices or {},
     )
 
 
@@ -468,7 +472,8 @@ def tiny(seed: int) -> Problem:
 
 
 def every_plan(problem: Problem) -> Iterator[Plan]:
-    """Every plan made of candidates within the portion ranges that honours the locks."""
+    """Every plan made of candidates (a chosen cell: its choice) within the portion ranges
+    that honours the locks."""
     cells: list[list[Meal | None]] = []
     for day in range(problem.days):
         for spec in problem.slots:
@@ -476,20 +481,27 @@ def every_plan(problem: Problem) -> Iterator[Plan]:
                 cells.append([problem.locked[(day, spec.slot)]])
                 continue
             lo, hi = problem.portion_range(spec.slot)
+            chosen = problem.choices.get((day, spec.slot))
             meals: list[Meal | None] = [
-                Meal(day, spec.slot, r, n) for r in spec.candidates for n in range(lo, hi + 1)
+                Meal(day, spec.slot, r, n)
+                for r in (spec.candidates if chosen is None else chosen)
+                for n in range(lo, hi + 1)
             ]
-            cells.append(meals if spec.required else [*meals, None])
+            cells.append(meals if spec.required or chosen else [*meals, None])
     for chosen in product(*cells):
         yield Plan(tuple(m for m in chosen if m is not None))
 
 
 def is_valid(problem: Problem, plan: Plan) -> bool:
-    """`hard(validate(...)) == []`, skipping the validator for days outside the kcal band."""
+    """`hard(validate(...)) == []`, skipping the validator for days outside their kcal rule."""
     band = problem.targets.daily.get(Nutrient.KCAL, Band())
     floor = problem.targets.calorie_floor
-    if any(not band.contains(t.kcal) or t.kcal < floor for t in day_totals(problem, plan)):
-        return False
+    for day, total in enumerate(day_totals(problem, plan)):
+        override = problem.day_kcal.get(day)
+        if override is not None and not override.contains(total.kcal):
+            return False
+        if override is None and (not band.contains(total.kcal) or total.kcal < floor):
+            return False
     return not hard(validate(problem, plan))
 
 
@@ -509,6 +521,199 @@ def test_diagnosis_is_sound_on_enumerable_problems() -> None:
     assert diagnosed >= 40
     assert feasible >= 20
     assert kinds == {"Only", "kcal", "budget", "fixed"}
+
+
+def tiny_replan(seed: int) -> Problem:
+    """`tiny(seed)` with a few chosen cells (mostly the slot's candidates, sometimes any of the
+    four recipes) and per-day kcal bands (sometimes under the floor or over the daily
+    maximum)."""
+    p = tiny(seed)
+    rng = Random(seed + 10_000)
+    cells = [(d, s) for d in range(p.days) for s in p.slots if (d, s.slot) not in p.locked]
+    choices = {
+        (day, spec.slot): tuple(
+            rng.sample(spec.candidates if rng.random() < 0.8 else sorted(p.recipes), 1)
+            + rng.sample(sorted(p.recipes), rng.choice([0, 0, 1]))
+        )
+        for day, spec in rng.sample(cells, rng.randint(0, 3))
+    }
+    day_kcal: dict[int, Band] = {}
+    for day in rng.sample(range(p.days), rng.randint(0, 2)):
+        low = rng.choice([None, rng.randint(300, 1600)])
+        day_kcal[day] = Band(low, rng.choice([None, (low or 300) + rng.randint(0, 1500)]))
+    return replace(p, choices=choices, day_kcal=day_kcal)
+
+
+def test_diagnosis_is_sound_with_choices_and_day_bands() -> None:
+    """The same, for replan-shaped problems: choices and day bands never make diagnose name
+    a reason when a plan exists."""
+    diagnosed = feasible = 0
+    kinds: set[str] = set()
+    for seed in range(150):
+        p = tiny_replan(seed)
+        messages = diagnose(p)
+        valid = next((plan for plan in every_plan(p) if is_valid(p, plan)), None)
+        assert not (messages and valid), (seed, messages, valid)
+        diagnosed += bool(messages)
+        feasible += valid is not None
+        words = ("choice", "chosen", "for that day", "kcal", "budget")
+        kinds |= {k for k in words if any(k in m for m in messages)}
+    assert diagnosed >= 40
+    assert feasible >= 20
+    assert kinds == {"choice", "chosen", "for that day", "kcal", "budget"}
+
+
+# --- replans -------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_replan_scenarios_have_no_diagnosis(seed: int) -> None:
+    assert diagnose(replan(seed).problem) == []
+
+
+def test_a_day_band_above_the_daily_maximum() -> None:
+    p = world(extra={1: Macros(2000)})  # Tue's smallest day is 3,500 kcal
+    assert diagnose(replace(p, day_kcal={1: Band(1200, 3600)})) == []
+    assert diagnose(replace(p, day_kcal={1: Band(1200, 3400)})) == [
+        "Tue: even the smallest meals that fit come to 3,500 kcal (with 2,000 kcal eaten "
+        "off-plan), above the 3,400 kcal maximum for that day"
+    ]
+
+
+def test_a_day_band_below_the_floor() -> None:
+    p = world(locked={(3, L): None, (3, D): None})  # Thursday: breakfast only, 900 kcal at most
+    assert diagnose(p) == [
+        "Thu: even the largest meals that fit reach only 900 kcal, below your 1,200 kcal floor"
+    ]
+    assert diagnose(replace(p, day_kcal={3: Band(600, 3000)})) == []
+    assert diagnose(replace(p, day_kcal={3: Band(None, 3000)})) == []
+    assert diagnose(replace(p, day_kcal={3: Band(1000, 3000)})) == [
+        "Thu: even the largest meals that fit reach only 900 kcal, below the 1,000 kcal minimum "
+        "for that day"
+    ]
+
+
+def test_day_bands_replace_a_daily_maximum_below_the_floor() -> None:
+    p = world(days=2, kcal=Band(900, 1100))
+    assert diagnose(p) == ["Your daily maximum of 1,100 kcal is below your 1,200 kcal floor"]
+    assert diagnose(replace(p, day_kcal={0: Band(1500, 2000)})) == [
+        "Your daily maximum of 1,100 kcal is below your 1,200 kcal floor"  # Tuesday still
+    ]
+    assert diagnose(replace(p, day_kcal={0: Band(1500, 2000), 1: Band(1500, 2000)})) == []
+
+
+def test_day_bands_count_in_the_weekly_and_budget_checks() -> None:
+    # Days reach at most 3,000 kcal (the daily maximum): 21,000 a week. Monday's band allows
+    # 3,500.
+    p = world(weekly=Band(21_001, None))
+    assert diagnose(p) != []
+    assert diagnose(replace(p, day_kcal={0: Band(1200, 3500)})) == []
+    # 1,439 pence a week at a 3,000 kcal floor (see test_budget_counts_kcal_still_needed); a
+    # 1,500 kcal minimum on Monday saves 99,500 millipence of that day's 205,500.
+    p = world(kcal=Band(3000, 3500), floor=3000, budget=1438)
+    assert diagnose(p) != []
+    assert diagnose(replace(p, day_kcal={0: Band(1500, 3500)})) == []
+    assert diagnose(replace(p, day_kcal={0: Band(1500, 3500)}, budget=1338)) == [
+        "Even the cheapest meals that fit would cost at least 13.39, over your 13.38 budget"
+    ]
+
+
+def unsafe_mains() -> list[Recipe]:
+    curry = Recipe(9, "Peanut curry", MAINS, Macros(400, 20, 10, 40), (Ingredient(2, 30),))
+    mystery = Recipe(10, "Mystery stew", MAINS, Macros(400, 20, 10, 40), (Ingredient(99, 30),))
+    return [curry, mystery]
+
+
+def test_choices_none_of_whose_recipes_can_be_planned() -> None:
+    p = world([*breakfasts(4), *mains(8), *unsafe_mains()])
+
+    def why(*ids: int) -> list[str]:
+        return diagnose(replace(p, choices={(2, D): ids}))
+
+    assert why(9) == [
+        "Your choice for Wed dinner, Peanut curry, doesn't fit your allergies and diet"
+    ]
+    assert why(10) == [
+        "Your choice for Wed dinner, Mystery stew, uses an ingredient we have no data for"
+    ]
+    assert why(1) == ["Your choice for Wed dinner, Recipe 1, isn't a dinner recipe"]
+    assert why(9, 10) == ["None of your choices for Wed dinner fits your allergies and diet"]
+    assert why(1, 2) == ["None of your choices for Wed dinner is a dinner recipe"]
+    assert why(1, 9) == [
+        "None of your choices for Wed dinner is a dinner recipe that fits your allergies and diet"
+    ]
+    assert why(9, 1, 101) == []  # one usable recipe is enough
+    open_profile = replace(p, profile=Profile())
+    assert diagnose(replace(open_profile, choices={(2, D): (9,)})) == []  # peanuts are fine
+    assert diagnose(replace(open_profile, choices={(2, D): (10,)})) == [
+        "Your choice for Wed dinner, Mystery stew, uses an ingredient we have no data for"
+    ]
+
+
+def test_a_chosen_recipe_need_not_be_a_candidate() -> None:
+    # Dinner's candidates are all unsafe, but the only dinner is chosen from lunch's.
+    p = world([*breakfasts(4), *mains(8), *unsafe_mains()], days=1)
+    slots = tuple(replace(s, candidates=(9, 10)) if s.slot is D else s for s in p.slots)
+    p = replace(p, slots=slots)
+    assert diagnose(p) == ["No dinner fits your allergies and diet"]
+    assert diagnose(replace(p, choices={(0, D): (9, 101)})) == []
+
+
+def test_chosen_cells_leave_the_slot_s_candidates_alone() -> None:
+    # 3 breakfasts at most twice each: 6 of the week's 7. Monday's is chosen from elsewhere.
+    p = world(breakfasts(3) + mains(8), repeats={B: 2})
+    assert diagnose(p) != []
+    oats = rec(9, frozenset({B}), 300, (1, 80))  # not a candidate
+    p = replace(p, recipes={**p.recipes, 9: oats})
+    assert diagnose(replace(p, choices={(0, B): (9,)})) == []
+    # Chosen from the slot's own candidates, it still needs one of their meals.
+    assert diagnose(replace(p, choices={(0, B): (1,)})) == [
+        "Only 3 breakfasts fit your allergies and diet, enough for 6 of the 7 breakfasts left to "
+        "plan (each at most twice)"
+    ]
+
+
+def test_repeat_capacity_of_choices() -> None:
+    p = world()  # mains at most twice
+    dinners = {(d, D): (101,) for d in (0, 2, 4)}
+    assert diagnose(replace(p, choices=dinners)) == [
+        "Recipe 101 is chosen for Mon, Wed and Fri dinner, but can be planned only twice"
+    ]
+    mixed = {(0, L): (101,), (1, D): (101,), (2, D): (101,)}
+    assert diagnose(replace(p, choices=mixed)) == [
+        "Recipe 101 is chosen for Mon lunch, Tue dinner and Wed dinner, but can be planned only "
+        "twice"
+    ]
+    pair = {(d, D): (101, 102) for d in range(5)}
+    assert diagnose(replace(p, choices=pair)) == [
+        "Your choices for Mon, Tue, Wed, Thu and Fri dinner can fill only 4 of those 5 meals "
+        "(each at most twice)"
+    ]
+    # A lock of the same recipe uses up the cap first.
+    locked: dict[tuple[int, Slot], Meal | None] = {(6, L): Meal(6, L, 101, 2)}
+    once = replace(p, locked=locked, choices={(0, D): (101,), (1, D): (101,)})
+    assert diagnose(once) == [
+        "Recipe 101 is chosen for Mon and Tue dinner, but can be planned only once more"
+    ]
+    locked |= {(5, L): Meal(5, L, 101, 2)}
+    full = replace(p, locked=locked, choices={(0, D): (101,)})
+    assert diagnose(full) == [
+        "Recipe 101 is chosen for Mon dinner, but your fixed meals already have it twice"
+    ]
+
+
+def test_a_chosen_optional_cell_must_hold_a_meal() -> None:
+    p = world(days=1, kcal=Band(1200, 1600))  # smallest day 1,500 kcal
+    snack = rec(301, frozenset({S}), 300)
+    p = replace(
+        p,
+        slots=(*p.slots, SlotSpec(S, False, (301,), 1, 2, None)),
+        recipes={**p.recipes, 301: snack},
+    )
+    assert diagnose(p) == []
+    assert diagnose(replace(p, choices={(0, S): (301,)})) == [
+        "Mon: even the smallest meals that fit come to 1,800 kcal, above your 1,600 kcal maximum"
+    ]
 
 
 # --- independence --------------------------------------------------------------------------------

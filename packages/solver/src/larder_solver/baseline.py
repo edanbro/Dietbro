@@ -4,12 +4,16 @@ It makes the app usable before the CP-SAT model exists and is the baseline the e
 against. It plans one day at a time, in order, and never goes back:
 
 1. Locked meals and food eaten off-plan are fixed. A locked meal that breaks a hard filter means
-   no plan (locks never skip the filters).
+   no plan (locks never skip the filters). So does a chosen cell (`Problem.choices`) none of
+   whose recipes passes the hard filters and fits the slot.
 2. Options per open slot: the top 8 candidates (4 for an optional slot, which may also stay
    empty) that pass the hard filters (`candidates.allowed`), fit the slot and are still under
    their repeat cap, ranked by preference, then protein per kcal, then id; plus the previous
-   plan's recipe for that slot when it qualifies. Each comes in every allowed portion count. A
-   recipe appears at most once a day.
+   plan's recipe for that slot when it qualifies. A chosen cell draws on its choice instead of
+   the slot's candidates, the same way (top 8 of those that pass and fit), and is never empty,
+   even in an optional slot. Each comes in every allowed portion count. A recipe appears at
+   most once a day, except in several chosen cells (leftovers) while its repeat cap has room
+   for all of them.
 3. Day score, in `Weights` units: preference; minus the shopping cost at full price (the pantry
    is left to the shopping list); minus a repeat for a recipe already planned; minus a snack;
    plus a kept slot when replanning (churn); plus half the macro weight per gram of protein, up
@@ -22,18 +26,23 @@ against. It plans one day at a time, in order, and never goes back:
    the score non-separable, so the best is judged among the window's top entry by score with
    protein and its top entry without: exact when the protein target is out of reach or already
    met, a close heuristic in between.
-5. Window: the daily kcal band and floor narrowed to the day's share of the weekly kcal band;
-   if nothing fits, the daily band and floor; if still nothing, the combination closest to the
-   band that meets the floor. If no combination meets the floor, there is no plan.
-6. Repeat caps stay satisfiable: after each day, every group of required slots must still be
-   fillable within the caps on the days left (Hall's condition, as in `diagnose`). If a day's
-   choice breaks it, the recipes that took the group's capacity from outside the group are
-   dropped from that day's options and the day is planned again.
+5. Window: the day's kcal rule is the daily kcal band and the floor, or on a day with a
+   `Problem.day_kcal` band, that band alone, its min acting as the day's floor (an open min:
+   no floor). The rule narrowed to the day's share of the weekly kcal band; if nothing fits,
+   the rule itself; if still nothing, the combination closest to the band that meets the
+   floor. If no combination meets the floor, there is no plan.
+6. Repeat caps stay satisfiable: after each day, the open cells left (each required slot's free
+   cells, and the chosen cells grouped by their choice) must still be fillable within the caps,
+   checked exactly as a max-flow from cells to recipes. If a day's choice breaks it, the
+   recipes the flow can't spare (those reachable in the residual graph, i.e. the neighbourhood
+   of a set of cells violating Hall's condition) are dropped from that day's options in the
+   slots that could use something else, and the day is planned again.
 
-So, by construction, its plans pass every hard filter, fill every required slot, honour locks,
-eligibility, portion ranges and repeat caps, and meet the calorie floor. The kcal bands, the
-budget and the soft macro bands may be missed; the API saves such plans and shows the misses. It
-never consults the validator, which checks it like any other planner.
+So, by construction, its plans pass every hard filter, fill every required slot and chosen
+cell, honour locks, choices, eligibility, portion ranges and repeat caps, and meet the calorie
+floor (on a `day_kcal` day: that band's min). The kcal bands (a `day_kcal` band's max), the
+budget and the soft macro bands may be missed; the API saves such plans and shows the misses.
+It never consults the validator, which checks it like any other planner.
 
 Result: FEASIBLE with a plan (`objective` = `metrics.score(problem, plan, previous).total`, so
 objective == score, and `bound` None: the baseline proves nothing), or INFEASIBLE with no plan
@@ -44,12 +53,12 @@ candidates x 4 slots x 7 days.
 
 import math
 from bisect import bisect_left, bisect_right
-from collections import Counter
-from collections.abc import Sequence
+from collections import Counter, deque
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from fractions import Fraction
-from itertools import combinations, product
+from itertools import product
 from time import perf_counter
 
 from larder_solver.candidates import allowed
@@ -76,6 +85,10 @@ RETRIES = 4  # re-plans of one day to keep the repeat caps satisfiable
 _FAR = 10**15  # stands in for a missing band side
 
 _WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+# What an open cell that must hold a meal draws on: a required slot's candidates (its free
+# cells), or a choice (chosen cells, by the recipe ids they may hold).
+type _Kind = Slot | frozenset[int]
 
 
 def greedy(
@@ -107,6 +120,7 @@ class _Item:
     kcal: int
     protein: int
     value: int  # day score apart from protein
+    shared: bool = False  # may repeat another shared item's recipe today (see `shareable`)
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,21 +129,32 @@ class _Combo:
 
     items: tuple[_Item, ...]
     recipes: frozenset[int]
+    free: frozenset[int]  # the recipes of items that aren't shared
     kcal: int
     protein: int
     value: int
 
 
 def _combos(options: Sequence[Sequence[_Item]]) -> list[_Combo]:
+    """Every way to fill the slots, a recipe at most once a day unless only shared items hold
+    it (two cells chosen as the same dish: leftovers)."""
     out: list[_Combo] = []
     for items in product(*options):
         ids = [i.recipe_id for i in items if i.recipe_id is not None]
+        free = [i.recipe_id for i in items if i.recipe_id is not None and not i.shared]
         recipes = frozenset(ids)
-        if len(recipes) == len(ids):  # a recipe at most once a day
+        if len(free) == len(set(free)) and not (len(ids) > len(recipes) and _clash(items)):
             kcal = sum(i.kcal for i in items)
             protein = sum(i.protein for i in items)
-            out.append(_Combo(items, recipes, kcal, protein, sum(i.value for i in items)))
+            value = sum(i.value for i in items)
+            out.append(_Combo(items, recipes, frozenset(free), kcal, protein, value))
     return out
+
+
+def _clash(items: Sequence[_Item]) -> bool:
+    """Whether an item that isn't shared has the recipe of a shared one."""
+    shared = {i.recipe_id for i in items if i.shared}
+    return any(i.recipe_id in shared for i in items if not i.shared)
 
 
 class _ArgMax:
@@ -190,21 +215,33 @@ class _Greedy:
         self.ok: dict[int, bool] = {}
         self.pool: dict[Slot, list[Recipe]] = {}  # allowed candidates fitting the slot, ranked
         for spec in self.specs:
-            recipes = (problem.recipes.get(r) for r in dict.fromkeys(spec.candidates))
-            fit = [r for r in recipes if r and spec.slot in r.meal_types and self.safe(r)]
-            self.pool[spec.slot] = sorted(fit, key=_rank)
-        self.caps = {r.id: problem.repeat_cap(r) for rs in self.pool.values() for r in rs}
+            self.pool[spec.slot] = self.fitting(spec.slot, spec.candidates)
+        self.ids = {slot: frozenset(r.id for r in rs) for slot, rs in self.pool.items()}
+        # Chosen open cells -> the allowed recipes of the choice that fit the slot, ranked.
+        self.chosen = {
+            at: self.fitting(at[1], ids)
+            for at, ids in sorted(problem.choices.items(), key=lambda kv: _at(kv[0]))
+            if 0 <= at[0] < problem.days and problem.spec(at[1]) and at not in problem.locked
+        }
+        self.caps = {
+            r.id: problem.repeat_cap(r)
+            for rs in (*self.pool.values(), *self.chosen.values())
+            for r in rs
+        }
         self.locks = {
             at: meal
             for at, meal in problem.locked.items()
             if meal is not None and 0 <= at[0] < problem.days
         }
         self.uses: Counter[int] = Counter(m.recipe_id for m in self.locks.values())
-        self.required = [s.slot for s in self.specs if s.required]
-        self.groups = [
-            (frozenset(g), {r.id for s in g for r in self.pool[s]})
-            for n in range(1, len(self.required) + 1)
-            for g in combinations(self.required, n)
+        # Open cells that must hold a meal, by kind: a required slot's free cells, or chosen
+        # cells with the same choice (its recipe ids).
+        self.cells = [
+            (day, kind)
+            for day in range(problem.days)
+            for spec in self.specs
+            if (day, spec.slot) not in problem.locked
+            and (kind := self.kind(day, spec.slot)) is not None
         ]
         self.meals: list[Meal] = list(self.locks.values())
         self.totals: list[Macros] = []
@@ -214,6 +251,26 @@ class _Greedy:
         if recipe.id not in self.ok:
             self.ok[recipe.id] = allowed(recipe, self.p.foods, self.p.profile)
         return self.ok[recipe.id]
+
+    def fitting(self, slot: Slot, ids: Sequence[int]) -> list[Recipe]:
+        """The recipes among `ids` that pass the hard filters and fit `slot`, ranked."""
+        recipes = (self.p.recipes.get(r) for r in dict.fromkeys(ids))
+        return sorted(
+            (r for r in recipes if r and slot in r.meal_types and self.safe(r)), key=_rank
+        )
+
+    def holds(self, day: int, slot: Slot) -> frozenset[int]:
+        """The recipe ids an open cell may hold."""
+        chosen = self.chosen.get((day, slot))
+        return self.ids[slot] if chosen is None else frozenset(r.id for r in chosen)
+
+    def kind(self, day: int, slot: Slot) -> _Kind | None:
+        """What an open cell that must hold a meal draws on (None: an optional slot, which
+        may stay empty)."""
+        if (day, slot) in self.chosen:
+            return self.holds(day, slot)
+        spec = self.p.spec(slot)
+        return slot if spec is not None and spec.required else None
 
     def day_name(self, day: int) -> str:
         return _WEEKDAYS[(self.p.start + timedelta(days=day)).weekday()]
@@ -226,8 +283,15 @@ class _Greedy:
             if recipe is None or not self.safe(recipe):
                 self.notes.append(f"{self.day_name(day)} {slot}: the fixed meal isn't allowed")
                 return None
+        for (day, slot), fit in self.chosen.items():
+            if not fit:
+                ids = self.p.choices[(day, slot)]
+                eligible = any(slot in r.meal_types for i in ids if (r := self.p.recipes.get(i)))
+                why = "is allowed" if eligible else f"is a {slot} recipe"
+                self.notes.append(f"{self.day_name(day)} {slot}: none of the chosen recipes {why}")
+                return None
         if self.hall(-1, Counter()) is not None:
-            self.notes.append("too few allowed recipes to fill every slot within the repeat limits")
+            self.notes.append("too few allowed recipes to fill every meal within the repeat limits")
             return None
         for day in range(self.p.days):
             chosen = self.plan_day(day)
@@ -246,14 +310,14 @@ class _Greedy:
             if chosen is None:
                 break
             used = Counter(i.recipe_id for i in chosen if i.recipe_id is not None)
-            group = self.hall(day, used)
-            if group is None:
+            short = self.hall(day, used)
+            if short is None:
                 break
-            slots, pool = group
+            # Meals using up `short` in cells that could have held something else.
             culprits = {
                 (i.slot, i.recipe_id)
                 for i in chosen
-                if i.recipe_id is not None and i.recipe_id in pool and i.slot not in slots
+                if i.recipe_id in short and not self.holds(day, i.slot) <= short
             }
             if culprits <= excluded:
                 break
@@ -268,16 +332,13 @@ class _Greedy:
             self.totals.append(self.fixed(day) + _macros(self.p, chosen))
         return chosen
 
-    def hall(self, day: int, used: Counter[int]) -> tuple[frozenset[Slot], set[int]] | None:
-        """The first group of required slots whose candidates can no longer fill its open meals
-        after `day` within the repeat caps, counting `used` on top of the plan so far."""
-        for slots, pool in self.groups:
-            need = sum(
-                (d, s) not in self.p.locked for s in slots for d in range(day + 1, self.p.days)
-            )
-            if need and sum(max(0, self.caps[r] - self.uses[r] - used[r]) for r in pool) < need:
-                return slots, pool
-        return None
+    def hall(self, day: int, used: Counter[int]) -> frozenset[int] | None:
+        """None if the open cells after `day` can still all be filled within the repeat caps,
+        counting `used` on top of the plan so far; else the recipes they are short of."""
+        need = Counter(kind for d, kind in self.cells if d > day)
+        demand = [(n, self.ids[k] if isinstance(k, Slot) else k) for k, n in need.items()]
+        room = {r: max(0, cap - self.uses[r] - used[r]) for r, cap in self.caps.items()}
+        return _shortfall(demand, room)
 
     # --- one day ---------------------------------------------------------------------------------
 
@@ -294,12 +355,14 @@ class _Greedy:
         """The day's meals (None: none possible) and a note on any miss."""
         name = self.day_name(day)
         options: list[list[_Item]] = []
+        shareable = self.shareable(day)
         for spec in self.specs:
             if (day, spec.slot) in self.p.locked:
                 continue
-            items = self.options(spec, day, excluded)
-            if spec.required and not items:
-                return None, f"{name}: no {spec.slot} left within the repeat limits"
+            items = self.options(spec, day, excluded, shareable)
+            if not items:
+                what = "chosen recipe" if (day, spec.slot) in self.chosen else spec.slot
+                return None, f"{name}: no {what} left within the repeat limits"
             options.append(items)
         fixed = self.fixed(day)
         today = _Day(fixed, self.protein_target(day))
@@ -308,8 +371,7 @@ class _Greedy:
         right = _combos([options[i] for i in right_ix])
         sides = _Sides(right, self.protein_weight)
 
-        band = self.p.targets.daily.get(Nutrient.KCAL, Band())
-        floor = self.p.targets.calorie_floor
+        band, floor = self.kcal_rule(day)
         low = max(floor, band.min if band.min is not None else floor)
         high = band.max if band.max is not None else _FAR
         windows: list[tuple[int, int]] = []
@@ -324,23 +386,49 @@ class _Greedy:
                 return best, None
         best = self.closest(today, left, sides, low, high, floor)
         if best is None:
-            return None, f"{name}: no meals that fit reach the {floor:,} kcal floor"
+            if floor <= -_FAR:  # nothing to reach: no combination at all
+                return None, f"{name}: no combination of the meals left fits the day"
+            what = "minimum for the day" if day in self.p.day_kcal else "floor"
+            return None, f"{name}: no meals that fit reach the {floor:,} kcal {what}"
         total = fixed.kcal + sum(i.kcal for i in best)
         return best, f"{name}: the kcal band was out of reach ({total:,} kcal)"
 
-    def options(self, spec: SlotSpec, day: int, excluded: set[tuple[Slot, int]]) -> list[_Item]:
+    def kcal_rule(self, day: int) -> tuple[Band, int]:
+        """The day's kcal band and floor: the targets', or a `day_kcal` band whose min is
+        also the floor (an open min: none)."""
+        override = self.p.day_kcal.get(day)
+        if override is None:
+            return self.p.targets.daily.get(Nutrient.KCAL, Band()), self.p.targets.calorie_floor
+        return override, -_FAR if override.min is None else override.min
+
+    def shareable(self, day: int) -> frozenset[int]:
+        """Recipes that may fill several chosen cells today (leftovers): those whose repeat
+        cap still has room for every chosen cell today that may hold them."""
+        cells = Counter(r.id for (d, _), rs in self.chosen.items() if d == day for r in rs)
+        return frozenset(r for r, n in cells.items() if self.caps[r] - self.uses[r] >= n)
+
+    def options(
+        self,
+        spec: SlotSpec,
+        day: int,
+        excluded: set[tuple[Slot, int]],
+        shareable: frozenset[int] = frozenset(),
+    ) -> list[_Item]:
+        """Ways to fill (day, spec.slot); [] if a meal is needed and none is left."""
         w = self.p.weights
         before = None if self.previous is None else self.previous.get((day, spec.slot))
-        limit = TOP if spec.required else TOP_OPTIONAL
+        choice = self.chosen.get((day, spec.slot))
+        required = spec.required or choice is not None
+        limit = TOP if required else TOP_OPTIONAL
         picked: list[Recipe] = []
-        for r in self.pool[spec.slot]:
+        for r in self.pool[spec.slot] if choice is None else choice:
             if (spec.slot, r.id) in excluded or self.uses[r.id] >= self.caps[r.id]:
                 continue
             if len(picked) < limit or r.id == before:
                 picked.append(r)
         lo, hi = self.p.portion_range(spec.slot)
         items: list[_Item] = []
-        if not spec.required:
+        if not required:
             kept = self.previous is not None and before is None
             items.append(_Item(spec.slot, None, 0, 0, 0, w.churn if kept else 0))
         for r in picked:
@@ -351,7 +439,8 @@ class _Greedy:
             cost = w.cost * self.cost(r)
             for n in range(lo, hi + 1):
                 kcal, protein = r.per_portion.kcal * n, r.per_portion.protein_g * n
-                items.append(_Item(spec.slot, r.id, n, kcal, protein, value - cost * n))
+                shared = choice is not None and r.id in shareable
+                items.append(_Item(spec.slot, r.id, n, kcal, protein, value - cost * n, shared))
         return items
 
     def cost(self, recipe: Recipe) -> int:
@@ -395,7 +484,7 @@ class _Greedy:
         """The best combination whose day total lands in [lo, hi]."""
         best: tuple[int, _Combo, _Combo] | None = None
         for combo in left:
-            side = sides.without(combo.recipes)
+            side = sides.without(combo)
             base = today.fixed.kcal + combo.kcal
             start, stop = bisect_left(side.kcal, lo - base), bisect_right(side.kcal, hi - base)
             if start >= stop:
@@ -419,7 +508,7 @@ class _Greedy:
         """The combination nearest the band [low, high] that still meets the floor."""
         best: tuple[int, int, _Combo, _Combo] | None = None
         for combo in left:
-            side = sides.without(combo.recipes)
+            side = sides.without(combo)
             base = today.fixed.kcal + combo.kcal
             enough = bisect_left(side.kcal, floor - base)  # first entry meeting the floor
             below = bisect_left(side.kcal, low - base) - 1  # last entry under the band
@@ -438,23 +527,71 @@ class _Greedy:
 
 class _Sides:
     """The second half, and copies without the recipes a first-half combination already uses
-    (built on demand: with lunch and dinner on one side they are rare)."""
+    (built on demand: with lunch and dinner on one side they are rare). Only shared items may
+    have the same recipe across the halves."""
 
     def __init__(self, combos: list[_Combo], protein_weight: int) -> None:
         self.combos = combos
         self.weight = protein_weight
         self.recipes = frozenset[int]().union(*(c.recipes for c in combos))
         self.full = _Side(combos, protein_weight)
-        self.cache: dict[frozenset[int], _Side] = {}
+        self.cache: dict[tuple[frozenset[int], frozenset[int]], _Side] = {}
 
-    def without(self, recipes: frozenset[int]) -> _Side:
-        clash = recipes & self.recipes
-        if not clash:
+    def without(self, first: _Combo) -> _Side:
+        key = (first.recipes & self.recipes, first.free & self.recipes)
+        if not key[0]:
             return self.full
-        if clash not in self.cache:
-            kept = [c for c in self.combos if not c.recipes & clash]
-            self.cache[clash] = _Side(kept, self.weight)
-        return self.cache[clash]
+        if key not in self.cache:
+            used, free = key
+            kept = [c for c in self.combos if not (c.recipes & free or c.free & used)]
+            self.cache[key] = _Side(kept, self.weight)
+        return self.cache[key]
+
+
+def _shortfall(
+    demand: Sequence[tuple[int, frozenset[int]]], room: Mapping[int, int]
+) -> frozenset[int] | None:
+    """Whether `demand` (cells needed, the recipes each may hold) fits in `room` (meals left per
+    recipe): None if it does, else the recipes reachable in the residual graph of a maximum
+    flow. Those are the neighbourhood of a set of cells that violates Hall's condition: every
+    such recipe is used up, and only a cell that could hold something else can free one.
+
+    Unit augmenting paths, breadth first from every cell kind still short: at most one search
+    per needed meal (a few dozen), each over a few hundred edges."""
+    pools = [sorted(pool) for _, pool in demand]
+    supplied = [0] * len(demand)
+    flow: dict[int, Counter[int]] = {}  # recipe -> units per kind
+    while True:
+        short = [k for k, (n, _) in enumerate(demand) if supplied[k] < n]
+        if not short:
+            return None
+        via: dict[int, int] = {}  # recipe -> the kind it was reached from
+        back: dict[int, int] = {}  # kind -> the recipe whose flow it gives up (path interior)
+        queue, seen, end = deque(short), set(short), None
+        while queue and end is None:
+            kind = queue.popleft()
+            for r in pools[kind]:
+                if r in via:
+                    continue
+                via[r] = kind
+                if sum(flow.get(r, Counter()).values()) < room.get(r, 0):
+                    end = r
+                    break
+                for other in flow.get(r, Counter()):
+                    if other not in seen and flow[r][other] > 0:
+                        seen.add(other)
+                        back[other] = r
+                        queue.append(other)
+        if end is None:
+            return frozenset(via)
+        kind = via[end]
+        flow.setdefault(end, Counter())[kind] += 1
+        while kind in back:
+            given = back[kind]
+            flow[given][kind] -= 1
+            kind = via[given]
+            flow[given][kind] += 1
+        supplied[kind] += 1
 
 
 def _split(options: Sequence[Sequence[_Item]]) -> tuple[list[int], list[int]]:
