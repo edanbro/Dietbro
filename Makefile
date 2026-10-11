@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed data bench llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed data bench bench-replan llm-smoke up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -37,6 +37,10 @@ data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report 
 PLANNER ?= auto
 bench: ## Planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
 	uv run larder-bench --planner $(PLANNER) --n 20 --out docs/solver-bench-$(PLANNER).md
+
+bench-replan: ## Replan latency p50/p95 and churn: scenarios + the executor on the seeded DB (M5)
+	uv run larder-bench --planner $(PLANNER) --kinds replan-scenarios,replan-api --n 40 \
+		--out docs/replan-bench-$(PLANNER).md
 
 llm-smoke: ## Real chat turns against Claude (needs ANTHROPIC_API_KEY and a seeded DB; costs cents)
 	uv run larder-llm-smoke

@@ -31,7 +31,14 @@ from larder_solver.problem import (
     Status,
     Targets,
 )
-from larder_solver.scenarios import infeasible, planted, realistic, replan, synthetic_catalog
+from larder_solver.scenarios import (
+    forced_churn,
+    infeasible,
+    planted,
+    realistic,
+    replan,
+    synthetic_catalog,
+)
 from larder_solver.validate import (
     SAFETY_CODES,
     STRUCTURAL_CODES,
@@ -516,6 +523,25 @@ def test_replan_hard_validity_rate() -> None:
     plans = ((s.problem, planned(greedy(s.problem))) for s in map(replan, SEEDS))
     valid = sum(not hard(validate(problem, plan)) for problem, plan in plans)
     assert valid >= 0.95 * len(SEEDS)
+
+
+def test_replans_stay_fast_and_use_the_previous_plan() -> None:
+    """The M5 gate at the planner: greedy replans of `scenarios.replan` at full size (k=40,
+    300 recipes) with the plan before the change as `previous`. Measured when written: p50
+    ~40 ms, p95 ~70 ms; churn 11.8 changed slots on average (2 forced) against 22.3 without
+    `previous`. The bounds are generous for shared CI machines."""
+    times: list[int] = []
+    churn: list[int] = []
+    blind: list[int] = []
+    for seed in range(20):
+        scenario = replan(seed, CATALOG)
+        result = greedy(scenario.problem, scenario.previous)
+        times.append(result.wall_ms)
+        churn.append(changed_slots(scenario.previous, planned(result)))
+        blind.append(changed_slots(scenario.previous, planned(greedy(scenario.problem))))
+        assert churn[-1] >= forced_churn(scenario)
+    assert sorted(times)[18] < 1_000  # p95 of 20
+    assert sum(churn) <= 0.75 * sum(blind)
 
 
 # --- independence --------------------------------------------------------------------------------
