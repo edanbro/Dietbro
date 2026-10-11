@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 larder-bench = "larder_api.bench:main"
+larder-llm-smoke = "larder_api.smoke:main"
 
 [tool.uv.sources]
 larder-core = { workspace = true }

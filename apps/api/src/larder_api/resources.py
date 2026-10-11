@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from larder_api.auth import JWKSCache, TokenVerifier
+from larder_api.chat.tasks import ChatTurns
 from larder_api.planning import CatalogCache
 from larder_api.settings import Settings, get_settings
 from larder_db.engine import make_engine, make_sessionmaker
@@ -67,9 +68,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Build the planning catalog in the background so the first plan doesn't pay for it.
     app.state.catalog = CatalogCache()
     warm = asyncio.create_task(_warm(app.state.catalog, app.state.sessionmaker))
+    # Chat turns run detached from their HTTP streams; shutdown lets running ones finish.
+    app.state.chat_turns = turns = ChatTurns(settings.chat_turn_deadline_s)
+    await turns.open()
     try:
         yield
     finally:
+        await turns.close()
         warm.cancel()
         await http.aclose()
         await resources.redis.aclose()

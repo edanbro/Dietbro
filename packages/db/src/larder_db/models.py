@@ -461,6 +461,8 @@ class ChatMessage(Base):
     role: Mapped[str] = mapped_column(String(16))  # user | assistant
     # The client's id for a user message (idempotent resend); NULL on assistant rows.
     client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # The user's local date when they sent it (user rows): a later message may not go back.
+    today: Mapped[date | None] = mapped_column(Date)
     text: Mapped[str] = mapped_column(Text)
     api_messages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     # Transcript segment: replay covers only rows of the thread's current epoch. A new epoch

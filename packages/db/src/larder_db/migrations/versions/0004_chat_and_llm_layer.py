@@ -53,6 +53,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("role", sa.String(length=16), nullable=False),
         sa.Column("client_id", sa.UUID(), nullable=True),
+        sa.Column("today", sa.Date(), nullable=True),
         sa.Column("text", sa.Text(), nullable=False),
         sa.Column("api_messages", postgresql.JSON(astext_type=sa.Text()), nullable=False),
         sa.Column("api_epoch", sa.Integer(), nullable=False),

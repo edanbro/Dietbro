@@ -1268,7 +1268,7 @@
           "chat"
         ],
         "summary": "Send Message",
-        "description": "Stream the reply as server-sent events (each `data:` is one ChatEvent as JSON).\n\nThe turn runs detached (larder_api.chat.tasks): this only relays its events, so a dropped\nconnection doesn't stop the turn; the client reloads GET /chat/thread (pending) instead of\nresending. Takes no request-scoped Session: the turn opens its own short sessions. The turn\nneeds the sessionmaker, catalog cache, planner, settings and clock as dependencies too\n(add them here when implementing; tests override them).",
+        "description": "Stream the reply as server-sent events (each `data:` is one ChatEvent as JSON).\n\nThe turn runs detached (larder_api.chat.tasks): this only relays its events, so a dropped\nconnection doesn't stop the turn; the client reloads GET /chat/thread (pending) instead of\nresending.",
         "operationId": "sendChatMessage",
         "requestBody": {
           "content": {

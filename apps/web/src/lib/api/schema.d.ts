@@ -444,9 +444,7 @@ export interface paths {
          *
          *     The turn runs detached (larder_api.chat.tasks): this only relays its events, so a dropped
          *     connection doesn't stop the turn; the client reloads GET /chat/thread (pending) instead of
-         *     resending. Takes no request-scoped Session: the turn opens its own short sessions. The turn
-         *     needs the sessionmaker, catalog cache, planner, settings and clock as dependencies too
-         *     (add them here when implementing; tests override them).
+         *     resending.
          */
         post: operations["sendChatMessage"];
         delete?: never;
