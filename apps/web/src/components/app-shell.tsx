@@ -2,12 +2,13 @@
 
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "cn";
-import { CalendarDaysIcon, RefrigeratorIcon, UserIcon } from "lucide-react";
+import { CalendarDaysIcon, MessageCircleIcon, RefrigeratorIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
+  { href: "/chat", label: "Chat", icon: MessageCircleIcon },
   { href: "/pantry", label: "Pantry", icon: RefrigeratorIcon },
   { href: "/profile", label: "Profile", icon: UserIcon },
 ];

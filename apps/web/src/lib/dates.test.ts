@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { addDays, dateRange, daysBetween, localISODate, longDate, parseISODate } from "./dates";
+import {
+  addDays,
+  dateRange,
+  daysBetween,
+  formatWhen,
+  localISODate,
+  localTime,
+  longDate,
+  parseISODate,
+} from "./dates";
 
 const originalTZ = process.env.TZ;
 afterEach(() => {
@@ -57,5 +66,20 @@ describe("labels", () => {
     expect(longDate("2026-10-15")).toBe("Thursday 15 October");
     expect(dateRange("2026-10-09", "2026-10-15")).toBe("Fri 9 Oct – Thu 15 Oct");
     expect(dateRange("2026-10-09", "2026-10-09")).toBe("Fri 9 Oct");
+  });
+});
+
+describe("chat times", () => {
+  it("sends the local wall-clock time", () => {
+    expect(localTime(new Date(2026, 9, 9, 7, 5, 3))).toBe("07:05:03");
+    process.env.TZ = "Pacific/Auckland";
+    expect(localTime(new Date("2026-10-09T22:30:00Z"))).toBe("11:30:00");
+  });
+
+  it("says when something comes back, relative to now", () => {
+    const now = new Date(2026, 9, 9, 10, 0);
+    expect(formatWhen(new Date(2026, 9, 9, 14, 5).toISOString(), now)).toBe("14:05");
+    expect(formatWhen(new Date(2026, 9, 10, 9, 12).toISOString(), now)).toBe("tomorrow at 09:12");
+    expect(formatWhen(new Date(2026, 10, 1, 0, 0).toISOString(), now)).toBe("Sun 1 Nov at 00:00");
   });
 });

@@ -174,7 +174,7 @@ export interface paths {
         };
         /**
          * List Cuisines
-         * @description Cuisines of the seeded recipes, for preference pickers.
+         * @description Cuisines of the shared catalogue (never of users' own recipes), for preference pickers.
          */
         get: operations["listCuisines"];
         put?: never;
@@ -376,7 +376,8 @@ export interface paths {
         /**
          * Get Recipe
          * @description A recipe with allergens and suitable diets derived the same way the planner derives them
-         *     (never TheMealDB's category, which isn't a diet claim).
+         *     (never TheMealDB's category, which isn't a diet claim). Signing in is optional: a generated
+         *     recipe is only found by its owner.
          */
         get: operations["getRecipe"];
         put?: never;
@@ -2313,7 +2314,7 @@ export interface operations {
                     "application/json": components["schemas"]["RecipeDetail"];
                 };
             };
-            /** @description no such recipe */
+            /** @description no such recipe (or another user's) */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => import("@/test/navigation"));
 beforeEach(() => resetNavigation("/"));
 
 describe("AppShell", () => {
-  it("puts Plan first in the bottom nav and the logo opens the plan", () => {
+  it("puts Plan first and Chat next in the bottom nav, and the logo opens the plan", () => {
     render(<AppShell>content</AppShell>);
 
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -21,6 +21,7 @@ describe("AppShell", () => {
         .map((a) => [a.textContent, a.getAttribute("href")]),
     ).toEqual([
       ["Plan", "/plan"],
+      ["Chat", "/chat"],
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
     ]);
@@ -30,6 +31,7 @@ describe("AppShell", () => {
   it.each([
     ["/plan", "Plan"],
     ["/plan/shopping", "Plan"],
+    ["/chat", "Chat"],
     ["/pantry", "Pantry"],
     ["/profile", "Profile"],
   ])("marks %s as %s", (path, label) => {

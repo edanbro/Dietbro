@@ -359,3 +359,91 @@ describe("New plan", () => {
     expect(screen.getByRole("button", { name: "Replace plan" })).toBeEnabled();
   });
 });
+
+describe("food logged in the chat", () => {
+  function planWithLogs() {
+    const plan = makePlan();
+    const fri = plan.days[0];
+    // Lunch was pizza (off-plan), dinner skipped for a meal out; dinner is pinned on Saturday.
+    fri.meals = fri.meals.filter((m) => m.slot === "breakfast");
+    fri.logged = [
+      {
+        date: "2026-10-09",
+        slot: "lunch",
+        kind: "off_plan",
+        description: "pizza",
+        kcal: 850,
+        estimated: true,
+      },
+      {
+        date: "2026-10-09",
+        slot: "dinner",
+        kind: "skipped",
+        description: "eating out",
+        kcal: 650,
+        estimated: true,
+      },
+      {
+        date: "2026-10-09",
+        slot: null,
+        kind: "off_plan",
+        description: "latte",
+        kcal: 120,
+        estimated: false,
+      },
+    ];
+    plan.days[1].meals[2] = { ...meal("dinner", 900, "Chilli con carne"), locked: true };
+    plan.days[2].logged = [
+      { date: "2026-10-11", slot: "dinner", kind: "skipped", description: "", kcal: 0, estimated: true },
+    ];
+    plan.days[2].meals = plan.days[2].meals.filter((m) => m.slot !== "dinner");
+    return plan;
+  }
+
+  it("shows logged food in place of the meal and says the totals include it", async () => {
+    setup({ "GET /plans/current": json(planWithLogs()) });
+
+    const day = await screen.findByRole("list", { name: "Meals on Friday 9 October" });
+    expect(
+      within(day)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([
+      expect.stringContaining("Breakfast 1"),
+      "LunchPizza (off-plan, ~850 kcal est.)",
+      "DinnerSkipped – eating out (~650 kcal counted)",
+      "LoggedLatte (off-plan, 120 kcal)",
+    ]);
+    // Logged food isn't a recipe: only the planned breakfast links anywhere.
+    expect(within(day).getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByText("Totals include ~1,620 kcal of logged food (estimated).")).toBeVisible();
+  });
+
+  it("marks pinned meals and plain skips", async () => {
+    setup({ "GET /plans/current": json(planWithLogs()) });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Sat 10 October" }));
+    const pinned = await screen.findByRole("link", { name: /Chilli con carne/ });
+    expect(pinned).toHaveTextContent("DinnerPinned");
+    expect(screen.queryByText(/of logged food/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Sun 11 October" }));
+    const sunday = await screen.findByRole("list", { name: "Meals on Sunday 11 October" });
+    expect(within(sunday).getAllByRole("listitem").at(-1)).toHaveTextContent("DinnerSkipped");
+    expect(within(sunday).getByText("Breakfast 3").closest("a")).not.toHaveTextContent("Pinned");
+  });
+
+  it("shows logged food in the week grid", async () => {
+    resetNavigation("/plan?view=week");
+    setup({ "GET /plans/current": json(planWithLogs()) });
+
+    const grid = await screen.findByRole("table", { name: "Meals this week" });
+    const friday = within(grid).getAllByRole("row")[1];
+    const cells = within(friday).getAllByRole("cell");
+    expect(cells.map((c) => c.textContent)).toEqual([
+      "Breakfast 1",
+      "Pizza (off-plan)",
+      "Skipped",
+    ]);
+  });
+});
