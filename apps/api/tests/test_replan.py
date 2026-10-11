@@ -17,7 +17,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from larder_api import planning
+from larder_api import eaten, planning
 from larder_api.chat.replan import apply_changes
 from larder_api.chat.scope import ChatScope, Models
 from larder_api.settings import Settings
@@ -812,6 +812,36 @@ async def test_a_plan_changed_meanwhile_is_rebuilt_once(
     v3 = await world.plan()
     assert (v3.version, v3.parent_id) == (3, interfered[0])
     assert world.runs == [2]
+
+
+async def test_a_meal_marked_eaten_meanwhile_is_rebuilt_once(world: World) -> None:
+    """Marking a meal eaten makes no version, so the plan id alone can't tell: the active logs
+    are compared under the lock too, and the replan is rebuilt around the mark."""
+    marked: list[int] = []
+
+    async def mark_lunch() -> None:
+        async with world.maker() as session:
+            await eaten.mark(
+                session, world.user_id, world.v1, TODAY, L, datetime(2026, 10, 14, 12, tzinfo=UTC)
+            )
+
+    def interfering(problem: Problem, previous: Plan | None) -> PlanResult:
+        if not marked:
+            anyio.from_thread.run(mark_lunch)
+            marked.append(1)
+        return greedy(problem, previous)
+
+    out = await world.say(craving(FRI, D, "lasagne"), planner=interfering)
+
+    assert out.results[0].status == "applied"
+    assert world.runs == [2]
+    v1, v2 = await world.plan(world.v1), await world.plan()
+    before, after = meal(v1, TODAY, L), meal(v2, TODAY, L)
+    assert before is not None
+    assert after is not None
+    assert (after.recipe_id, after.status) == (before.recipe_id, "eaten")
+    assert total(v2, TODAY) == meals_kcal(v2, TODAY)
+    assert logged(v2, TODAY) == []
 
 
 async def test_a_plan_that_keeps_changing_fails_the_wishes_but_logs_the_facts(

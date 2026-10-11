@@ -41,11 +41,12 @@ class SlotChange(BaseModel):
 
 
 class Logged(BaseModel):
-    """Food recorded as eaten off-plan, or a skipped meal (counted as eaten elsewhere or not)."""
+    """Food recorded as eaten off-plan, a skipped meal (counted as eaten elsewhere or not), or a
+    planned meal marked eaten from the plan screen."""
 
     date: date
     slot: Slot | None
-    kind: Literal["off_plan", "skipped"]
+    kind: Literal["off_plan", "skipped", "eaten"]
     description: str
     kcal: int
     estimated: bool = True  # always an estimate unless every item matched with an exact amount

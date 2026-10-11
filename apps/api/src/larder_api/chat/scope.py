@@ -1,7 +1,9 @@
 """What one chat turn's tools are bound to: the signed-in user, the database, the planner and
 the models. Tool handlers receive this, never a user id from the model. It carries plain values
-(no ORM rows), so any step can open its own short session."""
+(no ORM rows), so any step can open its own short session. A replan from the plan screen
+(POST /plans/replan) runs the executor in a scope without a thread, message or models."""
 
+import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
@@ -40,8 +42,8 @@ class ChatScope:
     today: date  # the user's local date for this turn
     local_time: time | None
     now: datetime  # UTC, from the clock seam
-    thread_id: int
-    message_id: int  # the user's chat message this turn answers
+    thread_id: int | None  # None: a plan-screen replan
+    message_id: int | None  # the user's chat message this turn answers (None: plan screen)
     raw_text: str  # the user's words (stored with each change request)
     sessionmaker: async_sessionmaker[AsyncSession]
     catalog: planning.CatalogCache
@@ -50,6 +52,7 @@ class ChatScope:
     models: Models
     emit: Emit  # stream an event to the client (no-op once it has gone)
     log_call: Callable[[ModelCall], Awaitable[None]]  # writes llm_calls now, own transaction
+    client_id: uuid.UUID | None = None  # a plan-screen request's id (idempotency)
     # Collected during the turn:
     outcomes: list[ReplanOutcome] = field(default_factory=list[ReplanOutcome])
     created_recipes: list[tuple[int, str]] = field(default_factory=list[tuple[int, str]])

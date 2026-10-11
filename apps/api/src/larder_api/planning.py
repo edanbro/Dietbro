@@ -17,6 +17,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from hashlib import blake2b
+from typing import Literal
 
 import anyio
 from pydantic import BaseModel, Field
@@ -29,7 +30,9 @@ from larder_api.schemas import (
     BandOut,
     MacrosOut,
     MealLogOut,
+    MealOut,
     NutrientBands,
+    RecipeCard,
     TargetsOut,
     ViolationOut,
 )
@@ -629,14 +632,19 @@ def with_logs(
     return constrain(problem, inputs, pool, choices={}, empty=empty, extra=extra)
 
 
+def log_kind(log: db.MealLog) -> Literal["off_plan", "skipped", "eaten"]:
+    return "eaten" if log.kind == "eaten" else "off_plan" if log.kind == "off_plan" else "skipped"
+
+
 def logged_out(log: db.MealLog) -> MealLogOut:
     return MealLogOut(
         date=log.eaten_on,
         slot=Slot(log.slot) if log.slot else None,
-        kind="off_plan" if log.kind == "off_plan" else "skipped",
+        kind=log_kind(log),
         description=log.description,
         kcal=log.kcal,
         estimated=log.estimated,
+        recipe_id=log.recipe_id,
     )
 
 
@@ -992,6 +1000,22 @@ def save_plan(
         )
     session.add(row)
     return row
+
+
+def meal_out(m: db.PlanMeal) -> MealOut:
+    """A saved meal for the client (its `recipe` must be loaded)."""
+    r = m.recipe
+    return MealOut(
+        slot=Slot(m.slot),
+        recipe=RecipeCard(
+            id=r.id, name=r.name, category=r.category, cuisine=r.cuisine, image_url=r.image_url
+        ),
+        portions=m.portions,
+        servings=m.portions / 2,
+        nutrition=MacrosOut(kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g),
+        locked=m.locked,
+        status="eaten" if m.status == "eaten" else "planned",
+    )
 
 
 def plan_dates(start: date, days: int) -> list[date]:
