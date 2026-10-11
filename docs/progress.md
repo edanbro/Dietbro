@@ -228,4 +228,3 @@ README section 7 (warm start). Migration 0005.
 **Known gaps**: `solve()` and its warm start (replan time limit to lower then); a craving bonus
 in the objective; swaps from the plan screen are "anything else" (no dish or tag picker yet);
 the replan e2e hasn't run against a live Clerk instance from this branch yet.
-
