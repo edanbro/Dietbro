@@ -62,7 +62,10 @@ export function loggedText(entry: Logged, today: string): string {
   return `${capitalize(entry.description)} – ${when}, ${amount}`;
 }
 
-const RESULT: Record<Result["status"], { label: string; icon: typeof CheckIcon; tone: string }> = {
+export const RESULT: Record<
+  Result["status"],
+  { label: string; icon: typeof CheckIcon; tone: string }
+> = {
   applied: { label: "Done", icon: CheckIcon, tone: "text-foreground" },
   unchanged: { label: "Already done", icon: MinusIcon, tone: "text-muted-foreground" },
   failed: { label: "Not done", icon: XIcon, tone: "text-destructive" },

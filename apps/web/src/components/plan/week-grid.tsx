@@ -1,3 +1,4 @@
+import { CircleCheckIcon } from "lucide-react";
 import Link from "next/link";
 
 import type { PlanDay, Slot } from "@/lib/api/hooks";
@@ -68,7 +69,19 @@ export function WeekGrid({
                       className="line-clamp-3 leading-snug hover:underline"
                       title={`${meal.recipe.name}, ${servingsLabel(meal.portions)}`}
                     >
+                      {meal.status === "eaten" ? (
+                        <CircleCheckIcon
+                          aria-hidden
+                          className="mr-0.5 inline size-3 align-[-0.1em] text-emerald-700 dark:text-emerald-400"
+                        />
+                      ) : null}
                       {meal.recipe.name}
+                      {meal.status === "eaten" ? (
+                        <>
+                          {" "}
+                          <span className="sr-only">(eaten)</span>
+                        </>
+                      ) : null}
                     </Link>
                   ) : logged ? (
                     <span className="line-clamp-3 leading-snug text-muted-foreground italic">
