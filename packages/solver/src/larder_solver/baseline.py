@@ -6,14 +6,15 @@ against. It plans one day at a time, in order, and never goes back:
 1. Locked meals and food eaten off-plan are fixed. A locked meal that breaks a hard filter means
    no plan (locks never skip the filters). So does a chosen cell (`Problem.choices`) none of
    whose recipes passes the hard filters and fits the slot.
-2. Options per open slot: the top 8 candidates (4 for an optional slot, which may also stay
-   empty) that pass the hard filters (`candidates.allowed`), fit the slot and are still under
-   their repeat cap, ranked by preference, then protein per kcal, then id; plus the previous
-   plan's recipe for that slot when it qualifies. A chosen cell draws on its choice instead of
-   the slot's candidates, the same way (top 8 of those that pass and fit), and is never empty,
-   even in an optional slot. Each comes in every allowed portion count. A recipe appears at
-   most once a day, except in several chosen cells (leftovers) while its repeat cap has room
-   for all of them.
+2. Options per open slot: the top 8 candidates (4 for an optional slot, which may also stay empty)
+   that pass the hard filters (`candidates.allowed`), fit the slot and are still under their repeat
+   cap, ranked by preference, then protein per kcal, then id; plus the previous plan's recipe for
+   that slot when it qualifies, and on a day with a `Problem.day_kcal` band the lightest and the
+   heaviest that qualify (that band is clipped to what they reach). A chosen cell draws on its
+   choice instead of the slot's candidates, the same way (top 8 of those that pass and fit), and is
+   never empty, even in an optional slot. Each comes in every allowed portion count. A recipe
+   appears at most once a day, except in several chosen cells (leftovers) while its repeat cap has
+   room for all of them.
 3. Day score, in `Weights` units: preference; minus the shopping cost at full price (the pantry
    is left to the shopping list); minus a repeat for a recipe already planned; minus a snack;
    plus a kept slot when replanning (churn); plus half the macro weight per gram of protein, up
@@ -420,11 +421,20 @@ class _Greedy:
         choice = self.chosen.get((day, spec.slot))
         required = spec.required or choice is not None
         limit = TOP if required else TOP_OPTIONAL
+        eligible = [
+            r
+            for r in (self.pool[spec.slot] if choice is None else choice)
+            if (spec.slot, r.id) not in excluded and self.uses[r.id] < self.caps[r.id]
+        ]
+        # A day with its own kcal band (a replan) may need the lightest or heaviest meal to
+        # land in it: that band is clipped to what they reach, which the top few may not.
+        edges: set[int] = set()
+        if day in self.p.day_kcal and eligible:
+            kcal = [r.per_portion.kcal for r in eligible]
+            edges = {eligible[kcal.index(min(kcal))].id, eligible[kcal.index(max(kcal))].id}
         picked: list[Recipe] = []
-        for r in self.pool[spec.slot] if choice is None else choice:
-            if (spec.slot, r.id) in excluded or self.uses[r.id] >= self.caps[r.id]:
-                continue
-            if len(picked) < limit or r.id == before:
+        for r in eligible:
+            if len(picked) < limit or r.id == before or r.id in edges:
                 picked.append(r)
         lo, hi = self.p.portion_range(spec.slot)
         items: list[_Item] = []

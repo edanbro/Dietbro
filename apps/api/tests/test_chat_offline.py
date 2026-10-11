@@ -114,3 +114,22 @@ async def test_the_simple_mode_note_comes_once(
 
     assert "Simple mode" in first[-1]["message"]["text"]
     assert "Simple mode" not in second[-1]["message"]["text"]
+
+
+async def test_off_plan_after_a_skip_still_replans_the_day(
+    api: httpx.AsyncClient, chat: ChatEnv, user: int, db_engine: AsyncEngine
+) -> None:
+    # The e2e flow: dinner skipped, then lunch eaten out after breakfast is over - only the
+    # snack is left open that day, and the day is re-planned around it.
+    _, first = await chat.send(api, "skip dinner tonight", local_time="13:30")
+    _, second = await chat.send(api, "had 2 slices of pizza for lunch", local_time="13:30")
+
+    outcomes = [next(e for e in events if e["type"] == "outcome") for events in (first, second)]
+    assert [o["version"] for o in outcomes] == [2, 3]
+    assert [r["status"] for o in outcomes for r in o["results"]] == ["applied", "applied"]
+    assert await versions(db_engine) == 3
+    logs = await rows(db_engine, db.MealLog)
+    assert [(log.kind, log.slot, log.plan_id) for log in logs] == [
+        ("skipped", "dinner", outcomes[0]["plan_id"]),
+        ("off_plan", "lunch", outcomes[1]["plan_id"]),
+    ]

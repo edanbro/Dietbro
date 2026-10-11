@@ -214,6 +214,7 @@ async def test_grams_from_quantities_and_portions(
     assert await foods.grams_for(scope, PIZZA, "300 g") == (300.0, False)
     assert await foods.grams_for(scope, PIZZA, None) == (63.0, True)  # one typical portion
     assert await foods.grams_for(scope, MUSHROOM, None) == (100.0, True)  # no portions known
+    assert await foods.grams_for(scope, MUSHROOM, "2 slices") == (50.0, True)  # a generic slice
 
 
 async def test_off_plan_estimate_falls_back_to_a_typical_meal(

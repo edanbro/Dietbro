@@ -472,6 +472,27 @@ def test_a_day_band_below_the_floor() -> None:
     assert day_totals(p, plan)[1].kcal == 200
 
 
+def test_a_day_band_reachable_only_with_a_low_ranked_meal() -> None:
+    # Tuesday: breakfast eaten, lunch off-plan, dinner skipped; only the snack is open. Five
+    # liked 100 kcal snacks rank above a disliked 400 kcal one, and the day's band (clipped
+    # to what the open cells reach, as a replan sets it) needs that one at two portions.
+    p = small_world(days=3)
+    snacks = [rec(201 + i, frozenset({S}), 100, preference=2) for i in range(5)]
+    snacks.append(rec(206, frozenset({S}), 400, preference=-2))
+    p = replace(
+        p,
+        slots=(*p.slots, SlotSpec(S, False, tuple(r.id for r in snacks), 1, 2)),
+        recipes={**p.recipes, **{r.id: r for r in snacks}},
+        locked={(1, B): None, (1, L): None, (1, D): None},
+        extra={1: Macros(300, 10, 10, 40)},
+        day_kcal={1: Band(300 + 800, 2500)},
+    )
+    plan = planned(greedy(p))
+    assert hard(validate(p, plan)) == []
+    assert plan.at(1, S) == Meal(1, S, 206, 2)
+    assert day_totals(p, plan)[1].kcal == 1100
+
+
 def day_minimum(problem: Problem, day: int) -> int:
     band = problem.day_kcal.get(day)
     if band is None:

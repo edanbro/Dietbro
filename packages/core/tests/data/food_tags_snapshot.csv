@@ -359,6 +359,7 @@ fdc_id,description,category,allergens,animal
 173180,"Beverages, Protein powder whey based",Beverages,milk,dairy
 173181,"Beverages, Protein powder soy based",Beverages,soy,-
 173190,"Alcoholic beverage, wine, table, red",Beverages,sulphites,-
+173292,"Fast Food, Pizza Chain, 14"" pizza, cheese topping, regular crust",Fast Foods,gluten|milk,dairy
 173410,"Butter, salted",Dairy and Egg Products,milk,dairy
 173416,"Cheese, colby",Dairy and Egg Products,milk,dairy
 173417,"Cheese, cottage, lowfat, 1% milkfat",Dairy and Egg Products,milk,dairy

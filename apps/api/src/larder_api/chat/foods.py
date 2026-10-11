@@ -9,7 +9,7 @@ resolver reuses for the shared catalogue (and which has no user to export or del
 
 grams_for(food, quantity): larder_core.units / quantities with the food's USDA portions
 ("2 slices", "300 g", "1 large"); no quantity -> one typical portion (the food's first portion,
-else 100 g), flagged as estimated.
+else 100 g), flagged as estimated, as is a count the food's portions don't weigh.
 """
 
 import logging
@@ -25,7 +25,7 @@ from larder_core.aliases import load_aliases
 from larder_core.names import normalise_name, singular
 from larder_core.quantities import Portion
 from larder_core.quantities import grams_for as portion_grams
-from larder_core.units import parse_measure
+from larder_core.units import Dimension, parse_measure
 from larder_db import models as db
 from larder_llm.client import LLMUnavailable
 
@@ -154,12 +154,18 @@ async def food_portions(scope: ChatScope, food_id: int) -> tuple[db.Food | None,
 
 
 async def grams_for(scope: ChatScope, food_id: int, quantity: str | None) -> tuple[float, bool]:
-    """(grams, estimated)."""
+    """(grams, estimated). A count the food's own portions don't weigh ("2 slices" of a food
+    USDA gives no slice for) takes a generic weight, so it is estimated too."""
     food, portions = await food_portions(scope, food_id)
     if quantity and quantity.strip() and food is not None:
         measure = parse_measure(quantity)
         grams = portion_grams(measure, portions, food.description.lower(), food.category)
         if grams is not None and grams > 0:
-            return grams, measure.vague
+            generic = (
+                measure.dimension is Dimension.COUNT
+                and measure.unit is not None
+                and all(p.unit != measure.unit for p in portions)
+            )
+            return grams, measure.vague or generic
     first = next((p for p in portions if p.grams > 0), None)
     return (first.grams if first else TYPICAL_G), True
