@@ -1,7 +1,15 @@
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 import httpx
 import pytest
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from larder_api.clock import get_clock
+from larder_api.main import app
+from larder_db.engine import make_sessionmaker
+from larder_db.models import PantryItem
 
 Auth = Callable[..., dict[str, str]]
 
@@ -98,3 +106,38 @@ async def test_food_units(api: httpx.AsyncClient, auth: Auth) -> None:
 
 async def test_food_search_needs_auth(api: httpx.AsyncClient) -> None:
     assert (await api.get("/foods/search", params={"q": "onion"})).status_code == 401
+
+
+async def test_expiring_lists_items_due_within_days_soonest_first(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    for quantity, expires in [(1, "2026-10-09"), (2, "2026-10-12"), (3, "2026-10-14"), (4, None)]:
+        await add(api, auth, quantity=quantity, expires_on=expires)
+    await add(api, auth, quantity=5, expires_on="2026-10-15")
+    await add(api, auth, user="user_b", expires_on="2026-10-12")
+    eaten = (await add(api, auth, quantity=6, expires_on="2026-10-12")).json()
+    async with make_sessionmaker(db_engine)() as session:  # used up by eaten meals
+        await session.execute(
+            update(PantryItem).where(PantryItem.id == eaten["id"]).values(grams=0)
+        )
+        await session.commit()
+
+    soon = (await api.get("/pantry/expiring?today=2026-10-12", headers=auth())).json()
+    week = (await api.get("/pantry/expiring?today=2026-10-12&days=7", headers=auth())).json()
+
+    assert (soon["today"], soon["days"], soon["expired"]) == ("2026-10-12", 3, 1)
+    assert [(i["quantity"], i["days_left"]) for i in soon["items"]] == [(1, -3), (2, 0), (3, 2)]
+    assert [i["quantity"] for i in week["items"]] == [1, 2, 3, 5]
+
+
+async def test_me_counts_expiring_items(api: httpx.AsyncClient, auth: Auth) -> None:
+    app.dependency_overrides[get_clock] = lambda: lambda: datetime(2026, 10, 12, 9, tzinfo=UTC)
+    try:
+        await add(api, auth, expires_on="2026-10-13")
+        await add(api, auth, expires_on="2026-10-30")
+        me = (await api.get("/me", headers=auth())).json()
+    finally:
+        app.dependency_overrides.pop(get_clock, None)
+
+    assert me["profile"]["expiring_soon"] == 1
+    assert me["profile"]["pantry_items"] == 2

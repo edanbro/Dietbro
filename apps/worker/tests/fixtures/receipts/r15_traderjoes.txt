@@ -1,0 +1,16 @@
+TRADER JOE'S
+Store #000
+ORGANIC BANANA                    0.29
+ORGANIC BANANA                    0.29
+ORGANIC BANANA                    0.29
+EGGS FREE RANGE BROWN 1 DOZ       3.79
+GREEK NONFAT YOGURT PLAIN 32OZ    4.99
+CHICKEN BREAST BONELESS 1.6 LB   10.38
+ATLANTIC SALMON FILLET 1 LB      11.99
+BROCCOLI FLORETS 12 OZ            2.49
+BABY SPINACH 6 OZ                 1.99
+ROLLED OATS 32 OZ                 3.49
+SUBTOTAL                         39.43
+TOTAL                            39.43
+VISA                             39.43
+ITEMS IN TRANSACTION 10

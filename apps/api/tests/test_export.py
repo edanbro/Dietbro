@@ -37,6 +37,7 @@ EXPORTED: dict[str, Rows] = {
     "meal_logs": lambda e: e["meal_logs"],
     "llm_calls": lambda e: e["llm_calls"],
     "recipes": lambda e: e["recipes"],
+    "receipt_uploads": lambda e: e["receipts"],
 }
 
 
@@ -159,7 +160,30 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         latency_ms=50,
         status="ok",
     )
-    session.add_all([log, call])
+    upload = db.ReceiptUpload(
+        user_id=uid,
+        source="image",
+        status="ready",
+        purchased_on=date(2026, 10, 12),
+        text="ONIONS 1KG 0.95",
+        image_type="image/jpeg",
+        image_bytes=1234,
+        lines=[
+            db.ReceiptLine(
+                position=0,
+                raw_text="ONIONS 1KG 0.95",
+                name="onion",
+                food_id=ONION,
+                match_method="alias",
+                quantity=1,
+                unit="kg",
+                grams=1000,
+                approx=False,
+                status="suggested",
+            )
+        ],
+    )
+    session.add_all([log, call, upload])
     await session.flush()
     return {
         "goals": uid,
@@ -174,6 +198,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "meal_logs": log.id,
         "llm_calls": call.id,
         "recipes": recipe.id,
+        "receipt_uploads": upload.id,
     }
 
 
@@ -209,6 +234,8 @@ async def test_export_covers_every_table_and_delete_removes_only_that_user(
     ]
     assert export["recipes"][0]["ingredients"][0]["raw_name"] == "onion"
     assert export["plans"][0]["meals"][0]["recipe_id"] == mine["recipes"]
+    assert export["receipts"][0]["lines"][0]["raw_text"] == "ONIONS 1KG 0.95"
+    assert "image" not in export["receipts"][0]
 
     assert (await api.delete("/me", headers=auth("user_a"))).status_code == 204
 
@@ -216,3 +243,5 @@ async def test_export_covers_every_table_and_delete_removes_only_that_user(
         for name, table in USER_TABLES.items():
             assert await owned(session, table, a) == 0, name
             assert await owned(session, table, b) == 1, name
+        lines = await session.scalar(select(func.count()).select_from(db.ReceiptLine))
+        assert lines == 1  # user B's; user A's went with their upload

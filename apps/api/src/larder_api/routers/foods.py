@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
+from larder_api.foodmatch import NOT_GROCERIES
 from larder_api.schemas import FoodDetail, FoodSummary, FoodUnit
 from larder_core.aliases import load_aliases
 from larder_core.names import normalise_name
@@ -16,14 +17,6 @@ from larder_db.models import Food, FoodPortion
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
-# Not things you'd keep in a pantry.
-_EXCLUDED_CATEGORIES = [
-    "Baby Foods",
-    "Fast Foods",
-    "Restaurant Foods",
-    "Meals, Entrees, and Side Dishes",
-    "American Indian/Alaska Native Foods",
-]
 _SEARCH_SQL = text(
     """
     SELECT id, description, category, kcal
@@ -61,7 +54,7 @@ async def search(
             if (f := by_id.get(fid)) is not None:
                 ordered.setdefault(fid, summary(f))
     rows = await session.execute(
-        _SEARCH_SQL, {"q": q.strip(), "excluded": _EXCLUDED_CATEGORIES, "limit": limit}
+        _SEARCH_SQL, {"q": q.strip(), "excluded": list(NOT_GROCERIES), "limit": limit}
     )
     for fid, description, category, kcal in rows:
         ordered.setdefault(

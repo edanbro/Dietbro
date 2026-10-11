@@ -1,0 +1,19 @@
+ALDI STORES
+VAT NO GB 000 1111 22
+GBP
+  812345 Skimmed Milk 4 Pints      1.15 A
+  801234 Chicken Thighs 1kg        2.89 A
+  805432 Broccoli                  0.49 A
+  803210 Baby Spinach 240g         1.09 A
+  809876 Salmon Fillets 2x120g     3.49 A
+  804567 Plum Tomatoes 400g        1.10 A
+  2 x 0.55
+  806543 Wholemeal Bread 800g      0.75 A
+  807654 Natural Yogurt 500g       0.79 A
+  808765 Peanut Butter Smooth 340g 1.29 A
+------------------------------------------
+Total                             13.04
+Card                              13.04
+Contactless
+Change                             0.00
+AUTH CODE 123456

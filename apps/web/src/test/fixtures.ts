@@ -23,6 +23,7 @@ export const ME: Me = {
     has_allergies: true,
     has_preferences: true,
     pantry_items: 2,
+    expiring_soon: 0,
   },
   setup_complete: true,
 };

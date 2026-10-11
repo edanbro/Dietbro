@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed data bench bench-replan llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed data bench bench-replan receipt-eval worker llm-smoke up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -41,6 +41,12 @@ bench: ## Planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
 bench-replan: ## Replan latency p50/p95 and churn: scenarios + the executor on the seeded DB (M5)
 	uv run larder-bench --planner $(PLANNER) --kinds replan-scenarios,replan-api --n 40 \
 		--out docs/replan-bench-$(PLANNER).md
+
+receipt-eval: ## Receipt line-item accuracy, pasted text and photos (OCR), on the seeded DB (M6)
+	uv run larder-receipt-eval --out docs/receipt-accuracy.md
+
+worker: ## Run the background worker locally (receipts; needs Redis and Postgres)
+	uv run arq larder_worker.main.WorkerSettings
 
 llm-smoke: ## Real chat turns against Claude (needs ANTHROPIC_API_KEY and a seeded DB; costs cents)
 	uv run larder-llm-smoke

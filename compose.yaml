@@ -34,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      target: api
     image: larder-api
     command: ["alembic", "-c", "/app/alembic.ini", "upgrade", "head"]
     environment:
@@ -46,6 +47,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      target: api
     image: larder-api
     environment:
       DATABASE_URL: *database_url
@@ -56,6 +58,22 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # Background jobs (arq on redis): reads receipt photos (OCR) and pasted receipts.
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: worker
+    image: larder-worker
+    environment:
+      DATABASE_URL: *database_url
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       migrate:
         condition: service_completed_successfully

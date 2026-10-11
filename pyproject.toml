@@ -6,10 +6,15 @@ requires-python = ">=3.12"
 
 [tool.uv]
 package = false
+# arq 0.28 caps redis-py below 6; the API is on redis-py 8, which arq's calls work with
+# (enqueue, job polling and the worker loop are exercised by the receipt tests and the compose
+# smoke test). Remove when arq widens its range.
+override-dependencies = ["redis>=8.1"]
 
 [tool.uv.workspace]
 members = [
     "apps/api",
+    "apps/worker",
     "packages/core",
     "packages/db",
     "packages/data",
@@ -19,6 +24,7 @@ members = [
 
 [tool.uv.sources]
 larder-api = { workspace = true }
+larder-worker = { workspace = true }
 larder-core = { workspace = true }
 larder-data = { workspace = true }
 larder-db = { workspace = true }
@@ -33,6 +39,7 @@ dev = [
     "larder-db",
     "larder-llm",
     "larder-solver",
+    "larder-worker",
     "hypothesis>=6.168",
     "httpx>=0.28",
     "pre-commit>=4.6",
@@ -72,10 +79,11 @@ known-first-party = [
     "larder_db",
     "larder_llm",
     "larder_solver",
+    "larder_worker",
 ]
 
 [tool.pyright]
-include = ["apps/api", "packages"]
+include = ["apps/api", "apps/worker", "packages"]
 exclude = ["**/.venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
@@ -85,6 +93,7 @@ venv = ".venv"
 [tool.pytest.ini_options]
 testpaths = [
     "apps/api/tests",
+    "apps/worker/tests",
     "packages/core/tests",
     "packages/db/tests",
     "packages/data/tests",

@@ -1,0 +1,13 @@
+ALDI
+VAT NO GB 000 1111 22
+  700112 British Semi Skimmed Milk 2 Pints   1.05 A
+  700113 Free Range Eggs 12               2.89 A
+  700114 Beef Steak Mince 5% 500g         3.29 A
+  700115 Carrots 1kg                      0.39 A
+  700116 Brown Onions 1kg                 0.79 A
+  700117 Garlic 4 Pack                    0.79 A
+  700118 Basmati Rice 1kg                 1.79 A
+  700119 Cheddar Mature 350g              2.39 A
+  700120 Butter Salted 250g               1.99 A
+Total                                 15.37
+Card                                  15.37

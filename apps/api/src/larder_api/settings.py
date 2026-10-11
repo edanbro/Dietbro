@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     chat_epoch_max_tokens: int = 12_000
     replan_time_limit_ms: int = 1_500  # per planner run in a replan (at most 3 runs)
 
+    # Pantry intake (docs/adr/0016-receipt-intake.md). The API stores the upload and enqueues
+    # it on Redis (arq); the worker reads it (OCR for photos) and writes the lines.
+    receipt_daily_uploads: int = 20  # per user per rolling 24 h, photos and text (HTTP 429)
+    receipt_max_image_bytes: int = 8_000_000  # JPEG, PNG or WebP (HTTP 413 above)
+    receipt_job_timeout_s: int = 120
+    receipt_stale_after_min: int = 15  # queued/processing longer than this is marked failed
+    ocr_max_side_px: int = 2_000  # photos are scaled down to this before OCR
+
     @property
     def llm_enabled(self) -> bool:
         return self.llm_mode == "auto" and self.anthropic_api_key is not None

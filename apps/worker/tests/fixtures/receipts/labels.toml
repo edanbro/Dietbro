@@ -1,0 +1,432 @@
+# Labelled receipt set for the M6 accuracy eval (larder_worker.evaluate, docs/receipt-accuracy.md).
+#
+# Each receipt lists the item lines a person would add to their pantry. `key` is a piece of
+# the printed line that identifies it; `food` names a set of acceptable USDA foods below (the
+# same food in any reasonable USDA form, judged by hand, not by what the matcher returns);
+# `grams` is the real amount bought where the receipt says it (pack size, weight, or a count of
+# things with a typical weight; `tol` widens the default 15% for counts). Items without
+# `grams` have no size on the receipt and are not scored for quantity. `optional` items (not
+# food you'd keep in a pantry) are neither required nor counted as false positives.
+# Anything else the parser reports is a false positive (headers, totals, savings, bags...).
+#
+# Receipts are written in the formats of real UK and US supermarket receipts; store details are
+# made up. r21-r25 were written after the parser and vocabulary were tuned (holdout).
+
+[foods]
+milk_whole = [171265, 172217, 746782, 322892]
+milk_semi = [171267, 172205, 170872]           # UK semi-skimmed ~1.7%: US 2% or 1%
+milk_2pc = [171267, 172205]
+milk_skim = [171269, 173432]
+egg = [171287]
+chicken_breast = [171077, 171474, 171509]
+chicken_thigh = [173627, 172385]
+banana = [173944]
+broccoli = [170379, 321900, 747447]
+tomato_tin = [170051, 170138]
+tomato_fresh = [170457, 321360]
+tomato_any = [170051, 170138, 170457]
+bread_wholemeal = [172688, 172690]
+bread_white = [167532, 325871, 174924]
+bread_sourdough = [172675]
+beef_mince = [168652, 174037, 174036, 2514744, 171796, 174030, 2514743, 173110, 171790, 173111]
+beef_steak = [2727574, 168726, 168728, 169551, 174055, 174763, 171804]
+onion = [170000, 790577, 790646, 1104962]
+onion_red = [790577, 170000]
+carrot = [170393, 2258586]
+rice_white = [168877, 169756]
+rice_brown = [169703]
+pasta = [169736, 168927]
+cheddar = [328637, 173414, 170899]
+mozzarella = [170845, 329370, 171244, 170900]
+yogurt_greek = [171304, 2259794, 170903, 330137, 170894, 171312, 171309]
+yogurt_greek_nonfat = [330137, 170894, 171312]
+yogurt_plain = [171284, 2259793, 170886]
+lemon = [167746]
+garlic = [169230, 1104647]
+butter = [173410, 173430]
+butter_salted = [173410]
+butter_unsalted = [173430]
+potato = [170026, 170028, 170029, 170027, 2346401, 2346402, 2346403]
+baked_beans = [175182, 168128]
+oats = [173904, 169705, 2346396]
+strawberry = [167762, 327699, 747448, 2263887, 2346409]
+spinach = [168462]
+salmon = [175167, 2684441, 173686, 173688, 175136, 173691, 2684440]
+peanut_butter = [324860, 172470, 174294, 174266]
+apple = [171688, 168204, 1750341, 1105781, 167793, 168202, 168203, 168201]
+cucumber = [168409, 169225, 2346406]
+lettuce_iceberg = [169248, 2346388]
+pepper_red = [170108]
+mushroom = [169251]
+sausage_pork = [172934, 171631]
+sweet_potato = [168482, 2346404]
+bacon = [168277]
+peas_frozen = [170016]
+ham = [173864, 173863, 332397]
+avocado = [171705, 171706, 171707]
+blueberry = [171711, 2263889, 2346411]
+cream_double = [170859]
+leek = [169246]
+mango = [169910]
+sugar = [169655, 334247, 746784]
+flour_plain = [168936, 168894, 169761]
+oil_vegetable = [172336, 171411, 169867]
+granola = [171646]
+raspberry = [167755, 2346410, 2263888]
+kidney_beans = [173744, 175195, 173741, 174285]
+chickpeas = [173756, 175206, 173800]
+black_beans = [173734, 175188, 175238, 2644285]
+orange_juice = [169098, 169100, 169099, 2003591, 2003597]
+pork_loin = [167818, 168230]
+water = [173647, 175103, 173233, 175106]
+# holdout-only groups
+chicken_drumstick = [173614, 172373]
+courgette = [169291]
+lentils_red = [174284, 172420]
+easy_peeler = [168195, 169105]
+cauliflower = [169986, 2685573]
+rocket = [169387]
+celery = [169988, 2346405]
+bread_any = [172688, 335240, 172686, 168013, 167532, 325871, 174924]
+
+[[receipt]]
+id = "r01_tesco"
+items = [
+  { key = "SEMI SKMD MILK 4PT", food = "milk_semi", grams = 2340 },
+  { key = "CHKN BRST FLLTS 650G", food = "chicken_breast", grams = 650 },
+  { key = "BANANAS LOOSE", food = "banana" },
+  { key = "BROCCOLI LOOSE", food = "broccoli", grams = 352 },
+  { key = "CHOPPED TOMS 400G", food = "tomato_tin", grams = 800 },
+  { key = "WARBURTONS WHOLEMEAL", food = "bread_wholemeal", grams = 800 },
+  { key = "LGE EGGS 6PK", food = "egg", grams = 330, tol = 0.25 },
+]
+
+[[receipt]]
+id = "r02_sainsburys"
+items = [
+  { key = "BEEF MINCE 5% 500G", food = "beef_mince", grams = 500 },
+  { key = "RED ONIONS 1KG", food = "onion_red", grams = 1000 },
+  { key = "CARROTS 1KG", food = "carrot", grams = 1000 },
+  { key = "BASMATI RICE 1KG", food = "rice_white", grams = 1000 },
+  { key = "SPAGHETTI 500G", food = "pasta", grams = 500 },
+  { key = "MATURE CHEDDAR 250G", food = "cheddar", grams = 250 },
+  { key = "GREEK STYLE YOG 500G", food = "yogurt_greek", grams = 500 },
+  { key = "LEMONS 4PK", food = "lemon", grams = 400, tol = 0.4 },
+  { key = "GARLIC", food = "garlic" },
+]
+
+[[receipt]]
+id = "r03_asda"
+items = [
+  { key = "WHOLE MILK 2PT", food = "milk_whole", grams = 1170 },
+  { key = "SALTED BUTTER 250G", food = "butter_salted", grams = 250 },
+  { key = "FREE RANGE EGGS 12", food = "egg", grams = 600, tol = 0.25 },
+  { key = "CHEDDAR MATURE 400G", food = "cheddar", grams = 400 },
+  { key = "BROWN ONIONS 3PK", food = "onion", grams = 450, tol = 0.35 },
+  { key = "POTATOES 2.5KG", food = "potato", grams = 2500 },
+  { key = "BAKED BEANS 4X420G", food = "baked_beans", grams = 1680 },
+  { key = "PORRIDGE OATS 1KG", food = "oats", grams = 1000 },
+  { key = "STRAWBERRIES 400G", food = "strawberry", grams = 400 },
+]
+
+[[receipt]]
+id = "r04_aldi"
+items = [
+  { key = "Skimmed Milk 4 Pints", food = "milk_skim", grams = 2340 },
+  { key = "Chicken Thighs 1kg", food = "chicken_thigh", grams = 1000 },
+  { key = "805432 Broccoli", food = "broccoli" },
+  { key = "Baby Spinach 240g", food = "spinach", grams = 240 },
+  { key = "Salmon Fillets 2x120g", food = "salmon", grams = 240 },
+  { key = "Plum Tomatoes 400g", food = "tomato_any", grams = 800 },
+  { key = "Wholemeal Bread 800g", food = "bread_wholemeal", grams = 800 },
+  { key = "Natural Yogurt 500g", food = "yogurt_plain", grams = 500 },
+  { key = "Peanut Butter Smooth 340g", food = "peanut_butter", grams = 340 },
+]
+
+[[receipt]]
+id = "r05_lidl"
+items = [
+  { key = "Bananas", food = "banana" },
+  { key = "Gala Apples 6pk", food = "apple", grams = 900, tol = 0.35 },
+  { key = "Cucumber", food = "cucumber" },
+  { key = "Iceberg Lettuce", food = "lettuce_iceberg" },
+  { key = "Red Peppers 3pk", food = "pepper_red", grams = 450, tol = 0.35 },
+  { key = "Mushrooms 300g", food = "mushroom", grams = 300 },
+  { key = "Chicken Breast Fillets 1kg", food = "chicken_breast", grams = 1000 },
+  { key = "Pork Sausages 454g", food = "sausage_pork", grams = 454 },
+  { key = "Butter 250g", food = "butter", grams = 250 },
+  { key = "Sweet Potatoes 1kg", food = "sweet_potato", grams = 1000 },
+]
+
+[[receipt]]
+id = "r06_morrisons"
+items = [
+  { key = "SEMI SKIMMED MILK 2.272L", food = "milk_semi", grams = 2340 },
+  { key = "SMOKED BACK BACON 300G", food = "bacon", grams = 300 },
+  { key = "LGE FREE RANGE EGGS 6", food = "egg", grams = 330, tol = 0.25 },
+  { key = "WHITE BREAD 800G", food = "bread_white", grams = 800 },
+  { key = "SALMON FLLTS 240G", food = "salmon", grams = 240 },
+  { key = "CARROTS LOOSE", food = "carrot", grams = 400 },
+  { key = "FROZEN PEAS 1KG", food = "peas_frozen", grams = 1000 },
+  { key = "LONG GRAIN RICE 1KG", food = "rice_white", grams = 1000 },
+]
+
+[[receipt]]
+id = "r07_coop"
+items = [
+  { key = "SEMI SKMD MILK 1PT", food = "milk_semi", grams = 585 },
+  { key = "FREE RANGE EGGS 6", food = "egg", grams = 330, tol = 0.25 },
+  { key = "HOVIS SOFT WHITE", food = "bread_white", grams = 800 },
+  { key = "CHEDDAR 350G", food = "cheddar", grams = 350 },
+  { key = "BANANAS 5PK", food = "banana", grams = 600, tol = 0.3 },
+  { key = "COOKED HAM 125G", food = "ham", grams = 125 },
+]
+
+[[receipt]]
+id = "r08_waitrose"
+items = [
+  { key = "SEMI SKMD MILK 4PT", food = "milk_semi", grams = 2340 },
+  { key = "FREE RANGE EGGS 6", food = "egg", grams = 330, tol = 0.25 },
+  { key = "CHKN THIGH FLLTS 500G", food = "chicken_thigh", grams = 500 },
+  { key = "AVOCADOS RIPE 2S", food = "avocado", grams = 340, tol = 0.35 },
+  { key = "BLUEBERRIES 150G", food = "blueberry", grams = 150 },
+  { key = "DOUBLE CREAM 300ML", food = "cream_double", grams = 300 },
+  { key = "LEEKS LOOSE", food = "leek", grams = 360, tol = 0.4 },
+  { key = "GREEK YOGHURT 500G", food = "yogurt_greek", grams = 500 },
+]
+
+[[receipt]]
+id = "r09_ms"
+items = [
+  { key = "BEEF STEAKS 2PK 454G", food = "beef_steak", grams = 454 },
+  { key = "NEW POTATOES 750G", food = "potato", grams = 750 },
+  { key = "TENDERSTEM BROCCOLI 200G", food = "broccoli", grams = 200 },
+  { key = "SALAD TOMATOES 6PK", food = "tomato_fresh", grams = 540, tol = 0.35 },
+  { key = "WHOLE MILK 1 PINT", food = "milk_whole", grams = 585 },
+  { key = "SOURDOUGH LOAF 400G", food = "bread_sourdough", grams = 400 },
+  { key = "MANGO", food = "mango" },
+  { key = "SPARKLING WATER 2L", food = "water", optional = true },
+]
+
+[[receipt]]
+id = "r10_tesco_express"
+items = [
+  { key = "SKIMMED MILK 2PT", food = "milk_skim", grams = 1170 },
+  { key = "CHOPPED TOMS 400G", food = "tomato_tin", grams = 400 },
+  { key = "CHOPPED TOMS 400G", food = "tomato_tin", grams = 400 },
+  { key = "PENNE PASTA 500G", food = "pasta", grams = 500 },
+  { key = "GRANULATED SUGAR 1KG", food = "sugar", grams = 1000 },
+  { key = "PLAIN FLOUR 1.5KG", food = "flour_plain", grams = 1500 },
+  { key = "VEG OIL 1L", food = "oil_vegetable", grams = 920 },
+  { key = "FROZEN PEAS 900G", food = "peas_frozen", grams = 900 },
+]
+
+[[receipt]]
+id = "r11_asda_online"
+items = [
+  { key = "Bananas 5pk", food = "banana", grams = 600, tol = 0.3 },
+  { key = "Semi Skimmed Milk 4 Pints", food = "milk_semi", grams = 4680 },
+  { key = "Chicken Breast Fillets 640g", food = "chicken_breast", grams = 640 },
+  { key = "Lean Beef Mince 500g", food = "beef_mince", grams = 500 },
+  { key = "Red Onions 1kg", food = "onion_red", grams = 1000 },
+  { key = "Chopped Tomatoes 400g", food = "tomato_tin", grams = 1200 },
+  { key = "Wholemeal Bread 800g", food = "bread_wholemeal", grams = 800 },
+  { key = "Brown Basmati Rice 1kg", food = "rice_brown", grams = 1000 },
+]
+
+[[receipt]]
+id = "r12_sainsburys_local"
+items = [
+  { key = "SEMI SKIMMED 2PT", food = "milk_semi", grams = 1170 },
+  { key = "STRAWBERRIES 400G", food = "strawberry", grams = 400 },
+  { key = "RASPBERRIES 150G", food = "raspberry", grams = 150 },
+  { key = "NATURAL YOGURT 500G", food = "yogurt_plain", grams = 500 },
+  { key = "SALTED BUTTER 250G", food = "butter_salted", grams = 250 },
+  { key = "SLICED MUSHROOMS 250G", food = "mushroom", grams = 250 },
+  { key = "BABY SPINACH 100G", food = "spinach", grams = 100 },
+  { key = "GRANOLA 500G", food = "granola", grams = 500 },
+]
+
+[[receipt]]
+id = "r13_walmart"
+items = [
+  { key = "GV 2% MILK GAL", food = "milk_2pc", grams = 3900 },
+  { key = "BANANAS", food = "banana", grams = 953 },
+  { key = "LG BROWN EGGS 12CT", food = "egg", grams = 600, tol = 0.25 },
+  { key = "GV WHT BREAD 20OZ", food = "bread_white", grams = 567 },
+  { key = "CHKN BRST BNLS SKNLS", food = "chicken_breast", grams = 1415 },
+  { key = "GV SHRD CHEDDAR 8OZ", food = "cheddar", grams = 227 },
+  { key = "YELLOW ONIONS 3LB", food = "onion", grams = 1361 },
+  { key = "RUSSET POTATO 5LB", food = "potato", grams = 2268 },
+  { key = "GV PEANUT BUTTER 16OZ", food = "peanut_butter", grams = 454 },
+]
+
+[[receipt]]
+id = "r14_kroger"
+items = [
+  { key = "KRO 2% MILK GAL", food = "milk_2pc", grams = 3900 },
+  { key = "KRO LG EGGS 12CT", food = "egg", grams = 600, tol = 0.25 },
+  { key = "GRND BEEF 80/20 1LB", food = "beef_mince", grams = 454 },
+  { key = "ROMA TOMATOES", food = "tomato_fresh", grams = 612 },
+  { key = "AVOCADOS HASS", food = "avocado", grams = 340, tol = 0.35 },
+  { key = "STRAWBERRIES 1LB", food = "strawberry", grams = 454 },
+  { key = "KRO SHRP CHEDDAR 8OZ", food = "cheddar", grams = 227 },
+  { key = "KRO BUTTER UNSALTED 1LB", food = "butter_unsalted", grams = 454 },
+  { key = "SPINACH BAG 10OZ", food = "spinach", grams = 283 },
+]
+
+[[receipt]]
+id = "r15_traderjoes"
+items = [
+  { key = "ORGANIC BANANA", food = "banana", grams = 118, tol = 0.3 },
+  { key = "ORGANIC BANANA", food = "banana", grams = 118, tol = 0.3 },
+  { key = "ORGANIC BANANA", food = "banana", grams = 118, tol = 0.3 },
+  { key = "EGGS FREE RANGE BROWN 1 DOZ", food = "egg", grams = 600, tol = 0.25 },
+  { key = "GREEK NONFAT YOGURT PLAIN 32OZ", food = "yogurt_greek_nonfat", grams = 907 },
+  { key = "CHICKEN BREAST BONELESS 1.6 LB", food = "chicken_breast", grams = 726 },
+  { key = "ATLANTIC SALMON FILLET 1 LB", food = "salmon", grams = 454 },
+  { key = "BROCCOLI FLORETS 12 OZ", food = "broccoli", grams = 340 },
+  { key = "BABY SPINACH 6 OZ", food = "spinach", grams = 170 },
+  { key = "ROLLED OATS 32 OZ", food = "oats", grams = 907 },
+]
+
+[[receipt]]
+id = "r16_costco"
+items = [
+  { key = "KS ORG EGGS 24CT", food = "egg", grams = 1200, tol = 0.25 },
+  { key = "KS CHKN BRST 6.5LB", food = "chicken_breast", grams = 2948 },
+  { key = "BANANAS 3 LB", food = "banana", grams = 1361 },
+  { key = "KS BUTTER 4LB", food = "butter", grams = 1814 },
+  { key = "STRAWBERRIES 2 LB", food = "strawberry", grams = 907 },
+  { key = "KS JASMINE RICE 25LB", food = "rice_white", grams = 11340 },
+  { key = "KS 2% MILK 2 GAL", food = "milk_2pc", grams = 7800 },
+]
+
+[[receipt]]
+id = "r17_wholefoods"
+items = [
+  { key = "365 WHOLE MILK HALF GAL", food = "milk_whole", grams = 1950 },
+  { key = "ORG CARROTS 2LB", food = "carrot", grams = 907 },
+  { key = "ORG GALA APPLES", food = "apple", grams = 767 },
+  { key = "365 OLD FASHIONED OATS 18OZ", food = "oats", grams = 510 },
+  { key = "WILD SALMON FILLET", food = "salmon", grams = 454 },
+  { key = "ORG BABY SPINACH 5OZ", food = "spinach", grams = 142 },
+  { key = "365 GREEK YOGURT 32OZ", food = "yogurt_greek", grams = 907 },
+]
+
+[[receipt]]
+id = "r18_target"
+items = [
+  { key = "GG WHOLE MILK 1GAL", food = "milk_whole", grams = 3900 },
+  { key = "GG LARGE EGGS 12CT", food = "egg", grams = 600, tol = 0.25 },
+  { key = "GG WHITE BREAD 20OZ", food = "bread_white", grams = 567 },
+  { key = "GG PASTA SPAGHETTI 16OZ", food = "pasta", grams = 454 },
+  { key = "GG BLACK BEANS 15OZ", food = "black_beans", grams = 425 },
+  { key = "GG PEANUT BUTTER 16OZ", food = "peanut_butter", grams = 454 },
+  { key = "SWEET POTATOES 3LB", food = "sweet_potato", grams = 1361 },
+]
+
+[[receipt]]
+id = "r19_aldi_us"
+items = [
+  { key = "WHOLE MILK GALLON", food = "milk_whole", grams = 3900 },
+  { key = "LARGE WHITE EGGS 12CT", food = "egg", grams = 600, tol = 0.25 },
+  { key = "GROUND BEEF 73/27 3LB", food = "beef_mince", grams = 1361 },
+  { key = "AVOCADOS 4CT", food = "avocado", grams = 680, tol = 0.35 },
+  { key = "YELLOW ONIONS 3LB", food = "onion", grams = 1361 },
+  { key = "SHREDDED MOZZARELLA 8OZ", food = "mozzarella", grams = 227 },
+  { key = "CANNED BLACK BEANS 15OZ", food = "black_beans", grams = 850 },
+]
+
+[[receipt]]
+id = "r20_tesco_large"
+items = [
+  { key = "SEMI SKMD MILK 2.272L", food = "milk_semi", grams = 2340 },
+  { key = "SEMI SKMD MILK 2.272L", food = "milk_semi", grams = 2340 },
+  { key = "PORK LOIN STEAKS 500G", food = "pork_loin", grams = 500 },
+  { key = "LEAN STEAK MINCE 5% 500G", food = "beef_mince", grams = 500 },
+  { key = "BROWN ONIONS 3PK", food = "onion", grams = 450, tol = 0.35 },
+  { key = "GARLIC 4PK", food = "garlic", grams = 200, tol = 0.4 },
+  { key = "SWEET POTATO LOOSE", food = "sweet_potato", grams = 840 },
+  { key = "CHERRY TOMATOES 325G", food = "tomato_fresh", grams = 325 },
+  { key = "RED PEPPER", food = "pepper_red" },
+  { key = "CUCUMBER", food = "cucumber" },
+  { key = "MAT CHEDDAR 400G", food = "cheddar", grams = 400 },
+  { key = "GREEK STYLE YOGURT 1KG", food = "yogurt_greek", grams = 1000 },
+  { key = "SALTED BUTTER 250G", food = "butter_salted", grams = 250 },
+  { key = "PORRIDGE OATS 1KG", food = "oats", grams = 1000 },
+  { key = "KIDNEY BEANS 400G", food = "kidney_beans", grams = 400 },
+  { key = "CHICKPEAS 400G", food = "chickpeas", grams = 400 },
+  { key = "ORANGE JUICE 1L", food = "orange_juice", grams = 1040 },
+]
+
+# --- holdout: written after tuning; never used to change the parser or vocabulary ----------
+
+[[receipt]]
+id = "r21_sainsburys_big"
+holdout = true
+items = [
+  { key = "SKIMMED MILK 4PT", food = "milk_skim", grams = 2340 },
+  { key = "CHICKEN DRUMSTICKS 1KG", food = "chicken_drumstick", grams = 1000 },
+  { key = "SALMON FILLETS X2 260G", food = "salmon", grams = 260 },
+  { key = "COURGETTES 3PK", food = "courgette", grams = 600, tol = 0.35 },
+  { key = "RED SPLIT LENTILS 500G", food = "lentils_red", grams = 500 },
+  { key = "CHOPPED TOMATOES 4X400G", food = "tomato_tin", grams = 1600 },
+  { key = "EASY PEELERS 600G", food = "easy_peeler", grams = 600 },
+  { key = "CAULIFLOWER", food = "cauliflower" },
+  { key = "BABY ROCKET 60G", food = "rocket", grams = 60 },
+]
+
+[[receipt]]
+id = "r22_publix"
+holdout = true
+items = [
+  { key = "2% REDUCED FAT MILK GAL", food = "milk_2pc", grams = 3900 },
+  { key = "LARGE EGGS 18CT", food = "egg", grams = 900, tol = 0.25 },
+  { key = "GROUND CHUCK", food = "beef_mince", grams = 576 },
+  { key = "CELERY HEARTS", food = "celery" },
+  { key = "CARROTS 1LB BAG", food = "carrot", grams = 454 },
+  { key = "SHARP CHEDDAR 8OZ", food = "cheddar", grams = 227 },
+  { key = "HONEY CRISP APPLES", food = "apple", grams = 925 },
+]
+
+[[receipt]]
+id = "r23_coop_small"
+holdout = true
+items = [
+  { key = "WHOLE MILK 2PT", food = "milk_whole", grams = 1170 },
+  { key = "MED EGGS 6", food = "egg", grams = 300, tol = 0.25 },
+  { key = "CHICKEN THIGHS 1KG", food = "chicken_thigh", grams = 1000 },
+  { key = "MUSHROOMS 250G", food = "mushroom", grams = 250 },
+  { key = "SPINACH 200G", food = "spinach", grams = 200 },
+  { key = "KINGSMILL 50/50 800G", food = "bread_any", grams = 800 },
+]
+
+[[receipt]]
+id = "r24_safeway"
+holdout = true
+items = [
+  { key = "WHL MILK 1/2 GAL", food = "milk_whole", grams = 1950 },
+  { key = "LG EGGS 12CT", food = "egg", grams = 600, tol = 0.25 },
+  { key = "BNLS SKNLS CHKN THIGHS", food = "chicken_thigh", grams = 953 },
+  { key = "GALA APPLES 3LB BAG", food = "apple", grams = 1361 },
+  { key = "YELLOW ONIONS 2LB", food = "onion", grams = 907 },
+  { key = "GREEK YOGURT PLAIN 32OZ", food = "yogurt_greek", grams = 907 },
+  { key = "BROCCOLI CROWNS", food = "broccoli", grams = 508 },
+  { key = "SIG BLACK BEANS 15.5OZ", food = "black_beans", grams = 439 },
+]
+
+[[receipt]]
+id = "r25_aldi_uk2"
+holdout = true
+items = [
+  { key = "Semi Skimmed Milk 2 Pints", food = "milk_semi", grams = 1170 },
+  { key = "Free Range Eggs 12", food = "egg", grams = 660, tol = 0.25 },
+  { key = "Beef Steak Mince 5% 500g", food = "beef_mince", grams = 500 },
+  { key = "Carrots 1kg", food = "carrot", grams = 1000 },
+  { key = "Brown Onions 1kg", food = "onion", grams = 1000 },
+  { key = "Garlic 4 Pack", food = "garlic", grams = 200, tol = 0.4 },
+  { key = "Basmati Rice 1kg", food = "rice_white", grams = 1000 },
+  { key = "Cheddar Mature 350g", food = "cheddar", grams = 350 },
+  { key = "Butter Salted 250g", food = "butter_salted", grams = 250 },
+]

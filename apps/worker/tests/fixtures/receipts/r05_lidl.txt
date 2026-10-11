@@ -1,0 +1,18 @@
+LIDL GB
+High Road
+VAT GB 999 8888 77
+                                   GBP
+Bananas                           0.79 A
+Gala Apples 6pk                   1.19 A
+Cucumber                          0.55 A
+Iceberg Lettuce                   0.49 A
+Red Peppers 3pk                   1.29 A
+Mushrooms 300g                    0.89 A
+Lidl Plus discount               -0.20
+Chicken Breast Fillets 1kg        5.79 A
+Pork Sausages 454g                1.65 A
+Butter 250g                       1.89 A
+Sweet Potatoes 1kg                1.15 A
+Total                            14.88
+Card payment                     14.88
+VAT A  0%                         0.00

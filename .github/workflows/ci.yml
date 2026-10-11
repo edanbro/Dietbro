@@ -148,6 +148,10 @@ jobs:
           done
       - name: Planner dependencies are in the API image
         run: docker compose exec -T api python -c "import ortools, anthropic, larder_solver.problem, larder_llm.agent"
+      - name: OCR stays out of the API image
+        run: docker compose exec -T api python -c "import importlib.util as u, sys; sys.exit(u.find_spec('rapidocr') is not None)"
+      - name: Worker reads a pasted and a photographed receipt (queue, OCR, parse)
+        run: docker compose exec -T worker python -m larder_worker.smoke
       - name: Logs on failure
         if: failure()
         run: docker compose logs

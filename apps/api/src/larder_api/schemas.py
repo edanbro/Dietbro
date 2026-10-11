@@ -32,6 +32,7 @@ class ProfileStatus(BaseModel):
     has_allergies: bool
     has_preferences: bool
     pantry_items: int
+    expiring_soon: int = 0  # pantry items past or within 3 days of their use-by date
 
 
 class Me(BaseModel):
@@ -151,6 +152,97 @@ class PantryItemOut(BaseModel):
     expires_on: date | None
     source: str
     created_at: datetime
+
+
+class ExpiringItem(PantryItemOut):
+    days_left: int  # negative: expired that many days ago
+
+
+class ExpiringPantry(BaseModel):
+    """Pantry items with something left whose use-by date is before `today` + `days`, soonest
+    first (expired ones included)."""
+
+    today: date
+    days: int
+    expired: int
+    items: list[ExpiringItem]
+
+
+# --- receipts (M6) ----------------------------------------------------------------------------
+
+ReceiptStatus = Literal["queued", "processing", "ready", "failed", "confirmed"]
+ReceiptSource = Literal["image", "text"]
+LineStatus = Literal["suggested", "accepted", "edited", "rejected"]
+MAX_RECEIPT_TEXT = 20_000
+
+
+class ReceiptTextIn(BaseModel):
+    text: str = Field(min_length=1, max_length=MAX_RECEIPT_TEXT)
+    purchased_on: date | None = None  # default: today (UTC)
+
+
+class ReceiptLineOut(BaseModel):
+    """A line read from the receipt and the pantry entry suggested for it. `food` is null when
+    nothing matched (pick one with PATCH). `match_method`: receipt | alias | trigram | partial
+    (a shorter phrase of the name matched) | user."""
+
+    id: int
+    position: int
+    raw_text: str
+    name: str
+    food: FoodSummary | None
+    match_method: str | None
+    quantity: float | None
+    unit: str | None
+    grams: float | None
+    approx: bool
+    price_minor: int | None
+    expires_on: date | None
+    status: LineStatus
+    pantry_item_id: int | None
+
+
+class ReceiptOut(BaseModel):
+    """Poll while `status` is queued or processing. ready: review `lines`; failed: `error`
+    says why (the photo is already deleted); confirmed: lines are in the pantry."""
+
+    id: int
+    source: ReceiptSource
+    status: ReceiptStatus
+    purchased_on: date
+    error: str | None
+    created_at: datetime
+    processed_at: datetime | None
+    confirmed_at: datetime | None
+    lines: list[ReceiptLineOut]
+
+
+class ReceiptSummary(BaseModel):
+    id: int
+    source: ReceiptSource
+    status: ReceiptStatus
+    purchased_on: date
+    error: str | None
+    created_at: datetime
+    lines: int
+
+
+class ReceiptLinePatch(BaseModel):
+    """Change a suggestion. Setting `food_id` re-estimates the amount for that food unless a
+    quantity and unit are given too; any edit makes the line `edited`. `status`: accepted,
+    rejected, or back to suggested."""
+
+    food_id: int | None = None
+    quantity: float | None = Field(default=None, gt=0, le=100_000)
+    unit: str | None = Field(default=None, min_length=1, max_length=32)
+    approx: bool | None = None
+    expires_on: date | None = None
+    status: Literal["suggested", "accepted", "rejected"] | None = None
+
+
+class ReceiptConfirmOut(BaseModel):
+    receipt: ReceiptOut
+    created: list[PantryItemOut]
 
 
 class Problems(BaseModel):

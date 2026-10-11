@@ -1,16 +1,26 @@
-"""Pantry CRUD. Every query is filtered by the signed-in user; other users' items are 404s."""
+"""Pantry CRUD and expiry alerts. Every query is filtered by the signed-in user; other users'
+items are 404s. Receipt intake (adding many items from a receipt) is routers/receipts.py."""
 
-from typing import Any
+from datetime import UTC, date, timedelta
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Response, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from larder_api.auth import CurrentUser
+from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
 from larder_api.routers.foods import load_portions, summary
-from larder_api.schemas import PantryItemIn, PantryItemOut, PantryItemPatch, Problems
+from larder_api.schemas import (
+    ExpiringItem,
+    ExpiringPantry,
+    PantryItemIn,
+    PantryItemOut,
+    PantryItemPatch,
+    Problems,
+)
 from larder_core.quantities import grams_for
 from larder_core.units import parse_measure
 from larder_db.models import Food, PantryItem, User
@@ -66,6 +76,53 @@ async def list_items(user: CurrentUser, session: Session) -> list[PantryItemOut]
         .order_by(PantryItem.expires_on.asc().nulls_last(), PantryItem.id)
     )
     return [out(i) for i in rows]
+
+
+EXPIRING_DAYS = 3  # "expiring soon": use-by before today + 3 days (the planner's SOON_DAYS)
+
+
+async def expiring_count(session: AsyncSession, user: User, today: date) -> int:
+    """Items with something left that are expired or expire within EXPIRING_DAYS."""
+    count = await session.scalar(
+        select(func.count(PantryItem.id)).where(
+            PantryItem.user_id == user.id,
+            PantryItem.grams > 0,
+            PantryItem.expires_on < today + timedelta(days=EXPIRING_DAYS),
+        )
+    )
+    return count or 0
+
+
+@router.get("/expiring", operation_id="listExpiringPantry")
+async def list_expiring(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    days: Annotated[int, Query(ge=0, le=60)] = EXPIRING_DAYS,
+    today: Annotated[date | None, Query(description="The user's local date (default UTC)")] = None,
+) -> ExpiringPantry:
+    """Expiry alerts: items with something left whose use-by date is before `today` + `days`
+    (so days=3 means today, tomorrow and the day after), expired ones included, soonest
+    first."""
+    today = today or clock().astimezone(UTC).date()
+    rows = await session.scalars(
+        select(PantryItem)
+        .where(
+            PantryItem.user_id == user.id,
+            PantryItem.grams > 0,
+            PantryItem.expires_on < today + timedelta(days=days),
+        )
+        .options(joinedload(PantryItem.food))
+        .order_by(PantryItem.expires_on, PantryItem.id)
+    )
+    items: list[ExpiringItem] = []
+    for row in rows:
+        assert row.expires_on is not None
+        left = (row.expires_on - today).days
+        items.append(ExpiringItem(**out(row).model_dump(), days_left=left))
+    return ExpiringPantry(
+        today=today, days=days, expired=sum(i.days_left < 0 for i in items), items=items
+    )
 
 
 @router.post(
