@@ -144,3 +144,45 @@ uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec (xfails un
 
 **Known gaps**: costs are pro rata (no pack sizes); macro targets are soft; locks/eaten meals
 and replanning with churn arrive in M5; the CP-SAT planner itself.
+
+## M4 — LLM layer (chat that re-plans)
+
+**What works**
+- A Chat tab: tell it "craving something spicy tonight", "had 2 slices of pizza for lunch",
+  "eating out Friday" or "swap Thursday's dinner", or ask why a meal is planned. Replies stream
+  in; a card shows exactly what changed (meal by meal, with kcal estimates for logged food) and
+  links to the plan, which now shows logged and skipped meals.
+- The model (Claude Sonnet 5.5) never writes a plan: it calls typed tools (search recipes,
+  request a replan, draft a recipe, explain a meal or a diff). One executor applies the changes:
+  it replans only from today on, rebuilds earlier logs and pins, runs the planner and the same
+  independent validator, and saves a new version. Claude Haiku 5.5 only picks among USDA foods we
+  offer it; nutrition is always ours.
+- Recipes the assistant drafts must match USDA foods and pass the planner's own allergen/diet
+  gate; they are private to their owner.
+- Without an API key (CI, self-hosting) or over the per-user budget, the chat runs offline: a
+  rule parser (69-phrase test table) drives the same executor with templated replies.
+- Limits and accounting: every model call is logged with tokens, cost and latency; 60 messages
+  per user per 24 h, $1 per user per month (paced), $0.10 per turn.
+
+**Done criteria**
+- Chat handles craving / off-plan / swap / skip: API tests for each intent in both modes
+  (scripted models and the offline path) and an offline-mode Playwright test on a phone.
+- Zero allergen violations in tests: `assert_user_safe` recomputes allergens, diet and avoided
+  foods from stored rows after the chat tests; adversarial scripts (unsafe or foreign recipe
+  ids, disguised allergens in drafted recipes, injected instructions in messages and recipe
+  text, failures after a write) save nothing unsafe.
+
+**See it**
+```sh
+docker compose up --build && make seed
+open http://localhost:3000/chat       # "skip dinner tonight", then open the plan
+make llm-smoke                        # with ANTHROPIC_API_KEY in .env: 4 real turns + cost
+```
+
+**Docs**: DESIGN §9; ADRs [0013](adr/0013-llm-layer.md) (agent, typed tools, offline path,
+transcript, limits), [0014](adr/0014-chat-replans.md) (open-horizon replans, `day_kcal`,
+`choices`); `solve()` spec gained 13 cases for them.
+
+**Known gaps**: `make llm-smoke` hasn't been run against Claude yet (needs a key); M5 brings the
+<1 s replan target, warm starts, a craving bonus in the objective and the diff view; the CP-SAT
+planner itself.

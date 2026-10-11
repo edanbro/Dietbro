@@ -177,7 +177,9 @@ user, so other users' records are indistinguishable from missing ones (404).
 | `GET /allergens`, `GET /cuisines` | Vocabularies (public) |
 | `POST /plans`, `GET /plans/current`, `GET /plans/{id}` | Make a plan (409 until setup is complete; 400 with reasons when no plan fits); the latest plan (or null) |
 | `GET /plans/{id}/shopping`, `PATCH /plans/{id}/shopping/{food_id}` | Shopping list (to buy + "check you have"), tick items |
-| `GET /recipes/{id}` | Recipe with derived allergens and suitable diets (public) |
+| `GET /recipes/{id}` | Recipe with derived allergens and suitable diets (public catalogue; a generated recipe only for its owner - optional auth, 404 otherwise) |
+| `POST /chat/messages` | One chat turn, streamed as server-sent events (§9); 400/404/409/429 as JSON before streaming |
+| `GET /chat/thread`, `POST /chat/threads` | The current conversation (paged; pending reply; model availability and limits); start a new one |
 
 **Targets** ([ADR-0008](adr/0008-calorie-target-safety.md)): `larder_core.energy` refuses
 minimums under the user's floor (never under 1000 kcal), more than the max deficit below
@@ -189,7 +191,9 @@ Screens: landing → Clerk sign-up → 5-step setup (body stats optional, goals,
 preferences, first pantry items) → plan (day strip and week grid, meal cards, macro bars against
 the targets, cost against budget, "planned without" exclusions) → shopping list (by aisle, tick
 as you shop, staples to check) → recipe pages; plus pantry (search, per-food units like "large"
-or "clove", use-by badges) and profile (edit everything, download data, delete account). App routes are guarded by
+or "clove", use-by badges), chat (streamed replies, plan-change and recipe cards, suggestion
+chips, offline and limit notices; the plan page shows logged and skipped meals and pinned
+ones) and profile (edit everything, download data, delete account). App routes are guarded by
 Clerk's middleware for UX; the API is the security boundary.
 
 **Tests**: API tests mint JWTs with a local RSA key (bad signature, wrong issuer/origin, expired,
