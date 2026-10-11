@@ -186,3 +186,30 @@ transcript, limits), [0014](adr/0014-chat-replans.md) (open-horizon replans, `da
 **Known gaps**: `make llm-smoke` hasn't been run against Claude yet (needs a key); M5 brings the
 <1 s replan target, warm starts, a craving bonus in the objective and the diff view; the CP-SAT
 planner itself.
+
+## M5 — Real-time replan (backend)
+
+**What works**
+- Replans without the chat: `POST /plans/replan` takes the same typed changes (skip, swap,
+  craving, food eaten off-plan) and runs the chat's executor, so the plan screen gets the same
+  results, new version and meal-by-meal diff. One change at a time per user (shared with the
+  chat), safe to resend (`client_id`).
+- Mark a meal eaten (and undo): logged as eaten, shown on the plan, its ingredients taken from
+  the pantry (soonest-expiring first, never below zero); undo gives back exactly what was taken.
+  Later replans keep eaten meals and count them once.
+- Latency is measured on every replan (`Server-Timing`, logs, `stats.total_ms`).
+
+**Done criteria**
+- Replan p95 < 1 s at the API: `make bench-replan` (`docs/replan-bench-greedy.md`) - the
+  executor against the seeded database, 40 replans: p50 152 ms, p95 319 ms (greedy planner);
+  `scenarios.replan` problems: p95 201 ms. A solver test keeps greedy replans under 1 s p95.
+- Average churn reported: 1.5 meals changed per replan through the executor (1.1 asked for,
+  0.3 rebalancing); on `scenarios.replan` 6.9 slots vs `previous` (2.0 forced) - the number
+  CP-SAT's warm start should bring down (spec test 17).
+
+**Docs**: DESIGN §5, §7, §9.3, §11; [ADR-0015](adr/0015-eaten-and-app-replans.md); solver
+README section 7 (warm start). Migration 0005.
+
+**Known gaps**: the UI for marking eaten and plan-screen changes (next); `solve()` and its
+warm start (replan time limit to lower then); a craving bonus in the objective.
+
