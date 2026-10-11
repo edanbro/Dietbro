@@ -8,7 +8,7 @@ larder_llm.fake), so a turn that stores a broken or reordered transcript fails h
 import json
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.types import Message, Scope
 
+from larder_api.chat.foods import FoodPick
 from larder_api.chat.scope import Models
 from larder_api.chat.service import REFUSED
 from larder_api.main import app
@@ -28,6 +29,7 @@ from larder_db.engine import make_sessionmaker
 from larder_llm.agent import check_transcript
 from larder_llm.fake import (
     ScriptedChatModel,
+    ScriptedStructuredModel,
     Step,
     fail,
     fallback,
@@ -472,6 +474,34 @@ async def test_a_failure_with_no_text_resets_once_and_goes_offline(
     _, events = await chat.send(api, "skip dinner tonight")
 
     assert kinds(events) == ["thread", "text_reset", "status", "outcome", "text", "done"]
+    assert len((await stored(db_engine, user)).logs) == 1
+
+
+@pytest.mark.parametrize("reason", ["model_error", "budget"])
+async def test_the_rule_parser_fallback_never_asks_the_fast_model(
+    api: httpx.AsyncClient, chat: ChatEnv, user: int, db_engine: AsyncEngine, reason: str
+) -> None:
+    async with make_sessionmaker(db_engine)() as session:  # "pizza" alone is ambiguous now
+        session.add_all(
+            [
+                db.Food(id=9001, description="Pizza, pepperoni, frozen", data_type="x", kcal=290),
+                db.Food(id=9002, description="Pizza, veggie, frozen", data_type="x", kcal=240),
+            ]
+        )
+        await session.commit()
+    if reason == "budget":
+        chat.settings.llm_turn_cap_usd = 0.0003  # one Sonnet-priced request passes it
+        chat.online(tool("get_plan", {}), say("never sent"), model=SONNET)
+    else:
+        chat.online(fail())
+    fast = ScriptedStructuredModel(answer=lambda _purpose, _prompt: FoodPick(food_id=9001))
+    chat.models = replace(chat.models, fast=fast)
+
+    _, events = await chat.send(api, "had pizza for lunch")
+
+    done = events[-1]["message"]
+    assert (done["mode"], done["offline_reason"]) == ("offline", reason)
+    assert fast.prompts == []
     assert len((await stored(db_engine, user)).logs) == 1
 
 

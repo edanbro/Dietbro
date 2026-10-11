@@ -9,7 +9,9 @@
    before the model runs. run_agent with handlers.make_handlers(scope), max_rounds,
    write_limits {request_replan: 2, create_recipe: 3}; events: text -> `text`; reset ->
    `text_reset`; tool start -> `status` (fixed friendly wording per tool); call -> log_call
-   (adds to scope.cost_micro_usd; past the turn cap no new round starts). Outcomes and created
+   (adds to scope.cost_micro_usd; past the turn cap no new round starts; a request still
+   running at the model deadline - the turn deadline less MODEL_MARGIN_S, at least half of it -
+   is cut off and counts as unavailable). Outcomes and created
    recipes are emitted by the handlers as `outcome` / `recipe` events as they happen.
    Ends:
    - done / max_rounds / max_tokens: reply = the agent's text (if empty, a templated summary of
@@ -20,8 +22,10 @@
      a second rejection is treated as unavailable.
    - unavailable / invalid: if scope.wrote -> templated summary of scope.outcomes
      (reply.offline_reply(None, outcomes, ..., reason="model_error")), keep the completed
-     rounds; else -> `text_reset` and the offline path below (reason "model_error"), the
-     agent's messages discarded and the user row's api_messages set to [].
+     rounds; else -> `text_reset` and the offline path below (reason "model_error", or
+     "budget" past the turn cap) with no models at all (scope.models offline, so food matching
+     never asks the fast model), the agent's messages discarded and the user row's
+     api_messages set to [].
    check_transcript(user message + agent messages) must be clean before persisting; if not,
    log it and persist display-only (api_messages []), never a broken transcript.
 3. Offline: rules.parse_rules(text, today) -> replan.apply_changes(source="offline") when it
@@ -32,7 +36,8 @@
    the outcome and recipe payloads, suggestions, plan_id = last version created) and
    thread.updated_at; emit `done` (stored message + messages_today). Unexpected exceptions:
    log, persist a display-only reply ("Something went wrong; your plan wasn't changed." - or
-   the outcomes summary if scope.wrote), emit `error`. Always release the turn lock.
+   the outcomes summary if scope.wrote), emit `error`. Always release the turn lock (a failed
+   release is logged, not an error: the lock goes stale after the deadline).
 
 Channels: `run_turn` yields `thread` first and `done` / `error` last; everything in between
 goes out through `scope.emit` as it happens (agent text deltas, tool status lines, the
@@ -56,7 +61,7 @@ from larder_api import planning
 from larder_api.chat import context, limits, replan
 from larder_api.chat.gate import PreparedTurn
 from larder_api.chat.handlers import make_handlers
-from larder_api.chat.scope import ChatScope, Emit
+from larder_api.chat.scope import ChatScope, Emit, Models
 from larder_api.schemas import (
     Attachment,
     ChatEvent,
@@ -194,12 +199,15 @@ async def run_turn(prepared: PreparedTurn, scope: ChatScope) -> AsyncIterator[Ch
 
 @dataclass(slots=True)
 class _Capped:
-    """Stops new model rounds once the turn's spend passes its cap: the agent then ends as
-    'unavailable' and the turn replies from what was done."""
+    """Stops new model rounds once the turn's spend passes its cap, and cuts off a request
+    still running at the model deadline (the SDK's timeout bounds each read and retry, not
+    the whole request): the agent then ends as 'unavailable' and the turn replies from what
+    was done, or falls back to the rule parser."""
 
     model: ChatModel
     scope: ChatScope
     cap_micro_usd: int
+    deadline: float  # time.monotonic()
     tripped: bool = False
 
     async def respond(
@@ -215,14 +223,16 @@ class _Capped:
         if self.scope.cost_micro_usd >= self.cap_micro_usd:
             self.tripped = True
             raise LLMUnavailable("the turn's model budget is spent")
-        return await self.model.respond(
-            system=system,
-            tools=tools,
-            messages=messages,
-            on_text=on_text,
-            on_reset=on_reset,
-            on_call=on_call,
-        )
+        with anyio.move_on_after(self.deadline - time.monotonic()):
+            return await self.model.respond(
+                system=system,
+                tools=tools,
+                messages=messages,
+                on_text=on_text,
+                on_reset=on_reset,
+                on_call=on_call,
+            )
+        raise LLMUnavailable("the model ran past the turn's deadline")
 
 
 def _with_deadline(chat: ChatModel, deadline: float) -> ChatModel:
@@ -314,9 +324,16 @@ class _Turn:
         return await self._persist()
 
     async def release(self) -> None:
+        """Free the turn lock. A failure is logged, not raised: the reply is already stored,
+        and the lock goes stale after the deadline."""
         if not self.released:
             self.released = True
-            await limits.release_turn(self.scope.sessionmaker, self.p.user_id, self.p.lock_token)
+            try:
+                await limits.release_turn(
+                    self.scope.sessionmaker, self.p.user_id, self.p.lock_token
+                )
+            except Exception:
+                logger.exception("couldn't release the turn lock for message %s", self.p.message_id)
 
     # --- online -------------------------------------------------------------------------------
 
@@ -327,7 +344,10 @@ class _Turn:
         await self._store_user()
         history = [] if self.p.new_epoch else await self._history()
         model = _Capped(
-            _with_deadline(chat, self.model_deadline), self.scope, self.p.turn_cap_micro_usd
+            _with_deadline(chat, self.model_deadline),
+            self.scope,
+            self.p.turn_cap_micro_usd,
+            self.model_deadline,
         )
         result = await self._agent(model, history, user_message)
         if result.stop == "rejected" and not self.scope.wrote:
@@ -355,6 +375,8 @@ class _Turn:
                 self.mode, self.offline_reason = "offline", reason
             else:
                 self.user_api = []
+                # Offline means no model at all: the fast one is spent or failing too.
+                self.scope.models = Models(offline_reason=reason)
                 await self._offline(reason, replayable=False)
             self._check_transcript()
             return

@@ -1,5 +1,9 @@
 """Weekly plans: generate (prefilter + plan + validate + save), read, and the shopping list.
 
+A new plan is made around food already logged in its dates (active meal_logs, from the chat):
+a logged meal stays empty, every log counts on its day (with the replan day bands) and shows
+in the plan's `logged`, like a chat replan's version.
+
 Every query is filtered by the signed-in user; other users' plans are 404s.
 """
 
@@ -223,6 +227,9 @@ async def create_plan(
         novelty=novelty,
         private=private,
     )
+    # Food already logged in these dates (chat) keeps its meal empty and counts on its day.
+    logs = await planning.active_logs(session, user.id, start, problem.days)
+    problem = planning.with_logs(problem, inputs, catalog.merged(private), logs)
     prepared = planning.Prepared(problem, version, seed, None, novelty)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
@@ -237,6 +244,7 @@ async def create_plan(
         problem, result, plan, violations, seed=seed, time_limit_ms=settings.plan_time_limit_ms
     )
     stats.total_ms = round((time.perf_counter() - started) * 1000)
+    stats.logged = planning.logged_by_day(logs, start, problem.days)
 
     # One save at a time per user (chat replans take the same lock): the version and the
     # parent are read under it.

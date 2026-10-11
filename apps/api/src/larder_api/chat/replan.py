@@ -11,7 +11,8 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
      P fail ("Monday isn't in your plan yet - make next week's plan first"). Only when no plan
      covers today and a wish is dated today..today+6 is a fresh plan made (POST /plans rules,
      start = today), with `fresh=True`. Changes dated before today: facts are logged (and shown on
-     that past day); wishes fail ("past days can't be changed").
+     that past day - except beside a fresh week, which has no parent to copy: then only logged,
+     against the plan that covers them); wishes fail ("past days can't be changed").
    - Missing slot: AteOffPlan today -> the latest slot whose time has passed (SLOT_START), else
      dinner; anything else -> dinner. The result's message says what was assumed.
    - Conflicts within the message, grouped by (date, slot): AteOffPlan beats Skip (the Skip is
@@ -34,14 +35,16 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
      their rows are copied unchanged into the new version.
    - Pins: the parent's PlanMeals with locked=True in the horizon become `choices` of one
      recipe, if still visible and `candidates.allowed` under the current profile (else dropped,
-     with a note). Wishes: a Craving/Swap with recipe_id -> choices=(id,) after the recipe guard
+     with a note); a wish on a pinned meal replaces the pin in the runs that keep the wish.
+     Wishes: a Craving/Swap with recipe_id -> choices=(id,) after the recipe guard
      (handlers.guard_recipe: visible to the user, plannable, slot in its meal types, allowed);
      with dish/tags -> choices = top 5 safe search hits for that slot; a Swap with nothing ->
      choices = that slot's candidates minus the current recipe (and minus recipes already on
      that date). Locks are only ever None.
    - day_kcal for every day with fixed intake (extra > 0 or a None-lock): fixed = extra[d];
-     [lo, hi] = the kcal the free slots can reach (min/max over their candidates and portion
-     ranges); band = Band(min(max(kcal_min, floor), fixed + hi), max(kcal_max, fixed + lo)).
+     [lo, hi] = the kcal the free slots can reach (min/max over their slot's candidates - never
+     a wish's or pin's choices, which must fit the band, not set it - and portion ranges);
+     band = Band(min(max(kcal_min, floor), fixed + hi), max(kcal_max, fixed + lo)).
      The day's result says when it lands outside the normal band ("Tue ~2,600 kcal with the
      pizza, above your 2,200 max"). Untouched days keep the hard band and the floor.
    - make_problem with seed = P.stats.seed, novelty = {}, the user's private recipes merged,
@@ -59,8 +62,10 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
    fail the wishes with "your plan changed while I was working". Save version
    next_version(P.start) with parent_id = P.id, start_date = P.start, days = P.days: rows for
    days < o and today's frozen meals copied verbatim from P; solver meals shifted by +o;
+   rows of cells with an active slotted log are never copied (the log replaces them);
    locked=True only for pins and this message's applied wishes; shopping list for the horizon
-   with `checked` copied from P for the same food when the new grams <= P's. PlanStats v2:
+   with `checked` copied from P (re-read under the lock, so ticks made meanwhile count) for
+   the same food when the new grams <= P's. PlanStats v2:
    day_totals (past days from P.stats), `logged` per day (MealLogOut snapshot of active logs in
    the plan's dates), the outcome (results + diff) for explain_plan_diff, score with previous
    (score['churn']). MealLogs (plan_id = new version, else P.id) and one cravings row per
@@ -84,7 +89,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from larder_api import planning
 from larder_api.chat import offplan, search
 from larder_api.chat.scope import ChatScope
-from larder_api.schemas import MacrosOut, MealLogOut
+from larder_api.schemas import MacrosOut
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_db import models as db
 from larder_llm.outcome import (
@@ -574,7 +579,9 @@ async def _solve(scope: ChatScope, items: list[_Item], read: _Read, decided: _Pl
         for i in items
         if (i.logs or i.pending) and i.where in ("plan", "fresh") and target.day(i.on) >= offset
     ]
-    past_facts = any(i.logs and i.where == "past" for i in items)
+    # Past-day facts get a copied version of the plan they fall in; a fresh week (no plan
+    # covers today) has no parent to copy, so they are only logged (against the latest plan).
+    past_facts = target.plan is not None and any(i.logs and i.where == "past" for i in items)
     if days <= 0 or not horizon:
         decided.copy_only = past_facts
         return
@@ -730,10 +737,12 @@ async def _pins(
     decided: _Plan,
     rows: dict[DateSlot, db.PlanMeal],
 ) -> dict[DateSlot, int]:
-    """Meals the user pinned earlier (locked) stay, if still safe and not changed now."""
+    """Meals the user pinned earlier (locked) stay, if still safe and not reported eaten or
+    skipped. A wish on a pinned meal overrides the pin only in the runs that keep the wish
+    (build: its choices replace the pin's), so a soft wish that is dropped leaves the pin."""
     target = decided.target
     assert target is not None
-    touched = {i.cell for i in items if i.where in ("plan", "fresh") and i.status != "failed"}
+    touched = {i.cell for i in items if i.logs and i.where in ("plan", "fresh")}
     logged = {(log.eaten_on, Slot(log.slot)) for log in read.logs if log.slot is not None}
     today_over = {(scope.today, s) for s in decided.frozen}
     pins: dict[DateSlot, int] = {}
@@ -922,17 +931,6 @@ def _log(item: _Item, source: Literal["chat", "offline"], user_id: int) -> db.Me
     )
 
 
-def _logged_out(log: db.MealLog) -> MealLogOut:
-    return MealLogOut(
-        date=log.eaten_on,
-        slot=Slot(log.slot) if log.slot else None,
-        kind="off_plan" if log.kind == "off_plan" else "skipped",
-        description=log.description,
-        kcal=log.kcal,
-        estimated=log.estimated,
-    )
-
-
 async def _save(
     scope: ChatScope,
     session: AsyncSession,
@@ -951,13 +949,26 @@ async def _save(
     assert read.inputs is not None
     parent = target.plan
     version = await planning.next_version(session, scope.user_id, target.start)
-    reported = {i.cell for i in items if i.logs}
+    # The parent's list as it is now, under the lock: ticks made while we planned carry over.
+    shopping = (
+        list(
+            await session.scalars(
+                select(db.ShoppingItem).where(db.ShoppingItem.plan_id == parent.id)
+            )
+        )
+        if parent is not None
+        else []
+    )
     logs = [log for log in read.logs if log.id not in voided] + new_logs
+    # Every meal with an active slotted log is reported, not only this message's: a log written
+    # while no version could be saved, or before POST /plans made the plan again, would
+    # otherwise be counted on top of the planned meal it replaced.
+    reported = {(log.eaten_on, Slot(log.slot)) for log in logs if log.slot is not None}
     by_day: dict[int, list[db.MealLog]] = {}
     for log in logs:
         if target.covers(log.eaten_on):
             by_day.setdefault(target.day(log.eaten_on), []).append(log)
-    snapshot = [[_logged_out(log) for log in by_day.get(d, [])] for d in range(target.days)]
+    snapshot = [[planning.logged_out(log) for log in by_day.get(d, [])] for d in range(target.days)]
 
     def kept(m: db.PlanMeal, upto: int) -> bool:
         cell = (target.date(m.day), Slot(m.slot))
@@ -993,7 +1004,7 @@ async def _save(
                 staple=s.staple,
                 checked=s.checked,
             )
-            for s in parent.shopping
+            for s in shopping
         )
         session.add(row)
         await session.flush()
@@ -1038,7 +1049,7 @@ async def _save(
             offset=offset,
             meals=rows,
             pinned=frozenset(pinned),
-            shopping=parent.shopping if parent is not None else (),
+            shopping=shopping,
         ),
     )
     await session.flush()
