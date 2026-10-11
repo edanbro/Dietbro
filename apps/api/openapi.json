@@ -489,7 +489,7 @@
           "profile"
         ],
         "summary": "List Cuisines",
-        "description": "Cuisines of the seeded recipes, for preference pickers.",
+        "description": "Cuisines of the shared catalogue (never of users' own recipes), for preference pickers.",
         "operationId": "listCuisines",
         "responses": {
           "200": {
@@ -1123,8 +1123,13 @@
           "recipes"
         ],
         "summary": "Get Recipe",
-        "description": "A recipe with allergens and suitable diets derived the same way the planner derives them\n(never TheMealDB's category, which isn't a diet claim).",
+        "description": "A recipe with allergens and suitable diets derived the same way the planner derives them\n(never TheMealDB's category, which isn't a diet claim). Signing in is optional: a generated\nrecipe is only found by its owner.",
         "operationId": "getRecipe",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "recipe_id",
@@ -1148,7 +1153,7 @@
             }
           },
           "404": {
-            "description": "no such recipe"
+            "description": "no such recipe (or another user's)"
           },
           "422": {
             "description": "Validation Error",

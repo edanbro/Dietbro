@@ -1,8 +1,9 @@
 """Planner benchmark on the real catalog: `make bench` / `uv run larder-bench --help`.
 
-Generates planted (a valid plan is known to exist) and realistic (user-like) problems from the
-seeded recipes, runs a planner on each, checks every plan with the independent validator and
-reports validity and latency. The M3 gate: no hard violations, end-to-end p95 < 5 s.
+Generates planted (a valid plan is known to exist), realistic (user-like) and replan (mid-week
+chat changes) problems from the seeded recipes, runs a planner on each, checks every plan with
+the independent validator and reports validity and latency. The M3 gate: no hard violations,
+end-to-end p95 < 5 s.
 """
 
 import argparse
@@ -35,7 +36,7 @@ from larder_solver import (
     shopping_list,
     validate,
 )
-from larder_solver.scenarios import Scenario, planted, realistic
+from larder_solver.scenarios import Scenario, planted, realistic, replan
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,7 +176,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--planner", choices=["auto", "cpsat", "greedy"], default="auto")
     parser.add_argument("--n", type=int, default=20, help="scenarios per kind")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--kinds", default="planted,realistic,profiles")
+    parser.add_argument("--kinds", default="planted,realistic,profiles,replans")
     parser.add_argument("--time-limit-ms", type=int, default=3_500)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--concurrency", type=int, default=1, help="plans solved at once")
@@ -189,10 +190,12 @@ def main(argv: list[str] | None = None) -> None:
         "planted": lambda s: planted(s, catalog),
         "realistic": lambda s: realistic(s, catalog),
         "profiles": lambda s: profile_scenario(s, full),
+        # Mid-week chat replans (ADR-0014): logged intake, per-day kcal bands, chosen meals.
+        "replans": lambda s: replan(s, catalog),
     }
 
     def plan(problem: Problem) -> PlanResult:
-        return run_planner(problem, args.planner, args.time_limit_ms, args.workers)
+        return run_planner(problem, None, args.planner, args.time_limit_ms, args.workers)
 
     def run(job: tuple[str, int]) -> Run:
         kind, seed = job

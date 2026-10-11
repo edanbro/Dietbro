@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime, time
 
+import anyio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning
@@ -60,5 +61,9 @@ class ChatScope:
         return bool(self.outcomes or self.created_recipes)
 
     async def solve(self, problem: Problem, previous: Plan | None) -> PlanResult:
-        """Run the planner in a worker thread behind planning.plan_limiter(settings)."""
-        raise NotImplementedError
+        """Run the planner in a worker thread behind planning.plan_limiter(settings). The
+        planner carries its own time budget (routers.plans.get_replan_planner:
+        settings.replan_time_limit_ms per run)."""
+        return await anyio.to_thread.run_sync(
+            self.planner, problem, previous, limiter=planning.plan_limiter(self.settings)
+        )

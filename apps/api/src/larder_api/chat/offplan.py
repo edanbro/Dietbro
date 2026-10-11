@@ -5,10 +5,21 @@ matches, the estimate falls back to the planned meal at that slot (or 600 kcal f
 for a snack) and says so."""
 
 from dataclasses import dataclass
+from datetime import date
 
+from sqlalchemy import select
+
+from larder_api import planning
+from larder_api.chat import foods
 from larder_api.chat.scope import ChatScope
-from larder_llm.schemas import AteOffPlan
+from larder_core.meals import Slot
+from larder_db import models as db
+from larder_llm.schemas import AteOffPlan, OffPlanItem
 from larder_solver import Macros
+
+# A typical meal when nothing in the description matched a food (kcal, protein, fat, carbs).
+TYPICAL_MAIN = Macros(600, 25, 25, 65)
+TYPICAL_SNACK = Macros(250, 5, 12, 30)
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,7 +28,69 @@ class Estimate:
     items: list[dict[str, object]]  # {"name", "food_id", "food", "grams"} per matched item
     unmatched: list[str]
     note: str | None  # "Estimated as a typical dinner - tell me what was in it to be precise."
+    estimated: bool = True  # False only when every item matched with an exact amount
 
 
 async def estimate(scope: ChatScope, change: AteOffPlan) -> Estimate:
-    raise NotImplementedError
+    items = change.items or [OffPlanItem(name=change.description)]
+    found: list[tuple[OffPlanItem, foods.FoodMatch, float, bool]] = []
+    unmatched: list[str] = []
+    for item in items:
+        match = await foods.match_food(scope, item.name)
+        if match is None:
+            unmatched.append(item.name)
+            continue
+        grams, estimated = await foods.grams_for(scope, match.food_id, item.quantity)
+        found.append((item, match, grams, estimated))
+    if not found:
+        return await _fallback(scope, change, unmatched)
+
+    async with scope.sessionmaker() as session:
+        rows = await session.scalars(
+            select(db.Food).where(db.Food.id.in_({m.food_id for _, m, _, _ in found}))
+        )
+        per_100g = {f.id: f for f in rows}
+    kcal = protein = fat = carbs = 0.0
+    for _, match, grams, _ in found:
+        food = per_100g[match.food_id]
+        kcal += (food.kcal or 0) * grams / 100
+        protein += (food.protein_g or 0) * grams / 100
+        fat += (food.fat_g or 0) * grams / 100
+        carbs += (food.carbs_g or 0) * grams / 100
+    return Estimate(
+        macros=Macros(round(kcal), round(protein), round(fat), round(carbs)),
+        items=[
+            {"name": item.name, "food_id": m.food_id, "food": m.description, "grams": round(g)}
+            for item, m, g, _ in found
+        ],
+        unmatched=unmatched,
+        note=None,
+        estimated=bool(unmatched) or any(estimated for *_, estimated in found),
+    )
+
+
+async def _fallback(scope: ChatScope, change: AteOffPlan, unmatched: list[str]) -> Estimate:
+    slot = change.when.slot or Slot.DINNER
+    planned = await planned_meal(scope, change.when.date, slot)
+    if planned is not None:
+        name, macros = planned
+        note = f"Estimated as your planned {slot} ({name}) - tell me what was in it to be precise."
+        return Estimate(macros, [], unmatched, note)
+    typical = TYPICAL_SNACK if slot == Slot.SNACK else TYPICAL_MAIN
+    note = f"Estimated as a typical {slot} - tell me what was in it to be precise."
+    return Estimate(typical, [], unmatched, note)
+
+
+async def planned_meal(scope: ChatScope, on: date, slot: Slot) -> tuple[str, Macros] | None:
+    """The latest plan's meal at (date, slot), if that plan covers the date."""
+    async with scope.sessionmaker() as session:
+        plan = await planning.latest_plan(session, scope.user_id)
+        if plan is None:
+            return None
+        day = (on - plan.start_date).days
+        meal = next((m for m in plan.meals if m.day == day and m.slot == slot), None)
+        if meal is None:
+            return None
+        recipe = await session.get(db.Recipe, meal.recipe_id)
+        name = recipe.name if recipe else "your planned meal"
+        return name, Macros(meal.kcal, meal.protein_g, meal.fat_g, meal.carbs_g)
