@@ -107,7 +107,7 @@ class TurnContext:
 
 def escape(text: str) -> str:
     """`&`, `<`, `>` -> entities, so no data can close or forge a tag."""
-    raise NotImplementedError
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def render_context(ctx: TurnContext) -> str:
@@ -115,12 +115,68 @@ def render_context(ctx: TurnContext) -> str:
     tokens at most: today (with weekday), the plan from today to its end only (one line per
     day: date, meals as "slot: name (id N, x servings, kcal)", day kcal, logged items), targets,
     budget, allergies / avoided foods / diet by name (said to be strict), up to 8 expiring
-    pantry items. Every name (recipes, foods - some written by users or models) is escaped."""
-    raise NotImplementedError
+    pantry items. Every name (recipes, foods - some written by users or models) is escaped.
+    Meals are written "D Chilli [12] 640 x1.5" under a one-line legend to stay compact."""
+    lines = [f"today: {_day(ctx.today)}"]
+    days = [d for d in ctx.days if d.date >= ctx.today]
+    if ctx.plan_id is None:
+        lines.append("plan: none yet")
+    elif not days:
+        lines.append(f"plan {ctx.plan_id}: ends before today")
+    else:
+        lines.append(
+            f"plan {ctx.plan_id} from today. Day: kcal | B/L/D/S (breakfast/lunch/dinner/snack) "
+            "recipe [id] kcal, xN = servings if not 1"
+        )
+        lines += [_day_line(d) for d in days]
+    target = f"targets: {ctx.kcal_min}-{ctx.kcal_max} kcal/day, floor {ctx.calorie_floor}"
+    if ctx.protein_g_min is not None:
+        target += f", protein >= {ctx.protein_g_min} g/day"
+    lines.append(target)
+    if ctx.weekly_budget:
+        lines.append(f"budget: {escape(ctx.weekly_budget)}/week")
+    lines.append(f"allergies (strict): {_names(ctx.allergens)}")
+    if ctx.avoided_foods:
+        lines.append(f"avoids (strict): {_names(ctx.avoided_foods)}")
+    if ctx.diet:
+        lines.append(f"diet (strict): {escape(ctx.diet)}")
+    if ctx.expiring:
+        lines.append(f"expiring: {'; '.join(escape(e) for e in ctx.expiring[:8])}")
+    return "<context>\n" + "\n".join(lines) + "\n</context>"
 
 
 def user_turn(ctx: TurnContext, text: str) -> dict[str, object]:
     """The API user message for one chat turn: two text blocks, the context and then
     `<user_message>{escape(text)}</user_message>`, so instructions inside the user's words read
     as data and can't forge a context block."""
-    raise NotImplementedError
+    return {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": render_context(ctx)},
+            {"type": "text", "text": f"<user_message>{escape(text)}</user_message>"},
+        ],
+    }
+
+
+def _day(d: date) -> str:
+    return f"{d:%a} {d.isoformat()}"
+
+
+def _day_line(day: DayLine) -> str:
+    meals = " | ".join(_meal(m) for m in day.meals) or "no meals"
+    line = f"{day.date:%a %m-%d}: {day.kcal} | {meals}"
+    if day.logged:
+        line += f" | logged: {'; '.join(escape(item) for item in day.logged)}"
+    return line
+
+
+_SLOT_LETTER = {Slot.BREAKFAST: "B", Slot.LUNCH: "L", Slot.DINNER: "D", Slot.SNACK: "S"}
+
+
+def _meal(m: MealLine) -> str:
+    servings = "" if m.servings == 1 else f" x{m.servings:g}"
+    return f"{_SLOT_LETTER[m.slot]} {escape(m.name)} [{m.recipe_id}] {m.kcal}{servings}"
+
+
+def _names(names: tuple[str, ...]) -> str:
+    return ", ".join(escape(n) for n in names) or "none"

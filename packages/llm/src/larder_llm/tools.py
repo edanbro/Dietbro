@@ -5,9 +5,10 @@ tool takes a user id, so no tool can reach another user's data). This module onl
 tools and turns the Pydantic input models into schemas the API accepts with `strict: true`.
 """
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -20,7 +21,7 @@ from larder_llm.schemas import (
     SearchRecipesInput,
 )
 
-__all__ = ["TOOLS", "ToolDef", "api_tools", "tool_schema"]
+__all__ = ["TOOLS", "ToolDef", "api_tools", "by_name", "tool_schema"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,43 +83,28 @@ TOOLS: tuple[ToolDef, ...] = (
     ),
 )
 
-# Keywords strict tool schemas don't support; Pydantic still enforces them on our side.
-_UNSUPPORTED = frozenset(
-    {
-        "minLength",
-        "maxLength",
-        "minimum",
-        "maximum",
-        "exclusiveMinimum",
-        "exclusiveMaximum",
-        "multipleOf",
-        "minItems",
-        "maxItems",
-        "uniqueItems",
-        "discriminator",
-        "title",
-        "default",
-    }
+# Limits strict tool schemas don't support. Pydantic still enforces them on our side; the model
+# sees them as a hint appended to the description.
+_LIMITS = (
+    "minLength",
+    "maxLength",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+    "minItems",
+    "maxItems",
+    "uniqueItems",
 )
+_DROPPED = frozenset({"title", "default", "discriminator"})
+_SCHEMA_LISTS = frozenset({"anyOf", "oneOf", "allOf"})
+_SCHEMA_ONE = frozenset({"items", "additionalProperties", "not"})
+
+type Schema = dict[str, Any]
 
 
-def _clean(node: Any) -> Any:
-    if isinstance(node, list):
-        return [_clean(v) for v in node]  # pyright: ignore[reportUnknownVariableType]
-    if not isinstance(node, dict):
-        return node
-    out: dict[str, Any] = {}
-    for key, value in node.items():  # pyright: ignore[reportUnknownVariableType]
-        if key in _UNSUPPORTED:
-            continue
-        out["anyOf" if key == "oneOf" else key] = _clean(value)
-    if out.get("type") == "object":
-        out["additionalProperties"] = False
-        out.setdefault("properties", {})
-    return out
-
-
-def tool_schema(model: type[BaseModel]) -> dict[str, Any]:
+def tool_schema(model: type[BaseModel]) -> Schema:
     """The model's JSON schema, reduced to what strict tool use accepts (Pydantic still
     validates everything server-side):
 
@@ -136,7 +122,130 @@ def tool_schema(model: type[BaseModel]) -> dict[str, Any]:
     Tests: a snapshot of `api_tools()`; no unsupported keyword anywhere; every `anyOf` branch
     under `changes.items` requires its `const`; optional/union counts across all tools (with
     `$ref`s expanded) leave headroom (<= 18 optional, <= 10 union)."""
-    return _clean(model.model_json_schema(mode="validation"))
+    raw = model.model_json_schema(mode="validation")
+    defs: dict[str, Schema] = raw.get("$defs", {})
+    out = _node(raw, defs)
+    kept = _used_defs(out)
+    if kept:
+        out["$defs"] = {name: d for name, d in out["$defs"].items() if name in kept}
+    else:
+        out.pop("$defs", None)
+    return out
+
+
+def _node(schema: Schema, defs: dict[str, Schema]) -> Schema:
+    """One schema position, cleaned."""
+    if "$ref" in schema and len(schema) > 1:
+        # `{"$ref": ..., "description": ...}`: siblings of `$ref` are not reliably honoured, so
+        # inline the target (our definitions are small and never recursive).
+        target = defs[str(schema["$ref"]).removeprefix("#/$defs/")]
+        schema = {
+            **{k: v for k, v in target.items() if k not in ("description", "title")},
+            **{k: v for k, v in schema.items() if k != "$ref"},
+        }
+    required: list[str] = list(schema.get("required", []))
+    out: Schema = {}
+    for key, value in schema.items():
+        if key in _DROPPED or key in _LIMITS:
+            continue
+        if key == "properties":
+            out[key] = {
+                name: _node(sub if name in required else _drop_null(sub), defs)
+                for name, sub in value.items()
+            }
+        elif key == "$defs":
+            out[key] = {name: _node(sub, defs) for name, sub in value.items()}
+        elif key in _SCHEMA_LISTS:
+            out["anyOf" if key == "oneOf" else key] = [_node(sub, defs) for sub in value]
+        elif key in _SCHEMA_ONE and isinstance(value, dict):
+            out[key] = _node(cast(Schema, value), defs)
+        else:
+            out[key] = value
+    if schema.get("minItems") in (0, 1):
+        out["minItems"] = schema["minItems"]
+    hint = _limits_hint(schema)
+    if hint:
+        out["description"] = f"{out['description']} ({hint})" if "description" in out else hint
+    if out.get("type") == "object":
+        props: Schema = out.setdefault("properties", {})
+        required += [n for n, p in props.items() if "const" in p and n not in required]
+        if required:
+            out["required"] = required
+        out["additionalProperties"] = False
+    return out
+
+
+def _drop_null(prop: Schema) -> Schema:
+    """`anyOf: [X, null]` -> X, keeping the property's own description: an omitted optional
+    property means None to Pydantic, so the null branch only costs strict-schema budget."""
+    branches: list[Schema] = prop.get("anyOf", [])
+    rest = [b for b in branches if b.get("type") != "null"]
+    if len(rest) == len(branches):
+        return prop
+    outer = {k: v for k, v in prop.items() if k != "anyOf"}
+    if len(rest) > 1:
+        return {**outer, "anyOf": rest}
+    return {**rest[0], **outer}
+
+
+def _limits_hint(schema: Schema) -> str:
+    hint = _range_hint(schema)
+    default = schema.get("default")
+    if isinstance(default, bool | int | str):
+        hint = ", ".join(h for h in (hint, f"default {json.dumps(default)}") if h)
+    return hint
+
+
+def _range_hint(schema: Schema) -> str:
+    lo, hi = schema.get("minimum"), schema.get("maximum")
+    if lo is None and "exclusiveMinimum" in schema:
+        lo = f"more than {schema['exclusiveMinimum']}"
+    if hi is None and "exclusiveMaximum" in schema:
+        hi = f"less than {schema['exclusiveMaximum']}"
+    if schema.get("type") == "array":
+        lo = schema.get("minItems") if schema.get("minItems", 0) > 1 else None
+        hi = schema.get("maxItems")
+        return _range(lo, hi, " items")
+    if schema.get("type") == "string":
+        return _range(schema.get("minLength"), schema.get("maxLength"), " characters")
+    return _range(lo, hi, "")
+
+
+def _range(lo: object, hi: object, unit: str) -> str:
+    if lo is not None and hi is not None:
+        return f"{lo}-{hi}{unit}"
+    if hi is not None:
+        return f"at most {hi}{unit}"
+    if lo is not None:
+        return f"at least {lo}{unit}"
+    return ""
+
+
+def _used_defs(schema: Schema) -> set[str]:
+    """Definitions reachable from the schema body (inlined ones drop out)."""
+    defs: dict[str, Schema] = schema.get("$defs", {})
+    used: set[str] = set()
+    todo = _refs({k: v for k, v in schema.items() if k != "$defs"})
+    while todo:
+        name = todo.pop()
+        if name not in used:
+            used.add(name)
+            todo |= _refs(defs.get(name, {}))
+    return used
+
+
+def _refs(node: object) -> set[str]:
+    found: set[str] = set()
+    if isinstance(node, dict):
+        for key, value in cast(Schema, node).items():
+            if key == "$ref" and isinstance(value, str):
+                found.add(value.removeprefix("#/$defs/"))
+            else:
+                found |= _refs(value)
+    elif isinstance(node, list):
+        for value in cast(list[object], node):
+            found |= _refs(value)
+    return found
 
 
 def api_tools(defs: Sequence[ToolDef] = TOOLS) -> list[dict[str, Any]]:
