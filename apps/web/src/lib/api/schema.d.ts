@@ -295,6 +295,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plans/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replan Plan
+         * @description Apply plan changes (skip, swap, craving, food eaten off-plan) without the chat: the
+         *     chat's executor, so the same rules, results and new plan version. Server-Timing has the
+         *     replan's wall time.
+         */
+        post: operations["replanPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/current": {
         parameters: {
             query?: never;
@@ -327,6 +349,32 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}/meals/eaten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Meal Eaten
+         * @description Mark a meal of the current plan eaten: logged as eaten (counted by later replans, its
+         *     slot kept) and its ingredients taken from the pantry. Repeating it changes nothing.
+         */
+        post: operations["markMealEaten"];
+        /**
+         * Unmark Meal Eaten
+         * @description Undo a meal marked eaten: the log is voided and the pantry gets back exactly what it
+         *     gave (items deleted since are not recreated). Undoing twice changes nothing.
+         */
+        delete: operations["unmarkMealEaten"];
         options?: never;
         head?: never;
         patch?: never;
@@ -489,6 +537,28 @@ export interface components {
             /** Avoid Foods */
             avoid_foods?: components["schemas"]["FoodSummary"][];
         };
+        /**
+         * AteOffPlan
+         * @description The user ate (or will eat) something that isn't in the plan.
+         */
+        AteOffPlan: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            intent: "ate_off_plan";
+            when: components["schemas"]["When"];
+            /**
+             * Description
+             * @description What they said they ate.
+             */
+            description: string;
+            /**
+             * Items
+             * @description The foods in it, one per item, when you can tell them apart.
+             */
+            items?: components["schemas"]["OffPlanItem"][];
+        };
         /** BandOut */
         BandOut: {
             /** Min */
@@ -632,6 +702,39 @@ export interface components {
             message_id?: number | null;
         };
         /**
+         * Craving
+         * @description The user wants something particular at a meal ("something spicy tonight").
+         */
+        Craving: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            intent: "craving";
+            when: components["schemas"]["When"];
+            /**
+             * Dish
+             * @description A named dish, if any: 'lasagne', 'ramen'.
+             */
+            dish?: string | null;
+            /**
+             * Tags
+             * @description Qualities to match: 'spicy', 'curry', 'quick', 'light', 'vegetarian'.
+             */
+            tags?: string[];
+            /**
+             * Recipe Id
+             * @description This exact recipe (an id returned by search_recipes or create_recipe).
+             */
+            recipe_id?: number | null;
+            /**
+             * Strength
+             * @description hard: the user insists; fail and say why if no safe match fits the plan. soft: a preference; keep the plan if nothing suitable fits.
+             * @enum {string}
+             */
+            strength: "hard" | "soft";
+        };
+        /**
          * DayKcal
          * @description A changed day's new total against the band it was planned to.
          */
@@ -684,6 +787,58 @@ export interface components {
             message: components["schemas"]["ChatMessageOut"];
             /** Messages Today */
             messages_today: number;
+        };
+        /**
+         * EatenIn
+         * @description Mark a planned meal eaten: a meal of the plan, on or before the user's today.
+         */
+        EatenIn: {
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date (a later `date` is refused)
+             */
+            today: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            slot: components["schemas"]["Slot"];
+        };
+        /**
+         * EatenOut
+         * @description A meal's eaten state after marking (or undoing) it. No new plan version is made: reload
+         *     the plan and the pantry to see them.
+         */
+        EatenOut: {
+            /** Plan Id */
+            plan_id: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            slot: components["schemas"]["Slot"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "eaten";
+            /**
+             * Changed
+             * @description false: it already was in this state (a repeat)
+             */
+            changed: boolean;
+            /** @description the plan's meal at that cell, if any */
+            meal: components["schemas"]["MealOut"] | null;
+            /**
+             * Pantry
+             * @description taken (mark) or given back (undo)
+             */
+            pantry: components["schemas"]["PantryChangeOut"][];
+            /** Notes */
+            notes: string[];
         };
         /** ErrorEvent */
         ErrorEvent: {
@@ -831,7 +986,8 @@ export interface components {
         };
         /**
          * Logged
-         * @description Food recorded as eaten off-plan, or a skipped meal (counted as eaten elsewhere or not).
+         * @description Food recorded as eaten off-plan, a skipped meal (counted as eaten elsewhere or not), or a
+         *     planned meal marked eaten from the plan screen.
          */
         Logged: {
             /**
@@ -844,7 +1000,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "off_plan" | "skipped";
+            kind: "off_plan" | "skipped" | "eaten";
             /** Description */
             description: string;
             /** Kcal */
@@ -884,8 +1040,10 @@ export interface components {
         };
         /**
          * MealLogOut
-         * @description Food eaten off-plan, or a planned meal skipped (told to the chat), as snapshotted with
-         *     the plan version: `DayOut.totals` = its meals + these.
+         * @description Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten
+         *     that this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =
+         *     its meals + these. A meal marked eaten that the version still plans shows as that meal
+         *     (`MealOut.status` eaten), not here.
          */
         MealLogOut: {
             /**
@@ -898,7 +1056,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "off_plan" | "skipped";
+            kind: "off_plan" | "skipped" | "eaten";
             /** Description */
             description: string;
             /** Kcal */
@@ -908,6 +1066,11 @@ export interface components {
              * @default true
              */
             estimated: boolean;
+            /**
+             * Recipe Id
+             * @description eaten: the recipe
+             */
+            recipe_id?: number | null;
         };
         /** MealOut */
         MealOut: {
@@ -929,10 +1092,11 @@ export interface components {
             locked: boolean;
             /**
              * Status
+             * @description eaten: marked eaten (POST /plans/{id}/meals/eaten)
              * @default planned
-             * @constant
+             * @enum {string}
              */
-            status: "planned";
+            status: "planned" | "eaten";
         };
         /** NutrientBands */
         NutrientBands: {
@@ -940,6 +1104,19 @@ export interface components {
             protein_g?: components["schemas"]["BandOut"] | null;
             fat_g?: components["schemas"]["BandOut"] | null;
             carbs_g?: components["schemas"]["BandOut"] | null;
+        };
+        /** OffPlanItem */
+        OffPlanItem: {
+            /**
+             * Name
+             * @description 'Big Mac', 'pepperoni pizza', 'latte'.
+             */
+            name: string;
+            /**
+             * Quantity
+             * @description '2 slices', '300 g', '1 large'. Omit if unknown.
+             */
+            quantity?: string | null;
         };
         /** OutcomeEvent */
         OutcomeEvent: {
@@ -1001,6 +1178,29 @@ export interface components {
              * @enum {string}
              */
             type: "outcome";
+        };
+        /**
+         * PantryChangeOut
+         * @description Pantry food a meal marked eaten used (or, on undo, gave back), in the item's own unit.
+         */
+        PantryChangeOut: {
+            /** Pantry Item Id */
+            pantry_item_id: number;
+            /** Food Id */
+            food_id: number;
+            /** Name */
+            name: string;
+            /** Grams */
+            grams: number;
+            /** Quantity */
+            quantity: number;
+            /** Unit */
+            unit: string;
+            /**
+             * Remaining Quantity
+             * @description the item's quantity now; null = the item was deleted since (undo: nothing was given back)
+             */
+            remaining_quantity: number | null;
         };
         /** PantryItemIn */
         PantryItemIn: {
@@ -1271,6 +1471,32 @@ export interface components {
             grams: number | null;
         };
         /**
+         * ReplanRequest
+         * @description Plan changes made from the plan screen (no chat): the same typed changes the chat's
+         *     model and offline parser produce, applied by the same executor.
+         */
+        ReplanRequest: {
+            /** Changes */
+            changes: (components["schemas"]["Craving"] | components["schemas"]["AteOffPlan"] | components["schemas"]["Skip"] | components["schemas"]["Swap"])[];
+            /**
+             * Client Id
+             * Format: uuid
+             * @description the client's id for this request: resending is safe
+             */
+            client_id: string;
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date
+             */
+            today: string;
+            /**
+             * Local Time
+             * @description the user's local time: today's meals whose time has passed count as eaten
+             */
+            local_time?: string | null;
+        };
+        /**
          * Sex
          * @enum {string}
          */
@@ -1325,6 +1551,23 @@ export interface components {
             items: components["schemas"]["ShoppingItemOut"][];
         };
         /**
+         * Skip
+         * @description The user won't eat a planned meal (eating out, not hungry, away).
+         */
+        Skip: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            intent: "skip";
+            when: components["schemas"]["When"];
+            /**
+             * Eating Elsewhere
+             * @description true only if the user said they'll eat somewhere else (eating out, at a friend's, takeaway): a meal of the same size is counted. false if they won't eat (not hungry, fasting) or didn't say. Never change it to make a re-plan succeed.
+             */
+            eating_elsewhere: boolean;
+        };
+        /**
          * Slot
          * @description A meal of the day, in eating order.
          * @enum {string}
@@ -1373,6 +1616,24 @@ export interface components {
             kcal_max: number;
             /** Protein G Min */
             protein_g_min: number | null;
+        };
+        /**
+         * Swap
+         * @description Replace a planned meal with something else, optionally something particular.
+         */
+        Swap: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            intent: "swap";
+            when: components["schemas"]["When"];
+            /** Dish */
+            dish?: string | null;
+            /** Tags */
+            tags?: string[];
+            /** Recipe Id */
+            recipe_id?: number | null;
         };
         /**
          * TargetsOut
@@ -1488,6 +1749,19 @@ export interface components {
             slot?: components["schemas"]["Slot"] | null;
             /** Recipe Id */
             recipe_id?: number | null;
+        };
+        /**
+         * When
+         * @description A day in the user's own calendar (their local date) and optionally one meal of it.
+         */
+        When: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** @description breakfast, lunch, dinner or snack. 'Tonight' means dinner. */
+            slot?: components["schemas"]["Slot"] | null;
         };
     };
     responses: never;
@@ -2153,6 +2427,57 @@ export interface operations {
             };
         };
     };
+    replanPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeOut"];
+                };
+            };
+            /** @description bad_today */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProblem"];
+                };
+            };
+            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProblem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getCurrentPlan: {
         parameters: {
             query?: never;
@@ -2199,6 +2524,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    markMealEaten: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EatenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EatenOut"];
+                };
+            };
+            /** @description `today` is implausible, or `date` is after it */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description no such plan (or not yours), date not in it, or no meal there */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description the plan isn't the latest version (reload it) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmarkMealEaten: {
+        parameters: {
+            query: {
+                date: string;
+                slot: components["schemas"]["Slot"];
+            };
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EatenOut"];
+                };
+            };
+            /** @description `today` is implausible, or `date` is after it */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description no such plan (or not yours), date not in it, or no meal there */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description the plan isn't the latest version (reload it) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
             };
             /** @description Validation Error */
             422: {

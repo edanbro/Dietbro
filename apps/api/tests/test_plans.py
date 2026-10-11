@@ -13,7 +13,7 @@ from larder_api import planning
 from larder_api.main import app
 from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_db.engine import make_sessionmaker
-from larder_db.models import Food, Goals, MealPlan, Recipe, RecipeIngredient
+from larder_db.models import Food, Goals, MealLog, MealPlan, Recipe, RecipeIngredient, User
 from larder_solver import Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
 
 Auth = Callable[..., dict[str, str]]
@@ -223,6 +223,54 @@ async def test_replanning_adds_a_version(api: httpx.AsyncClient, auth: Auth) -> 
 
     assert second["version"] == first["version"] + 1
     assert (await api.get("/plans/current", headers=auth())).json()["id"] == second["id"]
+
+
+async def test_a_new_plan_counts_food_already_logged(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    await set_up(api, auth)
+    today = datetime.now(UTC).date()
+    async with make_sessionmaker(db_engine)() as session:
+        user_id = await session.scalar(select(User.id).where(User.auth_subject == "user_a"))
+        assert user_id is not None
+        session.add_all(
+            [
+                MealLog(
+                    user_id=user_id,
+                    eaten_on=today,
+                    slot="lunch",
+                    kind="off_plan",
+                    description="a burrito",
+                    kcal=900,
+                    protein_g=40,
+                    fat_g=30,
+                    carbs_g=110,
+                    source="chat",
+                ),
+                MealLog(  # voided: replaced by a later log, never counted
+                    user_id=user_id,
+                    eaten_on=today,
+                    slot="dinner",
+                    kind="skipped",
+                    description="Skipped",
+                    kcal=0,
+                    protein_g=0,
+                    fat_g=0,
+                    carbs_g=0,
+                    source="chat",
+                    voided_at=datetime.now(UTC),
+                ),
+            ]
+        )
+        await session.commit()
+
+    response = await api.post("/plans", json={}, headers=auth())
+
+    assert response.status_code == 201, response.text
+    day = response.json()["days"][0]
+    assert [m["slot"] for m in day["meals"]][:2] == ["breakfast", "dinner"]
+    assert [e["description"] for e in day["logged"]] == ["a burrito"]
+    assert day["totals"]["kcal"] == sum(m["nutrition"]["kcal"] for m in day["meals"]) + 900
 
 
 async def test_allergens_are_excluded(api: httpx.AsyncClient, auth: Auth) -> None:

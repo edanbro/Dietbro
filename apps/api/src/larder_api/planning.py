@@ -17,6 +17,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from hashlib import blake2b
+from typing import Literal
 
 import anyio
 from pydantic import BaseModel, Field
@@ -29,7 +30,9 @@ from larder_api.schemas import (
     BandOut,
     MacrosOut,
     MealLogOut,
+    MealOut,
     NutrientBands,
+    RecipeCard,
     TargetsOut,
     ViolationOut,
 )
@@ -594,10 +597,72 @@ def constrain(
     return out
 
 
+async def active_logs(
+    session: AsyncSession, user_id: int, start: date, days: int
+) -> list[db.MealLog]:
+    """The user's meal logs (not voided) dated in [start, start + days)."""
+    return list(
+        await session.scalars(
+            select(db.MealLog)
+            .where(
+                db.MealLog.user_id == user_id,
+                db.MealLog.voided_at.is_(None),
+                db.MealLog.eaten_on >= start,
+                db.MealLog.eaten_on < start + timedelta(days=days),
+            )
+            .order_by(db.MealLog.id)
+        )
+    )
+
+
+def with_logs(
+    problem: Problem, inputs: UserInputs, pool: PlanningCatalog, logs: Iterable[db.MealLog]
+) -> Problem:
+    """A new plan around food already logged in its dates: a logged meal's slot stays empty
+    and every log's macros count on its day (`constrain`, so its day band follows)."""
+    extra: dict[int, Macros] = {}
+    empty: set[Cell] = set()
+    for log in logs:
+        d = (log.eaten_on - problem.start).days
+        extra[d] = extra.get(d, Macros()) + Macros(log.kcal, log.protein_g, log.fat_g, log.carbs_g)
+        if log.slot is not None:
+            empty.add((d, Slot(log.slot)))
+    if not extra and not empty:
+        return problem
+    return constrain(problem, inputs, pool, choices={}, empty=empty, extra=extra)
+
+
+def log_kind(log: db.MealLog) -> Literal["off_plan", "skipped", "eaten"]:
+    return "eaten" if log.kind == "eaten" else "off_plan" if log.kind == "off_plan" else "skipped"
+
+
+def logged_out(log: db.MealLog) -> MealLogOut:
+    return MealLogOut(
+        date=log.eaten_on,
+        slot=Slot(log.slot) if log.slot else None,
+        kind=log_kind(log),
+        description=log.description,
+        kcal=log.kcal,
+        estimated=log.estimated,
+        recipe_id=log.recipe_id,
+    )
+
+
+def logged_by_day(logs: Iterable[db.MealLog], start: date, days: int) -> list[list[MealLogOut]]:
+    """PlanStats.logged: each plan day's logs."""
+    out: list[list[MealLogOut]] = [[] for _ in range(days)]
+    for log in logs:
+        if 0 <= (d := (log.eaten_on - start).days) < days:
+            out[d].append(logged_out(log))
+    return out
+
+
 def day_reach(problem: Problem, day: int) -> tuple[int, int]:
     """The least and most kcal the day's open cells can add: each chosen or required cell
-    between its lightest option at the fewest portions and its heaviest at the most; optional
-    slots from nothing up to their heaviest."""
+    between its slot's lightest candidate at the fewest portions and its heaviest at the most;
+    optional slots from nothing up to their heaviest. Over the slot's candidates, not a cell's
+    choices: a wish (or pin) must fit the day's band, never set it (two broth cravings would
+    otherwise take the day under the floor)."""
     least = most = 0
     for spec in problem.slots:
         cell = (day, spec.slot)
@@ -607,7 +672,7 @@ def day_reach(problem: Problem, day: int) -> tuple[int, int]:
                 kcal = problem.recipes[meal.recipe_id].per_portion.kcal * meal.portions
                 least, most = least + kcal, most + kcal
             continue
-        ids = problem.choices.get(cell, spec.candidates)
+        ids = spec.candidates or problem.choices.get(cell, ())
         kcal = [problem.recipes[r].per_portion.kcal for r in ids if r in problem.recipes]
         if not kcal:
             continue
@@ -935,6 +1000,22 @@ def save_plan(
         )
     session.add(row)
     return row
+
+
+def meal_out(m: db.PlanMeal) -> MealOut:
+    """A saved meal for the client (its `recipe` must be loaded)."""
+    r = m.recipe
+    return MealOut(
+        slot=Slot(m.slot),
+        recipe=RecipeCard(
+            id=r.id, name=r.name, category=r.category, cuisine=r.cuisine, image_url=r.image_url
+        ),
+        portions=m.portions,
+        servings=m.portions / 2,
+        nutrition=MacrosOut(kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g),
+        locked=m.locked,
+        status="eaten" if m.status == "eaten" else "planned",
+    )
 
 
 def plan_dates(start: date, days: int) -> list[date]:

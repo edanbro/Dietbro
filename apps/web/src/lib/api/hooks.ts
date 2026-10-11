@@ -3,10 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { localISODate } from "@/lib/dates";
+import { localISODate, localTime } from "@/lib/dates";
 
-import { unwrap, useApi } from "./browser";
+import { ApiError, unwrap, useApi } from "./browser";
 import type { components } from "./schema";
+import { ChatProblemError, isChatProblem } from "./sse";
 
 export type Schemas = components["schemas"];
 export type Me = Schemas["Me"];
@@ -35,6 +36,10 @@ export type ChatAttachment = ChatMessage["attachments"][number];
 export type ChatOutcome = Schemas["OutcomeOut"];
 export type SlotChange = Schemas["SlotChange"];
 export type OfflineReason = NonNullable<ChatThread["offline_reason"]>;
+export type Eaten = Schemas["EatenOut"];
+export type PantryChange = Schemas["PantryChangeOut"];
+/** A typed plan change (skip, swap, off-plan food, craving), as the chat's executor takes it. */
+export type PlanChange = Schemas["ReplanRequest"]["changes"][number];
 
 export const keys = {
   me: ["me"] as const,
@@ -53,6 +58,8 @@ export const keys = {
   /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
   plans: ["plans"] as const,
   chatThread: ["chat", "thread"] as const,
+  /** Mutations that change the current plan from the plan screen (one at a time). */
+  planChange: ["plan-change"] as const,
 };
 
 export function useMe() {
@@ -301,5 +308,99 @@ export function useRecipe(id: number) {
     staleTime: 5 * 60_000,
     queryFn: async () =>
       unwrap(await api.GET("/recipes/{recipe_id}", { params: { path: { recipe_id: id } } })),
+  });
+}
+
+// --- plan-screen changes (M5) -----------------------------------------------------------------
+
+/** A meal on the plan: the plan cell an eaten mark or a change is about. */
+export type MealCell = { date: string; slot: Slot };
+
+/** What a plan conflict (409) means for the user; the plan is reloaded either way. */
+function conflictMessage(error: ApiError): string {
+  const code = error instanceof ChatProblemError ? error.code : null;
+  if (code === "busy") {
+    return "Another change to your plan is still running. Try again in a moment.";
+  }
+  if (code === "duplicate") return "That change was already made. Showing your latest plan.";
+  return "Your plan changed in the meantime. Showing the latest version.";
+}
+
+/**
+ * After a plan-screen change: the plan (and its shopping list) and the pantry are stale.
+ * Errors get a toast; conflicts and missing meals reload the plan first.
+ */
+function usePlanChangeHandlers() {
+  const qc = useQueryClient();
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: keys.plans }),
+      qc.invalidateQueries({ queryKey: keys.pantry }),
+    ]);
+  return {
+    onSuccess: refresh,
+    onError: (error: Error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
+        void refresh();
+        toast.error(
+          error.status === 404
+            ? "That meal isn't in your plan any more. Showing your latest plan."
+            : conflictMessage(error),
+        );
+        return;
+      }
+      toast.error(error.message || "Couldn't update your plan. Try again.");
+    },
+  };
+}
+
+/** Mark a planned meal eaten (on or before today), or undo the mark. */
+export function useMarkEaten(planId: number) {
+  const api = useApi();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async ({ date, slot, undo }: MealCell & { undo: boolean }): Promise<Eaten> => {
+      const path = { plan_id: planId };
+      return undo
+        ? unwrap(
+            await api.DELETE("/plans/{plan_id}/meals/eaten", {
+              params: { path, query: { date, slot } },
+            }),
+          )
+        : unwrap(
+            await api.POST("/plans/{plan_id}/meals/eaten", {
+              params: { path },
+              body: { today: localISODate(), date, slot },
+            }),
+          );
+    },
+    ...usePlanChangeHandlers(),
+  });
+}
+
+/**
+ * Re-plan around typed changes without the chat. Each call gets its own client id (the API
+ * answers a resend with 409 duplicate); `today` and the local time come from this device.
+ */
+export function useReplan() {
+  const api = useApi();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async (changes: PlanChange[]): Promise<ChatOutcome> => {
+      const result = await api.POST("/plans/replan", {
+        body: {
+          changes,
+          client_id: crypto.randomUUID(),
+          today: localISODate(),
+          local_time: localTime(),
+        },
+      });
+      // busy / duplicate / bad_today come as the chat's problems, with a code.
+      if (isChatProblem(result.error)) {
+        throw new ChatProblemError(result.response.status, result.error);
+      }
+      return unwrap(result);
+    },
+    ...usePlanChangeHandlers(),
   });
 }

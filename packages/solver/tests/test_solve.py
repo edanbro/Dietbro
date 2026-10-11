@@ -48,6 +48,7 @@ from larder_solver.problem import (
 )
 from larder_solver.scenarios import (
     DecoyPath,
+    forced_churn,
     infeasible,
     planted,
     realistic,
@@ -537,3 +538,22 @@ def test_replan_scenarios_get_a_valid_plan(seed: int) -> None:
         assert meal is not None
         assert meal.recipe_id in ids
     assert not [m for m in plan.meals if m.recipe_id in scenario.decoys]
+
+
+# --- 17. warm start (replans) --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_a_replan_is_at_least_as_good_as_keeping_the_plan(seed: int) -> None:
+    """17. Warm start: given `previous` (the plan before the change), the replan scores at
+    least as well as the witness, which is `previous` minus the cells the change emptied - a
+    valid plan that changes nothing it doesn't have to. Hinting every cell from `previous`
+    (README section 7) hands CP-SAT that solution at once, so even a FEASIBLE result at the
+    time limit can't be worse; and its churn is never below the forced churn."""
+    scenario = replan(seed, k=10)
+    p, previous, witness = scenario.problem, scenario.previous, scenario.witness
+    assert previous is not None
+    assert witness is not None
+    plan = found(run(p, previous))
+    assert score(p, plan, previous).total >= score(p, witness, previous).total
+    assert changed_slots(previous, plan) >= forced_churn(scenario)

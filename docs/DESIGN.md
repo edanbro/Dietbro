@@ -84,15 +84,17 @@ Tables exist for what each milestone uses; LLM calls (M4) come later.
 | `allergies` | Hard: EU/UK 14 allergen codes + specific foods to avoid |
 | `pantry_items` | Food, grams (canonical) + quantity/unit as typed, approx flag, use-by date, source |
 | `meal_plans` | One version of a plan: user, start date, days, version, parent, planner, status, objective, solve time, currency, stats snapshot (targets, cost, waste, score terms, violations, exclusions) |
-| `plan_meals` | Day, slot, recipe, portions (half-servings) + macro snapshot |
+| `plan_meals` | Day, slot, recipe, portions (half-servings) + macro snapshot; status planned/eaten (set in place) |
 | `shopping_items` | Food, grams to buy, estimated cost, staple flag, ticked |
+| `cravings` | Every plan change asked for (chat or plan screen): parsed change, result, the version it made; `client_id` for plan-screen requests |
+| `meal_logs` | Facts replans rebuild from: food eaten off-plan, skipped meals, meals marked eaten (recipe + exactly what was taken from the pantry); voided, never deleted |
 
 All user tables cascade on account deletion and are only read with `user_id = current user`.
 
 Conventions: quantities are grams (liquids too: ml × density); food nutrients per 100 g, recipe
 nutrients per serving. Only recipes with `nutrition_complete` (every line has a food and grams)
 are plannable. Plans are versioned: every (re)plan writes a new version and never edits an old
-one (except shopping ticks).
+one (except shopping ticks and a meal's eaten status).
 
 **Derived at runtime, not stored**: allergen/animal tags (`larder_core.tagging` + reviewed CSVs),
 prices (`larder_core.prices`), which slots a recipe can fill and data-quality exclusions
@@ -177,6 +179,8 @@ user, so other users' records are indistinguishable from missing ones (404).
 | `GET /allergens`, `GET /cuisines` | Vocabularies (public) |
 | `POST /plans`, `GET /plans/current`, `GET /plans/{id}` | Make a plan (409 until setup is complete; 400 with reasons when no plan fits); the latest plan (or null) |
 | `GET /plans/{id}/shopping`, `PATCH /plans/{id}/shopping/{food_id}` | Shopping list (to buy + "check you have"), tick items |
+| `POST /plans/replan` | Plan changes from the plan screen (skip, swap, craving, off-plan food): the chat's executor without a model; idempotent by `client_id`; `Server-Timing` |
+| `POST /plans/{id}/meals/eaten`, `DELETE /plans/{id}/meals/eaten?date&slot` | Mark a meal of the current plan eaten (logged, pantry drawn down) or undo it (pantry given back) |
 | `GET /recipes/{id}` | Recipe with derived allergens and suitable diets (public catalogue; a generated recipe only for its owner - optional auth, 404 otherwise) |
 | `POST /chat/messages` | One chat turn, streamed as server-sent events (§9); 400/404/409/429 as JSON before streaming |
 | `GET /chat/thread`, `POST /chat/threads` | The current conversation (paged; pending reply; model availability and limits); start a new one |
@@ -319,8 +323,23 @@ recipe_id, strength hard|soft) and `swap` - may fail with a reason. The executor
   outcome rules; then one transaction saves version + 1 under a per-user advisory lock, with
   shopping ticks carried over. Repeating the same change for the same message is a no-op.
 
-M5 adds the latency target, warm starts, a craving bonus in the objective and the diff view;
-the change types stay.
+The plan screen sends the same changes to `POST /plans/replan` (source `app`, no model; the
+chat's turn lock and a `client_id` make it one-at-a-time and idempotent), so both paths give
+identical results, versions and diffs ([ADR-0015](adr/0015-eaten-and-app-replans.md)).
+
+### 9.3.1 Meals marked eaten (M5)
+
+Marking a planned meal eaten writes an `eaten` meal log (the meal's own macros and recipe) and
+sets the row's status in place; no version is made. The log is a fact like off-plan food: later
+replans count it as fixed intake, keep its slot, carry the eaten row over unchanged (counted
+once) and leave it out of `previous`; a wish for it fails, a fact reported for it replaces it.
+Its ingredients (the planner's grams per portion x portions) come out of the pantry,
+soonest-expiring first, never below zero, approximate items included; the amounts taken are
+stored on the log so undo puts back exactly that. Because marking makes no version, the
+executor re-checks the active logs (not only the latest plan id) under the plan lock.
+
+A craving bonus in the objective remains open (M7 evals will show whether wishes as `choices`
+are enough).
 
 ### 9.4 Generated recipes
 
@@ -365,6 +384,14 @@ a few real conversations against Claude locally (needs a key; costs cents).
 - Auth tokens are verified locally; no passwords touch our systems.
 
 ## 11. Observability and performance
+
+**Replans (M5).** Target: p95 < 1 s at the API, churn reported. Every replan response has
+`Server-Timing: replan;dur=<ms>`, the API logs time, changes applied and meals changed, and the
+saved version's `stats.total_ms` keeps the executor's wall time (`score.churn` the weighted
+churn). `make bench-replan` runs `scenarios.replan` problems with `previous` and the executor
+against the seeded database ([results](replan-bench-greedy.md)): greedy p50 ~150 ms / p95
+~320 ms end to end, ~1.5 meals changed per replan of which ~0.3 unrequested. CP-SAT will warm
+start from `previous` (`AddHint`, solver README section 7) under a shorter replan time limit.
 
 _TBD (M8)._ OTel traces, Prometheus metrics, JSON logs, LLM token/cost per request; k6 numbers.
 

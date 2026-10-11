@@ -17,7 +17,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from larder_api import planning
+from larder_api import eaten, planning
 from larder_api.chat.replan import apply_changes
 from larder_api.chat.scope import ChatScope, Models
 from larder_api.settings import Settings
@@ -26,7 +26,21 @@ from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 from larder_llm.outcome import ReplanOutcome
 from larder_llm.schemas import AteOffPlan, Change, Craving, OffPlanItem, Skip, Swap, When
-from larder_solver import Plan, PlanResult, Problem, Status, greedy, hard, validate
+from larder_solver import (
+    Band,
+    Macros,
+    Nutrient,
+    Plan,
+    PlanResult,
+    Problem,
+    Recipe,
+    SlotSpec,
+    Status,
+    Targets,
+    greedy,
+    hard,
+    validate,
+)
 
 MON = date(2026, 10, 12)
 TUE, TODAY, THU, FRI, SAT, SUN = (MON + timedelta(days=d) for d in range(1, 7))
@@ -638,6 +652,39 @@ async def test_a_wish_on_a_meal_logged_off_plan_fails(world: World) -> None:
     assert await world.versions() == 2
 
 
+@pytest.mark.parametrize("replans", [False, True], ids=["copied", "replanned"])
+async def test_a_logged_meal_is_never_also_carried_over(world: World, replans: bool) -> None:
+    # Logged while no version could be saved (goals under review) or before POST /plans made
+    # the plan again: the parent still has the planned meal for those cells.
+    async with world.maker() as session:
+        for on, slot in ((TUE, D), (TODAY, B)):
+            session.add(
+                db.MealLog(
+                    user_id=world.user_id,
+                    eaten_on=on,
+                    slot=slot.value,
+                    kind="off_plan",
+                    description="a sandwich",
+                    kcal=500,
+                    protein_g=20,
+                    fat_g=20,
+                    carbs_g=60,
+                    source="chat",
+                    plan_id=world.v1,
+                )
+            )
+        await session.commit()
+    later = (skip(FRI, D, elsewhere=False),) if replans else ()
+
+    await world.say(ate(TUE, L, "2 slices of pizza", ("pizza", "2 slices")), *later)
+
+    v2 = await world.plan()
+    assert meal(v2, TUE, D) is None
+    assert meal(v2, TODAY, B) is None
+    assert total(v2, TUE) == meals_kcal(v2, TUE) + 500 + PIZZA_SLICES_KCAL
+    assert total(v2, TODAY) == meals_kcal(v2, TODAY) + 500
+
+
 async def test_a_new_log_for_a_meal_replaces_the_earlier_one(world: World) -> None:
     await world.say(ate(TODAY, L, "a whole pizza", ("pizza", "750 g")))
 
@@ -699,6 +746,34 @@ async def test_shopping_ticks_survive_a_replan(world: World) -> None:
     assert any(line.checked for line in after)
 
 
+@pytest.mark.parametrize("past", [False, True], ids=["replanned", "copied"])
+async def test_shopping_ticks_made_while_replanning_survive(
+    world: World, monkeypatch: pytest.MonkeyPatch, past: bool
+) -> None:
+    before = {s.food_id: s.grams for s in (await world.plan()).shopping}
+    lock = planning.lock_user_plans
+
+    async def tick_then_lock(session: AsyncSession, user_id: int) -> None:
+        async with world.maker() as other:  # the user ticks the list meanwhile
+            await other.execute(
+                update(db.ShoppingItem)
+                .where(db.ShoppingItem.plan_id == world.v1)
+                .values(checked=True)
+            )
+            await other.commit()
+        await lock(session, user_id)
+
+    monkeypatch.setattr(planning, "lock_user_plans", tick_then_lock)
+
+    await world.say(skip(TUE, D, elsewhere=False) if past else craving(FRI, D, "lasagne"))
+
+    after = (await world.plan()).shopping
+    assert after
+    for line in after:
+        kept = line.food_id in before and line.grams <= before[line.food_id]
+        assert line.checked == kept, line.food_id
+
+
 async def test_the_same_change_twice_for_one_message_is_applied_once(world: World) -> None:
     mid = await world.message()
     lasagne = craving(FRI, D, "lasagne")
@@ -739,6 +814,36 @@ async def test_a_plan_changed_meanwhile_is_rebuilt_once(
     assert world.runs == [2]
 
 
+async def test_a_meal_marked_eaten_meanwhile_is_rebuilt_once(world: World) -> None:
+    """Marking a meal eaten makes no version, so the plan id alone can't tell: the active logs
+    are compared under the lock too, and the replan is rebuilt around the mark."""
+    marked: list[int] = []
+
+    async def mark_lunch() -> None:
+        async with world.maker() as session:
+            await eaten.mark(
+                session, world.user_id, world.v1, TODAY, L, datetime(2026, 10, 14, 12, tzinfo=UTC)
+            )
+
+    def interfering(problem: Problem, previous: Plan | None) -> PlanResult:
+        if not marked:
+            anyio.from_thread.run(mark_lunch)
+            marked.append(1)
+        return greedy(problem, previous)
+
+    out = await world.say(craving(FRI, D, "lasagne"), planner=interfering)
+
+    assert out.results[0].status == "applied"
+    assert world.runs == [2]
+    v1, v2 = await world.plan(world.v1), await world.plan()
+    before, after = meal(v1, TODAY, L), meal(v2, TODAY, L)
+    assert before is not None
+    assert after is not None
+    assert (after.recipe_id, after.status) == (before.recipe_id, "eaten")
+    assert total(v2, TODAY) == meals_kcal(v2, TODAY)
+    assert logged(v2, TODAY) == []
+
+
 async def test_a_plan_that_keeps_changing_fails_the_wishes_but_logs_the_facts(
     world: World, make_plan: Callable[[int, date], Coroutine[Any, Any, int]]
 ) -> None:
@@ -776,6 +881,25 @@ async def test_a_wish_when_no_plan_covers_today_starts_a_fresh_week(make_world: 
     dinner = meal(fresh, TODAY, D)
     assert dinner is not None
     assert dinner.recipe_id == world.recipes["Lasagne"]
+
+
+async def test_a_failed_fresh_week_still_logs_a_past_day_of_the_old_plan(
+    make_world: MakeWorld,
+) -> None:
+    world = await make_world(start=MON - timedelta(days=7))
+    old = await world.plan()
+    last_fri = FRI - timedelta(days=7)
+
+    out = await world.say(
+        ate(last_fri, D, "2 slices of pizza", ("pizza", "2 slices")), craving(TODAY, D, "zorblax")
+    )
+
+    assert [r.status for r in out.results] == ["applied", "failed"]
+    assert out.plan_id is None
+    assert await world.versions() == 1
+    [log] = await world.logs()
+    assert (log.eaten_on, log.plan_id) == (last_fri, old.id)
+    assert [c.status for c in await world.cravings()] == ["applied", "failed"]
 
 
 async def test_goals_needing_review_fail_every_change_but_log_the_facts(
@@ -836,6 +960,40 @@ async def test_unrelated_days_keep_their_meals(world: World) -> None:
         }, on
 
 
+def test_a_wish_never_sets_its_own_days_calorie_band() -> None:
+    """Breakfast is over (400 kcal, locked empty): the day's band is relaxed only as far as its
+    open meals' candidates can't reach it - two broth cravings don't drag it under the floor."""
+    broth = Recipe(9, "Broth", frozenset({L, D}), Macros(80))
+    recipes = {
+        1: Recipe(1, "Porridge", frozenset({B}), Macros(400)),
+        2: Recipe(2, "Stew", frozenset({L, D}), Macros(600)),
+        3: Recipe(3, "Apple", frozenset({S}), Macros(120)),
+        9: broth,
+    }
+    problem = Problem(
+        start=TODAY,
+        days=1,
+        slots=(
+            SlotSpec(B, True, (1,)),
+            SlotSpec(L, True, (2,), max_portions=2),
+            SlotSpec(D, True, (2,), max_portions=2),
+            SlotSpec(S, False, (3,), max_portions=1),
+        ),
+        recipes=recipes,
+        foods={},
+        targets=Targets(daily={Nutrient.KCAL: Band(1600, 2200)}, calorie_floor=1200),
+        locked={(0, B): None},
+        extra={0: Macros(400)},
+        choices={(0, L): (9,), (0, D): (9,)},
+    )
+
+    assert planning.day_bands(problem) == {0: Band(1600, 2200)}
+    lunch_out = replace(problem, locked={(0, B): None, (0, L): None}, choices={(0, D): (9,)})
+    assert planning.day_bands(lunch_out) == {0: Band(1600, 2200)}  # 400 + 1,200 + 120 reach it
+    no_mains = replace(problem, locked={(0, B): None, (0, L): None, (0, D): None}, choices={})
+    assert planning.day_bands(no_mains) == {0: Band(520, 2200)}  # a reported day: 400 + 120
+
+
 # --- today's meals that are over, and pinned meals --------------------------------------------
 
 
@@ -876,6 +1034,31 @@ async def test_pinned_meals_stay_through_later_changes(world: World) -> None:
     thu = meal(v3, THU, D)
     assert thu is not None
     assert (thu.recipe_id, thu.locked) == (world.recipes["Lasagne"], True)
+
+
+async def test_a_pinned_meal_outlives_a_soft_wish_for_it_that_fails(
+    make_world: MakeWorld,
+) -> None:
+    world = await make_world(kcal=(1300, 1400), protein=None)
+    async with world.maker() as session:
+        await session.execute(
+            update(db.PlanMeal)
+            .where(db.PlanMeal.plan_id == world.v1, db.PlanMeal.day == 3, db.PlanMeal.slot == D)
+            .values(locked=True)
+        )
+        await session.commit()
+    pinned = meal(await world.plan(), THU, D)
+    assert pinned is not None
+
+    out = await world.say(
+        craving(THU, D, "feast", strength="soft"), skip(FRI, D, elsewhere=False), planner=strict
+    )
+
+    assert [r.status for r in out.results] == ["failed", "applied"]
+    assert world.runs == [2]
+    thu = meal(await world.plan(), THU, D)
+    assert thu is not None
+    assert (thu.recipe_id, thu.locked) == (pinned.recipe_id, True)
 
 
 async def test_a_pinned_meal_that_is_no_longer_safe_is_dropped(world: World) -> None:

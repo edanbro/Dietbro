@@ -76,6 +76,8 @@ class Scenario:
     witness: Plan | None  # a plan with no hard violations, when one is known
     # Decoy recipe id -> the hard filter it breaks; a correct planner never picks one.
     decoys: Mapping[int, DecoyPath] = field(default_factory=dict[int, DecoyPath])
+    # Replans: the plan before the change (pass it as `previous`; churn is measured against it).
+    previous: Plan | None = None
 
 
 # --- synthetic catalogue -------------------------------------------------------------------------
@@ -495,7 +497,9 @@ def replan(seed: int, catalog: Catalog | None = None, *, days: int = 7, k: int =
     these days gets the `day_kcal` band the replan executor sets (the usual band, clipped to
     what the free slots can reach), widened to contain the witness's day. 1-3 other cells are
     chosen (`choices`): the witness's recipe plus up to two other candidates of the slot, one
-    of them sometimes a decoy (a planner must still filter choices)."""
+    of them sometimes a decoy (a planner must still filter choices). `previous` is the planted
+    witness (the plan before the change): the witness changes only the emptied cells
+    (`forced_churn`), so it bounds the churn a replan needs."""
     base = planted(seed, catalog, days=days, k=k)
     assert base.witness is not None
     rng = Random(seed + 1_000_003)  # independent of planted's draws
@@ -529,7 +533,20 @@ def replan(seed: int, catalog: Catalog | None = None, *, days: int = 7, k: int =
     violations = hard(validate(problem, witness))
     if errors or violations:
         raise RuntimeError(f"replan scenario {seed} is broken: {errors or violations}")
-    return Scenario(problem, witness, base.decoys)
+    return Scenario(problem, witness, base.decoys, previous=base.witness)
+
+
+def forced_churn(scenario: Scenario) -> int:
+    """Cells of `scenario.previous` that the replan must change: planned there, locked empty
+    now. `metrics.changed_slots(previous, plan) - forced_churn` is the churn a planner chose."""
+    if scenario.previous is None:
+        return 0
+    p = scenario.problem
+    return sum(
+        1
+        for m in scenario.previous.meals
+        if (m.day, m.slot) in p.locked and p.locked[(m.day, m.slot)] is None
+    )
 
 
 def _replan_band(problem: Problem, day: int, witness_kcal: int) -> Band:

@@ -52,8 +52,10 @@ def plan_stats(plan: db.MealPlan) -> planning.PlanStats | None:
 
 
 def logged_line(entry: MealLogOut) -> str:
-    """'lunch: pizza (~850 kcal, off-plan)', 'dinner: skipped'."""
+    """'lunch: pizza (~850 kcal, off-plan)', 'dinner: skipped', 'lunch: Dal (~600 kcal, eaten)'."""
     where = f"{entry.slot}: " if entry.slot else ""
+    if entry.kind == "eaten":
+        return f"{where}{entry.description} (~{entry.kcal} kcal, eaten)"
     if entry.kind == "skipped":
         counted = f" (~{entry.kcal} kcal eaten elsewhere)" if entry.kcal else ""
         return f"{where}skipped{counted}"
@@ -78,7 +80,13 @@ def day_lines(plan: db.MealPlan, today: date) -> tuple[DayLine, ...]:
             DayLine(
                 date=on,
                 meals=tuple(
-                    MealLine(Slot(m.slot), m.recipe_id, m.recipe.name, m.portions / 2, m.kcal)
+                    MealLine(
+                        Slot(m.slot),
+                        m.recipe_id,
+                        m.recipe.name + (" (eaten)" if m.status == "eaten" else ""),
+                        m.portions / 2,
+                        m.kcal,
+                    )
                     for m in meals
                 ),
                 kcal=kcal,

@@ -18,6 +18,7 @@ from larder_core.energy import (
 from larder_core.meals import Slot
 from larder_core.tagging import Diet
 from larder_llm.outcome import Logged, ReplanOutcome
+from larder_llm.schemas import MAX_CHANGES, Change
 
 Currency = Literal["GBP", "EUR", "USD"]
 
@@ -205,12 +206,18 @@ class MealOut(BaseModel):
     servings: float
     nutrition: MacrosOut
     locked: bool = Field(default=False, description="pinned by the user (a craving or swap)")
-    status: Literal["planned"] = "planned"  # M5 adds eaten / skipped
+    status: Literal["planned", "eaten"] = Field(
+        default="planned", description="eaten: marked eaten (POST /plans/{id}/meals/eaten)"
+    )
 
 
 class MealLogOut(Logged):
-    """Food eaten off-plan, or a planned meal skipped (told to the chat), as snapshotted with
-    the plan version: `DayOut.totals` = its meals + these."""
+    """Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten
+    that this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =
+    its meals + these. A meal marked eaten that the version still plans shows as that meal
+    (`MealOut.status` eaten), not here."""
+
+    recipe_id: int | None = Field(default=None, description="eaten: the recipe")
 
 
 class DayOut(BaseModel):
@@ -264,6 +271,43 @@ class PlanOut(BaseModel):
     excluded_allergens: list[Allergen]
     diet: Diet | None
     violations: list[ViolationOut]
+    notes: list[str]
+
+
+class EatenIn(BaseModel):
+    """Mark a planned meal eaten: a meal of the plan, on or before the user's today."""
+
+    today: date = Field(description="the user's local date (a later `date` is refused)")
+    date: date
+    slot: Slot
+
+
+class PantryChangeOut(BaseModel):
+    """Pantry food a meal marked eaten used (or, on undo, gave back), in the item's own unit."""
+
+    pantry_item_id: int
+    food_id: int
+    name: str
+    grams: float
+    quantity: float
+    unit: str
+    remaining_quantity: float | None = Field(
+        description="the item's quantity now; null = the item was deleted since (undo: nothing "
+        "was given back)"
+    )
+
+
+class EatenOut(BaseModel):
+    """A meal's eaten state after marking (or undoing) it. No new plan version is made: reload
+    the plan and the pantry to see them."""
+
+    plan_id: int
+    date: date
+    slot: Slot
+    status: Literal["planned", "eaten"]
+    changed: bool = Field(description="false: it already was in this state (a repeat)")
+    meal: MealOut | None = Field(description="the plan's meal at that cell, if any")
+    pantry: list[PantryChangeOut] = Field(description="taken (mark) or given back (undo)")
     notes: list[str]
 
 
@@ -349,6 +393,19 @@ class OutcomeOut(ReplanOutcome):
     """What one plan change request did (also sent live as the `outcome` event)."""
 
     type: Literal["outcome"] = "outcome"
+
+
+class ReplanRequest(BaseModel):
+    """Plan changes made from the plan screen (no chat): the same typed changes the chat's
+    model and offline parser produce, applied by the same executor."""
+
+    changes: list[Change] = Field(min_length=1, max_length=MAX_CHANGES)
+    client_id: UUID = Field(description="the client's id for this request: resending is safe")
+    today: date = Field(description="the user's local date")
+    local_time: time | None = Field(
+        default=None,
+        description="the user's local time: today's meals whose time has passed count as eaten",
+    )
 
 
 Attachment = Annotated[OutcomeOut | RecipeCreatedOut, Field(discriminator="type")]

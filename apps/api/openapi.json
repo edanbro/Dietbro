@@ -913,6 +913,73 @@
         ]
       }
     },
+    "/plans/replan": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Replan Plan",
+        "description": "Apply plan changes (skip, swap, craving, food eaten off-plan) without the chat: the\nchat's executor, so the same rules, results and new plan version. Server-Timing has the\nreplan's wall time.",
+        "operationId": "replanPlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutcomeOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad_today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/plans/current": {
       "get": {
         "tags": [
@@ -984,6 +1051,174 @@
           },
           "404": {
             "description": "no such plan (or not yours)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/meals/eaten": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Mark Meal Eaten",
+        "description": "Mark a meal of the current plan eaten: logged as eaten (counted by later replans, its\nslot kept) and its ingredients taken from the pantry. Repeating it changes nothing.",
+        "operationId": "markMealEaten",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EatenIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EatenOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`today` is implausible, or `date` is after it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours), date not in it, or no meal there"
+          },
+          "409": {
+            "description": "the plan isn't the latest version (reload it)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Unmark Meal Eaten",
+        "description": "Undo a meal marked eaten: the log is voided and the pantry gets back exactly what it\ngave (items deleted since are not recreated). Undoing twice changes nothing.",
+        "operationId": "unmarkMealEaten",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EatenOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`today` is implausible, or `date` is after it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours), date not in it, or no meal there"
+          },
+          "409": {
+            "description": "the plan isn't the latest version (reload it)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1510,6 +1745,42 @@
         "type": "object",
         "title": "AllergiesOut"
       },
+      "AteOffPlan": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "const": "ate_off_plan",
+            "title": "Intent"
+          },
+          "when": {
+            "$ref": "#/components/schemas/When"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Description",
+            "description": "What they said they ate."
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OffPlanItem"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Items",
+            "description": "The foods in it, one per item, when you can tell them apart."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "intent",
+          "when",
+          "description"
+        ],
+        "title": "AteOffPlan",
+        "description": "The user ate (or will eat) something that isn't in the plan."
+      },
       "BandOut": {
         "properties": {
           "min": {
@@ -1936,6 +2207,71 @@
         "title": "ChatProblem",
         "description": "Body of the chat gate's 400/404/409/429 answers."
       },
+      "Craving": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "const": "craving",
+            "title": "Intent"
+          },
+          "when": {
+            "$ref": "#/components/schemas/When"
+          },
+          "dish": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dish",
+            "description": "A named dish, if any: 'lasagne', 'ramen'."
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Tags",
+            "description": "Qualities to match: 'spicy', 'curry', 'quick', 'light', 'vegetarian'."
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id",
+            "description": "This exact recipe (an id returned by search_recipes or create_recipe)."
+          },
+          "strength": {
+            "type": "string",
+            "enum": [
+              "hard",
+              "soft"
+            ],
+            "title": "Strength",
+            "description": "hard: the user insists; fail and say why if no safe match fits the plan. soft: a preference; keep the plan if nothing suitable fits."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "intent",
+          "when",
+          "strength"
+        ],
+        "title": "Craving",
+        "description": "The user wants something particular at a meal (\"something spicy tonight\")."
+      },
       "DayKcal": {
         "properties": {
           "date": {
@@ -2051,6 +2387,100 @@
           "messages_today"
         ],
         "title": "DoneEvent"
+      },
+      "EatenIn": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date (a later `date` is refused)"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "date",
+          "slot"
+        ],
+        "title": "EatenIn",
+        "description": "Mark a planned meal eaten: a meal of the plan, on or before the user's today."
+      },
+      "EatenOut": {
+        "properties": {
+          "plan_id": {
+            "type": "integer",
+            "title": "Plan Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "eaten"
+            ],
+            "title": "Status"
+          },
+          "changed": {
+            "type": "boolean",
+            "title": "Changed",
+            "description": "false: it already was in this state (a repeat)"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MealOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the plan's meal at that cell, if any"
+          },
+          "pantry": {
+            "items": {
+              "$ref": "#/components/schemas/PantryChangeOut"
+            },
+            "type": "array",
+            "title": "Pantry",
+            "description": "taken (mark) or given back (undo)"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "date",
+          "slot",
+          "status",
+          "changed",
+          "meal",
+          "pantry",
+          "notes"
+        ],
+        "title": "EatenOut",
+        "description": "A meal's eaten state after marking (or undoing) it. No new plan version is made: reload\nthe plan and the pantry to see them."
       },
       "ErrorEvent": {
         "properties": {
@@ -2543,7 +2973,8 @@
             "type": "string",
             "enum": [
               "off_plan",
-              "skipped"
+              "skipped",
+              "eaten"
             ],
             "title": "Kind"
           },
@@ -2570,7 +3001,7 @@
           "kcal"
         ],
         "title": "Logged",
-        "description": "Food recorded as eaten off-plan, or a skipped meal (counted as eaten elsewhere or not)."
+        "description": "Food recorded as eaten off-plan, a skipped meal (counted as eaten elsewhere or not), or a\nplanned meal marked eaten from the plan screen."
       },
       "MacrosOut": {
         "properties": {
@@ -2650,7 +3081,8 @@
             "type": "string",
             "enum": [
               "off_plan",
-              "skipped"
+              "skipped",
+              "eaten"
             ],
             "title": "Kind"
           },
@@ -2666,6 +3098,18 @@
             "type": "boolean",
             "title": "Estimated",
             "default": true
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id",
+            "description": "eaten: the recipe"
           }
         },
         "type": "object",
@@ -2677,7 +3121,7 @@
           "kcal"
         ],
         "title": "MealLogOut",
-        "description": "Food eaten off-plan, or a planned meal skipped (told to the chat), as snapshotted with\nthe plan version: `DayOut.totals` = its meals + these."
+        "description": "Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten\nthat this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =\nits meals + these. A meal marked eaten that the version still plans shows as that meal\n(`MealOut.status` eaten), not here."
       },
       "MealOut": {
         "properties": {
@@ -2707,8 +3151,12 @@
           },
           "status": {
             "type": "string",
-            "const": "planned",
+            "enum": [
+              "planned",
+              "eaten"
+            ],
             "title": "Status",
+            "description": "eaten: marked eaten (POST /plans/{id}/meals/eaten)",
             "default": "planned"
           }
         },
@@ -2767,6 +3215,35 @@
         },
         "type": "object",
         "title": "NutrientBands"
+      },
+      "OffPlanItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name",
+            "description": "'Big Mac', 'pepperoni pizza', 'latte'."
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity",
+            "description": "'2 slices', '300 g', '1 large'. Omit if unknown."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "OffPlanItem"
       },
       "OutcomeEvent": {
         "properties": {
@@ -2930,6 +3407,58 @@
         "type": "object",
         "title": "OutcomeOut",
         "description": "What one plan change request did (also sent live as the `outcome` event)."
+      },
+      "PantryChangeOut": {
+        "properties": {
+          "pantry_item_id": {
+            "type": "integer",
+            "title": "Pantry Item Id"
+          },
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "grams": {
+            "type": "number",
+            "title": "Grams"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "remaining_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Quantity",
+            "description": "the item's quantity now; null = the item was deleted since (undo: nothing was given back)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pantry_item_id",
+          "food_id",
+          "name",
+          "grams",
+          "quantity",
+          "unit",
+          "remaining_quantity"
+        ],
+        "title": "PantryChangeOut",
+        "description": "Pantry food a meal marked eaten used (or, on undo, gave back), in the item's own unit."
       },
       "PantryItemIn": {
         "properties": {
@@ -3758,6 +4287,74 @@
         ],
         "title": "RecipeIngredientOut"
       },
+      "ReplanRequest": {
+        "properties": {
+          "changes": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Craving"
+                },
+                {
+                  "$ref": "#/components/schemas/AteOffPlan"
+                },
+                {
+                  "$ref": "#/components/schemas/Skip"
+                },
+                {
+                  "$ref": "#/components/schemas/Swap"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "intent",
+                "mapping": {
+                  "ate_off_plan": "#/components/schemas/AteOffPlan",
+                  "craving": "#/components/schemas/Craving",
+                  "skip": "#/components/schemas/Skip",
+                  "swap": "#/components/schemas/Swap"
+                }
+              }
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Changes"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Client Id",
+            "description": "the client's id for this request: resending is safe"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time",
+            "description": "the user's local time: today's meals whose time has passed count as eaten"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changes",
+          "client_id",
+          "today"
+        ],
+        "title": "ReplanRequest",
+        "description": "Plan changes made from the plan screen (no chat): the same typed changes the chat's\nmodel and offline parser produce, applied by the same executor."
+      },
       "Sex": {
         "type": "string",
         "enum": [
@@ -3890,6 +4487,32 @@
           "items"
         ],
         "title": "ShoppingListOut"
+      },
+      "Skip": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "const": "skip",
+            "title": "Intent"
+          },
+          "when": {
+            "$ref": "#/components/schemas/When"
+          },
+          "eating_elsewhere": {
+            "type": "boolean",
+            "title": "Eating Elsewhere",
+            "description": "true only if the user said they'll eat somewhere else (eating out, at a friend's, takeaway): a meal of the same size is counted. false if they won't eat (not hungry, fasting) or didn't say. Never change it to make a re-plan succeed."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "intent",
+          "when",
+          "eating_elsewhere"
+        ],
+        "title": "Skip",
+        "description": "The user won't eat a planned meal (eating out, not hungry, away)."
       },
       "Slot": {
         "type": "string",
@@ -4041,6 +4664,58 @@
           "protein_g_min"
         ],
         "title": "SuggestedTargets"
+      },
+      "Swap": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "const": "swap",
+            "title": "Intent"
+          },
+          "when": {
+            "$ref": "#/components/schemas/When"
+          },
+          "dish": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dish"
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Tags"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "intent",
+          "when"
+        ],
+        "title": "Swap",
+        "description": "Replace a planned meal with something else, optionally something particular."
       },
       "TargetsOut": {
         "properties": {
@@ -4335,6 +5010,33 @@
         ],
         "title": "ViolationOut",
         "description": "A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the\nbaseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.\nSafety rules (allergens, diet, calorie floor) are never broken in a saved plan."
+      },
+      "When": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "breakfast, lunch, dinner or snack. 'Tonight' means dinner."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "title": "When",
+        "description": "A day in the user's own calendar (their local date) and optionally one meal of it."
       }
     },
     "securitySchemes": {

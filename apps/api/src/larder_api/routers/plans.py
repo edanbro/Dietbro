@@ -1,4 +1,10 @@
-"""Weekly plans: generate (prefilter + plan + validate + save), read, and the shopping list.
+"""Weekly plans: generate (prefilter + plan + validate + save), read, the shopping list, plan
+changes from the plan screen (POST /plans/replan, larder_api.replans) and meals marked eaten
+(larder_api.eaten).
+
+A new plan is made around food already logged in its dates (active meal_logs, from the chat):
+a logged meal stays empty, every log counts on its day (with the replan day bands) and shows
+in the plan's `logged`, like a chat replan's version.
 
 Every query is filtered by the signed-in user; other users' plans are 404s.
 """
@@ -11,23 +17,27 @@ from functools import partial
 from typing import Annotated, Any
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from larder_api import planning
+from larder_api import eaten, planning, replans
 from larder_api.auth import CurrentUser
+from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
 from larder_api.schemas import (
+    ChatProblem,
     DayOut,
+    EatenIn,
+    EatenOut,
     MacrosOut,
-    MealOut,
+    OutcomeOut,
     PlanOut,
     PlanRequest,
     Problems,
-    RecipeCard,
+    ReplanRequest,
     ShoppingItemOut,
     ShoppingItemPatch,
     ShoppingListOut,
@@ -56,6 +66,28 @@ _CREATE_ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_503_SERVICE_UNAVAILABLE: {
         "model": Problems,
         "description": "the planner found no plan in time",
+    },
+}
+
+_EATEN_ERRORS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: {
+        "model": Problems,
+        "description": "`today` is implausible, or `date` is after it",
+    },
+    status.HTTP_404_NOT_FOUND: {
+        "description": "no such plan (or not yours), date not in it, or no meal there"
+    },
+    status.HTTP_409_CONFLICT: {
+        "model": Problems,
+        "description": "the plan isn't the latest version (reload it)",
+    },
+}
+_REPLAN_ERRORS: dict[int | str, dict[str, Any]] = {
+    status.HTTP_400_BAD_REQUEST: {"model": ChatProblem, "description": "bad_today"},
+    status.HTTP_409_CONFLICT: {
+        "model": ChatProblem,
+        "description": "busy: a plan change (chat or plan screen) is running; duplicate: this "
+        "client_id was already applied (reload the plan)",
     },
 }
 
@@ -94,13 +126,6 @@ def _utc_today() -> date:
     return datetime.now(UTC).date()
 
 
-def _card(meal: PlanMeal) -> RecipeCard:
-    r = meal.recipe
-    return RecipeCard(
-        id=r.id, name=r.name, category=r.category, cuisine=r.cuisine, image_url=r.image_url
-    )
-
-
 def plan_out(row: MealPlan) -> PlanOut:
     """Built only from stored rows and the stats snapshot, never from live goals or prices."""
     stats = planning.PlanStats.model_validate(row.stats)
@@ -114,20 +139,7 @@ def plan_out(row: MealPlan) -> PlanOut:
             DayOut(
                 day=d,
                 date=day_date,
-                meals=[
-                    MealOut(
-                        slot=Slot(m.slot),
-                        recipe=_card(m),
-                        portions=m.portions,
-                        servings=m.portions / 2,
-                        nutrition=MacrosOut(
-                            kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g
-                        ),
-                        locked=m.locked,
-                        status=m.status,  # pyright: ignore[reportArgumentType]
-                    )
-                    for m in meals
-                ],
+                meals=[planning.meal_out(m) for m in meals],
                 totals=stats.day_totals[d],
                 logged=stats.logged_on(d),
             )
@@ -223,6 +235,9 @@ async def create_plan(
         novelty=novelty,
         private=private,
     )
+    # Food already logged in these dates (chat) keeps its meal empty and counts on its day.
+    logs = await planning.active_logs(session, user.id, start, problem.days)
+    problem = planning.with_logs(problem, inputs, catalog.merged(private), logs)
     prepared = planning.Prepared(problem, version, seed, None, novelty)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
@@ -237,6 +252,7 @@ async def create_plan(
         problem, result, plan, violations, seed=seed, time_limit_ms=settings.plan_time_limit_ms
     )
     stats.total_ms = round((time.perf_counter() - started) * 1000)
+    stats.logged = planning.logged_by_day(logs, start, problem.days)
 
     # One save at a time per user (chat replans take the same lock): the version and the
     # parent are read under it.
@@ -250,6 +266,35 @@ async def create_plan(
     return plan_out(await _load_plan(session, user, row.id))
 
 
+@router.post("/replan", operation_id="replanPlan", responses=_REPLAN_ERRORS)
+async def replan_plan(
+    body: ReplanRequest,
+    response: Response,
+    user: CurrentUser,
+    session: Session,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> OutcomeOut:
+    """Apply plan changes (skip, swap, craving, food eaten off-plan) without the chat: the
+    chat's executor, so the same rules, results and new plan version. Server-Timing has the
+    replan's wall time."""
+    timed = await replans.run(
+        session,
+        user.id,
+        body,
+        sessionmaker=sessionmaker,
+        catalog=cache,
+        planner=planner,
+        settings=settings,
+        now=clock(),
+    )
+    response.headers["Server-Timing"] = timed.server_timing
+    return OutcomeOut.model_validate(timed.outcome.model_dump())
+
+
 @router.get("/current", operation_id="getCurrentPlan")
 async def current_plan(user: CurrentUser, session: Session) -> PlanOut | None:
     """The most recently created plan, or null if there is none."""
@@ -260,6 +305,35 @@ async def current_plan(user: CurrentUser, session: Session) -> PlanOut | None:
 @router.get("/{plan_id}", operation_id="getPlan", responses=_NOT_FOUND)
 async def get_plan(plan_id: int, user: CurrentUser, session: Session) -> PlanOut:
     return plan_out(await _load_plan(session, user, plan_id))
+
+
+@router.post("/{plan_id}/meals/eaten", operation_id="markMealEaten", responses=_EATEN_ERRORS)
+async def mark_meal_eaten(
+    plan_id: int,
+    body: EatenIn,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> EatenOut:
+    """Mark a meal of the current plan eaten: logged as eaten (counted by later replans, its
+    slot kept) and its ingredients taken from the pantry. Repeating it changes nothing."""
+    now = clock()
+    eaten.check_dates(body.date, body.today, now)
+    return await eaten.mark(session, user.id, plan_id, body.date, body.slot, now)
+
+
+@router.delete("/{plan_id}/meals/eaten", operation_id="unmarkMealEaten", responses=_EATEN_ERRORS)
+async def unmark_meal_eaten(
+    plan_id: int,
+    on: Annotated[date, Query(alias="date")],
+    slot: Annotated[Slot, Query()],
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> EatenOut:
+    """Undo a meal marked eaten: the log is voided and the pantry gets back exactly what it
+    gave (items deleted since are not recreated). Undoing twice changes nothing."""
+    return await eaten.unmark(session, user.id, plan_id, on, slot, clock())
 
 
 def approx_units(grams: int, portions: list[Portion]) -> str | None:

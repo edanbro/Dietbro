@@ -7,7 +7,9 @@ back-pressures the model stream; text deltas may be coalesced). The SSE endpoint
 that stream; when the client disconnects, the relay stops and the turn carries on, persists its
 reply and releases the turn lock. Sends to a closed stream are ignored. Each turn runs under
 `anyio.fail_after(chat_turn_deadline_s)`; lifespan shutdown waits for running turns up to that
-deadline, then cancels them (their `finally` still releases the lock, shielded).
+deadline, then cancels them (their `finally` still releases the lock, shielded). Nothing a
+turn raises leaves its task (a failed lock release is logged; the lock goes stale); should the
+group die anyway, it stops accepting turns (503).
 
 The task group is hosted by a task of its own (`open` / `close`, or `async with`), so whoever
 opens it - the app lifespan, or a test fixture - may close it from another task.
@@ -74,16 +76,19 @@ class ChatTurns:
         await self.close()
 
     async def _serve(self, ready: anyio.Event, stop: anyio.Event) -> None:
-        async with anyio.create_task_group() as tg:
-            self._tg = tg
-            ready.set()
-            await stop.wait()
-            self._tg = None  # no new turns from here on
-            self._idle = anyio.Event()
-            if self.running:
-                with anyio.move_on_after(self.deadline_s):
-                    await self._idle.wait()
-            tg.cancel_scope.cancel()
+        try:
+            async with anyio.create_task_group() as tg:
+                self._tg = tg
+                ready.set()
+                await stop.wait()
+                self._tg = None  # no new turns from here on
+                self._idle = anyio.Event()
+                if self.running:
+                    with anyio.move_on_after(self.deadline_s):
+                        await self._idle.wait()
+                tg.cancel_scope.cancel()
+        finally:
+            self._tg = None  # a group that died takes no more turns (503, not 500)
 
     def start(
         self, prepared: PreparedTurn, scope_factory: ScopeFactory
@@ -129,7 +134,16 @@ class ChatTurns:
             if not self.running and self._idle is not None:
                 self._idle.set()
             if not ended and scope is not None:  # e.g. cancelled before run_turn started
-                await limits.release_turn(scope.sessionmaker, prepared.user_id, prepared.lock_token)
+                await _release(scope, prepared)
+
+
+async def _release(scope: ChatScope, prepared: PreparedTurn) -> None:
+    """Free the turn lock; a failure is logged, never raised (it would take the task group,
+    and every other user's turn, down with it). The lock then goes stale after the deadline."""
+    try:
+        await limits.release_turn(scope.sessionmaker, prepared.user_id, prepared.lock_token)
+    except Exception:
+        logger.exception("couldn't release the turn lock for message %s", prepared.message_id)
 
 
 def get_chat_turns(request: Request) -> ChatTurns:

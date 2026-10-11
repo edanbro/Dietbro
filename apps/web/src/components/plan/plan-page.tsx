@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useIsMutating } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -22,11 +23,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api/browser";
 import {
+  type ChatOutcome,
+  keys,
   type Plan,
   useAllergens,
   useCreatePlan,
   useCurrentPlan,
+  useMarkEaten,
   useMe,
+  useReplan,
   type Violation,
 } from "@/lib/api/hooks";
 import {
@@ -42,9 +47,11 @@ import { allergenLabel, humanize } from "@/lib/format";
 
 import { dayRows, LoggedCard, LoggedNote } from "./logged";
 import { DayMacros } from "./macro-bars";
+import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
+import { WhatChanged } from "./what-changed";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -273,10 +280,35 @@ function PlanNotes({ plan }: { plan: Plan }) {
   );
 }
 
+/**
+ * Meal actions (mark eaten, skip, swap, something else) for the plan's cards. One plan change
+ * runs at a time; a replan's outcome is kept for the "What changed" panel.
+ */
+function useMealActions(plan: Plan, today: string, creating: boolean) {
+  const eaten = useMarkEaten(plan.id);
+  const replan = useReplan();
+  const busy = useIsMutating({ mutationKey: keys.planChange }) > 0 || creating;
+  const [outcome, setOutcome] = useState<ChatOutcome | null>(null);
+  const actions = (date: string): MealActionsProps => ({
+    date,
+    today,
+    busy,
+    onEaten: async (cell, undo) => {
+      const out = await eaten.mutateAsync({ ...cell, undo });
+      const { title, description } = eatenMessage(out, undo);
+      toast.success(title, description ? { description } : undefined);
+    },
+    onReplan: async (changes) => {
+      setOutcome(await replan.mutateAsync(changes));
+    },
+  });
+  return { actions, outcome, setOutcome };
+}
+
 function PlanView({
   plan,
   create,
-  onCreated,
+  onCreated: created,
 }: {
   plan: Plan;
   create: CreatePlan;
@@ -285,6 +317,11 @@ function PlanView({
   const { view, day, set } = useViewState();
   const [confirming, setConfirming] = useState(false);
   const today = localISODate();
+  const { actions, outcome, setOutcome } = useMealActions(plan, today, create.isPending);
+  const onCreated = () => {
+    setOutcome(null);
+    created();
+  };
   const ended = planEnded(plan, today);
   const first = plan.days[0]?.date ?? plan.start;
   const last = plan.days.at(-1)?.date ?? plan.start;
@@ -369,6 +406,9 @@ function PlanView({
       <CreateError error={create.error} />
       <Exclusions plan={plan} />
       <PlanNotes plan={plan} />
+      {outcome ? (
+        <WhatChanged outcome={outcome} today={today} onDismiss={() => setOutcome(null)} />
+      ) : null}
 
       <Tabs value={view} onValueChange={(v: View) => set({ view: v === "week" ? "week" : null })}>
         <TabsList className="w-full" aria-label="View">
@@ -403,7 +443,11 @@ function PlanView({
                 <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
                   {dayRows(d).map((row) => (
                     <li key={row.key}>
-                      {row.meal ? <MealCard meal={row.meal} /> : <LoggedCard entry={row.entry} />}
+                      {row.meal ? (
+                        <MealCard meal={row.meal} actions={actions(d.date)} />
+                      ) : (
+                        <LoggedCard entry={row.entry} />
+                      )}
                     </li>
                   ))}
                 </ul>

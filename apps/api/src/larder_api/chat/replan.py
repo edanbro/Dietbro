@@ -1,4 +1,5 @@
-"""The executor: typed changes -> a new plan version. The only code that changes a plan from chat.
+"""The executor: typed changes -> a new plan version. The only code that changes a plan from chat
+(source "chat" / "offline") or from the plan screen (POST /plans/replan, source "app", ADR-0015).
 
 `apply_changes(scope, changes, source)` never raises for planning outcomes: every change gets a
 ChangeResult, facts are always recorded, and a plan version is saved whenever anything changed.
@@ -11,7 +12,8 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
      P fail ("Monday isn't in your plan yet - make next week's plan first"). Only when no plan
      covers today and a wish is dated today..today+6 is a fresh plan made (POST /plans rules,
      start = today), with `fresh=True`. Changes dated before today: facts are logged (and shown on
-     that past day); wishes fail ("past days can't be changed").
+     that past day - except beside a fresh week, which has no parent to copy: then only logged,
+     against the plan that covers them); wishes fail ("past days can't be changed").
    - Missing slot: AteOffPlan today -> the latest slot whose time has passed (SLOT_START), else
      dinner; anything else -> dinner. The result's message says what was assumed.
    - Conflicts within the message, grouped by (date, slot): AteOffPlan beats Skip (the Skip is
@@ -19,7 +21,8 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
      a Craving/Swap on a slot that also has a fact in this message fails ("You said you're
      skipping Fri dinner"); of two wishes on one slot the first applies, later ones fail.
    - Idempotency: change_key = sha256 of the canonical change JSON; a (message_id, change_key)
-     already in `cravings` returns its stored result with status 'unchanged'.
+     - or (user, client_id, change_key) for the plan screen - already in `cravings` returns its
+     stored result with status 'unchanged'.
 2. Estimates (no DB connection held): offplan.estimate for each AteOffPlan.
 3. The replan problem covers the open horizon only: day 0 = max(today, P.start), days = to
    P.end. Offset o = (day 0 - P.start). Past days are never in the problem.
@@ -27,44 +30,53 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
      (voided_at IS NULL) dated in the horizon adds its macros to `extra[day]` and, if slotted,
      locks that slot to None; this message's facts are added the same way (a new slotted log
      voids the earlier active log for that (date, slot); a wish on a slot with an active skip
-     voids the skip; on a slot with an active off_plan log it fails).
+     voids the skip; on a slot with an active off_plan or eaten log it fails). A meal marked
+     eaten (kind "eaten", larder_api.eaten) is such a log: fixed intake, slot kept empty.
    - Today's meals whose time has passed (local_time >= SLOT_END[slot]; without local_time,
      none unless a change today names a later slot) are frozen: their macros go to `extra[0]`
      and their slot is locked to None, so they are never re-judged against today's profile;
      their rows are copied unchanged into the new version.
    - Pins: the parent's PlanMeals with locked=True in the horizon become `choices` of one
      recipe, if still visible and `candidates.allowed` under the current profile (else dropped,
-     with a note). Wishes: a Craving/Swap with recipe_id -> choices=(id,) after the recipe guard
+     with a note); a wish on a pinned meal replaces the pin in the runs that keep the wish.
+     Wishes: a Craving/Swap with recipe_id -> choices=(id,) after the recipe guard
      (handlers.guard_recipe: visible to the user, plannable, slot in its meal types, allowed);
      with dish/tags -> choices = top 5 safe search hits for that slot; a Swap with nothing ->
      choices = that slot's candidates minus the current recipe (and minus recipes already on
      that date). Locks are only ever None.
    - day_kcal for every day with fixed intake (extra > 0 or a None-lock): fixed = extra[d];
-     [lo, hi] = the kcal the free slots can reach (min/max over their candidates and portion
-     ranges); band = Band(min(max(kcal_min, floor), fixed + hi), max(kcal_max, fixed + lo)).
+     [lo, hi] = the kcal the free slots can reach (min/max over their slot's candidates - never
+     a wish's or pin's choices, which must fit the band, not set it - and portion ranges);
+     band = Band(min(max(kcal_min, floor), fixed + hi), max(kcal_max, fixed + lo)).
      The day's result says when it lands outside the normal band ("Tue ~2,600 kcal with the
      pizza, above your 2,200 max"). Untouched days keep the hard band and the floor.
    - make_problem with seed = P.stats.seed, novelty = {}, the user's private recipes merged,
      every recipe named in choices added with its foods; check_problem after adding everything.
    - previous = the parent's meals with day >= o, re-indexed to day - o (churn weight keeps
-     unrelated meals).
+     unrelated meals), minus today's frozen meals and meals marked eaten (kept as they were).
 4. Solve (planning.Planner takes (problem, previous); runs via scope.solve, in a worker thread
    behind the process-wide planning.plan_limiter, replan_time_limit_ms): at most 3 runs -
    (a) everything; if that has no valid plan: (b) without soft wishes; then (c) facts only.
    Wishes dropped this way fail with the reason (diagnose lines when available). If (c) fails
    too, no version is saved but facts are still logged ("I logged it but couldn't re-plan
    Tuesday: ...").
-5. Write phase (one short transaction): `pg_advisory_xact_lock(user_id)` (POST /plans takes it
-   too), re-read the latest plan; if it is no longer P, rebuild once from the new latest, else
-   fail the wishes with "your plan changed while I was working". Save version
-   next_version(P.start) with parent_id = P.id, start_date = P.start, days = P.days: rows for
-   days < o and today's frozen meals copied verbatim from P; solver meals shifted by +o;
+5. Write phase (one short transaction): `pg_advisory_xact_lock(user_id)` (POST /plans and
+   marking eaten take it too), re-read the latest plan and the active logs; if the plan is no
+   longer P or the logs changed (a meal marked eaten or undone meanwhile), rebuild once from
+   the new state, else fail the wishes with "your plan changed while I was working". Save
+   version next_version(P.start) with parent_id = P.id, start_date = P.start, days = P.days:
+   rows for days < o and today's frozen meals copied verbatim from P; solver meals shifted by +o;
+   rows of cells with an active slotted log are never copied (the log replaces them), except
+   a meal marked eaten that P still plans (same recipe): that row is copied (status eaten) and
+   its log is counted once, through `extra`, not listed in `logged`; an eaten log this message
+   voids (a skip or off-plan food reported for that meal) gives its pantry food back;
    locked=True only for pins and this message's applied wishes; shopping list for the horizon
-   with `checked` copied from P for the same food when the new grams <= P's. PlanStats v2:
+   with `checked` copied from P (re-read under the lock, so ticks made meanwhile count) for
+   the same food when the new grams <= P's. PlanStats v2:
    day_totals (past days from P.stats), `logged` per day (MealLogOut snapshot of active logs in
    the plan's dates), the outcome (results + diff) for explain_plan_diff, score with previous
-   (score['churn']). MealLogs (plan_id = new version, else P.id) and one cravings row per
-   change, committed in the same transaction.
+   (score['churn']), total_ms = the executor's wall time. MealLogs (plan_id = new version,
+   else P.id) and one cravings row per change, committed in the same transaction.
 6. ReplanOutcome: results per change, SlotChange diff vs P for days >= today (recipe or portion
    changes; reason = the change that caused it, else 'rebalance' / 'resize'), logged, DayKcal for
    changed days, warnings = hard violations dated >= today (baseline only), notes.
@@ -73,6 +85,7 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
 import hashlib
 import json
 import logging
+import time as clock
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date, time, timedelta
@@ -81,10 +94,10 @@ from typing import Literal
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_api import planning
+from larder_api import eaten, planning
 from larder_api.chat import offplan, search
 from larder_api.chat.scope import ChatScope
-from larder_api.schemas import MacrosOut, MealLogOut
+from larder_api.schemas import MacrosOut
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_db import models as db
 from larder_llm.outcome import (
@@ -131,6 +144,7 @@ CHANGED = "Your plan changed while I was working - please try again."
 
 type DateSlot = tuple[date, Slot]  # a meal of the user's calendar
 type Where = Literal["plan", "past", "outside", "fresh"]
+type Source = Literal["chat", "offline", "app"]  # app: POST /plans/replan (the plan screen)
 
 
 def change_key(change: Change) -> str:
@@ -233,7 +247,8 @@ class _Read:
     blocked: str | None  # why nothing can be planned (setup, goals)
     latest: db.MealPlan | None
     logs: list[db.MealLog]  # active logs around the plan's dates
-    seen: dict[str, db.Craving]  # this message's stored changes, by key
+    window: tuple[date, date]  # the dates `logs` were read for
+    seen: dict[str, db.Craving]  # this message's (or request's) stored changes, by key
     private: planning.PlanningCatalog
     fresh_version: int
     names: dict[int, str] = field(default_factory=dict[int, str])
@@ -268,11 +283,12 @@ class _Plan:
 
 
 async def apply_changes(
-    scope: ChatScope, changes: Sequence[Change], *, source: Literal["chat", "offline"]
+    scope: ChatScope, changes: Sequence[Change], *, source: Source
 ) -> ReplanOutcome:
     estimates: dict[int, offplan.Estimate] = {}
+    started = clock.perf_counter()
     for attempt in range(2):
-        outcome = await _attempt(scope, changes, source, estimates, last=attempt == 1)
+        outcome = await _attempt(scope, changes, source, estimates, started, last=attempt == 1)
         if outcome is not None:
             return outcome
         logger.info("plan of user %s changed during a replan; rebuilding", scope.user_id)
@@ -282,8 +298,9 @@ async def apply_changes(
 async def _attempt(
     scope: ChatScope,
     changes: Sequence[Change],
-    source: Literal["chat", "offline"],
+    source: Source,
     estimates: dict[int, offplan.Estimate],
+    started: float,
     *,
     last: bool,
 ) -> ReplanOutcome | None:
@@ -311,7 +328,7 @@ async def _attempt(
     await _estimates(scope, items, read, estimates)
     if decided.target is not None and read.inputs is not None and read.blocked is None:
         await _solve(scope, items, read, decided)
-    return await _write(scope, items, read, decided, source, last=last)
+    return await _write(scope, items, read, decided, source, started, last=last)
 
 
 # --- 1. read --------------------------------------------------------------------------------
@@ -333,26 +350,37 @@ async def _read(scope: ChatScope, items: list[_Item]) -> _Read:
         dates = [i.on for i in items] + [scope.today, scope.today + timedelta(days=6)]
         if latest is not None:
             dates += [latest.start_date, latest.start_date + timedelta(days=latest.days - 1)]
+        window = (min(dates), max(dates))
         logs = list(
             await session.scalars(
                 select(db.MealLog)
                 .where(
                     db.MealLog.user_id == scope.user_id,
                     db.MealLog.voided_at.is_(None),
-                    db.MealLog.eaten_on.between(min(dates), max(dates)),
+                    db.MealLog.eaten_on.between(*window),
                 )
                 .order_by(db.MealLog.id)
             )
         )
-        seen = {
-            c.change_key: c
-            for c in await session.scalars(
-                select(db.Craving).where(
-                    db.Craving.message_id == scope.message_id,
-                    db.Craving.change_key.in_([i.key for i in items]),
+        seen: dict[str, db.Craving] = {}
+        request = (
+            db.Craving.message_id == scope.message_id
+            if scope.message_id is not None
+            else db.Craving.client_id == scope.client_id
+            if scope.client_id is not None
+            else None
+        )
+        if request is not None:
+            seen = {
+                c.change_key: c
+                for c in await session.scalars(
+                    select(db.Craving).where(
+                        db.Craving.user_id == scope.user_id,
+                        request,
+                        db.Craving.change_key.in_([i.key for i in items]),
+                    )
                 )
-            )
-        }
+            }
         private = await planning.load_private_recipes(session, scope.user_id)
         fresh_version = await planning.next_version(session, scope.user_id, scope.today)
         names = {
@@ -363,7 +391,7 @@ async def _read(scope: ChatScope, items: list[_Item]) -> _Read:
                 )
             )
         }
-    return _Read(inputs, blocked, latest, logs, seen, private, fresh_version, names)
+    return _Read(inputs, blocked, latest, logs, window, seen, private, fresh_version, names)
 
 
 def _repeats(items: list[_Item], read: _Read) -> None:
@@ -490,11 +518,11 @@ async def _decide(
             item.finish("failed", f"{when} is already over.")
             continue
         earlier = active.get(item.cell, [])
-        eaten = next((log for log in earlier if log.kind == "off_plan"), None)
-        if eaten is not None:
-            item.finish(
-                "failed", f"You already logged {eaten.description} for {when}, so I left it."
-            )
+        had = next((log for log in earlier if log.kind in ("off_plan", "eaten")), None)
+        if had is not None:
+            said = "logged" if had.kind == "off_plan" else "marked"
+            what = had.description if had.kind == "off_plan" else f"{had.description} eaten"
+            item.finish("failed", f"You already {said} {what} for {when}, so I left it.")
             continue
         item.voids_skips = frozenset(log.id for log in earlier)
         await _choose(scope, item, when)
@@ -574,7 +602,9 @@ async def _solve(scope: ChatScope, items: list[_Item], read: _Read, decided: _Pl
         for i in items
         if (i.logs or i.pending) and i.where in ("plan", "fresh") and target.day(i.on) >= offset
     ]
-    past_facts = any(i.logs and i.where == "past" for i in items)
+    # Past-day facts get a copied version of the plan they fall in; a fresh week (no plan
+    # covers today) has no parent to copy, so they are only logged (against the latest plan).
+    past_facts = target.plan is not None and any(i.logs and i.where == "past" for i in items)
     if days <= 0 or not horizon:
         decided.copy_only = past_facts
         return
@@ -640,12 +670,19 @@ async def _solve(scope: ChatScope, items: list[_Item], read: _Read, decided: _Pl
         choices |= {(pday(i.on), i.slot): i.choices for i in chosen}
         return planning.constrain(base, inputs, pool, choices=choices, empty=empty, extra=extra)
 
+    # Meals kept as they were (over today, or marked eaten) aren't the planner's to change.
+    eaten_cells = {
+        (log.eaten_on, Slot(log.slot))
+        for log in read.logs
+        if log.kind == "eaten" and log.slot is not None and log.id not in decided.voided
+    }
     previous = (
         planning.meals_plan(
             (
                 m
                 for m in target.plan.meals
                 if not (m.day == offset and Slot(m.slot) in decided.frozen)
+                and (target.date(m.day), Slot(m.slot)) not in eaten_cells
             ),
             offset,
         )
@@ -730,10 +767,12 @@ async def _pins(
     decided: _Plan,
     rows: dict[DateSlot, db.PlanMeal],
 ) -> dict[DateSlot, int]:
-    """Meals the user pinned earlier (locked) stay, if still safe and not changed now."""
+    """Meals the user pinned earlier (locked) stay, if still safe and not reported eaten or
+    skipped. A wish on a pinned meal overrides the pin only in the runs that keep the wish
+    (build: its choices replace the pin's), so a soft wish that is dropped leaves the pin."""
     target = decided.target
     assert target is not None
-    touched = {i.cell for i in items if i.where in ("plan", "fresh") and i.status != "failed"}
+    touched = {i.cell for i in items if i.logs and i.where in ("plan", "fresh")}
     logged = {(log.eaten_on, Slot(log.slot)) for log in read.logs if log.slot is not None}
     today_over = {(scope.today, s) for s in decided.frozen}
     pins: dict[DateSlot, int] = {}
@@ -762,7 +801,8 @@ async def _write(
     items: list[_Item],
     read: _Read,
     decided: _Plan,
-    source: Literal["chat", "offline"],
+    source: Source,
+    started: float,
     *,
     last: bool,
 ) -> ReplanOutcome | None:
@@ -770,8 +810,10 @@ async def _write(
     unshoppable |= read.private.unshoppable
     async with scope.sessionmaker() as session:
         await planning.lock_user_plans(session, scope.user_id)
-        if decided.saves and await _latest_id(session, scope.user_id) != (
-            read.latest.id if read.latest else None
+        # A meal marked eaten (or undone) meanwhile changes the plan without a new version.
+        if decided.saves and (
+            await _latest_id(session, scope.user_id) != (read.latest.id if read.latest else None)
+            or await _log_ids(session, scope.user_id, read.window) != {log.id for log in read.logs}
         ):
             if not last:
                 await session.rollback()
@@ -790,12 +832,17 @@ async def _write(
         if row is not None:
             stats = planning.PlanStats.model_validate(row.stats)
             stats.outcome = outcome
+            stats.total_ms = round((clock.perf_counter() - started) * 1000)
             row.stats = stats.model_dump(mode="json")
         if voided:
             await session.execute(
                 update(db.MealLog)
                 .where(db.MealLog.id.in_(voided), db.MealLog.voided_at.is_(None))
                 .values(voided_at=scope.now)
+            )
+            # A meal marked eaten that the user now reports otherwise: its pantry food back.
+            await eaten.give_back_logs(
+                session, scope.user_id, [log for log in read.logs if log.id in voided], read.latest
             )
         cravings: dict[int, db.Craving] = {}
         for item in items:
@@ -809,6 +856,7 @@ async def _write(
                 raw_text=scope.raw_text,
                 parsed=item.change.model_dump(mode="json"),
                 change_key=item.key,
+                client_id=scope.client_id,
                 status=item.status,
                 message=item.message,
                 plan_id=plan_id,
@@ -821,6 +869,19 @@ async def _write(
         session.add_all(new_logs)
         await session.commit()
     return outcome
+
+
+async def _log_ids(session: AsyncSession, user_id: int, window: tuple[date, date]) -> set[int]:
+    """The user's active logs in `window` now (under the plan lock)."""
+    return set(
+        await session.scalars(
+            select(db.MealLog.id).where(
+                db.MealLog.user_id == user_id,
+                db.MealLog.voided_at.is_(None),
+                db.MealLog.eaten_on.between(*window),
+            )
+        )
+    )
 
 
 async def _latest_id(session: AsyncSession, user_id: int) -> int | None:
@@ -894,7 +955,7 @@ def _fact_message(item: _Item, today: date, target: _Target | None) -> str:
     return text
 
 
-def _log(item: _Item, source: Literal["chat", "offline"], user_id: int) -> db.MealLog:
+def _log(item: _Item, source: Source, user_id: int) -> db.MealLog:
     change = item.change
     m = item.macros
     if isinstance(change, AteOffPlan):
@@ -922,17 +983,6 @@ def _log(item: _Item, source: Literal["chat", "offline"], user_id: int) -> db.Me
     )
 
 
-def _logged_out(log: db.MealLog) -> MealLogOut:
-    return MealLogOut(
-        date=log.eaten_on,
-        slot=Slot(log.slot) if log.slot else None,
-        kind="off_plan" if log.kind == "off_plan" else "skipped",
-        description=log.description,
-        kcal=log.kcal,
-        estimated=log.estimated,
-    )
-
-
 async def _save(
     scope: ChatScope,
     session: AsyncSession,
@@ -951,18 +1001,39 @@ async def _save(
     assert read.inputs is not None
     parent = target.plan
     version = await planning.next_version(session, scope.user_id, target.start)
-    reported = {i.cell for i in items if i.logs}
+    # The parent's list as it is now, under the lock: ticks made while we planned carry over.
+    shopping = (
+        list(
+            await session.scalars(
+                select(db.ShoppingItem).where(db.ShoppingItem.plan_id == parent.id)
+            )
+        )
+        if parent is not None
+        else []
+    )
     logs = [log for log in read.logs if log.id not in voided] + new_logs
+    # A meal marked eaten that the parent still plans is carried over as that meal (status
+    # eaten); its log then counts through the planner's `extra` only, never as well.
+    as_meal = eaten.shown_as_meals(logs, parent)
+    # Every other meal with an active slotted log is reported, not only this message's: a log
+    # written while no version could be saved, or before POST /plans made the plan again, would
+    # otherwise be counted on top of the planned meal it replaced.
+    reported = {
+        (log.eaten_on, Slot(log.slot))
+        for log in logs
+        if log.slot is not None and log.id not in as_meal
+    }
+    eaten_cells = {(log.eaten_on, Slot(log.slot)) for log in logs if log.id in as_meal}
     by_day: dict[int, list[db.MealLog]] = {}
     for log in logs:
-        if target.covers(log.eaten_on):
+        if target.covers(log.eaten_on) and log.id not in as_meal:
             by_day.setdefault(target.day(log.eaten_on), []).append(log)
-    snapshot = [[_logged_out(log) for log in by_day.get(d, [])] for d in range(target.days)]
+    snapshot = [[planning.logged_out(log) for log in by_day.get(d, [])] for d in range(target.days)]
 
     def kept(m: db.PlanMeal, upto: int) -> bool:
         cell = (target.date(m.day), Slot(m.slot))
         frozen = m.day == decided.offset and Slot(m.slot) in decided.frozen
-        return cell not in reported and (m.day < upto or frozen)
+        return cell not in reported and (m.day < upto or frozen or cell in eaten_cells)
 
     solved = decided.solved
     if solved is None:  # only past days changed: carry everything over
@@ -993,7 +1064,7 @@ async def _save(
                 staple=s.staple,
                 checked=s.checked,
             )
-            for s in parent.shopping
+            for s in shopping
         )
         session.add(row)
         await session.flush()
@@ -1038,7 +1109,7 @@ async def _save(
             offset=offset,
             meals=rows,
             pinned=frozenset(pinned),
-            shopping=parent.shopping if parent is not None else (),
+            shopping=shopping,
         ),
     )
     await session.flush()
@@ -1092,7 +1163,7 @@ def _outcome(
             Logged(
                 date=log.eaten_on,
                 slot=Slot(log.slot) if log.slot else None,
-                kind="off_plan" if log.kind == "off_plan" else "skipped",
+                kind=planning.log_kind(log),
                 description=log.description,
                 kcal=log.kcal,
                 estimated=log.estimated,

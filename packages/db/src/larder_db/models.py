@@ -3,7 +3,8 @@
 Data (M1): foods, recipes, embeddings. Users (M2): profile, goals, allergies, pantry; every user
 table is keyed or filtered by `user_id`. Plans (M3): versioned weekly plans and shopping lists.
 Chat (M4): threads and messages, requested changes, meals logged off-plan, LLM calls; recipes the
-assistant drafts are private to their owner.
+assistant drafts are private to their owner. Replans (M5): planned meals marked eaten (a meal log
+that records the pantry food it used) and plan changes made from the plan screen (`client_id`).
 """
 
 import uuid
@@ -338,7 +339,7 @@ class PantryItem(Base):
 class MealPlan(Base):
     """One version of a user's plan for `days` days from `start_date`. Replans (M5) add a new
     version (`parent_id` = the plan it replaced); rows are never edited in place, except
-    shopping-list ticks."""
+    shopping-list ticks and a meal's eaten status."""
 
     __tablename__ = "meal_plans"
     __table_args__ = (
@@ -388,7 +389,9 @@ class PlanMeal(Base):
     protein_g: Mapped[int] = mapped_column(Integer)
     fat_g: Mapped[int] = mapped_column(Integer)
     carbs_g: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(16), default="planned")  # eaten | skipped (M5)
+    # planned | eaten: set in place when the meal is marked eaten (or undone), like shopping
+    # ticks; the active `eaten` meal log is the fact replans count.
+    status: Mapped[str] = mapped_column(String(16), default="planned")
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     plan: Mapped[MealPlan] = relationship(back_populates="meals")
@@ -490,6 +493,7 @@ class Craving(Base):
         Index("ix_cravings_user_created", "user_id", "created_at"),
         Index("ix_cravings_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
         UniqueConstraint("message_id", "change_key"),
+        UniqueConstraint("user_id", "client_id", "change_key"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -497,6 +501,8 @@ class Craving(Base):
     message_id: Mapped[int | None] = mapped_column(
         ForeignKey("chat_messages.id", ondelete="SET NULL")
     )
+    # A change made from the plan screen (POST /plans/replan): the request's client id.
+    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     intent: Mapped[str] = mapped_column(String(16))  # craving | ate_off_plan | skip | swap
     raw_text: Mapped[str] = mapped_column(Text)  # the user's message
     parsed: Mapped[dict[str, Any]] = mapped_column(JSONB)  # larder_llm.schemas.Change
@@ -508,12 +514,17 @@ class Craving(Base):
 
 
 class MealLog(Base):
-    """Food eaten off-plan, or a planned meal skipped. Nutrition is computed by the app from
-    USDA data (never taken from a model) and is an estimate unless `estimated` is false. A
-    skipped meal stores the planned meal's macros when eaten elsewhere, else zeros. Active logs
-    (voided_at IS NULL) are facts every replan rebuilds from: their kcal count as eaten on that
-    day and a slotted log keeps that slot free of planned meals. A newer slotted log for the
-    same (day, slot), or a craving/swap there after a skip, voids the earlier one."""
+    """Food eaten off-plan, a planned meal skipped, or a planned meal marked eaten. Nutrition
+    is computed by the app from USDA data (never taken from a model) and is an estimate unless
+    `estimated` is false. A skipped meal stores the planned meal's macros when eaten
+    elsewhere, else zeros. Active logs (voided_at IS NULL) are facts every replan rebuilds
+    from: their kcal count as eaten on that day and a slotted log keeps that slot free of
+    planned meals. A newer slotted log for the same (day, slot), or a craving/swap there after
+    a skip, voids the earlier one.
+
+    An `eaten` log (M5, docs/adr/0015) copies the planned meal's macros (`recipe_id`, not an
+    estimate) and records in `pantry_taken` exactly what was drawn from the pantry, so undoing
+    it (voiding) gives the same amounts back."""
 
     __tablename__ = "meal_logs"
     __table_args__ = (
@@ -528,7 +539,7 @@ class MealLog(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     eaten_on: Mapped[date] = mapped_column(Date)  # the user's local date
     slot: Mapped[str | None] = mapped_column(String(16))
-    kind: Mapped[str] = mapped_column(String(16))  # off_plan | skipped (M5 adds eaten)
+    kind: Mapped[str] = mapped_column(String(16))  # off_plan | skipped | eaten
     description: Mapped[str] = mapped_column(Text)
     kcal: Mapped[int] = mapped_column(Integer)
     protein_g: Mapped[int] = mapped_column(Integer)
@@ -537,7 +548,12 @@ class MealLog(Base):
     estimated: Mapped[bool] = mapped_column(Boolean, default=True)
     # How the estimate was made: [{"name", "food_id", "food", "grams"}].
     items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
-    source: Mapped[str] = mapped_column(String(16))  # chat | offline
+    source: Mapped[str] = mapped_column(String(16))  # chat | offline | app
+    recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id", ondelete="SET NULL"))
+    # eaten: [{"pantry_item_id", "food_id", "grams", "quantity", "unit"}], amounts taken.
+    pantry_taken: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
     craving_id: Mapped[int | None] = mapped_column(ForeignKey("cravings.id", ondelete="SET NULL"))
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
     voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -249,9 +249,25 @@ may choose *any* allocation: at the optimum it is worth exactly as much as EDF's
   churn make them differ, and in the prototype lexicographic ordering of days made the first
   solution slower and the final gap worse.
 - **Hints.** `model.add_hint(var, value)` from the greedy plan (`baseline.greedy`, ~25 ms), or
-  from `previous` when replanning, usually gives CP-SAT a good first solution immediately. A
-  hint is a speed-up, never a guarantee: it may break a hard rule the greedy plan missed (kcal
-  band, budget), and CP-SAT then repairs or ignores it.
+  from `previous` when replanning (next point), usually gives CP-SAT a good first solution
+  immediately. A hint is a speed-up, never a guarantee: it may break a hard rule the greedy
+  plan missed (kcal band, budget), and CP-SAT then repairs or ignores it.
+- **Warm start for replans (M5).** A replan must answer in well under a second at the API
+  (p95 < 1 s, [ADR-0015](../../docs/adr/0015-eaten-and-app-replans.md)), so `solve()` must
+  `AddHint` from `previous` whenever it is given: for every open cell `(d, s)` whose previous
+  recipe `r0` has a variable there, hint `x[d,s,r0] = 1` and its portions
+  (`q[d,s,r0] = meal.portions`, or `y[d,s,r0,p] = 1`), and hint the cell's other choice
+  booleans to 0; for an open cell with no previous meal, hint every boolean to 0. Skip locked
+  cells, and a previous recipe that isn't a variable at that cell (it is no longer a candidate,
+  a choice excludes it, or it is no longer allowed) - leave that cell unhinted. Hinting the
+  auxiliaries (pantry draws, repeat and macro slacks) as well is optional; CP-SAT completes a
+  partial hint. Because the previous plan minus the cells the change emptied is usually still
+  valid, this gives a first solution with almost no churn at once, and every later solution is
+  better (spec test 17). Run replans with a short limit (`replan_time_limit_ms`; around
+  600-800 ms leaves room for the API's own ~100 ms) and expect FEASIBLE, not OPTIMAL. The
+  churn weight (`Weights.churn`, £2 per changed slot) is what keeps unrelated meals; measure it
+  with `make bench-replan` (average changed slots vs `scenarios.replan`'s
+  `previous`, against `forced_churn`, the cells the change itself emptied).
 - **Parameters.**
 
   ```python
@@ -272,10 +288,11 @@ budget profiles often ended UNKNOWN, which is why they are soft. Day-symmetry br
 ## 8. Running the specification
 
 ```sh
-uv run pytest packages/solver/tests/test_solve.py   # the spec: 75 tests, xfail until solve() exists
+uv run pytest packages/solver/tests/test_solve.py   # the spec: 85 tests, xfail until solve() exists
 uv run pytest -m perf packages/solver               # realistic size: 20 seeds, p95 < 4 s
 uv run pytest packages/solver                       # everything else (validator, greedy, ...)
 make bench                                          # end to end through the API (bench added with the API work)
+make bench-replan                                   # M5: replan latency (p50/p95) and churn
 ```
 
 Functional tests use `time_limit_ms=2000, workers=4` on planted problems (k=10) and small
@@ -287,6 +304,7 @@ Useful while developing:
 
 - `scenarios.planted(seed, k=10)` has a known valid plan (`scenario.witness`) and decoys
   (`scenario.decoys`); `validate(problem, plan)` says in plain English what is wrong.
-  `scenarios.replan(seed, k=10)` is the same with choices and day bands (section 3a).
+  `scenarios.replan(seed, k=10)` is the same with choices and day bands (section 3a), plus
+  `scenario.previous`, the plan before the change, to pass as `previous`.
 - `score(problem, plan, previous).terms` gives each objective term; compare with the model.
 - `greedy(problem)` is a baseline to beat: `score(...).total` of its plan.
