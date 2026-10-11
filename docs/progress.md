@@ -187,7 +187,7 @@ transcript, limits), [0014](adr/0014-chat-replans.md) (open-horizon replans, `da
 <1 s replan target, warm starts, a craving bonus in the objective and the diff view; the CP-SAT
 planner itself.
 
-## M5 — Real-time replan (backend)
+## M5 — Real-time replan
 
 **What works**
 - Replans without the chat: `POST /plans/replan` takes the same typed changes (skip, swap,
@@ -198,6 +198,16 @@ planner itself.
   the pantry (soonest-expiring first, never below zero); undo gives back exactly what was taken.
   Later replans keep eaten meals and count them once.
 - Latency is measured on every replan (`Server-Timing`, logs, `stats.total_ms`).
+- On the plan screen (web): each meal card has an options button. Today and earlier: mark
+  eaten (a toast says what came out of the pantry; eaten meals get a check badge and can only be
+  undone). Today and later: skip (eating elsewhere or not), swap for something else; today:
+  "had something else" (a short description, logged off-plan). After a replan a "What changed"
+  panel lists each request (done / not done and why), every changed meal with its reason
+  ("Thu dinner: Lentil stew → Chilli — rebalanced to keep Thu on target"), logged food, days
+  now off target, warnings and notes. One change at a time (buttons wait while one runs); the
+  plan, shopping list and pantry reload after each; busy / already-made / stale-plan conflicts
+  reload the plan with a toast. Eaten meals show in the week grid, and eaten logs (after a new
+  plan) as "Lentil stew (eaten, 540 kcal)" with a link to the recipe.
 
 **Done criteria**
 - Replan p95 < 1 s at the API: `make bench-replan` (`docs/replan-bench-greedy.md`) - the
@@ -207,9 +217,15 @@ planner itself.
   0.3 rebalancing); on `scenarios.replan` 6.9 slots vs `previous` (2.0 forced) - the number
   CP-SAT's warm start should bring down (spec test 17).
 
+- Web tests: `meal-actions.test.tsx` and `what-changed.test.tsx` (options per day, pending
+  state, toasts, request bodies, 409 handling, the diff lines); Playwright `e2e/replan.e2e.ts`
+  marks today's breakfast eaten and undoes it, then skips tomorrow's dinner (valid at any hour)
+  and checks the "What changed" panel and the skip on the plan.
+
 **Docs**: DESIGN §5, §7, §9.3, §11; [ADR-0015](adr/0015-eaten-and-app-replans.md); solver
 README section 7 (warm start). Migration 0005.
 
-**Known gaps**: the UI for marking eaten and plan-screen changes (next); `solve()` and its
-warm start (replan time limit to lower then); a craving bonus in the objective.
+**Known gaps**: `solve()` and its warm start (replan time limit to lower then); a craving bonus
+in the objective; swaps from the plan screen are "anything else" (no dish or tag picker yet);
+the replan e2e hasn't run against a live Clerk instance from this branch yet.
 
