@@ -228,3 +228,45 @@ README section 7 (warm start). Migration 0005.
 **Known gaps**: `solve()` and its warm start (replan time limit to lower then); a craving bonus
 in the objective; swaps from the plan screen are "anything else" (no dish or tag picker yet);
 the replan e2e hasn't run against a live Clerk instance from this branch yet.
+
+## M6 — Pantry intake (backend)
+
+**What works**
+- Add groceries from a receipt: upload a photo (`POST /pantry/receipts/image`, JPEG/PNG/WebP up
+  to 8 MB) or paste the text (`POST /pantry/receipts/text`, e.g. an online order). The worker
+  (`apps/worker`, arq on Redis, compose service `worker`) reads it - photos with offline OCR
+  (RapidOCR; free, no key, nothing leaves the box) - and the API serves the suggested lines:
+  food, quantity and unit, grams (approximate when no size was printed), price, suggested
+  use-by. Review each line (change the food, the amount or the date, accept or reject), then
+  confirm: the lines go into the pantry as `source: receipt`. Photos are deleted as soon as
+  they've been read; 20 receipts per user per day.
+- Expiry alerts: `GET /pantry/expiring?days=3` (expired and soon-expiring, days left), and
+  `expiring_soon` on `GET /me` for a badge. The planner already prefers food that expires soon.
+- Receipt uploads and lines are in the data export and go with account deletion.
+
+**Done criterion: measured line-item accuracy** ([receipt-accuracy.md](receipt-accuracy.md),
+`make receipt-eval`): 25 labelled UK/US receipts (209 items; 5 receipts written after tuning as a
+holdout), 11 also as rendered photos.
+
+| Path | Line precision | Line recall | Food match | Amount | End to end |
+|---|---|---|---|---|---|
+| Pasted text, all 25 | 100% | 100% | 99.0% | 99.0% | 98.1% |
+| Pasted text, holdout 5 | 100% | 100% | 94.9% | 100% | 94.9% |
+| Photo via OCR, 11 (3 degraded) | 100% | 99.0% | 99.0% | 98.9% | 97.0% |
+
+OCR takes ~1.4 s per photo on CPU. A CI test keeps the pasted-text path above a floor using a
+fixture of the USDA foods the matcher can reach; another OCRs three of the photos.
+
+**Also**: `larder_core.quantities.each_weight` no longer counts slices and wedges as "one" of a
+food ("1 medium onion" was 62 g, the median of a medium onion and a medium slice; now 110 g).
+Recipe grams pick this up the next time `make data` re-resolves the catalogue.
+
+**Docs**: [ADR-0016](adr/0016-receipt-intake.md), DESIGN §4, §5, §7, §7.1, §10. Migration 0006.
+Images: the API image only gains arq and python-multipart (680 -> 681 MB); the worker image is
+the API's code plus OCR, 1.12 GB (opencv-headless, onnxruntime, numpy and the models add ~290 MB
+to the virtualenv).
+
+**Known gaps**: the review/upload UI (in progress separately); the photo numbers come from
+rendered images (flat, evenly lit), so real photos of crumpled or faded receipts need a labelled
+set of real receipts; HEIC photos are refused (iPhones send JPEG from the browser); loose produce
+is weighed by USDA's typical item, often approximate.
