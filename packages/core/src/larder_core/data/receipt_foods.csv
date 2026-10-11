@@ -1,0 +1,28 @@
+name,fdc_id,description,note
+semi skimmed milk,171267,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",UK semi-skimmed (1.7%) -> nearest US 2%
+semi skimmed,171267,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",printed without "milk"
+reduced fat milk,171267,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",US 2%
+lowfat milk,170872,"Milk, lowfat, fluid, 1% milkfat, with added vitamin A and vitamin D",US 1%
+skim milk,171269,"Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)",
+cheddar,328637,"Cheese, cheddar",
+mature cheddar,328637,"Cheese, cheddar",
+sharp cheddar,328637,"Cheese, cheddar",
+chopped tomato,170051,"Tomatoes, red, ripe, canned, packed in tomato juice",sold in tins
+mince,174036,"Beef, ground, 80% lean meat / 20% fat, raw",UK mince is beef
+beef mince,174036,"Beef, ground, 80% lean meat / 20% fat, raw",
+steak mince,174030,"Beef, ground, 90% lean meat / 10% fat, raw",leaner than standard mince
+greek style yogurt,171304,"Yogurt, Greek, plain, whole milk",
+penne,169736,"Pasta, dry, enriched",
+sourdough,172675,"Bread, french or vienna (includes sourdough)",
+pork sausage,172934,"Pork sausage, link/patty, unprepared",
+beef steak,2727574,"Beef, top sirloin steak, raw",
+steak,2727574,"Beef, top sirloin steak, raw",
+pork loin,167818,"Pork, fresh, loin, whole, separable lean and fat, raw",
+pork steak,167818,"Pork, fresh, loin, whole, separable lean and fat, raw",
+black bean,175188,"Beans, black turtle, mature seeds, canned",groceries sell them tinned
+kidney bean,175195,"Beans, kidney, red, mature seeds, canned, solids and liquids",groceries sell them tinned
+chickpea,175206,"Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, solids and liquids",groceries sell them tinned
+unsalted butter,173430,"Butter, without salt",
+butter unsalted,173430,"Butter, without salt",
+brown basmati rice,169703,"Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)",
+brown rice,169703,"Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)",

@@ -107,3 +107,10 @@ def test_volume_grams_scale_linearly(q: float, unit: str) -> None:
     assert one is not None
     assert many is not None
     assert many == pytest.approx(q * one, rel=1e-6)
+
+
+def test_slices_are_not_one_of_the_thing() -> None:
+    onion = [*ONION, Portion(1, "slice", 'medium (1/8" thick)', 14), Portion(10, "rings", None, 60)]
+
+    assert grams("3 medium", onion, "onion") == 330
+    assert grams("1", onion, "onion") == 110
