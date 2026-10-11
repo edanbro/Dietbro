@@ -1,5 +1,6 @@
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -350,3 +351,20 @@ def test_score_counts_meals_in_slots_without_a_spec_as_optional() -> None:
     )
     plan = Plan((Meal(0, L, 1, 1), Meal(0, S, 1, 1), Meal(1, B, 1, 1)))
     assert score(p, plan).terms["optional"] == -120_000 * 2
+
+
+def test_score_ignores_choices_and_day_bands() -> None:
+    """Choices and day bands are hard rules for the validator; the objective never sees them
+    (kcal bands aren't priced, and a chosen meal scores like any other)."""
+    recipes = [recipe(1, (1, 100), preference=10), recipe(2, (2, 50), preference=-5)]
+    targets = Targets(daily={Nutrient.KCAL: Band(500, 700), Nutrient.PROTEIN: Band(50, None)})
+    p = problem(recipes, {1: 2000, 2: 1000}, days=2, targets=targets)
+    plan = Plan((Meal(0, L, 1, 1), Meal(1, D, 2, 2), Meal(1, S, 1, 1)))
+    previous = Plan((Meal(0, L, 2, 1),))
+    replanned = replace(
+        p,
+        choices={(0, L): (2,), (1, S): (1, 2)},
+        day_kcal={0: Band(0, 100), 1: Band(5000, None)},
+    )
+    assert score(replanned, plan, previous) == score(p, plan, previous)
+    assert macro_distance(replanned, plan) == macro_distance(p, plan) > 0

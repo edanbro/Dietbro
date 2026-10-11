@@ -7,20 +7,26 @@ converse doesn't hold: [] doesn't prove that a plan exists, because each check l
 on its own (kcal ignores repeat caps, the budget ignores the daily kcal maximum, and so on).
 
 Only what a planner may use counts: per slot, the candidates that pass the hard filters
-(`candidates.allowed`) and fit the slot, plus locked meals and food eaten off-plan. Checks:
+(`candidates.allowed`) and fit the slot, plus locked meals and food eaten off-plan. A chosen cell
+(`Problem.choices`) draws on its choice instead (the recipes in it that pass and fit, candidates
+of the slot or not) and must hold a meal even in an optional slot. A day's kcal rule is the daily
+kcal band and the floor, or on a day with a `Problem.day_kcal` band, that band alone. Checks:
 
 1. a locked meal that breaks a hard filter (locks never skip them);
-2. a required slot with no candidate left;
+2. a required slot with no candidate left, and a chosen cell none of whose recipes is allowed
+   and fits the slot;
 3. repeat capacity, per group of required slots (each slot alone, and slots that share recipes,
    such as lunch and dinner, pooled): the meals the group's candidates can still provide within
-   their repeat caps, after locked meals, against the group's open meals. By Hall's theorem
-   these groups are exactly what decides whether the caps alone allow a plan;
-4. per day, the kcal reach (off-plan intake, locked meals, each open required slot between its
-   lightest candidate at the fewest portions and its heaviest at the most, optional slots from
-   nothing up to their heaviest) against the daily kcal band and the calorie floor;
-5. the weekly kcal band against the sum of the days' reach, each day already clipped to its band;
+   their repeat caps, after locked meals, against the group's open meals (their free cells, and
+   their chosen cells that can only use the group's candidates). By Hall's theorem these groups
+   are exactly what decides whether the caps alone allow a plan without choices. Then the same
+   per choice: the chosen cells that can only use its recipes against what they can provide;
+4. per day, the kcal reach (off-plan intake, locked meals, each open required or chosen cell
+   between its lightest option at the fewest portions and its heaviest at the most, optional
+   slots from nothing up to their heaviest) against the day's kcal rule;
+5. the weekly kcal band against the sum of the days' reach, each day already clipped to its rule;
 6. a lower bound on shopping cost against the budget: per day, the cheapest way for the open
-   slots to supply the kcal the day still needs, where a slot costs at least its cheapest meal
+   cells to supply the kcal the day still needs, where a cell costs at least its cheapest meal
    and at least its cheapest cost per kcal times the kcal it supplies (a fractional knapsack);
    over the week, at least the weekly kcal minimum at the cheapest kcal; plus locked meals,
    minus everything in the pantry.
@@ -48,6 +54,7 @@ from larder_solver.problem import (
     Problem,
     Recipe,
     Slot,
+    SlotSpec,
 )
 
 _SINGULAR = {
@@ -82,6 +89,17 @@ class _Reach:
     locked: bool
 
 
+@dataclass(frozen=True, slots=True)
+class _Rule:
+    """A day's kcal rule: at least `least` and at most `most` (None: no bound), and how the
+    messages name the two bounds."""
+
+    least: int | None
+    most: int | None
+    below: str  # "your 1,200 kcal floor"
+    above: str  # "your 2,500 kcal maximum"
+
+
 class _Diagnosis:
     def __init__(self, problem: Problem) -> None:
         self.p = problem
@@ -89,12 +107,13 @@ class _Diagnosis:
         self.ok: dict[int, bool] = {}
         self.costs: dict[int, int] = {}
         # slot -> allowed candidates that fit it, each recipe once, in candidate order
-        self.pool: dict[Slot, list[Recipe]] = {}
-        for spec in self.specs:
-            recipes = (problem.recipes.get(rid) for rid in dict.fromkeys(spec.candidates))
-            self.pool[spec.slot] = [
-                r for r in recipes if r is not None and spec.slot in r.meal_types and self.safe(r)
-            ]
+        self.pool = {spec.slot: self.fitting(spec.slot, spec.candidates) for spec in self.specs}
+        # open chosen cell -> the allowed recipes of its choice that fit the slot, in order
+        self.chosen = {
+            at: self.fitting(at[1], ids)
+            for at, ids in sorted(problem.choices.items(), key=lambda kv: _key(kv[0]))
+            if 0 <= at[0] < problem.days and problem.spec(at[1]) and at not in problem.locked
+        }
         self.locks = [
             m
             for (day, _), m in sorted(problem.locked.items(), key=lambda kv: _key(kv[0]))
@@ -106,34 +125,75 @@ class _Diagnosis:
             for s in self.specs
             if s.required and self.open_days(s.slot) and not self.pool[s.slot]
         ]
+        self.unusable = [at for at, pool in self.chosen.items() if not pool]
 
     def safe(self, recipe: Recipe) -> bool:
         if recipe.id not in self.ok:
             self.ok[recipe.id] = allowed(recipe, self.p.foods, self.p.profile)
         return self.ok[recipe.id]
 
+    def fitting(self, slot: Slot, ids: Iterable[int]) -> list[Recipe]:
+        recipes = (self.p.recipes.get(rid) for rid in dict.fromkeys(ids))
+        return [r for r in recipes if r is not None and slot in r.meal_types and self.safe(r)]
+
     def open_days(self, slot: Slot) -> list[int]:
-        return [d for d in range(self.p.days) if (d, slot) not in self.p.locked]
+        """Days whose `slot` draws on the slot's candidates: not locked, not chosen."""
+        return [
+            d
+            for d in range(self.p.days)
+            if (d, slot) not in self.p.locked and (d, slot) not in self.chosen
+        ]
+
+    def cell(self, day: int, spec: SlotSpec) -> tuple[list[Recipe], bool] | None:
+        """What an open cell may hold and whether it must hold something (None: locked)."""
+        if (day, spec.slot) in self.p.locked:
+            return None
+        if (day, spec.slot) in self.chosen:
+            return self.chosen[(day, spec.slot)], True
+        return self.pool[spec.slot], spec.required
+
+    def rule(self, day: int) -> _Rule:
+        override = self.p.day_kcal.get(day)
+        if override is not None:
+            low, high = override.min, override.max
+            return _Rule(
+                low,
+                high,
+                f"the {low or 0:,} kcal minimum for that day",
+                f"the {high or 0:,} kcal maximum for that day",
+            )
+        band = self.p.targets.daily.get(Nutrient.KCAL, Band())
+        floor = self.p.targets.calorie_floor
+        least, word = (
+            (floor, "floor") if band.min is None or band.min <= floor else (band.min, "minimum")
+        )
+        return _Rule(
+            least, band.max, f"your {least:,} kcal {word}", f"your {band.max or 0:,} kcal maximum"
+        )
 
     def run(self) -> Iterator[str]:
         yield from self.unsafe_locks()
         yield from self.no_candidates()
+        yield from self.unusable_choices()
         yield from self.capacity()
-        if self.empty:
-            return  # the kcal and cost checks need a candidate in every open required slot
+        yield from self.choice_capacity()
+        if self.empty or self.unusable:
+            return  # the kcal and cost checks need an option in every cell that needs a meal
         band = self.p.targets.daily.get(Nutrient.KCAL, Band())
         floor = self.p.targets.calorie_floor
-        if band.max is not None and band.max < floor:
+        usual = any(d not in self.p.day_kcal for d in range(self.p.days))
+        if usual and band.max is not None and band.max < floor:
             yield f"Your daily maximum of {band.max:,} kcal is below your {floor:,} kcal floor"
             return
         reach = [self.reach(day) for day in range(self.p.days)]
-        daily = self.daily_kcal(reach, band)
+        rules = [self.rule(day) for day in range(self.p.days)]
+        daily = self.daily_kcal(reach, rules)
         yield from daily
-        if not daily:  # the weekly and cost checks assume every day can meet its band
-            yield from self.weekly_kcal(reach, band)
-            yield from self.budget(reach, band)
+        if not daily:  # the weekly and cost checks assume every day can meet its rule
+            yield from self.weekly_kcal(reach, rules)
+            yield from self.budget(reach, rules)
 
-    # --- 1, 2: locks and empty slots -------------------------------------------------------------
+    # --- 1, 2: locks, empty slots and unusable choices -------------------------------------------
 
     def unsafe_locks(self) -> Iterator[str]:
         for meal in self.locks:
@@ -141,10 +201,7 @@ class _Diagnosis:
             if recipe is None or self.safe(recipe):
                 continue
             what = f"Your fixed {self.day_name(meal.day)} {meal.slot}, {recipe.name},"
-            if any(i.food_id not in self.p.foods for i in recipe.ingredients):
-                yield f"{what} uses an ingredient we have no data for"
-            else:
-                yield f"{what} doesn't fit your {self.restrictions()}"
+            yield f"{what} {self.unsafe(recipe)}"
 
     def no_candidates(self) -> Iterator[str]:
         for slot in self.empty:
@@ -152,6 +209,35 @@ class _Diagnosis:
                 yield f"No {_SINGULAR[slot]} fits your {self.restrictions()}"
             else:
                 yield f"No {_SINGULAR[slot]} recipe is available"
+
+    def unusable_choices(self) -> Iterator[str]:
+        for day, slot in self.unusable:
+            where = f"{self.day_name(day)} {_SINGULAR[slot]}"
+            ids = dict.fromkeys(self.p.choices[(day, slot)])
+            recipes = [r for rid in ids if (r := self.p.recipes.get(rid)) is not None]
+            if len(recipes) == 1:
+                recipe = recipes[0]
+                if slot not in recipe.meal_types:
+                    why = f"isn't a {_SINGULAR[slot]} recipe"
+                else:
+                    why = self.unsafe(recipe)
+                yield f"Your choice for {where}, {recipe.name}, {why}"
+                continue
+            eligible = sum(slot in r.meal_types for r in recipes)
+            kind, fits = f"is a {_SINGULAR[slot]} recipe", f"fits your {self.restrictions()}"
+            if not eligible:
+                why = kind
+            elif eligible == len(recipes):
+                why = fits
+            else:
+                why = f"{kind} that {fits}"
+            yield f"None of your choices for {where} {why}"
+
+    def unsafe(self, recipe: Recipe) -> str:
+        """Why an eligible recipe isn't allowed, as the end of a sentence."""
+        if any(i.food_id not in self.p.foods for i in recipe.ingredients):
+            return "uses an ingredient we have no data for"
+        return f"doesn't fit your {self.restrictions()}"
 
     # --- 3: repeat capacity ----------------------------------------------------------------------
 
@@ -172,7 +258,12 @@ class _Diagnosis:
         pool = {r.id: r for s in slots for r in self.pool[s]}
         caps = {rid: self.p.repeat_cap(r) for rid, r in pool.items()}
         room = sum(max(0, caps[rid] - self.locked_uses[rid]) for rid in pool)
-        need = sum(len(self.open_days(s)) for s in slots)
+        # Chosen cells of the group's slots that can only use its candidates need them too.
+        chosen = sum(
+            at[1] in group and bool(rs) and all(r.id in pool for r in rs)
+            for at, rs in self.chosen.items()
+        )
+        need = sum(len(self.open_days(s)) for s in slots) + chosen
         if room >= need:
             return None
         n = len(pool)
@@ -180,7 +271,9 @@ class _Diagnosis:
         low, top = min(caps.values()), max(caps.values())
         times = _times(low, top)
         locks = any(self.locked_uses[rid] for rid in pool) or any(
-            (d, s) in self.p.locked for d in range(self.p.days) for s in slots
+            (d, s) in self.p.locked or (d, s) in self.chosen
+            for d in range(self.p.days)
+            for s in slots
         )
         if locks or low != top:
             left = "left to plan" if locks else "to plan"
@@ -193,6 +286,38 @@ class _Diagnosis:
             period = f"{self.p.days} days need"
         return f"{head}; {period} at least {-(-need // top)} ({times})"
 
+    def choice_capacity(self) -> Iterator[str]:
+        """Per choice (smallest first): the chosen cells that can only use its recipes."""
+        pools = sorted(
+            {frozenset(r.id for r in rs) for rs in self.chosen.values() if rs},
+            key=lambda p: (len(p), sorted(p)),
+        )
+        failed: list[frozenset[int]] = []
+        for pool in pools:
+            if any(f <= pool for f in failed):
+                continue
+            cells = [at for at, rs in self.chosen.items() if rs and {r.id for r in rs} <= pool]
+            caps = {rid: self.p.repeat_cap(self.p.recipes[rid]) for rid in pool}
+            room = sum(max(0, caps[rid] - self.locked_uses[rid]) for rid in pool)
+            if room >= len(cells):
+                continue
+            failed.append(pool)
+            where = self.cells_label(cells)
+            if len(pool) == 1:
+                (rid,) = pool
+                head = f"{self.p.recipes[rid].name} is chosen for {where}"
+                if room == 0:
+                    yield f"{head}, but your fixed meals already have it {_word(caps[rid])}"
+                else:
+                    more = " more" if self.locked_uses[rid] else ""
+                    yield f"{head}, but can be planned only {_word(room)}{more}"
+            else:
+                times = _times(min(caps.values()), max(caps.values()))
+                yield (
+                    f"Your choices for {where} can fill only {room} of those {len(cells)} meals "
+                    f"({times})"
+                )
+
     # --- 4, 5: kcal ------------------------------------------------------------------------------
 
     def reach(self, day: int) -> _Reach:
@@ -201,42 +326,38 @@ class _Diagnosis:
         fixed = extra + sum(_kcal(self.p, m) for m in today)
         low = high = 0
         for spec in self.specs:
-            if (day, spec.slot) in self.p.locked:
-                continue
-            kcal = [r.per_portion.kcal for r in self.pool[spec.slot]]
-            if not kcal:
-                continue  # an empty optional slot (empty required ones stop earlier)
+            cell = self.cell(day, spec)
+            if cell is None or not cell[0]:
+                continue  # locked, or an empty optional slot (empty required ones stop earlier)
+            pool, required = cell
+            kcal = [r.per_portion.kcal for r in pool]
             lo, hi = self.p.portion_range(spec.slot)
-            if spec.required:
+            if required:
                 low += min(kcal) * lo
             high += max(kcal) * hi
         return _Reach(fixed, fixed + low, fixed + high, extra, bool(today))
 
-    def daily_kcal(self, reach: list[_Reach], band: Band) -> list[str]:
-        floor = self.p.targets.calorie_floor
-        least, word = (
-            (floor, "floor") if band.min is None or band.min <= floor else (band.min, "minimum")
-        )
+    def daily_kcal(self, reach: list[_Reach], rules: list[_Rule]) -> list[str]:
         tails: dict[str, list[int]] = {}
-        for day, r in enumerate(reach):
-            if r.high < least:
+        for day, (r, rule) in enumerate(zip(reach, rules, strict=True)):
+            if rule.least is not None and r.high < rule.least:
                 tail = f"even the largest meals that fit reach only {r.high:,} kcal{_with(r)}"
-                tail += f", below your {least:,} kcal {word}"
-            elif band.max is not None and r.low > band.max:
+                tail += f", below {rule.below}"
+            elif rule.most is not None and r.low > rule.most:
                 tail = f"even the smallest meals that fit come to {r.low:,} kcal{_with(r)}"
-                tail += f", above your {band.max:,} kcal maximum"
+                tail += f", above {rule.above}"
             else:
                 continue
             tails.setdefault(tail, []).append(day)
         return [f"{self.days_label(days)}: {tail}" for tail, days in tails.items()]
 
-    def weekly_kcal(self, reach: list[_Reach], band: Band) -> Iterator[str]:
+    def weekly_kcal(self, reach: list[_Reach], rules: list[_Rule]) -> Iterator[str]:
         week = self.p.targets.weekly.get(Nutrient.KCAL)
         if week is None:
             return
-        least = max(self.p.targets.calorie_floor, band.min or 0)
-        most = sum(r.high if band.max is None else min(r.high, band.max) for r in reach)
-        fewest = sum(max(r.low, least) for r in reach)
+        pairs = list(zip(reach, rules, strict=True))
+        most = sum(r.high if u.most is None else min(r.high, u.most) for r, u in pairs)
+        fewest = sum(r.low if u.least is None else max(r.low, u.least) for r, u in pairs)
         label = "This week" if self.p.days == 7 else "Over the whole plan"
         if week.min is not None and most < week.min:
             yield (
@@ -251,18 +372,21 @@ class _Diagnosis:
 
     # --- 6: budget -------------------------------------------------------------------------------
 
-    def budget(self, reach: list[_Reach], band: Band) -> Iterator[str]:
+    def budget(self, reach: list[_Reach], rules: list[_Rule]) -> Iterator[str]:
         if self.p.budget is None:
             return
-        least = max(self.p.targets.calorie_floor, band.min or 0)
         open_meals = sum(
-            (self.day_cost(day, max(0, least - r.fixed)) for day, r in enumerate(reach)),
+            (
+                self.day_cost(day, max(0, (rule.least or 0) - r.fixed))
+                for day, (r, rule) in enumerate(zip(reach, rules, strict=True))
+            ),
             Fraction(0),
         )
         # The week's open meals must also supply what the weekly minimum still needs, at no
-        # less than the cheapest kcal any candidate offers.
+        # less than the cheapest kcal any candidate (or chosen recipe) offers.
         week = self.p.targets.weekly.get(Nutrient.KCAL)
-        ratios = [ratio for spec in self.specs if (ratio := self.ratio(spec.slot)) is not None]
+        pools = [*self.pool.values(), *self.chosen.values()]
+        ratios = [ratio for pool in pools if (ratio := self.ratio(pool)) is not None]
         if ratios and week is not None and week.min is not None:
             needed = max(0, week.min - sum(r.fixed for r in reach))
             open_meals = max(open_meals, min(ratios) * needed)
@@ -287,28 +411,29 @@ class _Diagnosis:
             )
 
     def day_cost(self, day: int, kcal: int) -> Fraction:
-        """A lower bound on what a day's open slots cost (every ingredient bought) when they
+        """A lower bound on what a day's open cells cost (every ingredient bought) when they
         must supply at least `kcal`.
 
-        A meal in slot s that supplies k kcal costs at least g_s(k) = max(m_s, rho_s * k), where
-        m_s is the slot's cheapest meal at its fewest portions (0 for an optional slot, which may
-        stay empty) and rho_s its cheapest cost per kcal; k lies between the slot's lightest and
-        heaviest meal. Each g_s is convex and nondecreasing, so the cheapest way to supply `kcal`
-        is: every slot at its lightest, then the remaining kcal from the cheapest increments
+        A meal in cell c that supplies k kcal costs at least g_c(k) = max(m_c, rho_c * k), where
+        m_c is the cell's cheapest meal at its fewest portions (0 for an optional slot, which may
+        stay empty) and rho_c its cheapest cost per kcal; k lies between the cell's lightest and
+        heaviest meal. Each g_c is convex and nondecreasing, so the cheapest way to supply `kcal`
+        is: every cell at its lightest, then the remaining kcal from the cheapest increments
         (a fractional knapsack)."""
         base = Fraction(0)
         supplied = 0
         increments: list[tuple[Fraction, Fraction]] = []  # (cost per kcal, kcal available)
         for spec in self.specs:
-            pool = self.pool[spec.slot]
-            if (day, spec.slot) in self.p.locked or not pool:
+            cell = self.cell(day, spec)
+            if cell is None or not cell[0]:
                 continue
+            pool, required = cell
             lo, hi = self.p.portion_range(spec.slot)
-            fixed = min(self.cost(r) for r in pool) * lo if spec.required else 0
-            first = min(r.per_portion.kcal for r in pool) * lo if spec.required else 0
+            fixed = min(self.cost(r) for r in pool) * lo if required else 0
+            first = min(r.per_portion.kcal for r in pool) * lo if required else 0
             most = max(r.per_portion.kcal for r in pool) * hi
-            rho = self.ratio(spec.slot)
-            if rho is None:  # no candidate supplies kcal
+            rho = self.ratio(pool)
+            if rho is None:  # no option supplies kcal
                 base += fixed
                 continue
             base += max(Fraction(fixed), rho * first)
@@ -323,14 +448,10 @@ class _Diagnosis:
             missing -= take
         return base
 
-    def ratio(self, slot: Slot) -> Fraction | None:
-        """The cheapest cost per kcal among the slot's candidates (None: none supplies kcal)."""
+    def ratio(self, pool: Sequence[Recipe]) -> Fraction | None:
+        """The cheapest cost per kcal among `pool` (None: none supplies kcal)."""
         return min(
-            (
-                Fraction(self.cost(r), r.per_portion.kcal)
-                for r in self.pool[slot]
-                if r.per_portion.kcal > 0
-            ),
+            (Fraction(self.cost(r), r.per_portion.kcal) for r in pool if r.per_portion.kcal > 0),
             default=None,
         )
 
@@ -374,6 +495,12 @@ class _Diagnosis:
             return "Every day"
         return _join([self.day_name(d) for d in days])
 
+    def cells_label(self, cells: Sequence[tuple[int, Slot]]) -> str:
+        """'Mon, Wed and Fri dinner'; 'Mon lunch and Fri dinner'."""
+        if len({slot for _, slot in cells}) == 1:
+            return f"{_join(self.day_name(d) for d, _ in cells)} {_SINGULAR[cells[0][1]]}"
+        return _join(f"{self.day_name(d)} {_SINGULAR[s]}" for d, s in cells)
+
 
 def _key(at: tuple[int, Slot]) -> tuple[int, int]:
     day, slot = at
@@ -393,12 +520,13 @@ def _with(reach: _Reach) -> str:
     return f" (with {_join(parts)})" if parts else ""
 
 
-def _times(low: int, high: int) -> str:
-    def word(n: int) -> str:
-        return {1: "once", 2: "twice"}.get(n, f"{n} times")
+def _word(n: int) -> str:
+    return {1: "once", 2: "twice"}.get(n, f"{n} times")
 
+
+def _times(low: int, high: int) -> str:
     if low == high:
-        return f"each at most {word(high)}"
+        return f"each at most {_word(high)}"
     return f"each at most {low} to {high} times"
 
 

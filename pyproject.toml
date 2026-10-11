@@ -8,13 +8,21 @@ requires-python = ">=3.12"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/api", "packages/core", "packages/db", "packages/data", "packages/solver"]
+members = [
+    "apps/api",
+    "packages/core",
+    "packages/db",
+    "packages/data",
+    "packages/llm",
+    "packages/solver",
+]
 
 [tool.uv.sources]
 larder-api = { workspace = true }
 larder-core = { workspace = true }
 larder-data = { workspace = true }
 larder-db = { workspace = true }
+larder-llm = { workspace = true }
 larder-solver = { workspace = true }
 
 [dependency-groups]
@@ -23,6 +31,7 @@ dev = [
     "larder-core",
     "larder-data",
     "larder-db",
+    "larder-llm",
     "larder-solver",
     "hypothesis>=6.168",
     "httpx>=0.28",
@@ -56,7 +65,14 @@ select = [
 "packages/data/**" = ["ASYNC240"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["larder_api", "larder_core", "larder_data", "larder_db", "larder_solver"]
+known-first-party = [
+    "larder_api",
+    "larder_core",
+    "larder_data",
+    "larder_db",
+    "larder_llm",
+    "larder_solver",
+]
 
 [tool.pyright]
 include = ["apps/api", "packages"]
@@ -72,6 +88,7 @@ testpaths = [
     "packages/core/tests",
     "packages/db/tests",
     "packages/data/tests",
+    "packages/llm/tests",
     "packages/solver/tests",
 ]
 asyncio_mode = "auto"

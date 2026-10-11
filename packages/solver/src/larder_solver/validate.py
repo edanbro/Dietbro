@@ -10,6 +10,11 @@ Malformed plans (unknown recipes, slots or days) are reported, never raised.
 Every violation is hard except the protein/fat/carbs bands, which are soft (missing them costs
 `Weights.macro` per gram). `SAFETY_CODES` must never reach a user; `STRUCTURAL_CODES` mean the
 planner itself is broken.
+
+Replans (ADR-0014): a chosen cell (`Problem.choices`) is a normal meal, so eligibility, portions
+and the hard filters apply, plus CHOICE when it is empty or holds another recipe (an empty
+required chosen cell is CHOICE, not also MISSING). A day with a `Problem.day_kcal` band is
+judged by that band instead of the daily kcal band and the floor (see `_nutrition`).
 """
 
 from collections.abc import Iterable, Iterator, Mapping
@@ -51,6 +56,7 @@ class Code(StrEnum):
     DIET = "diet"
     UNKNOWN_FOOD = "unknown_food"
     LOCKED = "locked"
+    CHOICE = "choice"  # a chosen cell (Problem.choices) is empty or holds another recipe
     REPEATS = "repeats"
     CALORIE_FLOOR = "calorie_floor"
     DAILY_BAND = "daily_band"
@@ -75,6 +81,7 @@ STRUCTURAL_CODES = frozenset(
         Code.NOT_ELIGIBLE,
         Code.PORTIONS,
         Code.LOCKED,
+        Code.CHOICE,
     }
 )
 
@@ -200,9 +207,22 @@ def _slots(problem: Problem, plan: Plan) -> Iterator[Violation]:
     for day in range(problem.days):
         for spec in problem.slots:
             key = (day, spec.slot)
-            if spec.required and key not in at and key not in problem.locked:
+            fixed = key in problem.locked or key in problem.choices  # reported as LOCKED/CHOICE
+            if spec.required and key not in at and not fixed:
                 where = f"{_day(problem, day)} {spec.slot}"
                 yield Violation(Code.MISSING, f"{where}: no meal planned", day=day, slot=spec.slot)
+    for (day, slot), ids in problem.choices.items():
+        where = f"{_day(problem, day)} {slot}"
+        wanted = _either(problem, ids)
+        meals = at.get((day, slot), [])
+        if not meals:
+            message = f"{where}: no meal planned; it should be {wanted}"
+            yield Violation(Code.CHOICE, message, day=day, slot=slot)
+        for meal in meals:
+            if meal.recipe_id not in ids:
+                name = _name(problem, meal.recipe_id)
+                message = f"{where}: {name} is planned instead of {wanted}"
+                yield Violation(Code.CHOICE, message, day=day, slot=slot, recipe_id=meal.recipe_id)
     for (day, slot), lock in problem.locked.items():
         meals = at.get((day, slot), [])
         where = f"{_day(problem, day)} {slot}"
@@ -217,10 +237,21 @@ def _slots(problem: Problem, plan: Plan) -> Iterator[Violation]:
 
 
 def _nutrition(problem: Problem, plan: Plan) -> Iterator[Violation]:
+    """Daily, floor and weekly checks. A day with a `Problem.day_kcal` band has that band as its
+    whole kcal rule, in place of the daily kcal band *and* the floor: outside it (an open side
+    is unbounded) is DAILY_BAND, hard, and CALORIE_FLOOR is never reported for that day, even
+    under the usual floor (the override exists because reported intake makes the usual rules
+    unreachable). DAILY_BAND isn't a safety code, so the planners treat an override's min as
+    strictly as the floor. Its other daily bands, and the weekly ones, are unchanged."""
     totals = day_totals(problem, plan)
     floor = problem.targets.calorie_floor
     for day, total in enumerate(totals):
         label = _day(problem, day)
+        override = problem.day_kcal.get(day)
+        if override is not None:
+            bands = {**problem.targets.daily, Nutrient.KCAL: override}
+            yield from _bands(Code.DAILY_BAND, label, bands, total, day, override=True)
+            continue
         if total.kcal < floor:
             message = f"{label}: {total.kcal:,} kcal is below your {floor:,} kcal floor"
             yield Violation(Code.CALORIE_FLOOR, message, day=day)
@@ -238,7 +269,13 @@ _UNIT = {
 
 
 def _bands(
-    code: Code, label: str, bands: Mapping[Nutrient, Band], total: Macros, day: int | None
+    code: Code,
+    label: str,
+    bands: Mapping[Nutrient, Band],
+    total: Macros,
+    day: int | None,
+    *,
+    override: bool = False,  # bands[KCAL] is the day's day_kcal band, not the user's own
 ) -> Iterator[Violation]:
     for nutrient in Nutrient:
         band = bands.get(nutrient)
@@ -250,7 +287,11 @@ def _bands(
             limit, side, word = band.min, "minimum", "below"
         else:
             limit, side, word = band.max, "maximum", "above"
-        message = f"{label}: {value:,} {unit}{what} is {word} your {limit:,} {unit} {side}"
+        if override and nutrient is Nutrient.KCAL:
+            limit_text = f"the {limit:,} {unit} {side} for this day"
+        else:
+            limit_text = f"your {limit:,} {unit} {side}"
+        message = f"{label}: {value:,} {unit}{what} is {word} {limit_text}"
         yield Violation(code, message, hard=nutrient in HARD_NUTRIENTS, day=day)
 
 
@@ -306,8 +347,16 @@ def _name(problem: Problem, recipe_id: int) -> str:
     return recipe.name if recipe else f"recipe {recipe_id}"
 
 
-def _join(words: list[str]) -> str:
-    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} and {words[-1]}"
+def _either(problem: Problem, recipe_ids: Iterable[int]) -> str:
+    """'Pizza', 'Pizza or Calzone', 'Pizza, Calzone, Stromboli or 2 other recipes'."""
+    names = [_name(problem, r) for r in _unique(recipe_ids)]
+    if len(names) > 4:
+        names = [*names[:3], f"{len(names) - 3} other recipes"]
+    return _join(names, "or") if names else "a chosen recipe"
+
+
+def _join(words: list[str], conjunction: str = "and") -> str:
+    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} {conjunction} {words[-1]}"
 
 
 def _unique(ids: Iterable[int]) -> list[int]:

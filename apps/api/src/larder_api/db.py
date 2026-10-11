@@ -17,3 +17,6 @@ async def get_session(
 
 
 Session = Annotated[AsyncSession, Depends(get_session)]
+# Closed when the dependant returns (not when the response ends): for gates in front of
+# long-lived streaming responses.
+FunctionSession = Annotated[AsyncSession, Depends(get_session, scope="function")]

@@ -1,5 +1,6 @@
 """The signed-in user's profile: goals, body stats, preferences, allergies; GDPR export/delete."""
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -42,8 +43,12 @@ from larder_db.models import (
     Allergies,
     Base,
     BodyProfile,
+    ChatThread,
+    Craving,
     Food,
     Goals,
+    LlmCall,
+    MealLog,
     MealPlan,
     PantryItem,
     Preferences,
@@ -137,6 +142,9 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         attrs = inspect(obj).mapper.column_attrs
         return {a.key: getattr(obj, a.key) for a in attrs if a.key not in exclude}
 
+    def rows(objs: Iterable[Base], *exclude: str) -> list[dict[str, Any]]:
+        return [row(o, *exclude) or {} for o in objs]
+
     pantry = await session.scalars(select(PantryItem).where(PantryItem.user_id == user.id))
     plans = await session.scalars(
         select(MealPlan)
@@ -144,6 +152,28 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         .order_by(MealPlan.created_at)
         .options(selectinload(MealPlan.meals), selectinload(MealPlan.shopping))
     )
+    threads = await session.scalars(
+        select(ChatThread)
+        .where(ChatThread.user_id == user.id)
+        .order_by(ChatThread.created_at)
+        .options(selectinload(ChatThread.messages))
+    )
+    recipes = await session.scalars(
+        select(Recipe)
+        .where(Recipe.owner_user_id == user.id)
+        .order_by(Recipe.id)
+        .options(selectinload(Recipe.ingredients))
+    )
+    cravings = await session.scalars(
+        select(Craving).where(Craving.user_id == user.id).order_by(Craving.id)
+    )
+    logs = await session.scalars(
+        select(MealLog).where(MealLog.user_id == user.id).order_by(MealLog.id)
+    )
+    calls = await session.scalars(
+        select(LlmCall).where(LlmCall.user_id == user.id).order_by(LlmCall.id)
+    )
+
     response.headers["Content-Disposition"] = 'attachment; filename="larder-export.json"'
     return {
         "exported_at": datetime.now(UTC),
@@ -152,14 +182,24 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "body": row(await session.get(BodyProfile, user.id), "user_id"),
         "preferences": row(await session.get(Preferences, user.id), "user_id"),
         "allergies": row(await session.get(Allergies, user.id), "user_id"),
-        "pantry": [row(p, "user_id") for p in pantry],
+        "pantry": rows(pantry, "user_id"),
         "plans": [
             (row(p, "user_id") or {})
-            | {
-                "meals": [row(m, "plan_id") for m in p.meals],
-                "shopping": [row(s, "plan_id") for s in p.shopping],
-            }
+            | {"meals": rows(p.meals, "plan_id"), "shopping": rows(p.shopping, "plan_id")}
             for p in plans
+        ],
+        # Chat (M4): what was said (including the exact model transcript), the changes asked
+        # for, food logged, model calls, and recipes drafted for the user.
+        "threads": [
+            (row(t, "user_id") or {}) | {"messages": rows(t.messages, "user_id", "thread_id")}
+            for t in threads
+        ],
+        "cravings": rows(cravings, "user_id"),
+        "meal_logs": rows(logs, "user_id"),
+        "llm_calls": rows(calls, "user_id"),
+        "recipes": [
+            (row(r, "owner_user_id") or {}) | {"ingredients": rows(r.ingredients, "recipe_id")}
+            for r in recipes
         ],
     }
 
@@ -269,10 +309,10 @@ async def put_allergies(body: AllergiesIn, user: CurrentUser, session: Session) 
 
 @allergens_router.get("/cuisines", operation_id="listCuisines")
 async def list_cuisines(session: Session) -> list[str]:
-    """Cuisines of the seeded recipes, for preference pickers."""
+    """Cuisines of the shared catalogue (never of users' own recipes), for preference pickers."""
     rows = await session.scalars(
         select(Recipe.cuisine)
-        .where(Recipe.cuisine.is_not(None))
+        .where(Recipe.cuisine.is_not(None), Recipe.owner_user_id.is_(None))
         .distinct()
         .order_by(Recipe.cuisine)
     )

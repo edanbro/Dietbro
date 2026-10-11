@@ -13,13 +13,13 @@ from typing import Annotated, Any
 import anyio
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
 from larder_api.auth import CurrentUser
 from larder_api.db import Session, get_sessionmaker
+from larder_api.planning import plan_limiter
 from larder_api.schemas import (
     DayOut,
     MacrosOut,
@@ -70,22 +70,22 @@ def get_catalog_cache(request: Request) -> planning.CatalogCache:
     return cache
 
 
-_limiter: anyio.CapacityLimiter | None = None
-
-
-def plan_limiter(settings: Settings) -> anyio.CapacityLimiter:
-    """Process-wide cap on concurrent solves (each uses several CPU threads)."""
-    global _limiter
-    if _limiter is None:
-        _limiter = anyio.CapacityLimiter(settings.plan_concurrency)
-    return _limiter
-
-
 def get_planner(settings: Annotated[Settings, Depends(get_settings)]) -> planning.Planner:
     return partial(
         planning.run_planner,
         mode=settings.planner,
         time_limit_ms=settings.plan_time_limit_ms,
+        workers=settings.plan_workers,
+    )
+
+
+def get_replan_planner(settings: Annotated[Settings, Depends(get_settings)]) -> planning.Planner:
+    """The planner chat replans use: the same one with a shorter budget per run (at most three
+    runs per request, docs/adr/0014-chat-replans.md)."""
+    return partial(
+        planning.run_planner,
+        mode=settings.planner,
+        time_limit_ms=settings.replan_time_limit_ms,
         workers=settings.plan_workers,
     )
 
@@ -129,6 +129,7 @@ def plan_out(row: MealPlan) -> PlanOut:
                     for m in meals
                 ],
                 totals=stats.day_totals[d],
+                logged=stats.logged_on(d),
             )
         )
     week = MacrosOut(
@@ -140,6 +141,7 @@ def plan_out(row: MealPlan) -> PlanOut:
     return PlanOut(
         id=row.id,
         version=row.version,
+        parent_id=row.parent_id,
         start=row.start_date,
         days=days,
         planner=row.planner,
@@ -207,19 +209,26 @@ async def create_plan(
             [*problems, "Please review your goals in your profile before planning."],
         )
     catalog = await cache.get(sessionmaker)
+    private = await planning.load_private_recipes(session, user.id)
     current = await planning.latest_plan(session, user.id)
     version = await planning.next_version(session, user.id, start)
     seed = planning.plan_seed(user.id, start, version)
     novelty = frozenset(m.recipe_id for m in current.meals) if current else frozenset[int]()
     problem = planning.make_problem(
-        inputs, catalog, start, k=settings.plan_candidates, seed=seed, novelty=novelty
+        inputs,
+        catalog,
+        start,
+        k=settings.plan_candidates,
+        seed=seed,
+        novelty=novelty,
+        private=private,
     )
-    prepared = planning.Prepared(problem, version, seed, current.id if current else None, novelty)
+    prepared = planning.Prepared(problem, version, seed, None, novelty)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
     await session.commit()
 
-    result = await anyio.to_thread.run_sync(planner, problem, limiter=plan_limiter(settings))
+    result = await anyio.to_thread.run_sync(planner, problem, None, limiter=plan_limiter(settings))
     try:
         plan, violations = planning.check_outcome(problem, result)
     except planning.PlanningError as e:
@@ -229,19 +238,15 @@ async def create_plan(
     )
     stats.total_ms = round((time.perf_counter() - started) * 1000)
 
-    row = planning.save_plan(
-        session, user.id, prepared, result, plan, stats, currency, catalog.unshoppable
-    )
-    try:
-        await session.commit()
-    except IntegrityError:
-        # Two plans for the same start at once: take the next version and retry once.
-        await session.rollback()
-        prepared.version = await planning.next_version(session, user.id, start)
-        row = planning.save_plan(
-            session, user.id, prepared, result, plan, stats, currency, catalog.unshoppable
-        )
-        await session.commit()
+    # One save at a time per user (chat replans take the same lock): the version and the
+    # parent are read under it.
+    await planning.lock_user_plans(session, user.id)
+    latest = await planning.latest_plan(session, user.id)
+    prepared.parent_id = latest.id if latest else None
+    prepared.version = await planning.next_version(session, user.id, start)
+    unshoppable = catalog.unshoppable | private.unshoppable
+    row = planning.save_plan(session, user.id, prepared, result, plan, stats, currency, unshoppable)
+    await session.commit()
     return plan_out(await _load_plan(session, user, row.id))
 
 

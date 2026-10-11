@@ -73,3 +73,23 @@ export function longDate(iso: string): string {
 export function dateRange(first: string, last: string): string {
   return first === last ? shortDate(first) : `${shortDate(first)} – ${shortDate(last)}`;
 }
+
+/** The local wall-clock time of `d` as HH:MM:SS (what the chat sends as `local_time`). */
+export function localTime(d: Date = new Date()): string {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+const CLOCK = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+/**
+ * When something comes back, relative to `now` in local time: "14:05" today, "tomorrow at
+ * 09:12", otherwise "Sun 1 Nov at 00:00".
+ */
+export function formatWhen(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  const days = daysBetween(localISODate(now), localISODate(at));
+  const clock = CLOCK.format(at);
+  if (days === 0) return clock;
+  if (days === 1) return `tomorrow at ${clock}`;
+  return `${shortDate(localISODate(at))} at ${clock}`;
+}

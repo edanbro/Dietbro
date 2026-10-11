@@ -4,6 +4,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // session token on every request, so this is a UX redirect, not the security boundary.
 const isAppRoute = createRouteMatcher([
   "/plan(.*)",
+  "/chat(.*)",
   "/setup(.*)",
   "/pantry(.*)",
   "/profile(.*)",

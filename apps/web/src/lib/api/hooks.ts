@@ -28,6 +28,13 @@ export type Violation = Schemas["ViolationOut"];
 export type ShoppingList = Schemas["ShoppingListOut"];
 export type ShoppingItem = Schemas["ShoppingItemOut"];
 export type Recipe = Schemas["RecipeDetail"];
+export type LoggedEntry = Schemas["MealLogOut"];
+export type ChatThread = Schemas["ThreadOut"];
+export type ChatMessage = Schemas["ChatMessageOut"];
+export type ChatAttachment = ChatMessage["attachments"][number];
+export type ChatOutcome = Schemas["OutcomeOut"];
+export type SlotChange = Schemas["SlotChange"];
+export type OfflineReason = NonNullable<ChatThread["offline_reason"]>;
 
 export const keys = {
   me: ["me"] as const,
@@ -43,6 +50,9 @@ export const keys = {
   currentPlan: ["plans", "current"] as const,
   shopping: (planId: number) => ["plans", planId, "shopping"] as const,
   recipe: (id: number) => ["recipes", id] as const,
+  /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
+  plans: ["plans"] as const,
+  chatThread: ["chat", "thread"] as const,
 };
 
 export function useMe() {

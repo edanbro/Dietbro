@@ -3,8 +3,10 @@
 AI meal planner: plans your week around what's already in your kitchen, then re-plans in real time
 when you get a craving or eat off-plan. **LLM for language, constraint solver for guarantees.**
 
-> Status: M3 (in progress) — plan a week of meals on your phone with a shopping list; the CP-SAT
-> planner is being written (a greedy baseline stands in, checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
+> Status: M4 — tell the chat about cravings, off-plan food, skipped meals or swaps and the plan
+> re-plans itself (Claude for language, the planner and an independent validator for every
+> change; works offline without an API key). The CP-SAT planner is being written (a greedy
+> baseline stands in, checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
 > Progress: [docs/progress.md](docs/progress.md).
 
 ## Run it
@@ -14,6 +16,8 @@ Requires Docker and a free [Clerk](https://clerk.com) development instance (for 
 1. In the Clerk dashboard, create an application and copy its **Publishable key** and
    **Secret key**.
 2. `cp .env.example .env` and paste them into `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`.
+   Optionally add `ANTHROPIC_API_KEY` for the AI chat; without it the chat still changes your
+   plan from plain requests ("skip dinner tonight", "had pizza for lunch").
 3. Start everything (migrations run automatically), then load foods and recipes:
 
 ```sh
@@ -44,6 +48,7 @@ make gen-api          # after changing API routes: regenerate OpenAPI + web type
 make migrate          # apply DB migrations
 make data             # import USDA + TheMealDB + curated recipes, resolve, write report (~4 min)
 make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
+make llm-smoke        # four real chat turns against Claude (needs ANTHROPIC_API_KEY; ~5 cents)
 uv run pytest packages/solver/tests/test_solve.py   # the spec the CP-SAT solve() must pass
 ```
 
@@ -55,6 +60,7 @@ apps/web        Next.js app
 packages/core   units, measure parsing, nutrition math, allergen/diet tags, prices (pure)
 packages/db     SQLAlchemy models + Alembic migrations
 packages/data   importers, ingredient normaliser, embeddings, curated recipes (CLI: larder-data)
+packages/llm    Claude clients, typed plan changes and tools, agent loop, offline rule parser
 packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT solve() (pure)
                 — modelling guide: packages/solver/README.md
 docs/           DESIGN.md, ADRs, progress notes

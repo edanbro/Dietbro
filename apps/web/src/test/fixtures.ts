@@ -1,5 +1,8 @@
 /** API-shaped sample data for component tests. */
 import type {
+  ChatMessage,
+  ChatOutcome,
+  ChatThread,
   Me,
   Meal,
   Plan,
@@ -56,10 +59,12 @@ export function makePlan(overrides: Partial<Plan> = {}): Plan {
       meal("dinner", 300 + d, `Dinner ${d + 1}`, { portions: 4 }),
     ],
     totals: { kcal: 1900, protein_g: 95, fat_g: 60, carbs_g: 230 },
+    logged: [],
   }));
   return {
     id: 7,
     version: 1,
+    parent_id: null,
     start,
     days,
     planner: "cpsat",
@@ -155,6 +160,7 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     category: "Vegetarian",
     cuisine: "Egyptian",
     image_url: "https://img.example/shakshuka.jpg",
+    generated: false,
     instructions: "Fry the onion.\r\n\r\nAdd the tomatoes and simmer.\r\nCrack in the eggs.",
     source: "mealdb",
     source_url: "https://www.bbcgoodfood.com/recipes/shakshuka",
@@ -170,6 +176,96 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
       { name: "Eggs", measure: "4", food_id: 2, food_name: "Egg, whole, raw", grams: 200 },
       { name: "Feta", measure: "", food_id: null, food_name: null, grams: null },
     ],
+    ...overrides,
+  };
+}
+
+// --- chat -------------------------------------------------------------------------------------
+
+export function chatMessage(
+  id: number,
+  role: ChatMessage["role"],
+  text: string,
+  overrides: Partial<ChatMessage> = {},
+): ChatMessage {
+  return {
+    id,
+    role,
+    text,
+    created_at: "2026-10-09T09:00:00Z",
+    plan_id: null,
+    mode: role === "assistant" ? "offline" : null,
+    offline_reason: null,
+    attachments: [],
+    suggestions: [],
+    ...overrides,
+  };
+}
+
+export function makeThread(overrides: Partial<ChatThread> = {}): ChatThread {
+  return {
+    thread_id: 3,
+    messages: [],
+    has_more: false,
+    pending: null,
+    llm_available: true,
+    offline_reason: null,
+    llm_resets_at: null,
+    messages_today: 0,
+    daily_limit: 60,
+    ...overrides,
+  };
+}
+
+/** Skipping Friday's dinner (2026-10-09) in plan 7 made version 2 (plan 8). */
+export function makeOutcome(overrides: Partial<ChatOutcome> = {}): ChatOutcome {
+  return {
+    type: "outcome",
+    plan_id: 8,
+    version: 2,
+    fresh: false,
+    results: [
+      {
+        index: 0,
+        intent: "skip",
+        date: "2026-10-09",
+        slot: "dinner",
+        status: "applied",
+        message: "Skipped tonight's dinner.",
+      },
+    ],
+    changes: [
+      {
+        date: "2026-10-09",
+        slot: "dinner",
+        before: "Dinner 1",
+        after: null,
+        reason: "skip",
+        change_index: 0,
+      },
+      {
+        date: "2026-10-10",
+        slot: "lunch",
+        before: "Lunch 2",
+        after: "Lunch 2",
+        before_portions: 2,
+        after_portions: 3,
+        reason: "resize",
+      },
+    ],
+    logged: [
+      {
+        date: "2026-10-09",
+        slot: "dinner",
+        kind: "skipped",
+        description: "",
+        kcal: 0,
+        estimated: true,
+      },
+    ],
+    days: [],
+    warnings: [],
+    notes: [],
     ...overrides,
   };
 }

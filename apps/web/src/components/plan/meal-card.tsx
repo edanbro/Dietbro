@@ -1,4 +1,4 @@
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, PinIcon } from "lucide-react";
 import Link from "next/link";
 
 import type { Meal } from "@/lib/api/hooks";
@@ -39,6 +39,13 @@ export function MealCard({ meal }: { meal: Meal }) {
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Icon aria-hidden className="size-3.5" />
           {SLOT_LABEL[meal.slot]}
+          {meal.locked ? (
+            // Pinned by the user through the chat (a craving or swap): replans keep it.
+            <span className="ml-1 flex items-center gap-0.5 font-medium text-foreground">
+              <PinIcon aria-hidden className="size-3" />
+              Pinned
+            </span>
+          ) : null}
         </span>
         <span className="line-clamp-2 leading-snug font-medium">{meal.recipe.name}</span>
         <span className="text-xs text-muted-foreground tabular-nums">

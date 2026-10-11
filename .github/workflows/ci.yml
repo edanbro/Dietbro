@@ -147,7 +147,7 @@ jobs:
             case "$location" in http://localhost:3000/sign-in*) ;; *) exit 1 ;; esac
           done
       - name: Planner dependencies are in the API image
-        run: docker compose exec -T api python -c "import ortools, larder_solver.problem"
+        run: docker compose exec -T api python -c "import ortools, anthropic, larder_solver.problem, larder_llm.agent"
       - name: Logs on failure
         if: failure()
         run: docker compose logs
@@ -183,6 +183,8 @@ jobs:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
       NEXT_PUBLIC_API_URL: http://localhost:8000
       PLAN_TIME_LIMIT_MS: "2000"
+      # The chat e2e runs the offline path (no model calls, no key needed in CI).
+      LLM_MODE: offline
     steps:
       - name: Check for Clerk keys
         id: clerk

@@ -2,6 +2,7 @@ import base64
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,35 @@ class Settings(BaseSettings):
     plan_workers: int = 4
     plan_concurrency: int = 2  # plans solved at once per process
     plan_candidates: int = 40  # recipes per slot after the prefilter
+
+    # LLM layer (docs/adr/0013-llm-layer.md). Without a key (or with llm_mode=offline) the chat
+    # still works: a rule-based parser and templated replies, same plan changes.
+    anthropic_api_key: SecretStr | None = None
+    llm_mode: Literal["auto", "offline"] = "auto"
+    llm_chat_model: str = "claude-sonnet-5-5"  # the conversational agent
+    llm_fast_model: str = "claude-haiku-5-5"  # small structured choices (which USDA food?)
+    llm_chat_effort: Literal["low", "medium", "high"] = "low"
+    llm_max_rounds: int = 6  # model responses per chat turn
+    llm_timeout_s: float = 30.0  # per request (connect 5 s); the SDK retries once
+    # Per-user limits (costs from llm_calls). Messages: 60 per rolling 24 h (HTTP 429), offline
+    # turns included (they run the planner). Model budget: $1 per calendar month (UTC), paced -
+    # the model is used while today's spend is under what's left of the month divided by the
+    # days left - and at most $0.10 per turn; otherwise the turn runs offline.
+    llm_monthly_cap_usd: float = 1.0
+    llm_turn_cap_usd: float = 0.10
+    llm_daily_messages: int = 60
+    # A chat turn runs detached from the HTTP stream, under this deadline (and the turn lock
+    # expires after deadline + 30 s).
+    chat_turn_deadline_s: float = 90.0
+    # Transcript epochs: replay the thread's current epoch only while its last message is newer
+    # than this and the epoch is under the token estimate; otherwise start a new epoch.
+    chat_epoch_idle_min: int = 30
+    chat_epoch_max_tokens: int = 12_000
+    replan_time_limit_ms: int = 1_500  # per planner run in a replan (at most 3 runs)
+
+    @property
+    def llm_enabled(self) -> bool:
+        return self.llm_mode == "auto" and self.anthropic_api_key is not None
 
     @property
     def issuer(self) -> str | None:

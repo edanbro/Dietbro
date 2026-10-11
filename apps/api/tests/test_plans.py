@@ -180,7 +180,11 @@ async def set_up(
 
 
 def use_planner(fake: Callable[[Problem], PlanResult]) -> None:
-    app.dependency_overrides[get_planner] = lambda: fake
+    def planner(problem: Problem, previous: Plan | None) -> PlanResult:
+        assert previous is None  # a new plan replaces nothing
+        return fake(problem)
+
+    app.dependency_overrides[get_planner] = lambda: planner
 
 
 async def plan_rows(db_engine: AsyncEngine) -> int:

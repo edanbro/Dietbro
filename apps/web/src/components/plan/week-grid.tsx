@@ -4,6 +4,7 @@ import type { PlanDay, Slot } from "@/lib/api/hooks";
 import { dayOfMonth, weekday } from "@/lib/dates";
 import { formatNumber, servingsLabel } from "@/lib/format";
 
+import { loggedShort } from "./logged";
 import { REQUIRED_SLOTS, SLOT_LABEL, SLOT_ORDER } from "./slots";
 
 /** Compact week at a glance: one row per day, one column per meal of the day. */
@@ -58,6 +59,7 @@ export function WeekGrid({
             </th>
             {slots.map((s) => {
               const meal = day.meals.find((m) => m.slot === s);
+              const logged = day.logged.find((l) => l.slot === s);
               return (
                 <td key={s} className="border-t px-1 py-1.5 align-top">
                   {meal ? (
@@ -68,6 +70,10 @@ export function WeekGrid({
                     >
                       {meal.recipe.name}
                     </Link>
+                  ) : logged ? (
+                    <span className="line-clamp-3 leading-snug text-muted-foreground italic">
+                      {loggedShort(logged)}
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">
                       <span aria-hidden>—</span>

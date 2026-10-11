@@ -5,6 +5,8 @@ process.
 - `synthetic_catalog`: a plausible recipe and food catalogue; no database needed.
 - `planted`: a problem built around a known valid plan (the witness), plus decoy recipes that
   each break one hard filter, so any planner can be checked by the validator.
+- `replan`: a planted problem as a mid-week replan (off-plan intake, a skipped meal, per-day kcal
+  bands, chosen cells), its witness still valid.
 - `infeasible`: a planted problem whose daily kcal band no plan can reach.
 - `realistic`: a user-like profile and targets over a given catalogue, for the bench; no
   feasibility guarantee.
@@ -481,6 +483,72 @@ def _around(rng: Random, problem: Problem, witness: Plan) -> Targets:
             week.kcal - rng.randint(0, 700), week.kcal + rng.randint(0, 700)
         )
     return Targets(daily, weekly, calorie_floor=FLOOR)
+
+
+# --- replans -------------------------------------------------------------------------------------
+
+
+def replan(seed: int, catalog: Catalog | None = None, *, days: int = 7, k: int = 40) -> Scenario:
+    """`planted(seed, catalog)` turned into a mid-week replan (ADR-0014) whose witness is still
+    valid. One day's lunch was eaten out (locked empty, 1,200-2,000 kcal in `extra`) and, on
+    plans of 2+ days, another day's dinner is skipped (locked empty, nothing eaten). Each of
+    these days gets the `day_kcal` band the replan executor sets (the usual band, clipped to
+    what the free slots can reach), widened to contain the witness's day. 1-3 other cells are
+    chosen (`choices`): the witness's recipe plus up to two other candidates of the slot, one
+    of them sometimes a decoy (a planner must still filter choices)."""
+    base = planted(seed, catalog, days=days, k=k)
+    assert base.witness is not None
+    rng = Random(seed + 1_000_003)  # independent of planted's draws
+    p = base.problem
+    pizza_day = rng.randrange(days)
+    skip_day = rng.choice([d for d in range(days) if d != pizza_day] or [None])
+    pizza = Macros(rng.randint(1200, 2000), rng.randint(30, 80), rng.randint(40, 90), 180)
+    locked: dict[tuple[int, Slot], Meal | None] = {(pizza_day, Slot.LUNCH): None}
+    if skip_day is not None:
+        locked[(skip_day, Slot.DINNER)] = None
+    witness = Plan(tuple(m for m in base.witness.meals if (m.day, m.slot) not in locked))
+    p = replace(p, locked=locked, extra={pizza_day: pizza})
+
+    totals = day_totals(p, witness)
+    day_kcal = {d: _replan_band(p, d, totals[d].kcal) for d in sorted({d for d, _ in locked})}
+    open_cells = [(m.day, m.slot) for m in witness.meals if (m.day, m.slot) not in locked]
+    choices: dict[tuple[int, Slot], tuple[int, ...]] = {}
+    for day, slot in rng.sample(open_cells, min(len(open_cells), rng.randint(1, 3))):
+        kept = next(m.recipe_id for m in witness.meals if (m.day, m.slot) == (day, slot))
+        others = [r for s in p.slots if s.slot == slot for r in s.candidates if r != kept]
+        picked = rng.sample(others, min(len(others), rng.randint(0, 2)))
+        choices[(day, slot)] = tuple(rng.sample([kept, *picked], len(picked) + 1))
+    weekly = dict(p.targets.weekly)
+    if (week := weekly.get(Nutrient.KCAL)) is not None:
+        kcal = sum(t.kcal for t in totals)
+        lo, hi = week.min, week.max
+        weekly[Nutrient.KCAL] = Band(None if lo is None else min(lo, kcal), max(hi or 0, kcal))
+    targets = replace(p.targets, weekly=weekly)
+    problem = replace(p, targets=targets, day_kcal=day_kcal, choices=choices)
+    errors = check_problem(problem)
+    violations = hard(validate(problem, witness))
+    if errors or violations:
+        raise RuntimeError(f"replan scenario {seed} is broken: {errors or violations}")
+    return Scenario(problem, witness, base.decoys)
+
+
+def _replan_band(problem: Problem, day: int, witness_kcal: int) -> Band:
+    """The executor's band for a day with reported intake, Band(min(usual min, fixed + most),
+    max(usual max, fixed + least)), widened to contain `witness_kcal`."""
+    band = problem.targets.daily.get(Nutrient.KCAL, Band())
+    usual_min = max(problem.targets.calorie_floor, band.min or 0)
+    fixed = problem.extra.get(day, Macros()).kcal
+    least = most = 0
+    for spec in problem.slots:
+        if (day, spec.slot) in problem.locked:
+            continue
+        lo, hi = problem.portion_range(spec.slot)
+        kcal = [problem.recipes[r].per_portion.kcal for r in spec.candidates]
+        least += min(kcal, default=0) * lo if spec.required else 0
+        most += max(kcal, default=0) * hi
+    low = min(usual_min, fixed + most, witness_kcal)
+    high = max(band.max or 0, fixed + least, witness_kcal)
+    return Band(low, high)
 
 
 # --- infeasible and realistic --------------------------------------------------------------------

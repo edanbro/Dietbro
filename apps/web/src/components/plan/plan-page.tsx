@@ -40,9 +40,9 @@ import {
 } from "@/lib/dates";
 import { allergenLabel, humanize } from "@/lib/format";
 
+import { dayRows, LoggedCard, LoggedNote } from "./logged";
 import { DayMacros } from "./macro-bars";
 import { MealCard } from "./meal-card";
-import { SLOT_ORDER } from "./slots";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 
@@ -398,23 +398,21 @@ function PlanView({
                 </TabsTrigger>
               ))}
             </TabsList>
-            {plan.days.map((d) => {
-              const meals = [...d.meals].sort(
-                (a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot),
-              );
-              return (
-                <TabsContent key={d.date} value={d.date} className="flex flex-col gap-4 pt-2">
-                  <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
-                    {meals.map((m) => (
-                      <li key={m.slot}>
-                        <MealCard meal={m} />
-                      </li>
-                    ))}
-                  </ul>
+            {plan.days.map((d) => (
+              <TabsContent key={d.date} value={d.date} className="flex flex-col gap-4 pt-2">
+                <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
+                  {dayRows(d).map((row) => (
+                    <li key={row.key}>
+                      {row.meal ? <MealCard meal={row.meal} /> : <LoggedCard entry={row.entry} />}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-col gap-2">
                   <DayMacros totals={d.totals} bands={plan.targets.daily} />
-                </TabsContent>
-              );
-            })}
+                  <LoggedNote logged={d.logged} />
+                </div>
+              </TabsContent>
+            ))}
           </Tabs>
         </TabsContent>
 

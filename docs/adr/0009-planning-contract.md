@@ -69,3 +69,6 @@ For macros: hard bands, or soft bands with a penalty.
   note.
 - Open for M5: `locked` mixes eaten meals (facts) and pinned future meals (choices). Today both
   still pass the allergen/diet filters. M5 adds an explicit "eaten" marker that skips them.
+  (Superseded in M4 by [ADR-0014](0014-chat-replans.md): replans plan only the open horizon,
+  eaten meals count as `extra` intake, pins use `Problem.choices`, and `Problem.day_kcal`
+  relaxes the band on days with reported intake. `solve()` takes the previous plan.)

@@ -1,8 +1,9 @@
 """Request/response models. Field constraints here are the first line of input validation;
 domain rules (calorie floor, deficit) live in larder_core.energy."""
 
-from datetime import date, datetime
-from typing import Literal
+from datetime import date, datetime, time
+from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +17,7 @@ from larder_core.energy import (
 )
 from larder_core.meals import Slot
 from larder_core.tagging import Diet
+from larder_llm.outcome import Logged, ReplanOutcome
 
 Currency = Literal["GBP", "EUR", "USD"]
 
@@ -202,8 +204,13 @@ class MealOut(BaseModel):
     portions: int = Field(description="half-servings: 2 = one serving")
     servings: float
     nutrition: MacrosOut
-    locked: bool = False
-    status: Literal["planned", "eaten", "skipped", "off_plan"] = "planned"
+    locked: bool = Field(default=False, description="pinned by the user (a craving or swap)")
+    status: Literal["planned"] = "planned"  # M5 adds eaten / skipped
+
+
+class MealLogOut(Logged):
+    """Food eaten off-plan, or a planned meal skipped (told to the chat), as snapshotted with
+    the plan version: `DayOut.totals` = its meals + these."""
 
 
 class DayOut(BaseModel):
@@ -211,6 +218,7 @@ class DayOut(BaseModel):
     date: date
     meals: list[MealOut]
     totals: MacrosOut
+    logged: list[MealLogOut]
 
 
 class ViolationOut(BaseModel):
@@ -237,6 +245,7 @@ class PlanRequest(BaseModel):
 class PlanOut(BaseModel):
     id: int
     version: int
+    parent_id: int | None
     start: date
     days: list[DayOut]
     planner: str
@@ -292,6 +301,8 @@ class RecipeIngredientOut(BaseModel):
 
 class RecipeDetail(RecipeCard):
     instructions: str
+    # True for a recipe the assistant drafted for this user (private; nutrition computed by us).
+    generated: bool
     source: str
     source_url: str | None
     servings: int | None
@@ -303,3 +314,131 @@ class RecipeDetail(RecipeCard):
     allergens_complete: bool
     suitable_for: list[Diet]
     ingredients: list[RecipeIngredientOut]
+
+
+# --- chat (M4) --------------------------------------------------------------------------------
+
+
+class ChatMessageIn(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+    client_id: UUID = Field(description="the client's id for this message: resending is safe")
+    thread_id: int | None = Field(default=None, description="omit to continue the latest thread")
+    today: date = Field(description="the user's local date (dates like 'tonight' resolve to it)")
+    local_time: time | None = Field(
+        default=None,
+        description="the user's local time: today's meals whose time has passed count as eaten",
+    )
+
+
+class ChatProblem(BaseModel):
+    """Body of the chat gate's 400/404/409/429 answers."""
+
+    detail: list[str]
+    code: Literal["bad_today", "thread_not_found", "busy", "duplicate", "daily_limit"]
+    retry_at: datetime | None = None  # daily_limit: when sending works again
+    message_id: int | None = None  # busy / duplicate: the message being (or already) answered
+
+
+class RecipeCreatedOut(BaseModel):
+    type: Literal["recipe"] = "recipe"
+    recipe_id: int
+    name: str
+
+
+class OutcomeOut(ReplanOutcome):
+    """What one plan change request did (also sent live as the `outcome` event)."""
+
+    type: Literal["outcome"] = "outcome"
+
+
+Attachment = Annotated[OutcomeOut | RecipeCreatedOut, Field(discriminator="type")]
+OfflineReason = Literal["no_key", "budget", "model_error"]
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    role: Literal["user", "assistant"]
+    text: str
+    created_at: datetime
+    plan_id: int | None = Field(description="last plan version this turn created")
+    mode: Literal["llm", "offline"] | None
+    offline_reason: OfflineReason | None
+    attachments: list[Attachment]
+    suggestions: list[str] = Field(description="tap-to-send replies")
+
+
+class PendingTurn(BaseModel):
+    message_id: int
+    started_at: datetime
+
+
+class ThreadOut(BaseModel):
+    thread_id: int | None
+    messages: list[ChatMessageOut] = Field(description="oldest first")
+    has_more: bool = Field(description="older messages exist (page with before_id)")
+    pending: PendingTurn | None = Field(description="a reply is still being worked on")
+    llm_available: bool = Field(description="false: replies come from the offline parser")
+    offline_reason: OfflineReason | None
+    llm_resets_at: datetime | None = Field(description="when model replies come back (budget)")
+    messages_today: int
+    daily_limit: int
+
+
+# Server-sent events of POST /chat/messages, in order: thread, then any of status / text /
+# text_reset / outcome / recipe, then exactly one of done / error. Each is one `data:` line.
+
+
+class ThreadEvent(BaseModel):
+    type: Literal["thread"] = "thread"
+    thread_id: int
+    message_id: int  # the user's message
+    mode: Literal["llm", "offline"]
+    offline_reason: OfflineReason | None
+
+
+class StatusEvent(BaseModel):
+    type: Literal["status"] = "status"
+    text: str  # "Looking for spicy dinners…"
+
+
+class TextEvent(BaseModel):
+    type: Literal["text"] = "text"
+    delta: str
+
+
+class TextResetEvent(BaseModel):
+    """Discard the reply text streamed so far (a declined or dropped model response)."""
+
+    type: Literal["text_reset"] = "text_reset"
+
+
+class OutcomeEvent(OutcomeOut):
+    pass
+
+
+class RecipeEvent(RecipeCreatedOut):
+    pass
+
+
+class DoneEvent(BaseModel):
+    type: Literal["done"] = "done"
+    message: ChatMessageOut  # the assistant's message as stored (replaces streamed text)
+    messages_today: int
+
+
+class ErrorEvent(BaseModel):
+    type: Literal["error"] = "error"
+    message: str
+
+
+ChatEvent = Annotated[
+    ThreadEvent
+    | StatusEvent
+    | TextEvent
+    | TextResetEvent
+    | OutcomeEvent
+    | RecipeEvent
+    | DoneEvent
+    | ErrorEvent,
+    Field(discriminator="type"),
+]
