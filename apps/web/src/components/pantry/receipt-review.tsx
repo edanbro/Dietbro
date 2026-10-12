@@ -314,13 +314,17 @@ function Review({ receipt }: { receipt: Receipt }) {
   const unmatched = receipt.lines.filter((l) => l.food === null && l.status !== "rejected").length;
   const rejected = receipt.lines.filter((l) => l.status === "rejected").length;
 
-  function add() {
-    confirm.mutate(undefined, {
-      onSuccess: ({ created }) => {
-        toast.success(`Added ${plural(created.length, "item")} to your pantry`);
-        router.push("/pantry");
-      },
-    });
+  async function add() {
+    // Not mutate(..., { onSuccess }): the confirmed receipt replaces this view before a
+    // per-call callback would run, and an unmounted observer never gets it.
+    let created;
+    try {
+      ({ created } = await confirm.mutateAsync());
+    } catch {
+      return; // the error is shown from confirm.error
+    }
+    toast.success(`Added ${plural(created.length, "item")} to your pantry`);
+    router.push("/pantry");
   }
 
   if (!receipt.lines.length) {
