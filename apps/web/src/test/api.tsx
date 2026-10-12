@@ -21,12 +21,21 @@ export function mockApi(routes: Routes): Call[] {
     vi.fn(async (req: Request) => {
       const path = new URL(req.url).pathname;
       const text = req.method === "GET" ? "" : await req.clone().text();
-      calls.push({ method: req.method, path, body: text ? JSON.parse(text) : undefined });
+      calls.push({ method: req.method, path, body: text ? parseBody(text) : undefined });
       const handler = routes[`${req.method} ${path}`];
       return handler ? handler(req) : Response.json({ detail: "Not Found" }, { status: 404 });
     }),
   );
   return calls;
+}
+
+/** JSON bodies parsed; anything else (multipart uploads) as text. */
+function parseBody(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
 }
 
 export const json =

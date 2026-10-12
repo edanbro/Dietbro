@@ -7,6 +7,8 @@ import type {
   Meal,
   Plan,
   PlanDay,
+  Receipt,
+  ReceiptLine,
   Recipe,
   ShoppingItem,
   ShoppingList,
@@ -267,6 +269,75 @@ export function makeOutcome(overrides: Partial<ChatOutcome> = {}): ChatOutcome {
     days: [],
     warnings: [],
     notes: [],
+    ...overrides,
+  };
+}
+
+// --- receipts (M6) ----------------------------------------------------------------------------
+
+export function receiptLine(
+  id: number,
+  overrides: Partial<ReceiptLine> & Pick<ReceiptLine, "raw_text" | "name">,
+): ReceiptLine {
+  return {
+    id,
+    position: id,
+    food: null,
+    match_method: null,
+    quantity: null,
+    unit: null,
+    grams: null,
+    approx: false,
+    price_minor: 100,
+    expires_on: null,
+    status: "suggested",
+    pantry_item_id: null,
+    ...overrides,
+  };
+}
+
+export const MILK = { id: 31, description: "Milk, reduced fat, 2%", category: "Dairy", kcal: 50 };
+export const TOMATOES = {
+  id: 32,
+  description: "Tomatoes, canned",
+  category: "Vegetables",
+  kcal: 20,
+};
+export const BANANA = { id: 33, description: "Bananas, raw", category: "Fruits", kcal: 89 };
+
+/** A ready pasted receipt bought 2026-10-09: milk and chopped tomatoes matched, one line not. */
+export function makeReceipt(overrides: Partial<Receipt> = {}): Receipt {
+  return {
+    id: 5,
+    source: "text",
+    status: "ready",
+    purchased_on: "2026-10-09",
+    error: null,
+    created_at: "2026-10-09T10:00:00Z",
+    processed_at: "2026-10-09T10:00:01Z",
+    confirmed_at: null,
+    lines: [
+      receiptLine(1, {
+        raw_text: "SEMI SKMD MILK 4PT   £1.45",
+        name: "semi skimmed milk",
+        food: MILK,
+        match_method: "receipt",
+        quantity: 2.27,
+        unit: "l",
+        grams: 2340,
+        expires_on: "2026-10-16",
+      }),
+      receiptLine(2, {
+        raw_text: "CHOPPED TOMS 400G   £0.55",
+        name: "chopped tomatoes",
+        food: TOMATOES,
+        match_method: "receipt",
+        quantity: 400,
+        unit: "g",
+        grams: 400,
+      }),
+      receiptLine(3, { raw_text: "MYSTERY SNACK   £1.00", name: "mystery snack" }),
+    ],
     ...overrides,
   };
 }

@@ -1,7 +1,9 @@
 "use client";
 
+import { ReceiptTextIcon } from "lucide-react";
 import Link from "next/link";
 
+import { ExpiryAlerts } from "@/components/pantry/expiry-alerts";
 import { PantryAdd } from "@/components/pantry/pantry-add";
 import { PantryList } from "@/components/pantry/pantry-list";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,7 +15,13 @@ export function PantryPage() {
   const { data: me } = useMe();
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Pantry</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Pantry</h1>
+        <Link href="/pantry/receipts" className={buttonVariants({ variant: "outline" })}>
+          <ReceiptTextIcon aria-hidden />
+          Add from receipt
+        </Link>
+      </div>
       {me && !me.setup_complete ? (
         <Alert>
           <AlertDescription className="flex items-center justify-between gap-2">
@@ -24,6 +32,7 @@ export function PantryPage() {
           </AlertDescription>
         </Alert>
       ) : null}
+      <ExpiryAlerts />
       <Card>
         <CardHeader>
           <CardTitle>Add food</CardTitle>

@@ -40,6 +40,13 @@ export type Eaten = Schemas["EatenOut"];
 export type PantryChange = Schemas["PantryChangeOut"];
 /** A typed plan change (skip, swap, off-plan food, craving), as the chat's executor takes it. */
 export type PlanChange = Schemas["ReplanRequest"]["changes"][number];
+export type ExpiringPantry = Schemas["ExpiringPantry"];
+export type ExpiringItem = Schemas["ExpiringItem"];
+export type Receipt = Schemas["ReceiptOut"];
+export type ReceiptLine = Schemas["ReceiptLineOut"];
+export type ReceiptLinePatch = Schemas["ReceiptLinePatch"];
+export type ReceiptSummary = Schemas["ReceiptSummary"];
+export type ReceiptStatus = Receipt["status"];
 
 export const keys = {
   me: ["me"] as const,
@@ -47,7 +54,11 @@ export const keys = {
   body: ["me", "body"] as const,
   preferences: ["me", "preferences"] as const,
   allergies: ["me", "allergies"] as const,
+  /** Also the prefix of the expiry alerts, so every pantry change refreshes them. */
   pantry: ["pantry"] as const,
+  expiring: (today: string) => ["pantry", "expiring", today] as const,
+  receipts: ["receipts"] as const,
+  receipt: (id: number) => ["receipts", id] as const,
   allergens: ["allergens"] as const,
   cuisines: ["cuisines"] as const,
   food: (id: number) => ["food", id] as const,
@@ -402,5 +413,157 @@ export function useReplan() {
       return unwrap(result);
     },
     ...usePlanChangeHandlers(),
+  });
+}
+
+// --- pantry intake (M6) -----------------------------------------------------------------------
+
+/** Pantry items expired or expiring within `days` of the user's local today, soonest first. */
+export function useExpiring(days = 3) {
+  const api = useApi();
+  const today = localISODate();
+  return useQuery({
+    queryKey: [...keys.expiring(today), days],
+    queryFn: async () =>
+      unwrap(await api.GET("/pantry/expiring", { params: { query: { days, today } } })),
+  });
+}
+
+/** The worker hasn't finished reading this receipt yet. */
+export function isReading(status: ReceiptStatus | undefined): boolean {
+  return status === "queued" || status === "processing";
+}
+
+export function useReceipts() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.receipts,
+    queryFn: async () => unwrap(await api.GET("/pantry/receipts")),
+  });
+}
+
+/**
+ * One receipt. While the worker reads it (queued/processing) and `poll` is on, it is refetched
+ * every half second for pasted text and every 1.5 s for photos (OCR takes about that long);
+ * polling stops on ready, failed or confirmed.
+ */
+export function useReceipt(id: number, { poll = true }: { poll?: boolean } = {}) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.receipt(id),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/pantry/receipts/{upload_id}", { params: { path: { upload_id: id } } }),
+      ),
+    refetchInterval: (query) => {
+      const receipt = query.state.data;
+      if (!poll || !receipt || !isReading(receipt.status)) return false;
+      return receipt.source === "text" ? 500 : 1500;
+    },
+  });
+}
+
+/** Seed the receipt's cache with the 202 answer, so its page starts polling from there. */
+function useReceiptCreated() {
+  const qc = useQueryClient();
+  return async (receipt: Receipt) => {
+    qc.setQueryData(keys.receipt(receipt.id), receipt);
+    await qc.invalidateQueries({ queryKey: keys.receipts, exact: true });
+  };
+}
+
+export function useSubmitReceiptText() {
+  const api = useApi();
+  const onSuccess = useReceiptCreated();
+  return useMutation({
+    mutationFn: async (body: Schemas["ReceiptTextIn"]) =>
+      unwrap(await api.POST("/pantry/receipts/text", { body })),
+    onSuccess,
+  });
+}
+
+export function useUploadReceiptImage() {
+  const api = useApi();
+  const onSuccess = useReceiptCreated();
+  return useMutation({
+    mutationFn: async ({ file, purchased_on }: { file: File; purchased_on?: string }) =>
+      unwrap(
+        await api.POST("/pantry/receipts/image", {
+          // The schema types the file as a string; it goes as multipart form data.
+          body: { file: "", purchased_on },
+          bodySerializer: () => {
+            const form = new FormData();
+            form.append("file", file, file.name);
+            if (purchased_on) form.append("purchased_on", purchased_on);
+            return form;
+          },
+        }),
+      ),
+    onSuccess,
+  });
+}
+
+/** Edit one suggested line; the answer replaces that line in the cached receipt. */
+export function useUpdateReceiptLine(receiptId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ lineId, patch }: { lineId: number; patch: ReceiptLinePatch }) =>
+      unwrap(
+        await api.PATCH("/pantry/receipts/{upload_id}/lines/{line_id}", {
+          params: { path: { upload_id: receiptId, line_id: lineId } },
+          body: patch,
+        }),
+      ),
+    onSuccess: (line) => {
+      qc.setQueryData<Receipt>(keys.receipt(receiptId), (receipt) =>
+        receipt
+          ? { ...receipt, lines: receipt.lines.map((l) => (l.id === line.id ? line : l)) }
+          : receipt,
+      );
+    },
+    onError: (error) => {
+      // 409: the receipt isn't reviewable any more (confirmed elsewhere); show what it is now.
+      if (error instanceof ApiError && error.status === 409) {
+        void qc.invalidateQueries({ queryKey: keys.receipt(receiptId) });
+      }
+    },
+  });
+}
+
+/** Add the reviewed lines to the pantry; pantry, expiry alerts, receipts and `me` go stale. */
+export function useConfirmReceipt(receiptId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST("/pantry/receipts/{upload_id}/confirm", {
+          params: { path: { upload_id: receiptId } },
+        }),
+      ),
+    onSuccess: async ({ receipt }) => {
+      qc.setQueryData(keys.receipt(receiptId), receipt);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.pantry }),
+        qc.invalidateQueries({ queryKey: keys.receipts, exact: true }),
+        qc.invalidateQueries({ queryKey: keys.me }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteReceipt() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      unwrap(
+        await api.DELETE("/pantry/receipts/{upload_id}", { params: { path: { upload_id: id } } }),
+      ),
+    onSuccess: async (_data, id) => {
+      qc.removeQueries({ queryKey: keys.receipt(id) });
+      await qc.invalidateQueries({ queryKey: keys.receipts, exact: true });
+    },
   });
 }

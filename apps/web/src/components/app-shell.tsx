@@ -6,6 +6,8 @@ import { CalendarDaysIcon, MessageCircleIcon, RefrigeratorIcon, UserIcon } from 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useMe } from "@/lib/api/hooks";
+
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
   { href: "/chat", label: "Chat", icon: MessageCircleIcon },
@@ -14,8 +16,23 @@ const NAV = [
 ];
 
 /** Mobile-first shell: compact header, content column, thumb-reach bottom nav. */
+/** Count bubble on a nav icon (the pantry's food expiring within 3 days). */
+function CountBadge({ n }: { n: number }) {
+  if (!n) return null;
+  return (
+    <span
+      aria-hidden
+      className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+    >
+      {n > 9 ? "9+" : n}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: me } = useMe();
+  const expiring = me?.profile.expiring_soon ?? 0;
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur">
@@ -42,8 +59,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     active ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  <Icon className="size-5" />
+                  <span className="relative">
+                    <Icon className="size-5" />
+                    {href === "/pantry" ? <CountBadge n={expiring} /> : null}
+                  </span>
                   {label}
+                  {href === "/pantry" && expiring ? (
+                    <span className="sr-only">, {expiring} expiring soon</span>
+                  ) : null}
                 </Link>
               </li>
             );
