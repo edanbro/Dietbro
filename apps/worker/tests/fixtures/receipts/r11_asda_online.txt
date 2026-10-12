@@ -1,0 +1,15 @@
+ASDA Groceries Online - Order 123456789
+Delivered: Saturday
+
+Qty  Item                              Price
+1    ASDA Grower's Selection Bananas 5pk   0.89
+2    ASDA Semi Skimmed Milk 4 Pints        2.70
+1    ASDA Chicken Breast Fillets 640g      4.25
+1    ASDA Lean Beef Mince 500g             3.20
+1    ASDA Grower's Selection Red Onions 1kg 0.89
+3    ASDA Chopped Tomatoes 400g            1.65
+1    ASDA Wholemeal Bread 800g             0.85
+1    ASDA Brown Basmati Rice 1kg           1.90
+     Order total                          16.33
+     Delivery charge                       1.50
+     Amount charged                       17.83

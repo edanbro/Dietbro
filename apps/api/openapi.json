@@ -647,6 +647,376 @@
         }
       }
     },
+    "/pantry/receipts/image": {
+      "post": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Upload Image",
+        "description": "Queue a receipt photo for reading. The photo is deleted as soon as it has been read.",
+        "operationId": "uploadReceiptImage",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadReceiptImage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOut"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Photo over the size limit"
+          },
+          "415": {
+            "description": "Not a JPEG, PNG or WebP photo"
+          },
+          "429": {
+            "description": "Daily upload limit reached"
+          },
+          "503": {
+            "description": "Job queue unavailable; try again"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/pantry/receipts/text": {
+      "post": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Submit Text",
+        "description": "Queue pasted receipt text (e.g. from an online order) for reading.",
+        "operationId": "submitReceiptText",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptTextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOut"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Photo over the size limit"
+          },
+          "415": {
+            "description": "Not a JPEG, PNG or WebP photo"
+          },
+          "429": {
+            "description": "Daily upload limit reached"
+          },
+          "503": {
+            "description": "Job queue unavailable; try again"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/pantry/receipts": {
+      "get": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "List Receipts",
+        "description": "The 20 most recent uploads, newest first.",
+        "operationId": "listReceipts",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Listreceipts"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/pantry/receipts/{upload_id}": {
+      "get": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Get Receipt",
+        "operationId": "getReceipt",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Delete Receipt",
+        "description": "Delete the upload, its photo (if not yet read) and its lines. Pantry items already\nconfirmed from it stay.",
+        "operationId": "deleteReceipt",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pantry/receipts/{upload_id}/lines/{line_id}": {
+      "patch": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Update Line",
+        "description": "Edit a suggestion before confirming: food, quantity + unit, use-by date, or status.",
+        "operationId": "updateReceiptLine",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Upload Id"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Line Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptLinePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptLineOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pantry/receipts/{upload_id}/confirm": {
+      "post": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Confirm Receipt",
+        "description": "Add every line that isn't rejected and has a food to the pantry (source `receipt`,\napproximate where the size wasn't printed); suggested lines become accepted. Lines without\na food are skipped. 409 unless the receipt is ready (so confirming twice adds nothing).",
+        "operationId": "confirmReceipt",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptConfirmOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/pantry": {
       "get": {
         "tags": [
@@ -730,6 +1100,76 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/pantry/expiring": {
+      "get": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "List Expiring",
+        "description": "Expiry alerts: items with something left whose use-by date is before `today` + `days`\n(so days=3 means today, tomorrow and the day after), expired ones included, soonest\nfirst.",
+        "operationId": "listExpiringPantry",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 0,
+              "default": 3,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "today",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The user's local date (default UTC)",
+              "title": "Today"
+            },
+            "description": "The user's local date (default UTC)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpiringPantry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/pantry/{item_id}": {
@@ -1899,6 +2339,33 @@
         ],
         "title": "BodyOut"
       },
+      "Body_uploadReceiptImage": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Photo of the receipt: JPEG, PNG or WebP"
+          },
+          "purchased_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchased On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadReceiptImage"
+      },
       "ChangeReason": {
         "type": "string",
         "enum": [
@@ -2500,6 +2967,105 @@
           "message"
         ],
         "title": "ErrorEvent"
+      },
+      "ExpiringItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodSummary"
+          },
+          "grams": {
+            "type": "number",
+            "title": "Grams"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "approx": {
+            "type": "boolean",
+            "title": "Approx"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "days_left": {
+            "type": "integer",
+            "title": "Days Left"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "food",
+          "grams",
+          "quantity",
+          "unit",
+          "approx",
+          "expires_on",
+          "source",
+          "created_at",
+          "days_left"
+        ],
+        "title": "ExpiringItem"
+      },
+      "ExpiringPantry": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "expired": {
+            "type": "integer",
+            "title": "Expired"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExpiringItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "days",
+          "expired",
+          "items"
+        ],
+        "title": "ExpiringPantry",
+        "description": "Pantry items with something left whose use-by date is before `today` + `days`, soonest\nfirst (expired ones included)."
       },
       "FoodDetail": {
         "properties": {
@@ -3944,6 +4510,11 @@
           "pantry_items": {
             "type": "integer",
             "title": "Pantry Items"
+          },
+          "expiring_soon": {
+            "type": "integer",
+            "title": "Expiring Soon",
+            "default": 0
           }
         },
         "type": "object",
@@ -3984,6 +4555,433 @@
           "checks"
         ],
         "title": "Readiness"
+      },
+      "ReceiptConfirmOut": {
+        "properties": {
+          "receipt": {
+            "$ref": "#/components/schemas/ReceiptOut"
+          },
+          "created": {
+            "items": {
+              "$ref": "#/components/schemas/PantryItemOut"
+            },
+            "type": "array",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "receipt",
+          "created"
+        ],
+        "title": "ReceiptConfirmOut"
+      },
+      "ReceiptLineOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "raw_text": {
+            "type": "string",
+            "title": "Raw Text"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "food": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FoodSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "match_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Method"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "approx": {
+            "type": "boolean",
+            "title": "Approx"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "suggested",
+              "accepted",
+              "edited",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "pantry_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pantry Item Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "raw_text",
+          "name",
+          "food",
+          "match_method",
+          "quantity",
+          "unit",
+          "grams",
+          "approx",
+          "price_minor",
+          "expires_on",
+          "status",
+          "pantry_item_id"
+        ],
+        "title": "ReceiptLineOut",
+        "description": "A line read from the receipt and the pantry entry suggested for it. `food` is null when\nnothing matched (pick one with PATCH). `match_method`: receipt | alias | trigram | partial\n(a shorter phrase of the name matched) | user."
+      },
+      "ReceiptLinePatch": {
+        "properties": {
+          "food_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "approx": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approx"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "suggested",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "title": "ReceiptLinePatch",
+        "description": "Change a suggestion. Setting `food_id` re-estimates the amount for that food unless a\nquantity and unit are given too; any edit makes the line `edited`. `status`: accepted,\nrejected, or back to suggested."
+      },
+      "ReceiptOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "image",
+              "text"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "ready",
+              "failed",
+              "confirmed"
+            ],
+            "title": "Status"
+          },
+          "purchased_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Purchased On"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptLineOut"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "status",
+          "purchased_on",
+          "error",
+          "created_at",
+          "processed_at",
+          "confirmed_at",
+          "lines"
+        ],
+        "title": "ReceiptOut",
+        "description": "Poll while `status` is queued or processing. ready: review `lines`; failed: `error`\nsays why (the photo is already deleted); confirmed: lines are in the pantry."
+      },
+      "ReceiptSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "image",
+              "text"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "ready",
+              "failed",
+              "confirmed"
+            ],
+            "title": "Status"
+          },
+          "purchased_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Purchased On"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "lines": {
+            "type": "integer",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "status",
+          "purchased_on",
+          "error",
+          "created_at",
+          "lines"
+        ],
+        "title": "ReceiptSummary"
+      },
+      "ReceiptTextIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "purchased_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchased On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ReceiptTextIn"
       },
       "RecipeCard": {
         "properties": {

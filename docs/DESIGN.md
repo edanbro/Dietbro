@@ -3,7 +3,7 @@
 Living design doc. Update it in the same PR as the change it describes. Decisions between real
 alternatives get an ADR in [`adr/`](adr/); this doc links to them rather than repeating them.
 
-Status: **M3 (planning, validator, shopping list, plan view)**. Sections marked _TBD (Mn)_ are filled in at that milestone.
+Status: **M6 (pantry intake: receipts, expiry alerts)**. Sections marked _TBD (Mn)_ are filled in at that milestone.
 
 ## 1. Problem
 
@@ -37,8 +37,8 @@ See [ADR-0002](adr/0002-hybrid-llm-constraint-solver.md).
   packages/db      SQLAlchemy models + Alembic migrations
   packages/data    USDA + recipe importers, normaliser, embeddings (CLI: larder-data)
   packages/solver  problem contract, CP-SAT model, validator, prefilter, baseline (pure)
-  packages/llm     Claude client, tools, schemas            — M4
-  apps/worker      arq jobs (receipts, plan gen, embeddings) — when first needed
+  packages/llm     Claude client, tools, schemas (M4)
+  apps/worker      arq jobs on Redis: receipt OCR + parsing (M6); plan gen, embeddings later
 ```
 
 Rules:
@@ -52,7 +52,7 @@ Rules:
 ## 4. Runtime and local dev
 
 - `docker compose up` runs `db` (Postgres 17 + pgvector), `redis`, a one-shot `migrate`, `api`
-  (:8000) and `web` (:3000). It needs `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` in `.env`
+  (:8000), `worker` (arq; the same Dockerfile's `worker` target, with OCR) and `web` (:3000). It needs `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` in `.env`
   (a free Clerk development instance); `make seed` loads foods and recipes.
 - `GET /healthz` = liveness. `GET /readyz` = Postgres `SELECT 1` + Redis `PING`, 503 if any fail.
   Compose waits on health checks, so `web` starts only after `api` is healthy.
@@ -60,7 +60,8 @@ Rules:
   [ADR-0003](adr/0003-monorepo-tooling.md).
 - Quality gates (CI + pre-commit): ruff, pyright strict, pytest (with a Postgres service);
   eslint, tsc, vitest, next build; OpenAPI/type drift check; gitleaks; Docker build + compose
-  smoke test. The data pipeline runs as its own workflow (weekly + PRs touching data code).
+  smoke test (including a pasted and a photographed receipt through the queue and the worker).
+  The data pipeline runs as its own workflow (weekly + PRs touching data code).
 - Migrations: `make migrate` (Alembic, `packages/db`). DB tests use `$TEST_DATABASE_URL` and
   skip when Postgres is unreachable (CI sets `LARDER_REQUIRE_DB=1` so they can't skip there).
 
@@ -88,6 +89,8 @@ Tables exist for what each milestone uses; LLM calls (M4) come later.
 | `shopping_items` | Food, grams to buy, estimated cost, staple flag, ticked |
 | `cravings` | Every plan change asked for (chat or plan screen): parsed change, result, the version it made; `client_id` for plan-screen requests |
 | `meal_logs` | Facts replans rebuild from: food eaten off-plan, skipped meals, meals marked eaten (recipe + exactly what was taken from the pantry); voided, never deleted |
+| `receipt_uploads` | A receipt to read (photo or pasted text): status, purchase date, error; the photo only until it has been read, the read text until confirm |
+| `receipt_lines` | Item lines read from a receipt: raw text, cleaned name, suggested food (+ match method), quantity/unit/grams (approx), price, suggested use-by, review status, the pantry item it became |
 
 All user tables cascade on account deletion and are only read with `user_id = current user`.
 
@@ -175,6 +178,8 @@ user, so other users' records are indistinguishable from missing ones (404).
 | `GET/PUT/DELETE /me/body` | Optional body stats → TDEE and suggested targets |
 | `GET/PUT /me/preferences`, `GET/PUT /me/allergies` | Soft likes/dislikes; hard allergens + avoided foods |
 | `GET/POST /pantry`, `PATCH/DELETE /pantry/{id}` | Pantry; quantity + unit → grams via USDA portions |
+| `GET /pantry/expiring?days=3&today=` | Expiry alerts: items with something left, use-by before today + days (expired included), with days left; `GET /me` carries the count |
+| `POST /pantry/receipts/image` (multipart) or `/text`, `GET /pantry/receipts[/{id}]`, `PATCH /pantry/receipts/{id}/lines/{line_id}`, `POST /pantry/receipts/{id}/confirm`, `DELETE /pantry/receipts/{id}` | Receipt intake (§7.1): queue a photo or pasted text (202), poll, review lines, confirm into the pantry |
 | `GET /foods/search?q=`, `GET /foods/{id}` | Type-ahead (curated names first, then pg_trgm); units a food can be entered in |
 | `GET /allergens`, `GET /cuisines` | Vocabularies (public) |
 | `POST /plans`, `GET /plans/current`, `GET /plans/{id}` | Make a plan (409 until setup is complete; 400 with reasons when no plan fits); the latest plan (or null) |
@@ -204,6 +209,51 @@ Clerk's middleware for UX; the API is the security boundary.
 unknown key, cross-user access); component tests run forms against a stubbed fetch; Playwright
 drives the whole onboarding on a Pixel 7 profile against a Clerk dev instance (CI job runs when
 the Clerk secrets are configured).
+
+### 7.1 Pantry intake (M6)
+
+[ADR-0016](adr/0016-receipt-intake.md). Free and offline: OCR is RapidOCR (PP-OCR models on
+onnxruntime, bundled in the wheel), parsing and matching are rules; no model sees a receipt.
+
+```
+POST /pantry/receipts/image|text ─► receipt_uploads (queued; photo bytes) ─► arq: read_receipt(id)
+                                                                                 │ worker
+ photo ─► Pillow (EXIF, ≤2000 px) ─► RapidOCR boxes ─► lines (deskewed y) ─┐     │
+ pasted text ──────────────────────────────────────────────────────────────┴─► parse_receipt
+   item lines (name, count, pieces, size, price, frozen/tinned) ─► match food ─► amount, use-by
+   ─► receipt_lines (suggested); upload ready | failed; photo deleted either way
+GET (poll) ─► review: PATCH line (food / quantity+unit / use-by / accept / reject)
+POST confirm ─► pantry_items (source receipt, approx without a printed size); upload confirmed
+```
+
+- **Status**: upload `queued → processing → ready | failed`, `ready → confirmed`; line
+  `suggested → accepted | edited | rejected`. Confirm adds every line that isn't rejected and has
+  a food (suggested ones become accepted); 409 unless ready. The job is idempotent (conditional
+  claim, lines replaced in one transaction, deleted uploads skipped), retried once, and a cron
+  sweep fails uploads stuck for 15 minutes.
+- **Parsing** (`larder_core.receipts`): item = a name and a price; totals, tax, payment, change,
+  loyalty, savings and bags are dropped by keyword and shape; follow-on lines give counts
+  (`2 @ 0.46`) and weights (`0.352 kg @ £1.10/kg`); sizes, packs and counts are read
+  (`4PT`, `2 GAL`, `4X420G`, `6PK`, `12CT`, `1 DOZ`, `EGGS 6`); codes, tax flags and store brands
+  are stripped; a curated table expands abbreviations (SKMD, CHKN BRST, TOMS).
+- **Matching** (`larder_api.receipts`): receipt vocabulary (`receipt_foods.csv`) and recipe
+  aliases on the whole name → trigram clear winner among grocery foods (must start with one of
+  the name's words, no cooked forms) → the tables on shorter phrases (`partial`); else the line
+  stays unmatched for the user. The offline matcher is shared with the chat
+  (`larder_api.foodmatch`), which adds its model tiebreak.
+- **Amounts**: printed metric sizes as printed, imperial converted; piece counts via the food's
+  count portion; no size → one typical portion, `approx`. **Use-by**: purchase date + a shelf-life
+  table by USDA category (`larder_core.shelf_life`; none for frozen, tinned, dry).
+- **Accuracy** ([receipt-accuracy.md](receipt-accuracy.md), `make receipt-eval`): 25 labelled
+  receipts (UK and US formats; 5 a holdout written after tuning), 11 also as rendered photos.
+  Pasted text: 100% line precision and recall, 99% food match (holdout 95%), 99% amounts within
+  tolerance. Photos through OCR (rendered, 3 deliberately degraded): 100% precision, 99% recall,
+  99% food match, 97% end to end at ~1.4 s per photo on CPU. A CI test holds the text path to a
+  floor (precision/recall ≥ 95%, food/amount/end to end ≥ 90%).
+- **Expiring food and the planner**: no solver change needed. The prefilter already counts
+  grams in lots expiring within 3 days double in a recipe's pantry bonus, and the objective
+  (`Weights.waste`) prices pantry food left to expire within the horizon (CP-SAT; the greedy
+  baseline relies on the prefilter). Expired lots are left out of planning.
 
 ## 8. Planning
 
@@ -378,6 +428,9 @@ a few real conversations against Claude locally (needs a key; costs cents).
   enforced; extreme targets are refused ([ADR-0008](adr/0008-calorie-target-safety.md)).
   "Not medical advice" note on goal and body screens. Adults only.
 - User content (receipts, recipe text, chat) is data, never instructions. Tools are user-scoped.
+- Receipt photos are deleted as soon as the worker has read them (or failed to); the text read
+  from them is dropped on confirm. Uploads and their lines are exported and deleted with the
+  account ([ADR-0016](adr/0016-receipt-intake.md)).
 - No secrets in the repo: `.env.example` only; gitleaks in pre-commit and CI.
 - GDPR basics: `GET /me/export` returns every row we hold; `DELETE /me` removes them all
   (cascade) and the client deletes the Clerk user. Body stats are optional and deletable.

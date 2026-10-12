@@ -5,6 +5,8 @@ table is keyed or filtered by `user_id`. Plans (M3): versioned weekly plans and 
 Chat (M4): threads and messages, requested changes, meals logged off-plan, LLM calls; recipes the
 assistant drafts are private to their owner. Replans (M5): planned meals marked eaten (a meal log
 that records the pantry food it used) and plan changes made from the plan screen (`client_id`).
+Pantry intake (M6): receipt uploads (photo or pasted text) and the item lines read from them,
+reviewed by the user before they become pantry items.
 """
 
 import uuid
@@ -21,6 +23,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     MetaData,
     SmallInteger,
     String,
@@ -30,7 +33,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, deferred, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
 EMBEDDING_DIM = 384
@@ -326,7 +329,7 @@ class PantryItem(Base):
     unit: Mapped[str] = mapped_column(String(32))
     approx: Mapped[bool] = mapped_column(Boolean, default=False)
     expires_on: Mapped[date | None] = mapped_column(Date)
-    source: Mapped[str] = mapped_column(String(16), default="manual")  # manual | receipt (M6)
+    source: Mapped[str] = mapped_column(String(16), default="manual")  # manual | receipt
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = _now()
 
@@ -589,3 +592,75 @@ class LlmCall(Base):
     request_id: Mapped[str | None] = mapped_column(String(64))
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- pantry intake (M6) -----------------------------------------------------------------------
+
+
+class ReceiptUpload(Base):
+    """A receipt to read: a photo (`source` image) or pasted text. The worker reads it into
+    `lines` (docs/adr/0016). Status: queued -> processing -> ready | failed; ready -> confirmed
+    once its accepted lines are in the pantry. The photo is kept only until it has been read
+    (success or failure), then deleted; the text read from it is dropped on confirm."""
+
+    __tablename__ = "receipt_uploads"
+    __table_args__ = (Index("ix_receipt_uploads_user_created", "user_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    source: Mapped[str] = mapped_column(String(8))  # image | text
+    status: Mapped[str] = mapped_column(
+        String(16)
+    )  # queued | processing | ready | failed | confirmed
+    purchased_on: Mapped[date] = mapped_column(Date)
+    text: Mapped[str | None] = mapped_column(Text)  # pasted, or read from the photo
+    image: Mapped[bytes | None] = deferred(mapped_column(LargeBinary))  # until read
+    image_type: Mapped[str | None] = mapped_column(String(32))  # image/jpeg | image/png | ...
+    image_bytes: Mapped[int | None] = mapped_column(Integer)  # the photo's size, kept
+    error: Mapped[str | None] = mapped_column(Text)
+    read_ms: Mapped[int | None] = mapped_column(Integer)  # OCR + parse + match time
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = _now()
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    lines: Mapped[list["ReceiptLine"]] = relationship(
+        back_populates="upload",
+        order_by="ReceiptLine.position",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class ReceiptLine(Base):
+    """One item line read from a receipt, with the suggested pantry entry: food (and how it was
+    matched), quantity/unit/grams (`approx` when the size wasn't printed), use-by date. Status:
+    suggested -> accepted | edited | rejected; confirm turns every accepted, edited or matched
+    suggested line into a pantry item (`pantry_item_id`)."""
+
+    __tablename__ = "receipt_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    upload_id: Mapped[int] = mapped_column(
+        ForeignKey("receipt_uploads.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(SmallInteger)
+    raw_text: Mapped[str] = mapped_column(Text)  # as printed (follow-on lines after " | ")
+    name: Mapped[str] = mapped_column(Text)  # cleaned words the matcher used
+    food_id: Mapped[int | None] = mapped_column(ForeignKey("foods.id"))
+    match_method: Mapped[str | None] = mapped_column(
+        String(16)
+    )  # receipt|alias|trigram|partial|user
+    quantity: Mapped[float | None] = mapped_column(Float)
+    unit: Mapped[str | None] = mapped_column(String(32))
+    grams: Mapped[float | None] = mapped_column(Float)
+    approx: Mapped[bool] = mapped_column(Boolean, default=False)
+    price_minor: Mapped[int | None] = mapped_column(Integer)
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(16), default="suggested")
+    pantry_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pantry_items.id", ondelete="SET NULL")
+    )
+
+    upload: Mapped[ReceiptUpload] = relationship(back_populates="lines")
+    food: Mapped[Food | None] = relationship()

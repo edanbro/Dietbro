@@ -89,6 +89,9 @@ CATEGORY_DENSITY = {
     "Baked Products": 0.4,
 }
 DEFAULT_DENSITY = 1.0
+# Portion units that are part of the thing ("1 slice, medium (1/8\" thick)" of an onion), so
+# never "one" of it, though they stay units the pantry offers.
+PART_UNITS = frozenset({"slice", "wedge", "ring", "rings", "strip", "cubic", "inch", "scoop"})
 # Portion units that are packaging or servings, not "one of the thing".
 _NOT_EACH = frozenset(
     {"serving", "nlea", "packet", "container", "bag", "jar", "can", "bottle", "box", "oz", "lb"}
@@ -148,7 +151,7 @@ def count_portions(portions: Sequence[Portion]) -> list[Portion]:
 
 def each_weight(portions: Sequence[Portion], size: str | None, name: str) -> float | None:
     """Weight of "one" of the food, e.g. one medium onion, one large egg, one garlic clove."""
-    each = count_portions(portions)
+    each = [p for p in count_portions(portions) if p.unit not in PART_UNITS]
     if not each:
         return None
 

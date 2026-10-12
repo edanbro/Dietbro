@@ -1,0 +1,25 @@
+TESCO
+Superstore
+VAT NUMBER GB 222 3333 44
+
+TSC SEMI SKMD MILK 2.272L        £1.45
+TSC SEMI SKMD MILK 2.272L        £1.45
+TSC BRITISH PORK LOIN STEAKS 500G £3.00
+TSC LEAN STEAK MINCE 5% 500G     £3.50
+TSC BROWN ONIONS 3PK             £0.69
+TSC GARLIC 4PK                   £0.75
+TSC SWEET POTATO LOOSE
+  0.840 kg @ £1.05/kg            £0.88
+TSC CHERRY TOMATOES 325G         £0.85
+TSC RED PEPPER                   £0.65
+TSC CUCUMBER                     £0.60
+TSC MAT CHEDDAR 400G             £3.10
+TSC GREEK STYLE YOGURT 1KG       £2.00
+TSC SALTED BUTTER 250G           £2.10
+TSC PORRIDGE OATS 1KG            £1.05
+TSC KIDNEY BEANS 400G            £0.50
+TSC CHICKPEAS 400G               £0.55
+TSC ORANGE JUICE 1L              £1.50
+CLUBCARD PRICE SAVING           -£1.00
+TOTAL                           £26.22
+CARD                            £26.22

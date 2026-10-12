@@ -1,0 +1,15 @@
+ALDI
+Store 123
+  1234567  WHOLE MILK GALLON        2.89  F
+  2345678  LARGE WHITE EGGS 12CT    1.89  F
+  3456789  GROUND BEEF 73/27 3LB   10.99  F
+  4567890  AVOCADOS 4CT             2.49  F
+  5678901  YELLOW ONIONS 3LB        1.99  F
+  6789012  SHREDDED MOZZARELLA 8OZ  1.89  F
+  7890123  CANNED BLACK BEANS 15OZ  0.65  F
+  2 @ 0.65
+SUBTOTAL                           23.44
+TAX                                 0.00
+TOTAL                              23.44
+DEBIT                              23.44
+CHANGE                              0.00

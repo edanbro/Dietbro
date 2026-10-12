@@ -148,6 +148,10 @@ jobs:
           done
       - name: Planner dependencies are in the API image
         run: docker compose exec -T api python -c "import ortools, anthropic, larder_solver.problem, larder_llm.agent"
+      - name: OCR stays out of the API image
+        run: docker compose exec -T api python -c "import importlib.util as u, sys; sys.exit(u.find_spec('rapidocr') is not None)"
+      - name: Worker reads a pasted and a photographed receipt (queue, OCR, parse)
+        run: docker compose exec -T worker python -m larder_worker.smoke
       - name: Logs on failure
         if: failure()
         run: docker compose logs
@@ -225,6 +229,17 @@ jobs:
         run: |
           uv run uvicorn larder_api.main:app --port 8000 > api.log 2>&1 &
           curl --retry 30 --retry-connrefused --retry-delay 1 --fail --silent http://localhost:8000/readyz
+      - name: Start worker (reads receipts for the receipt e2e)
+        if: steps.clerk.outputs.enabled == 'true'
+        run: |
+          uv run arq larder_worker.main.WorkerSettings > worker.log 2>&1 &
+          # The worker records a health check in Redis once it has loaded the OCR models.
+          for _ in $(seq 60); do
+            uv run --no-sync arq --check larder_worker.main.WorkerSettings > /dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          cat worker.log
+          exit 1
       - name: Build and start web
         if: steps.clerk.outputs.enabled == 'true'
         working-directory: apps/web
@@ -242,7 +257,7 @@ jobs:
           pnpm e2e
       - name: Logs and report on failure
         if: failure() && steps.clerk.outputs.enabled == 'true'
-        run: tail -n 100 api.log apps/web/web.log || true
+        run: tail -n 100 api.log worker.log apps/web/web.log || true
       - uses: actions/upload-artifact@v7
         if: failure() && steps.clerk.outputs.enabled == 'true'
         with:

@@ -239,6 +239,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pantry/receipts/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Image
+         * @description Queue a receipt photo for reading. The photo is deleted as soon as it has been read.
+         */
+        post: operations["uploadReceiptImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pantry/receipts/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Text
+         * @description Queue pasted receipt text (e.g. from an online order) for reading.
+         */
+        post: operations["submitReceiptText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pantry/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Receipts
+         * @description The 20 most recent uploads, newest first.
+         */
+        get: operations["listReceipts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pantry/receipts/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Receipt */
+        get: operations["getReceipt"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Receipt
+         * @description Delete the upload, its photo (if not yet read) and its lines. Pantry items already
+         *     confirmed from it stay.
+         */
+        delete: operations["deleteReceipt"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pantry/receipts/{upload_id}/lines/{line_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Line
+         * @description Edit a suggestion before confirming: food, quantity + unit, use-by date, or status.
+         */
+        patch: operations["updateReceiptLine"];
+        trace?: never;
+    };
+    "/pantry/receipts/{upload_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Receipt
+         * @description Add every line that isn't rejected and has a food to the pantry (source `receipt`,
+         *     approximate where the size wasn't printed); suggested lines become accepted. Lines without
+         *     a food are skipped. 409 unless the receipt is ready (so confirming twice adds nothing).
+         */
+        post: operations["confirmReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pantry": {
         parameters: {
             query?: never;
@@ -254,6 +378,28 @@ export interface paths {
         put?: never;
         /** Add Item */
         post: operations["addPantryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pantry/expiring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Expiring
+         * @description Expiry alerts: items with something left whose use-by date is before `today` + `days`
+         *     (so days=3 means today, tomorrow and the day after), expired ones included, soonest
+         *     first.
+         */
+        get: operations["listExpiringPantry"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -594,6 +740,16 @@ export interface components {
                 [key: string]: components["schemas"]["SuggestedTargets"];
             };
         };
+        /** Body_uploadReceiptImage */
+        Body_uploadReceiptImage: {
+            /**
+             * File
+             * @description Photo of the receipt: JPEG, PNG or WebP
+             */
+            file: string;
+            /** Purchased On */
+            purchased_on?: string | null;
+        };
         /** @enum {string} */
         ChangeReason: "craving" | "swap" | "skip" | "ate_off_plan" | "rebalance" | "resize";
         /**
@@ -849,6 +1005,49 @@ export interface components {
             type: "error";
             /** Message */
             message: string;
+        };
+        /** ExpiringItem */
+        ExpiringItem: {
+            /** Id */
+            id: number;
+            food: components["schemas"]["FoodSummary"];
+            /** Grams */
+            grams: number;
+            /** Quantity */
+            quantity: number;
+            /** Unit */
+            unit: string;
+            /** Approx */
+            approx: boolean;
+            /** Expires On */
+            expires_on: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Days Left */
+            days_left: number;
+        };
+        /**
+         * ExpiringPantry
+         * @description Pantry items with something left whose use-by date is before `today` + `days`, soonest
+         *     first (expired ones included).
+         */
+        ExpiringPantry: {
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Days */
+            days: number;
+            /** Expired */
+            expired: number;
+            /** Items */
+            items: components["schemas"]["ExpiringItem"][];
         };
         /** FoodDetail */
         FoodDetail: {
@@ -1371,6 +1570,11 @@ export interface components {
             has_preferences: boolean;
             /** Pantry Items */
             pantry_items: number;
+            /**
+             * Expiring Soon
+             * @default 0
+             */
+            expiring_soon: number;
         };
         /** Readiness */
         Readiness: {
@@ -1383,6 +1587,143 @@ export interface components {
             checks: {
                 [key: string]: "ok" | "error";
             };
+        };
+        /** ReceiptConfirmOut */
+        ReceiptConfirmOut: {
+            receipt: components["schemas"]["ReceiptOut"];
+            /** Created */
+            created: components["schemas"]["PantryItemOut"][];
+        };
+        /**
+         * ReceiptLineOut
+         * @description A line read from the receipt and the pantry entry suggested for it. `food` is null when
+         *     nothing matched (pick one with PATCH). `match_method`: receipt | alias | trigram | partial
+         *     (a shorter phrase of the name matched) | user.
+         */
+        ReceiptLineOut: {
+            /** Id */
+            id: number;
+            /** Position */
+            position: number;
+            /** Raw Text */
+            raw_text: string;
+            /** Name */
+            name: string;
+            food: components["schemas"]["FoodSummary"] | null;
+            /** Match Method */
+            match_method: string | null;
+            /** Quantity */
+            quantity: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Grams */
+            grams: number | null;
+            /** Approx */
+            approx: boolean;
+            /** Price Minor */
+            price_minor: number | null;
+            /** Expires On */
+            expires_on: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "suggested" | "accepted" | "edited" | "rejected";
+            /** Pantry Item Id */
+            pantry_item_id: number | null;
+        };
+        /**
+         * ReceiptLinePatch
+         * @description Change a suggestion. Setting `food_id` re-estimates the amount for that food unless a
+         *     quantity and unit are given too; any edit makes the line `edited`. `status`: accepted,
+         *     rejected, or back to suggested.
+         */
+        ReceiptLinePatch: {
+            /** Food Id */
+            food_id?: number | null;
+            /** Quantity */
+            quantity?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Approx */
+            approx?: boolean | null;
+            /** Expires On */
+            expires_on?: string | null;
+            /** Status */
+            status?: ("suggested" | "accepted" | "rejected") | null;
+        };
+        /**
+         * ReceiptOut
+         * @description Poll while `status` is queued or processing. ready: review `lines`; failed: `error`
+         *     says why (the photo is already deleted); confirmed: lines are in the pantry.
+         */
+        ReceiptOut: {
+            /** Id */
+            id: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "image" | "text";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "processing" | "ready" | "failed" | "confirmed";
+            /**
+             * Purchased On
+             * Format: date
+             */
+            purchased_on: string;
+            /** Error */
+            error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Processed At */
+            processed_at: string | null;
+            /** Confirmed At */
+            confirmed_at: string | null;
+            /** Lines */
+            lines: components["schemas"]["ReceiptLineOut"][];
+        };
+        /** ReceiptSummary */
+        ReceiptSummary: {
+            /** Id */
+            id: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "image" | "text";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "processing" | "ready" | "failed" | "confirmed";
+            /**
+             * Purchased On
+             * Format: date
+             */
+            purchased_on: string;
+            /** Error */
+            error: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Lines */
+            lines: number;
+        };
+        /** ReceiptTextIn */
+        ReceiptTextIn: {
+            /** Text */
+            text: string;
+            /** Purchased On */
+            purchased_on?: string | null;
         };
         /** RecipeCard */
         RecipeCard: {
@@ -2232,6 +2573,293 @@ export interface operations {
             };
         };
     };
+    uploadReceiptImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uploadReceiptImage"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
+            /** @description Photo over the size limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a JPEG, PNG or WebP photo */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Daily upload limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job queue unavailable; try again */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    submitReceiptText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptTextIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
+            /** @description Photo over the size limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a JPEG, PNG or WebP photo */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Daily upload limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job queue unavailable; try again */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listReceipts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptSummary"][];
+                };
+            };
+        };
+    };
+    getReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateReceiptLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: number;
+                line_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptLinePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptLineOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptConfirmOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listPantry: {
         parameters: {
             query?: never;
@@ -2281,6 +2909,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listExpiringPantry: {
+        parameters: {
+            query?: {
+                days?: number;
+                /** @description The user's local date (default UTC) */
+                today?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpiringPantry"];
                 };
             };
             /** @description Validation Error */

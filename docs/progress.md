@@ -228,3 +228,67 @@ README section 7 (warm start). Migration 0005.
 **Known gaps**: `solve()` and its warm start (replan time limit to lower then); a craving bonus
 in the objective; swaps from the plan screen are "anything else" (no dish or tag picker yet);
 the replan e2e hasn't run against a live Clerk instance from this branch yet.
+
+## M6 — Pantry intake
+
+**What works**
+- Add groceries from a receipt: upload a photo (`POST /pantry/receipts/image`, JPEG/PNG/WebP up
+  to 8 MB) or paste the text (`POST /pantry/receipts/text`, e.g. an online order). The worker
+  (`apps/worker`, arq on Redis, compose service `worker`) reads it - photos with offline OCR
+  (RapidOCR; free, no key, nothing leaves the box) - and the API serves the suggested lines:
+  food, quantity and unit, grams (approximate when no size was printed), price, suggested
+  use-by. Review each line (change the food, the amount or the date, accept or reject), then
+  confirm: the lines go into the pantry as `source: receipt`. Photos are deleted as soon as
+  they've been read; 20 receipts per user per day.
+- Expiry alerts: `GET /pantry/expiring?days=3` (expired and soon-expiring, days left), and
+  `expiring_soon` on `GET /me` for a badge. The planner already prefers food that expires soon.
+- Receipt uploads and lines are in the data export and go with account deletion.
+- Web (phone-first): "Add from receipt" on the pantry page opens `/pantry/receipts` with two
+  tabs, Photo (take one with the back camera or choose one; type and 8 MB checked before
+  upload, HEIC explained) and Paste text, plus the purchase date (today, local). The receipt
+  page (`/pantry/receipts/{id}`) polls while the worker reads it (every 0.5 s for text, 1.5 s
+  for photos; stops on ready/failed/confirmed; after 60 s says it's taking too long, with
+  "Check again" and delete). Review: each line shows the matched food (or "No match — pick a
+  food"), the printed line, amount, use-by and an approx flag; edit (food search shared with
+  manual add, quantity/unit, use-by, rough amount) or reject/restore; "N items will be added"
+  (unmatched lines are skipped); confirm toasts "Added N items to your pantry" and returns to
+  the pantry, refreshing pantry, alerts and the badge. Failed receipts show the reason with
+  retry and delete; recent receipts are listed (reopen one to review). The pantry page shows a
+  "Use soon" card (expired / expiring within 3 days, "expires tomorrow", "expired 2 days
+  ago"), and the Pantry tab in the bottom nav carries a count from `expiring_soon`.
+
+**Done criterion: measured line-item accuracy** ([receipt-accuracy.md](receipt-accuracy.md),
+`make receipt-eval`): 25 labelled UK/US receipts (209 items; 5 receipts written after tuning as a
+holdout), 11 also as rendered photos.
+
+| Path | Line precision | Line recall | Food match | Amount | End to end |
+|---|---|---|---|---|---|
+| Pasted text, all 25 | 100% | 100% | 99.0% | 99.0% | 98.1% |
+| Pasted text, holdout 5 | 100% | 100% | 94.9% | 100% | 94.9% |
+| Photo via OCR, 11 (3 degraded) | 100% | 99.0% | 99.0% | 98.9% | 97.0% |
+
+OCR takes ~1.4 s per photo on CPU. A CI test keeps the pasted-text path above a floor using a
+fixture of the USDA foods the matcher can reach; another OCRs three of the photos.
+
+**Also**: `larder_core.quantities.each_weight` no longer counts slices and wedges as "one" of a
+food ("1 medium onion" was 62 g, the median of a medium onion and a medium slice; now 110 g).
+Recipe grams pick this up the next time `make data` re-resolves the catalogue.
+
+**Docs**: [ADR-0016](adr/0016-receipt-intake.md), DESIGN §4, §5, §7, §7.1, §10. Migration 0006.
+Images: the API image only gains arq and python-multipart (680 -> 681 MB); the worker image is
+the API's code plus OCR, 1.12 GB (opencv-headless, onnxruntime, numpy and the models add ~290 MB
+to the virtualenv).
+
+- Web tests: `receipt-review.test.tsx` (polling until ready and stopping, giving up, failed,
+  line counts, reject/restore, edit, picking a food for an unmatched line, confirm),
+  `receipt-intake.test.tsx` (photo checks, multipart upload, text submit, upload error and
+  retry, recent list), `expiry-alerts.test.tsx`, the nav badge in `app-shell.test.tsx`.
+  Playwright `e2e/receipt.e2e.ts` pastes a three-line receipt, waits for the worker, moves the
+  milk's use-by to tomorrow, rejects the bananas, confirms, and checks the pantry, the "Use
+  soon" card and the badge. The CI e2e job now starts the worker (`arq`, health-checked).
+
+**Known gaps**: the receipt e2e hasn't run against a live Clerk instance from this branch yet;
+no client-side image downscaling (phone photos go up as taken, within 8 MB); the photo numbers come from
+rendered images (flat, evenly lit), so real photos of crumpled or faded receipts need a labelled
+set of real receipts; HEIC photos are refused (iPhones send JPEG from the browser); loose produce
+is weighed by USDA's typical item, often approximate.

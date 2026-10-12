@@ -3,11 +3,12 @@
 AI meal planner: plans your week around what's already in your kitchen, then re-plans in real time
 when you get a craving or eat off-plan. **LLM for language, constraint solver for guarantees.**
 
-> Status: M5 — re-plan in real time: mark meals eaten (the pantry follows), skip, swap or log
-> something else right on the plan, or tell the chat, and see what changed and why (Claude for
-> language, the planner and an independent validator for every change; works offline without
-> an API key; replans p95 well under 1 s). The CP-SAT planner is being written (a greedy
-> baseline stands in, checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
+> Status: M6 — add groceries from a receipt: photograph it or paste the text, review what was
+> read (offline OCR and matching, no API key), confirm into the pantry, and see what expires
+> soon. Before that (M5): re-plan in real time from the plan screen or the chat (Claude for
+> language, the planner and an independent validator for every change; works offline; replans
+> p95 well under 1 s). The CP-SAT planner is being written (a greedy baseline stands in,
+> checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
 > Progress: [docs/progress.md](docs/progress.md).
 
 ## Run it

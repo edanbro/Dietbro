@@ -1,17 +1,19 @@
 """The signed-in user's profile: goals, body stats, preferences, allergies; GDPR export/delete."""
 
 from collections.abc import Iterable
-from datetime import UTC, datetime
-from typing import Any
+from datetime import UTC, date, datetime
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import delete, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_api.auth import CurrentUser
+from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
 from larder_api.routers.foods import summary
+from larder_api.routers.pantry import expiring_count
 from larder_api.schemas import (
     AllergenOption,
     AllergiesIn,
@@ -52,6 +54,7 @@ from larder_db.models import (
     MealPlan,
     PantryItem,
     Preferences,
+    ReceiptUpload,
     Recipe,
     User,
 )
@@ -96,7 +99,7 @@ def _body_out(row: BodyProfile) -> BodyOut:
     )
 
 
-async def _status(session: AsyncSession, user: User) -> ProfileStatus:
+async def _status(session: AsyncSession, user: User, today: date) -> ProfileStatus:
     async def has(model: type[Goals | BodyProfile | Allergies | Preferences]) -> bool:
         return await session.get(model, user.id) is not None
 
@@ -109,12 +112,15 @@ async def _status(session: AsyncSession, user: User) -> ProfileStatus:
         has_allergies=await has(Allergies),
         has_preferences=await has(Preferences),
         pantry_items=pantry or 0,
+        expiring_soon=await expiring_count(session, user, today),
     )
 
 
 @router.get("", operation_id="getMe")
-async def get_me(user: CurrentUser, session: Session) -> Me:
-    s = await _status(session, user)
+async def get_me(
+    user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
+) -> Me:
+    s = await _status(session, user, clock().astimezone(UTC).date())
     return Me(
         id=user.id,
         created_at=user.created_at,
@@ -173,6 +179,12 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
     calls = await session.scalars(
         select(LlmCall).where(LlmCall.user_id == user.id).order_by(LlmCall.id)
     )
+    receipts = await session.scalars(
+        select(ReceiptUpload)
+        .where(ReceiptUpload.user_id == user.id)
+        .order_by(ReceiptUpload.id)
+        .options(selectinload(ReceiptUpload.lines))
+    )
 
     response.headers["Content-Disposition"] = 'attachment; filename="larder-export.json"'
     return {
@@ -200,6 +212,12 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "recipes": [
             (row(r, "owner_user_id") or {}) | {"ingredients": rows(r.ingredients, "recipe_id")}
             for r in recipes
+        ],
+        # Pantry intake (M6): receipts and the lines read from them. A photo still waiting to
+        # be read is not exported (it is deleted once read); its size and type are.
+        "receipts": [
+            (row(r, "user_id", "image") or {}) | {"lines": rows(r.lines, "upload_id")}
+            for r in receipts
         ],
     }
 
