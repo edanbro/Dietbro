@@ -96,7 +96,7 @@ test("user adds food from a pasted receipt and sees what expires soon", async ({
     const alerts = page.getByRole("region", { name: "Use soon" });
     await expect(alerts).toContainText(/milk/i);
     await expect(alerts).toContainText("expires tomorrow");
-    await expect(page.getByRole("link", { name: /^Pantry,? *1 expiring soon$/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Pantry, 1 expiring soon" })).toBeVisible();
 
     // 6. The receipt is listed as added.
     await page.getByRole("link", { name: "Add from receipt" }).click();

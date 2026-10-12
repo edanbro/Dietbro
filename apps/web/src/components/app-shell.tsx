@@ -2,7 +2,12 @@
 
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "cn";
-import { CalendarDaysIcon, MessageCircleIcon, RefrigeratorIcon, UserIcon } from "lucide-react";
+import {
+  CalendarDaysIcon,
+  MessageCircleIcon,
+  RefrigeratorIcon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -41,7 +46,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <UserButton />
       </header>
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-24">{children}</main>
+      <main className="mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-24">
+        {children}
+      </main>
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
@@ -54,6 +61,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
+                  // One name, not label + sr-only text: browsers join those with a stray space.
+                  aria-label={
+                    href === "/pantry" && expiring
+                      ? `${label}, ${expiring} expiring soon`
+                      : undefined
+                  }
                   className={cn(
                     "flex h-16 flex-col items-center justify-center gap-1 text-xs",
                     active ? "text-foreground" : "text-muted-foreground",
@@ -64,9 +77,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {href === "/pantry" ? <CountBadge n={expiring} /> : null}
                   </span>
                   {label}
-                  {href === "/pantry" && expiring ? (
-                    <span className="sr-only">, {expiring} expiring soon</span>
-                  ) : null}
                 </Link>
               </li>
             );
