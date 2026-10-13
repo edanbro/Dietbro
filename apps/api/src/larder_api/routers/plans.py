@@ -136,20 +136,24 @@ def plan_out(row: MealPlan) -> PlanOut:
     days: list[DayOut] = []
     for d, day_date in enumerate(planning.plan_dates(row.start_date, row.days)):
         meals = sorted(by_day.get(d, []), key=lambda m: SLOT_ORDER.index(Slot(m.slot)))
+        out = [planning.meal_out(m) for m in meals]
         days.append(
             DayOut(
                 day=d,
                 date=day_date,
-                meals=[planning.meal_out(m) for m in meals],
-                totals=stats.day_totals[d],
+                meals=out,
+                totals=planning.add_extras(stats.day_totals[d], (m.nutrition for m in out)),
                 logged=stats.logged_on(d),
             )
         )
-    week = MacrosOut(
-        kcal=sum(t.kcal for t in stats.day_totals),
-        protein_g=sum(t.protein_g for t in stats.day_totals),
-        fat_g=sum(t.fat_g for t in stats.day_totals),
-        carbs_g=sum(t.carbs_g for t in stats.day_totals),
+    week = planning.add_extras(
+        MacrosOut(
+            kcal=sum(t.kcal for t in stats.day_totals),
+            protein_g=sum(t.protein_g for t in stats.day_totals),
+            fat_g=sum(t.fat_g for t in stats.day_totals),
+            carbs_g=sum(t.carbs_g for t in stats.day_totals),
+        ),
+        (day.totals for day in days),
     )
     return PlanOut(
         id=row.id,

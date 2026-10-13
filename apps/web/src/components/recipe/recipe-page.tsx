@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe } from "@/lib/api/hooks";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
+import { MoreNutrients } from "@/components/plan/macro-bars";
 
 /** http(s) URLs only: recipe data comes from third parties. */
 export function safeUrl(url: string | null): URL | null {
@@ -64,14 +65,17 @@ function Nutrition({ recipe }: { recipe: Recipe }) {
     { label: "Fat", value: `${formatNumber(n.fat_g)} g` },
   ];
   return (
-    <dl className="grid grid-cols-4 gap-2">
-      {cells.map((c) => (
-        <div key={c.label} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
-          <dt className="text-xs text-muted-foreground">{c.label}</dt>
-          <dd className="text-sm font-semibold tabular-nums">{c.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-2">
+      <dl className="grid grid-cols-4 gap-2">
+        {cells.map((c) => (
+          <div key={c.label} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
+            <dt className="text-xs text-muted-foreground">{c.label}</dt>
+            <dd className="text-sm font-semibold tabular-nums">{c.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <MoreNutrients values={n} />
+    </div>
   );
 }
 

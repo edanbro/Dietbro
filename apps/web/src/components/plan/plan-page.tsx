@@ -453,7 +453,11 @@ function PlanView({
                   ))}
                 </ul>
                 <div className="flex flex-col gap-2">
-                  <DayMacros totals={d.totals} bands={plan.targets.daily} />
+                  <DayMacros
+                    totals={d.totals}
+                    bands={plan.targets.daily}
+                    reference={plan.targets.reference}
+                  />
                   <LoggedNote logged={d.logged} />
                 </div>
               </TabsContent>

@@ -434,7 +434,8 @@ export interface paths {
         };
         /**
          * List Items
-         * @description Soonest-expiring first; items without a date last.
+         * @description Soonest-expiring first; items without a date last. Used-up items (0 g left after meals
+         *     were marked eaten) are kept for undo but not listed.
          */
         get: operations["listPantry"];
         put?: never;
@@ -1315,7 +1316,9 @@ export interface components {
         };
         /**
          * MacrosOut
-         * @description Energy and macros as whole numbers (kcal, grams).
+         * @description Energy and macros as whole numbers (kcal, grams). Fibre, sugars, saturated fat and salt
+         *     (sodium x 2.5) come from recipes, one decimal; null when unknown. Day and week totals add
+         *     planned meals only (food logged off-plan has energy and macros, not these).
          */
         MacrosOut: {
             /** Kcal */
@@ -1326,6 +1329,14 @@ export interface components {
             fat_g: number;
             /** Carbs G */
             carbs_g: number;
+            /** Fiber G */
+            fiber_g?: number | null;
+            /** Sugars G */
+            sugars_g?: number | null;
+            /** Sat Fat G */
+            sat_fat_g?: number | null;
+            /** Salt G */
+            salt_g?: number | null;
         };
         /** Me */
         Me: {
@@ -1915,6 +1926,33 @@ export interface components {
             /** Grams */
             grams: number | null;
         };
+        /**
+         * ReferenceIntakes
+         * @description Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned
+         *     for: fibre at least, the rest at most.
+         */
+        ReferenceIntakes: {
+            /**
+             * Fiber G
+             * @default 30
+             */
+            fiber_g: number;
+            /**
+             * Sugars G
+             * @default 90
+             */
+            sugars_g: number;
+            /**
+             * Sat Fat G
+             * @default 20
+             */
+            sat_fat_g: number;
+            /**
+             * Salt G
+             * @default 6
+             */
+            salt_g: number;
+        };
         /** RegionIn */
         RegionIn: {
             /** Country */
@@ -2128,6 +2166,7 @@ export interface components {
             weekly: components["schemas"]["NutrientBands"];
             /** Calorie Floor */
             calorie_floor: number;
+            reference?: components["schemas"]["ReferenceIntakes"];
         };
         /** TextEvent */
         TextEvent: {

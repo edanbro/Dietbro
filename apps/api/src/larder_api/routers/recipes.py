@@ -81,6 +81,7 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
             protein_g=facts.per_portion.protein_g * 2,
             fat_g=facts.per_portion.fat_g * 2,
             carbs_g=facts.per_portion.carbs_g * 2,
+            **planning.extra_nutrients(recipe, 1),
         )
         if facts.per_portion
         else None

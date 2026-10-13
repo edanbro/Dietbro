@@ -29,6 +29,7 @@ export type Meal = Schemas["MealOut"];
 export type Slot = Schemas["Slot"];
 export type Macros = Schemas["MacrosOut"];
 export type NutrientBands = Schemas["NutrientBands"];
+export type ReferenceIntakes = Schemas["ReferenceIntakes"];
 export type Violation = Schemas["ViolationOut"];
 export type ShoppingList = Schemas["ShoppingListOut"];
 export type ShoppingItem = Schemas["ShoppingItemOut"];

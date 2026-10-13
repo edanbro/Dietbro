@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_api import planning
@@ -517,3 +517,35 @@ def test_portion_grams_rounds_up_and_drops_staples_and_pinches() -> None:
 
 def test_slot_rules_cover_every_slot() -> None:
     assert set(planning.SLOT_RULES) == set(Slot)
+
+
+async def test_fibre_sugars_sat_fat_and_salt_are_reported(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    async with make_sessionmaker(db_engine)() as session:
+        await session.execute(
+            update(Recipe).values(fiber_g=4.0, sugars_g=6.0, sat_fat_g=2.0, sodium_mg=400)
+        )
+        await session.commit()
+        recipe_id = await session.scalar(select(Recipe.id).where(Recipe.name == "Satay noodles"))
+    await set_up(api, auth)
+
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+    detail = (await api.get(f"/recipes/{recipe_id}")).json()
+
+    assert detail["per_serving"]["salt_g"] == 1.0  # 400 mg sodium x 2.5
+    assert plan["targets"]["reference"] == {
+        "fiber_g": 30,
+        "sugars_g": 90,
+        "sat_fat_g": 20,
+        "salt_g": 6,
+    }
+    day = plan["days"][0]
+    for meal in day["meals"]:
+        assert meal["nutrition"]["fiber_g"] == round(4.0 * meal["servings"], 1)
+    assert day["totals"]["fiber_g"] == round(
+        sum(m["nutrition"]["fiber_g"] for m in day["meals"]), 1
+    )
+    assert plan["week_totals"]["salt_g"] == round(
+        sum(d["totals"]["salt_g"] or 0 for d in plan["days"]), 1
+    )

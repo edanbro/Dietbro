@@ -1026,6 +1026,36 @@ def save_plan(
     return row
 
 
+EXTRA_NUTRIENTS = ("fiber_g", "sugars_g", "sat_fat_g", "salt_g")
+
+
+def extra_nutrients(recipe: db.Recipe, servings: float) -> dict[str, float | None]:
+    """Fibre, sugars, saturated fat and salt for `servings` of a recipe (its columns are per
+    serving); all None unless the recipe's nutrition is complete."""
+    if not recipe.nutrition_complete:
+        return dict.fromkeys(EXTRA_NUTRIENTS)
+
+    def scaled(value: float | None, factor: float = 1.0) -> float | None:
+        return None if value is None else round(value * factor * servings, 1)
+
+    return {
+        "fiber_g": scaled(recipe.fiber_g),
+        "sugars_g": scaled(recipe.sugars_g),
+        "sat_fat_g": scaled(recipe.sat_fat_g),
+        "salt_g": scaled(recipe.sodium_mg, 2.5 / 1000),
+    }
+
+
+def add_extras(total: MacrosOut, parts: Iterable[MacrosOut]) -> MacrosOut:
+    """`total` with the extra nutrients summed over `parts` (unknown parts are skipped)."""
+    parts = list(parts)
+    sums: dict[str, float | None] = {}
+    for name in EXTRA_NUTRIENTS:
+        known = [v for p in parts if (v := getattr(p, name)) is not None]
+        sums[name] = round(sum(known), 1) if known else None
+    return total.model_copy(update=sums)
+
+
 def meal_out(m: db.PlanMeal) -> MealOut:
     """A saved meal for the client (its `recipe` must be loaded)."""
     r = m.recipe
@@ -1036,7 +1066,13 @@ def meal_out(m: db.PlanMeal) -> MealOut:
         ),
         portions=m.portions,
         servings=m.portions / 2,
-        nutrition=MacrosOut(kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g),
+        nutrition=MacrosOut(
+            kcal=m.kcal,
+            protein_g=m.protein_g,
+            fat_g=m.fat_g,
+            carbs_g=m.carbs_g,
+            **extra_nutrients(r, m.portions / 2),
+        ),
         locked=m.locked,
         status="eaten" if m.status == "eaten" else "planned",
     )

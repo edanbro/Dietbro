@@ -1212,7 +1212,7 @@
           "pantry"
         ],
         "summary": "List Items",
-        "description": "Soonest-expiring first; items without a date last.",
+        "description": "Soonest-expiring first; items without a date last. Used-up items (0 g left after meals\nwere marked eaten) are kept for undo but not listed.",
         "operationId": "listPantry",
         "responses": {
           "200": {
@@ -3867,6 +3867,50 @@
           "carbs_g": {
             "type": "integer",
             "title": "Carbs G"
+          },
+          "fiber_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiber G"
+          },
+          "sugars_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sugars G"
+          },
+          "sat_fat_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sat Fat G"
+          },
+          "salt_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salt G"
           }
         },
         "type": "object",
@@ -3877,7 +3921,7 @@
           "carbs_g"
         ],
         "title": "MacrosOut",
-        "description": "Energy and macros as whole numbers (kcal, grams)."
+        "description": "Energy and macros as whole numbers (kcal, grams). Fibre, sugars, saturated fat and salt\n(sodium x 2.5) come from recipes, one decimal; null when unknown. Day and week totals add\nplanned meals only (food logged off-plan has energy and macros, not these)."
       },
       "Me": {
         "properties": {
@@ -5570,6 +5614,33 @@
         ],
         "title": "RecipeIngredientOut"
       },
+      "ReferenceIntakes": {
+        "properties": {
+          "fiber_g": {
+            "type": "number",
+            "title": "Fiber G",
+            "default": 30
+          },
+          "sugars_g": {
+            "type": "number",
+            "title": "Sugars G",
+            "default": 90
+          },
+          "sat_fat_g": {
+            "type": "number",
+            "title": "Sat Fat G",
+            "default": 20
+          },
+          "salt_g": {
+            "type": "number",
+            "title": "Salt G",
+            "default": 6
+          }
+        },
+        "type": "object",
+        "title": "ReferenceIntakes",
+        "description": "Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned\nfor: fibre at least, the rest at most."
+      },
       "RegionIn": {
         "properties": {
           "country": {
@@ -6120,6 +6191,9 @@
           "calorie_floor": {
             "type": "integer",
             "title": "Calorie Floor"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/ReferenceIntakes"
           }
         },
         "type": "object",

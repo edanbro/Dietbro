@@ -285,12 +285,28 @@ class Problems(BaseModel):
 
 
 class MacrosOut(BaseModel):
-    """Energy and macros as whole numbers (kcal, grams)."""
+    """Energy and macros as whole numbers (kcal, grams). Fibre, sugars, saturated fat and salt
+    (sodium x 2.5) come from recipes, one decimal; null when unknown. Day and week totals add
+    planned meals only (food logged off-plan has energy and macros, not these)."""
 
     kcal: int
     protein_g: int
     fat_g: int
     carbs_g: int
+    fiber_g: float | None = None
+    sugars_g: float | None = None
+    sat_fat_g: float | None = None
+    salt_g: float | None = None
+
+
+class ReferenceIntakes(BaseModel):
+    """Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned
+    for: fibre at least, the rest at most."""
+
+    fiber_g: float = 30
+    sugars_g: float = 90
+    sat_fat_g: float = 20
+    salt_g: float = 6
 
 
 class BandOut(BaseModel):
@@ -311,6 +327,7 @@ class TargetsOut(BaseModel):
     daily: NutrientBands
     weekly: NutrientBands
     calorie_floor: int
+    reference: ReferenceIntakes = Field(default_factory=ReferenceIntakes)
 
 
 class RecipeCard(BaseModel):
