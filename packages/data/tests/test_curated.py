@@ -47,7 +47,7 @@ def test_parse_builds_drafts_with_explicit_servings() -> None:
     ("data", "error"),
     [
         ({"recipe": [recipe(), recipe()]}, "duplicate"),
-        ({"recipe": [recipe(category="Dessert")]}, "category"),
+        ({"recipe": [recipe(category="Side")]}, "category"),
         ({"recipe": [recipe(servings=0)]}, "servings"),
         ({"recipe": [recipe(ingredients=[])]}, "no ingredients"),
     ],

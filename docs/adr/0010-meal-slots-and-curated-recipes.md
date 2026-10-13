@@ -41,3 +41,11 @@ Option 3.
 - A few genuine recipes are excluded with the broken ones. Overrides can bring them back.
 - Generated recipes (M4) will need a slot assignment too: the same category rules, or an
   explicit slot.
+
+## Addendum (2026-10-14): curated mains
+
+Curated recipes may now use any category that fills a slot (`CATEGORY_SLOTS`), not only
+Breakfast and Snack. 24 Irish and everyday mains and lunches were added (Irish stew, coddle,
+bacon and cabbage, shepherd's and cottage pie, chowder, fish pie, soups, toasties, curries,
+bolognese...). The same rules apply: every ingredient is an exact curated alias, servings are
+explicit, and tags must be complete.

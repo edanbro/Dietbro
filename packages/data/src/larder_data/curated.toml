@@ -1,4 +1,4 @@
-# Curated breakfasts and snacks: see larder_data/curated.py and docs/adr/0010.
+# Curated breakfasts, snacks, mains and lunches: see larder_data/curated.py and docs/adr/0010.
 # Every ingredient name must be a curated alias (larder_core/data/aliases.csv), so these resolve
 # without the embedding model. Servings are explicit. Quantities are per recipe.
 
@@ -798,3 +798,522 @@ category = "Snack"
 servings = 1
 instructions = "Spread the almond butter on the rice cakes and top with banana slices."
 ingredients = [["rice cakes", "20g"], ["almond butter", "15g"], ["banana", "1/2"]]
+
+# --- mains and lunches (Irish and everyday) ----------------------------------------------------
+
+[[recipe]]
+slug = "irish-stew"
+name = "Irish stew"
+category = "Lamb"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Cut the lamb into chunks and the potatoes, carrots and onions into large pieces. Layer them in a
+heavy pot with the thyme, season, and pour over the stock. Cover and simmer gently for about
+1 1/2 hours until the lamb is tender and some of the potato has thickened the broth. Scatter
+with parsley.
+"""
+ingredients = [
+  ["lamb shoulder", "600g"],
+  ["potato", "800g"],
+  ["carrot", "300g"],
+  ["onion", "2"],
+  ["lamb stock", "750ml"],
+  ["thyme", "1 tsp"],
+  ["parsley", "2 tbsp"],
+]
+
+[[recipe]]
+slug = "dublin-coddle"
+name = "Dublin coddle"
+category = "Pork"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Brown the sausages and the chopped bacon lightly in a large pot. Add sliced onions and thickly
+sliced potatoes, season with plenty of black pepper and pour in the stock. Cover and simmer
+gently for 1 hour, then scatter with parsley and serve in bowls.
+"""
+ingredients = [
+  ["sausage", "450g"],
+  ["bacon", "200g"],
+  ["potato", "700g"],
+  ["onion", "2"],
+  ["chicken stock", "500ml"],
+  ["parsley", "2 tbsp"],
+  ["black pepper", "1/2 tsp"],
+]
+
+[[recipe]]
+slug = "bacon-and-cabbage"
+name = "Bacon and cabbage with parsley sauce"
+category = "Pork"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Simmer the ham joint in water for about 1 hour. Boil the potatoes. Add the shredded cabbage to
+the ham water for the last 8 minutes. For the sauce, melt the butter, stir in the flour, whisk
+in the milk until thick, then add the parsley. Slice the ham and serve with the cabbage,
+potatoes and sauce.
+"""
+ingredients = [
+  ["ham", "600g"],
+  ["cabbage", "500g"],
+  ["potato", "800g"],
+  ["butter", "20g"],
+  ["plain flour", "20g"],
+  ["milk", "300ml"],
+  ["parsley", "3 tbsp"],
+]
+
+[[recipe]]
+slug = "shepherds-pie"
+name = "Shepherd's pie"
+category = "Lamb"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Brown the lamb mince with the chopped onion and carrot. Stir in the tomato puree, Worcestershire
+sauce and stock and simmer for 20 minutes, adding the peas at the end. Boil and mash the potatoes
+with the butter and milk. Spread the mince in a dish, top with the mash and bake at 200C for
+25 minutes until golden.
+"""
+ingredients = [
+  ["lamb mince", "500g"],
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["tomato puree", "1 tbsp"],
+  ["worcestershire sauce", "1 tbsp"],
+  ["lamb stock", "300ml"],
+  ["frozen pea", "100g"],
+  ["potato", "800g"],
+  ["butter", "25g"],
+  ["milk", "50ml"],
+]
+
+[[recipe]]
+slug = "cottage-pie"
+name = "Cottage pie"
+category = "Beef"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Brown the beef mince with the chopped onion, carrot and celery. Add the tomato puree,
+Worcestershire sauce and stock and simmer for 20 minutes. Top with mash made from the potatoes,
+butter and milk, and bake at 200C for 25 minutes.
+"""
+ingredients = [
+  ["ground beef", "500g"],
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["celery", "1"],
+  ["tomato puree", "1 tbsp"],
+  ["worcestershire sauce", "1 tbsp"],
+  ["beef stock", "300ml"],
+  ["potato", "800g"],
+  ["butter", "25g"],
+  ["milk", "50ml"],
+]
+
+[[recipe]]
+slug = "beef-and-stout-stew"
+name = "Beef and stout stew"
+category = "Beef"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Toss the diced beef in the flour and brown it in batches in the oil. Add the chopped onions and
+carrots, then the stout, stock and thyme. Cover and simmer gently for 2 hours until the beef is
+tender. Good with mash or crusty bread.
+"""
+ingredients = [
+  ["beef brisket", "700g"],
+  ["plain flour", "2 tbsp"],
+  ["vegetable oil", "1 tbsp"],
+  ["onion", "2"],
+  ["carrot", "3"],
+  ["stout", "400ml"],
+  ["beef stock", "300ml"],
+  ["thyme", "1 tsp"],
+]
+
+[[recipe]]
+slug = "colcannon-and-sausages"
+name = "Colcannon with sausages"
+category = "Pork"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Grill the sausages. Boil the potatoes until soft. Cook the shredded kale in a little water for
+5 minutes. Warm the milk with the butter and sliced spring onions, then mash everything together
+and serve with the sausages.
+"""
+ingredients = [
+  ["sausage", "450g"],
+  ["potato", "900g"],
+  ["kale", "150g"],
+  ["spring onion", "4"],
+  ["butter", "40g"],
+  ["milk", "100ml"],
+]
+
+[[recipe]]
+slug = "boxty-with-bacon-and-egg"
+name = "Boxty with bacon and egg"
+category = "Pork"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Grate half the potatoes and squeeze out the liquid; boil and mash the rest. Mix both with the
+flour, milk and one egg into a thick batter and fry spoonfuls in the butter until golden on
+both sides. Serve with grilled bacon and a fried egg.
+"""
+ingredients = [
+  ["potato", "400g"],
+  ["plain flour", "80g"],
+  ["milk", "100ml"],
+  ["egg", "3"],
+  ["butter", "20g"],
+  ["bacon", "150g"],
+]
+
+[[recipe]]
+slug = "seafood-chowder"
+name = "Seafood chowder"
+category = "Seafood"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Soften the chopped onion, celery and leek in the butter, stir in the flour, then add the stock
+and diced potato and simmer for 10 minutes. Add the milk, cream and chunks of fish and simmer
+for 5 minutes, then the prawns for 2 more. Season and serve with brown bread.
+"""
+ingredients = [
+  ["butter", "20g"],
+  ["onion", "1"],
+  ["celery", "2"],
+  ["leek", "1"],
+  ["plain flour", "2 tbsp"],
+  ["fish stock", "500ml"],
+  ["potato", "400g"],
+  ["milk", "300ml"],
+  ["single cream", "100ml"],
+  ["white fish", "300g"],
+  ["smoked haddock", "200g"],
+  ["prawn", "150g"],
+]
+
+[[recipe]]
+slug = "fish-pie"
+name = "Fish pie"
+category = "Seafood"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Poach the fish in the milk for 5 minutes, lift it out and flake it. Make a white sauce with the
+butter, flour and poaching milk, then stir in the fish, peas and parsley. Top with mashed
+potato and bake at 200C for 25-30 minutes.
+"""
+ingredients = [
+  ["white fish", "300g"],
+  ["smoked haddock", "200g"],
+  ["salmon", "200g"],
+  ["milk", "500ml"],
+  ["butter", "40g"],
+  ["plain flour", "40g"],
+  ["frozen pea", "150g"],
+  ["parsley", "2 tbsp"],
+  ["potato", "900g"],
+]
+
+[[recipe]]
+slug = "salmon-new-potatoes-greens"
+name = "Baked salmon with new potatoes and green beans"
+category = "Seafood"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Boil the new potatoes for 15 minutes. Bake the salmon at 200C for 12-15 minutes with a squeeze
+of lemon and the oil. Steam the green beans for 4 minutes and serve together.
+"""
+ingredients = [
+  ["salmon", "260g"],
+  ["new potato", "400g"],
+  ["green bean", "200g"],
+  ["lemon", "1"],
+  ["olive oil", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "chicken-curry"
+name = "Chicken curry with rice"
+category = "Chicken"
+cuisine = "Indian"
+servings = 4
+instructions = """
+Soften the chopped onions in the oil, add the garlic, ginger and curry powder and cook for a
+minute. Add the diced chicken thighs, tomatoes and coconut milk and simmer for 25 minutes. Serve
+with boiled basmati rice.
+"""
+ingredients = [
+  ["vegetable oil", "1 tbsp"],
+  ["onion", "2"],
+  ["garlic clove", "3"],
+  ["ginger", "15g"],
+  ["curry powder", "2 tbsp"],
+  ["chicken thigh", "600g"],
+  ["tinned tomato", "400g"],
+  ["coconut milk", "400ml"],
+  ["basmati rice", "300g"],
+]
+
+[[recipe]]
+slug = "spaghetti-bolognese"
+name = "Spaghetti bolognese"
+category = "Pasta"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Soften the chopped onion, carrot, celery and garlic in the oil, add the beef mince and brown it.
+Stir in the tomatoes and tomato puree and simmer for 30 minutes. Serve over the spaghetti,
+cooked according to the packet.
+"""
+ingredients = [
+  ["olive oil", "1 tbsp"],
+  ["onion", "1"],
+  ["carrot", "1"],
+  ["celery", "1"],
+  ["garlic clove", "2"],
+  ["ground beef", "500g"],
+  ["tinned tomato", "800g"],
+  ["tomato puree", "2 tbsp"],
+  ["spaghetti", "400g"],
+]
+
+[[recipe]]
+slug = "chilli-con-carne"
+name = "Chilli con carne with rice"
+category = "Beef"
+cuisine = "Mexican"
+servings = 4
+instructions = """
+Brown the beef mince with the chopped onion, pepper and garlic. Add the chilli powder and cumin,
+then the tomatoes and drained kidney beans. Simmer for 25 minutes and serve with rice.
+"""
+ingredients = [
+  ["ground beef", "500g"],
+  ["onion", "1"],
+  ["red pepper", "1"],
+  ["garlic clove", "2"],
+  ["chilli powder", "2 tsp"],
+  ["ground cumin", "1 tsp"],
+  ["tinned tomato", "400g"],
+  ["kidney bean", "240g"],
+  ["rice", "300g"],
+]
+
+[[recipe]]
+slug = "roast-chicken-dinner"
+name = "Roast chicken with potatoes, carrots and broccoli"
+category = "Chicken"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Roast a 1.5 kg chicken (about 900 g of meat) at 190C for about 1 1/2 hours, until the juices
+run clear. Roast the halved potatoes in the oil alongside for the last hour. Boil the carrots
+and steam the broccoli just before serving, and make a gravy from the pan juices and stock.
+"""
+ingredients = [
+  ["chicken", "900g"],
+  ["potato", "800g"],
+  ["vegetable oil", "2 tbsp"],
+  ["carrot", "400g"],
+  ["broccoli", "300g"],
+  ["chicken stock", "300ml"],
+]
+
+[[recipe]]
+slug = "creamy-chicken-mushroom-linguine"
+name = "Creamy chicken and mushroom linguine"
+category = "Pasta"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Cook the linguine. Fry the sliced chicken breast until golden, add the mushrooms and garlic and
+cook for 5 minutes. Stir in the cream and spinach until wilted, toss with the pasta and finish
+with parmesan.
+"""
+ingredients = [
+  ["linguine pasta", "350g"],
+  ["olive oil", "1 tbsp"],
+  ["chicken breast", "400g"],
+  ["mushroom", "250g"],
+  ["garlic clove", "2"],
+  ["single cream", "200ml"],
+  ["spinach", "100g"],
+  ["parmesan cheese", "30g"],
+]
+
+[[recipe]]
+slug = "vegetable-soup-brown-bread"
+name = "Vegetable soup with brown bread"
+category = "Starter"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Soften the chopped onion, carrots, celery and leek, add the diced potato and stock and simmer for
+25 minutes. Blend until smooth and serve with brown bread.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "3"],
+  ["celery", "2"],
+  ["leek", "1"],
+  ["potato", "300g"],
+  ["vegetable stock", "1200ml"],
+  ["wholemeal bread", "160g"],
+]
+
+[[recipe]]
+slug = "leek-and-potato-soup"
+name = "Leek and potato soup"
+category = "Starter"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Melt the butter and soften the sliced leeks and onion for 10 minutes. Add the diced potatoes and
+stock and simmer for 20 minutes, then blend with the milk. Serve with brown bread.
+"""
+ingredients = [
+  ["butter", "25g"],
+  ["leek", "3"],
+  ["onion", "1"],
+  ["potato", "500g"],
+  ["vegetable stock", "1000ml"],
+  ["milk", "200ml"],
+  ["wholemeal bread", "160g"],
+]
+
+[[recipe]]
+slug = "ham-and-cheese-toastie"
+name = "Ham and cheese toastie"
+category = "Starter"
+cuisine = "Irish"
+servings = 1
+instructions = """
+Butter the outsides of two slices of bread, fill with the ham and cheddar and toast in a dry pan
+for 3 minutes a side until golden and melted.
+"""
+ingredients = [
+  ["wholemeal bread", "80g"],
+  ["butter", "5g"],
+  ["ham", "40g"],
+  ["cheddar cheese", "30g"],
+]
+
+[[recipe]]
+slug = "jacket-potato-beans-cheese"
+name = "Jacket potato with beans and cheese"
+category = "Vegetarian"
+cuisine = "Irish"
+servings = 1
+instructions = """
+Bake the potato at 200C for about 1 hour (or microwave for 8-10 minutes). Split it, add the
+butter, top with hot baked beans and grated cheddar.
+"""
+ingredients = [
+  ["potato", "300g"],
+  ["butter", "10g"],
+  ["baked bean", "200g"],
+  ["cheddar cheese", "30g"],
+]
+
+[[recipe]]
+slug = "red-lentil-vegetable-stew"
+name = "Red lentil and vegetable stew"
+category = "Vegan"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Soften the chopped onion, carrots, celery and garlic in the oil with the cumin. Add the lentils,
+tomatoes and stock and simmer for 25 minutes, stirring now and then. Stir in the spinach until
+wilted.
+"""
+ingredients = [
+  ["olive oil", "1 tbsp"],
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["celery", "2"],
+  ["garlic clove", "2"],
+  ["ground cumin", "1 tsp"],
+  ["red lentil", "250g"],
+  ["tinned tomato", "400g"],
+  ["vegetable stock", "1000ml"],
+  ["spinach", "100g"],
+]
+
+[[recipe]]
+slug = "chickpea-spinach-curry"
+name = "Chickpea and spinach curry with rice"
+category = "Vegan"
+cuisine = "Indian"
+servings = 4
+instructions = """
+Soften the chopped onion in the oil, add the garlic, ginger and curry powder for a minute, then
+the drained chickpeas, tomatoes and coconut milk. Simmer for 15 minutes, stir in the spinach
+and serve with basmati rice.
+"""
+ingredients = [
+  ["vegetable oil", "1 tbsp"],
+  ["onion", "1"],
+  ["garlic clove", "2"],
+  ["ginger", "15g"],
+  ["curry powder", "2 tbsp"],
+  ["tinned chickpea", "480g"],
+  ["tinned tomato", "400g"],
+  ["coconut milk", "400ml"],
+  ["spinach", "200g"],
+  ["basmati rice", "300g"],
+]
+
+[[recipe]]
+slug = "pork-chops-apple-mash"
+name = "Pork chops with apple, mash and green beans"
+category = "Pork"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Fry the pork chops for 5-6 minutes a side. Soften the sliced apples in the pan juices. Mash the
+boiled potatoes with the butter and milk, steam the green beans and serve together.
+"""
+ingredients = [
+  ["pork chop", "600g"],
+  ["apple", "2"],
+  ["potato", "800g"],
+  ["butter", "25g"],
+  ["milk", "80ml"],
+  ["green bean", "300g"],
+]
+
+[[recipe]]
+slug = "chicken-fajita-wraps"
+name = "Chicken fajita wraps"
+category = "Chicken"
+cuisine = "Mexican"
+servings = 4
+instructions = """
+Fry the sliced chicken breast with the sliced peppers and onion in the oil and the spices for
+8-10 minutes. Warm the tortillas and fill with the chicken, a spoon of yogurt and some cheddar.
+"""
+ingredients = [
+  ["vegetable oil", "1 tbsp"],
+  ["chicken breast", "500g"],
+  ["red pepper", "1"],
+  ["green pepper", "1"],
+  ["onion", "1"],
+  ["smoked paprika", "1 tsp"],
+  ["ground cumin", "1 tsp"],
+  ["tortilla", "8"],
+  ["natural yogurt", "150g"],
+  ["cheddar cheese", "80g"],
+]

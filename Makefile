@@ -33,8 +33,9 @@ seed: migrate ## Load foods + recipes and resolve via curated aliases (no embedd
 	uv run larder-data import-curated
 	uv run larder-data resolve --aliases-only
 
-foods: ## Link UK/Irish foods to generics, then import Irish + UK products (1.3 GB, ~15 min)
+foods: ## Match every recipe ingredient (~700 plannable recipes), link UK/Irish foods, import Irish + UK products (1.3 GB, ~20 min)
 	uv run larder-data embed-foods
+	uv run larder-data resolve
 	uv run larder-data link-generics --sources cofid
 	uv run larder-data import-off --countries ie,gb
 
