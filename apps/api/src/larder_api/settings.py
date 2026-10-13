@@ -65,11 +65,19 @@ class Settings(BaseSettings):
     receipt_stale_after_min: int = 15  # queued/processing longer than this is marked failed
     ocr_max_side_px: int = 2_000  # photos are scaled down to this before OCR
 
+    # Barcode lookups for products not imported yet (Open Food Facts product API). Off unless a
+    # User-Agent is set: OFF asks for "AppName/Version (contact email)". Only the barcode is sent.
+    off_user_agent: str | None = None
+    off_base_url: str = "https://world.openfoodfacts.org"
+    off_rate_per_min: int = 12  # all users together (OFF allows 15 product reads per minute)
+    barcode_lookups_per_hour: int = 30  # per user, lookups that reach OFF
+
     @field_validator(
         "anthropic_api_key",
         "clerk_issuer",
         "clerk_publishable_key",
         "clerk_jwks_url",
+        "off_user_agent",
         mode="before",
     )
     @classmethod

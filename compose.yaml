@@ -56,6 +56,8 @@ services:
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY in .env (see README)}
       # Optional: without it the chat runs offline (rule parser, templated replies).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Optional: barcode lookups of products not imported yet (Open Food Facts).
+      OFF_USER_AGENT: ${OFF_USER_AGENT:-}
     ports:
       - "8000:8000"
     depends_on:

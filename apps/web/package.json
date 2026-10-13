@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-zxing.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-zxing.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -16,6 +18,7 @@
     "@base-ui/react": "^1.8.0",
     "@clerk/nextjs": "^7.9.12",
     "@tanstack/react-query": "^5.104.1",
+    "barcode-detector": "3.2.2",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.53.0",

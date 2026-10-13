@@ -145,6 +145,17 @@ export function useFood(id: number | null) {
   });
 }
 
+/** A product by barcode (catalogue, else Open Food Facts); primes the food's detail. */
+export function useBarcodeLookup() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (code: string) =>
+      unwrap(await api.GET("/foods/barcode/{code}", { params: { path: { code } } })),
+    onSuccess: (food) => qc.setQueryData(keys.food(food.id), food),
+  });
+}
+
 export const SEARCH_PAGE = 20;
 export type FoodScope = "all" | "generic";
 

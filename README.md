@@ -34,6 +34,10 @@ make foods           # optional: Irish + UK packaged products from Open Food Fac
 
 Without `make`, run the same `uv run larder-data ...` steps listed in the Makefile.
 
+Barcode scanning finds imported products offline. To also look up products that aren't imported
+yet, set `OFF_USER_AGENT` in `.env` (Open Food Facts asks for `AppName/Version (contact email)`;
+only the barcode is sent). The camera works on `localhost` or HTTPS.
+
 - Web: http://localhost:3000 (works on a phone on the same network via your machine's IP if you
   add it to `CORS_ORIGINS` and rebuild with that `NEXT_PUBLIC_API_URL`)
 - API: http://localhost:8000 (docs at `/docs`, readiness at `/readyz`)

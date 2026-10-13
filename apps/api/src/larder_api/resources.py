@@ -11,6 +11,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from larder_api.auth import JWKSCache, TokenVerifier
+from larder_api.barcodes import make_off_client
 from larder_api.chat.tasks import ChatTurns
 from larder_api.jobs import make_queue
 from larder_api.planning import CatalogCache
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.resources = resources
     app.state.sessionmaker = make_sessionmaker(resources.engine)
     app.state.verifier = make_verifier(settings, http)
+    app.state.off = make_off_client(settings, http)  # barcode lookups; None when not configured
     # Jobs for the worker (receipt reading); connects on first enqueue.
     app.state.queue = queue = make_queue(settings.redis_url)
     # Build the planning catalog in the background so the first plan doesn't pay for it.

@@ -24,9 +24,11 @@ import { allergenLabel } from "@/lib/format";
  */
 export function PantryAdd({
   onAdded,
+  onCleared,
   initialFood = null,
 }: {
   onAdded?: () => void;
+  onCleared?: () => void; // the chosen food was dropped ("choose another")
   initialFood?: FoodSummary | null;
 }) {
   const [food, setFood] = useState<FoodSummary | null>(initialFood);
@@ -80,7 +82,14 @@ export function PantryAdd({
             {food.brand ? `${food.brand} ` : ""}
             {food.description}
           </span>
-          <button type="button" aria-label="Choose another food" onClick={reset}>
+          <button
+            type="button"
+            aria-label="Choose another food"
+            onClick={() => {
+              reset();
+              onCleared?.();
+            }}
+          >
             <XIcon className="size-4" />
           </button>
         </div>

@@ -10,18 +10,23 @@ and when sold in the user's country.
 """
 
 import re
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 
 from larder_api.auth import CurrentUser
+from larder_api.barcodes import Limits, OffClient, OffUnavailable, get_limits, get_off_client
 from larder_api.db import Session
 from larder_api.foodmatch import NOT_GROCERIES
-from larder_api.schemas import FoodDetail, FoodSummary, FoodUnit
+from larder_api.generic_link import ensure_generic
+from larder_api.schemas import FoodDetail, FoodSummary, FoodUnit, Problems
 from larder_core.aliases import load_aliases
 from larder_core.allergens import Allergen
+from larder_core.categories import off_category
 from larder_core.names import normalise_name
+from larder_core.off import OffProduct, normalise_barcode, parse_product
 from larder_core.quantities import Portion, count_portions, density
 from larder_core.receipts import load_receipt_foods
 from larder_core.regions import region_for
@@ -149,6 +154,116 @@ async def _named(session: Session, name: str, limit: int) -> list[Food]:
         return []
     by_id = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
     return [by_id[i] for i in ids if i in by_id]
+
+
+_BARCODE_PROBLEMS: dict[int | str, dict[str, Any]] = {
+    code: {"model": Problems}
+    for code in (
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+}
+NOT_FOUND = "We don't know that barcode yet. Search for the food by name instead."
+
+
+@router.get("/barcode/{code}", operation_id="lookupBarcode", responses=_BARCODE_PROBLEMS)
+async def lookup_barcode(
+    code: str,
+    user: CurrentUser,
+    session: Session,
+    off: Annotated[OffClient | None, Depends(get_off_client)],
+    limits: Annotated[Limits, Depends(get_limits)],
+) -> FoodDetail:
+    """A product by its barcode (EAN-13, EAN-8, UPC-A): from the catalogue, else from Open Food
+    Facts (stored, so the next scan is local). Only the barcode leaves the app."""
+    barcode = normalise_barcode(code)
+    if barcode is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, ["That isn't a valid product barcode."]
+        )
+    food = await session.scalar(select(Food).where(Food.barcode == barcode))
+    if food is not None:
+        if food.retired_at is not None:
+            food.retired_at = None  # someone still has it: it's sold somewhere
+            await session.commit()
+        return await food_detail(session, food)
+    if off is None or await limits.known_missing(barcode):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, [NOT_FOUND])
+    if not await limits.take_user(user.id):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            ["That's a lot of new barcodes for one hour. Search by name for now."],
+        )
+    if not await limits.take_global():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ["The product database is busy. Try again in a minute."],
+            headers={"Retry-After": "60"},
+        )
+    try:
+        fields = await off.product(barcode)
+    except OffUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ["Couldn't reach the product database. Try again shortly."],
+            headers={"Retry-After": "60"},
+        ) from exc
+    product = parse_product(fields) if fields is not None else None
+    if product is None:
+        await limits.remember_missing(barcode)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, [NOT_FOUND])
+    food = await store_product(session, product, barcode, region_for(user.country).country)
+    return await food_detail(session, food)
+
+
+async def store_product(session: Session, p: OffProduct, barcode: str, country: str) -> Food:
+    """Keep a looked-up product (it was scanned here, so it's sold in the user's country)."""
+    existing = await session.scalar(
+        select(Food).where(Food.source == "off", Food.source_id == p.code)
+    )
+    food_id = (
+        existing.id
+        if existing
+        else await session.scalar(text("SELECT nextval('foods_local_id_seq')"))
+    )
+    assert food_id is not None
+    food = existing or Food(id=food_id, source="off", source_id=p.code, data_type="branded")
+    food.description = p.name
+    food.brand = p.brand
+    food.barcode = barcode
+    food.category = off_category(p.categories)
+    food.source_category = p.categories[-1] if p.categories else None
+    food.countries = sorted({*p.countries, country})
+    food.allergens_declared = sorted(a.value for a in p.allergens) or None
+    food.traces_declared = sorted(a.value for a in p.traces) or None
+    food.ingredients_text = p.ingredients[:4000] if p.ingredients else None
+    food.origin = existing.origin if existing else "lookup"
+    food.retired_at = None
+    food.kcal, food.protein_g, food.fat_g, food.carbs_g = p.kcal, p.protein_g, p.fat_g, p.carbs_g
+    food.fiber_g, food.sugars_g, food.sat_fat_g, food.sodium_mg = (
+        p.fiber_g,
+        p.sugars_g,
+        p.sat_fat_g,
+        p.sodium_mg,
+    )
+    if existing is None:
+        session.add(food)
+        session.add_all(
+            FoodPortion(food_id=food_id, amount=1, unit=unit, grams=grams)
+            for unit, grams in p.portions
+        )
+    await ensure_generic(session, food)
+    try:
+        await session.commit()
+    except IntegrityError:  # scanned twice at once: the other request stored it
+        await session.rollback()
+        stored = await session.scalar(select(Food).where(Food.barcode == barcode))
+        if stored is None:
+            raise
+        return stored
+    return food
 
 
 @router.get("/{food_id}", operation_id="getFood")
