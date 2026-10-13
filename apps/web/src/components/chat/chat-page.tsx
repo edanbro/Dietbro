@@ -1,6 +1,7 @@
 "use client";
 
 import { InfoIcon, LoaderCircleIcon, SquarePenIcon, TimerIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { ErrorAlert } from "@/components/form-bits";
@@ -140,6 +141,15 @@ function ChatSkeleton() {
 export function ChatPage() {
   const chat = useChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const params = useSearchParams();
+  const router = useRouter();
+  const prompt = params.get("prompt");
+  const { setDraft } = chat;
+  useEffect(() => {
+    if (!prompt) return;
+    setDraft((d) => d || prompt.slice(0, 500));
+    router.replace("/chat");
+  }, [prompt, router, setDraft]);
   const endRef = useRef<HTMLDivElement>(null);
   const { thread, live, messages } = chat;
 

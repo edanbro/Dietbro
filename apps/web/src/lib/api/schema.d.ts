@@ -1091,6 +1091,12 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Storage
+             * @default cupboard
+             * @enum {string}
+             */
+            storage: "fridge" | "freezer" | "cupboard";
             /** Days Left */
             days_left: number;
         };
@@ -1554,6 +1560,12 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Storage
+             * @default cupboard
+             * @enum {string}
+             */
+            storage: "fridge" | "freezer" | "cupboard";
         };
         /** PantryItemPatch */
         PantryItemPatch: {

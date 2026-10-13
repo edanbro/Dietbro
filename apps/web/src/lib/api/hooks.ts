@@ -23,6 +23,7 @@ export type FoodSummary = Schemas["FoodSummary"];
 export type FoodDetail = Schemas["FoodDetail"];
 export type PantryItem = Schemas["PantryItemOut"];
 export type PantryItemIn = Schemas["PantryItemIn"];
+export type PantryItemPatch = Schemas["PantryItemPatch"];
 export type Plan = Schemas["PlanOut"];
 export type PlanDay = Schemas["DayOut"];
 export type Meal = Schemas["MealOut"];
@@ -254,6 +255,15 @@ export function useAddPantryItem() {
   const api = useApi();
   return useSave(
     async (body: PantryItemIn) => unwrap(await api.POST("/pantry", { body })),
+    keys.pantry,
+  );
+}
+
+export function useUpdatePantryItem() {
+  const api = useApi();
+  return useSave(
+    async ({ id, ...body }: PantryItemPatch & { id: number }) =>
+      unwrap(await api.PATCH("/pantry/{item_id}", { params: { path: { item_id: id } }, body })),
     keys.pantry,
   );
 }

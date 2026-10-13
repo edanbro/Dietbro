@@ -60,6 +60,14 @@ async def test_used_up_items_are_not_listed(
     assert [i["id"] for i in items] == [kept["id"]]
 
 
+async def test_items_say_where_they_are_kept(api: httpx.AsyncClient, auth: Auth) -> None:
+    await add(api, auth)  # onions: a cupboard vegetable
+
+    items = (await api.get("/pantry", headers=auth())).json()
+
+    assert items[0]["storage"] == "cupboard"
+
+
 async def test_update_recomputes_grams(api: httpx.AsyncClient, auth: Auth) -> None:
     item = (await add(api, auth)).json()
 

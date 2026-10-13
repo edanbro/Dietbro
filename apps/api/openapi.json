@@ -3203,6 +3203,16 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "fridge",
+              "freezer",
+              "cupboard"
+            ],
+            "title": "Storage",
+            "default": "cupboard"
+          },
           "days_left": {
             "type": "integer",
             "title": "Days Left"
@@ -4444,6 +4454,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "fridge",
+              "freezer",
+              "cupboard"
+            ],
+            "title": "Storage",
+            "default": "cupboard"
           }
         },
         "type": "object",

@@ -24,6 +24,7 @@ from larder_api.schemas import (
 )
 from larder_core.quantities import grams_for
 from larder_core.regions import local_today
+from larder_core.shelf_life import storage_for
 from larder_core.units import parse_measure
 from larder_db.models import Food, PantryItem, User
 
@@ -54,6 +55,7 @@ def out(item: PantryItem) -> PantryItemOut:
         expires_on=item.expires_on,
         source=item.source,
         created_at=item.created_at,
+        storage=storage_for(item.food.description, item.food.category),
     )
 
 

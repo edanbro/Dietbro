@@ -5,10 +5,13 @@ import { type ChatThread, keys } from "@/lib/api/hooks";
 import type { ChatEvent } from "@/lib/api/sse";
 import { json, mockApi, renderWithClient, type Routes } from "@/test/api";
 import { chatMessage, makeOutcome, makePlan, makeThread } from "@/test/fixtures";
+import * as navigation from "@/test/navigation";
+import { resetNavigation } from "@/test/navigation";
 import { sseStream } from "@/test/sse";
 
 import { ChatPage } from "./chat-page";
 
+vi.mock("next/navigation", () => import("@/test/navigation"));
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -480,5 +483,16 @@ describe("errors", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("text: String should have");
     expect(box).toHaveValue("x");
+  });
+});
+
+describe("ChatPage prompt links", () => {
+  it("fills the composer from ?prompt= and drops it from the URL", async () => {
+    resetNavigation("/chat?prompt=What%20can%20I%20make%20with%20spinach%3F");
+    mockApi({ "GET /chat/thread": json(makeThread()) });
+    renderWithClient(<ChatPage />);
+
+    expect(await screen.findByDisplayValue("What can I make with spinach?")).toBeInTheDocument();
+    expect(navigation.calls.replace).toContain("/chat");
   });
 });

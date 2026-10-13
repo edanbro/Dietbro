@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from larder_core.shelf_life import shelf_life_days, suggest_expiry
+from larder_core.shelf_life import shelf_life_days, storage_for, suggest_expiry
 
 BOUGHT = date(2026, 10, 12)
 
@@ -69,3 +69,24 @@ def test_storage_on_the_receipt_wins() -> None:
     assert suggest_expiry(BOUGHT, *chicken, storage="frozen") is None
     assert suggest_expiry(BOUGHT, "Broccoli, raw", "Vegetables", storage="ambient") is None
     assert suggest_expiry(BOUGHT, *chicken) == date(2026, 10, 14)
+
+
+@pytest.mark.parametrize(
+    ("description", "category", "place"),
+    [
+        ("Chicken, broilers or fryers, breast, raw", "Poultry Products", "fridge"),
+        ("Milk, whole, 3.25% milkfat", "Dairy and Egg Products", "fridge"),
+        ("Milk, dry, whole", "Dairy and Egg Products", "cupboard"),
+        ("Peas, green, frozen, unprepared", "Vegetables and Vegetable Products", "freezer"),
+        ("Spinach, raw", "Vegetables and Vegetable Products", "fridge"),
+        ("Potatoes, flesh and skin, raw", "Vegetables and Vegetable Products", "cupboard"),
+        ("Onions, raw", "Vegetables and Vegetable Products", "cupboard"),
+        ("Strawberries, raw", "Fruits and Fruit Juices", "fridge"),
+        ("Bananas, raw", "Fruits and Fruit Juices", "cupboard"),
+        ("Beans, baked, canned", "Legumes and Legume Products", "cupboard"),
+        ("Bread, white", "Baked Products", "cupboard"),
+        ("Mystery food", None, "cupboard"),
+    ],
+)
+def test_storage_for(description: str, category: str | None, place: str) -> None:
+    assert storage_for(description, category) == place

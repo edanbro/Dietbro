@@ -1,7 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { daysUntil, ExpiryBadge, formatAmount } from "./pantry-list";
+import { json, mockApi, renderWithClient } from "@/test/api";
+
+import { daysUntil, ExpiryBadge, formatAmount, PantryList } from "./pantry-list";
+
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "test-token" }) }));
 
 const TODAY = new Date(2026, 9, 8); // 8 Oct 2026, local time
 
@@ -40,5 +44,76 @@ describe("formatAmount", () => {
       "~0.5 kg · 500 g",
     );
     expect(formatAmount({ quantity: 250, unit: "g", grams: 250, approx: false })).toBe("250 g");
+  });
+});
+
+describe("PantryList", () => {
+  const item = (id: number, description: string, storage: string, extra = {}) => ({
+    id,
+    food: { id: id + 100, description, category: null, kcal: 100, kind: "food", source: "usda" },
+    grams: 500,
+    quantity: 500,
+    unit: "g",
+    approx: false,
+    expires_on: null,
+    source: "manual",
+    created_at: "2026-10-01T09:00:00Z",
+    storage,
+    ...extra,
+  });
+  const ITEMS = [
+    item(1, "Milk, whole", "fridge"),
+    item(2, "Peas, frozen", "freezer"),
+    item(3, "Rice, white", "cupboard"),
+  ];
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("groups by where things are kept and searches", async () => {
+    mockApi({ "GET /pantry": json(ITEMS) });
+    renderWithClient(<PantryList />);
+
+    expect(await screen.findByRole("region", { name: "Fridge" })).toHaveTextContent("Milk");
+    expect(screen.getByRole("region", { name: "Freezer" })).toHaveTextContent("Peas");
+    fireEvent.change(screen.getByLabelText("Search your pantry"), { target: { value: "ric" } });
+    expect(screen.queryByText("Milk, whole")).not.toBeInTheDocument();
+    expect(screen.getByText("Rice, white")).toBeInTheDocument();
+  });
+
+  it("edits an item", async () => {
+    const calls = mockApi({
+      "GET /pantry": json(ITEMS),
+      "GET /foods/101": json({ units: [{ unit: "g" }, { unit: "ml" }] }),
+      "PATCH /pantry/1": json(ITEMS[0]),
+    });
+    renderWithClient(<PantryList />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Milk, whole" }));
+    fireEvent.change(screen.getByLabelText("Quantity left"), { target: { value: "250" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+        quantity: 250,
+        unit: "g",
+        expires_on: null,
+      }),
+    );
+  });
+
+  it("waits before deleting so it can be undone", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const calls = mockApi({ "GET /pantry": json(ITEMS), "DELETE /pantry/3": json(null) });
+    renderWithClient(<PantryList />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Rice, white" }));
+    expect(screen.queryByText("Rice, white")).not.toBeInTheDocument();
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
   });
 });

@@ -182,6 +182,7 @@ class PantryItemOut(BaseModel):
     expires_on: date | None
     source: str
     created_at: datetime
+    storage: Literal["fridge", "freezer", "cupboard"] = "cupboard"  # where it's usually kept
 
 
 class ExpiringItem(PantryItemOut):

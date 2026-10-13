@@ -89,3 +89,40 @@ def suggest_expiry(
         return None
     days = shelf_life_days(description, category)
     return None if days is None else purchased_on + timedelta(days=days)
+
+
+type Place = Literal["fridge", "freezer", "cupboard"]
+
+_CHILLED = frozenset(
+    {
+        "Poultry Products",
+        "Finfish and Shellfish Products",
+        "Beef Products",
+        "Pork Products",
+        "Lamb, Veal, and Game Products",
+        "Sausages and Luncheon Meats",
+        "Dairy and Egg Products",
+    }
+)
+# Vegetables kept out of the fridge; fruit kept in it (the rest live in a bowl).
+_CUPBOARD_VEG = ("potato", "sweet potato", "onion", "garlic", "squash", "pumpkin", "yam")
+_FRIDGE_FRUIT = ("strawberr", "raspberr", "blueberr", "blackberr", "grape", "cherr", "melon")
+
+
+def storage_for(description: str, category: str | None) -> Place:
+    """Where a food is usually kept, for grouping the pantry list: frozen food in the freezer,
+    fresh meat, fish, dairy, most vegetables and soft fruit in the fridge, the rest (tins, dry
+    goods, bread, potatoes and onions, a fruit bowl) in the cupboard. A guess for display."""
+    text = description.lower()
+    words = set(text.replace(",", " ").split())
+    if "frozen" in words:
+        return "freezer"
+    if any(w in words for w in _SHELF_STABLE):
+        return "cupboard"
+    if category in _CHILLED:
+        return "fridge"
+    if category == "Vegetables and Vegetable Products":
+        return "cupboard" if text.startswith(_CUPBOARD_VEG) else "fridge"
+    if category == "Fruits and Fruit Juices":
+        return "fridge" if text.startswith(_FRIDGE_FRUIT) or "juice" in words else "cupboard"
+    return "cupboard"
