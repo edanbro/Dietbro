@@ -136,7 +136,7 @@ function Total({ list }: { list: ShoppingList }) {
 }
 
 function ListView({ plan }: { plan: Plan }) {
-  const { data: list, isPending, error } = useShoppingList(plan.id);
+  const { data: list, isPending, error, refetch } = useShoppingList(plan.id);
   const tick = useTickShoppingItem(plan.id);
 
   if (isPending) {
@@ -148,7 +148,7 @@ function ListView({ plan }: { plan: Plan }) {
       </div>
     );
   }
-  if (error) return <ErrorAlert error={error} />;
+  if (error) return <ErrorAlert error={error} onRetry={() => void refetch()} />;
 
   const toBuy = list.items.filter((i) => !i.staple);
   const staples = list.items.filter((i) => i.staple);
@@ -200,7 +200,7 @@ function ListView({ plan }: { plan: Plan }) {
 
 /** What to buy for the current plan, by aisle, with tick-as-you-shop boxes. */
 export function ShoppingPage() {
-  const { data: plan, isPending, error } = useCurrentPlan();
+  const { data: plan, isPending, error, refetch } = useCurrentPlan();
   const first = plan?.days[0]?.date ?? plan?.start;
   const last = plan?.days.at(-1)?.date ?? plan?.start;
 
@@ -222,7 +222,7 @@ export function ShoppingPage() {
       {isPending ? (
         <Skeleton className="h-16" />
       ) : error ? (
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} onRetry={() => void refetch()} />
       ) : plan ? (
         <ListView plan={plan} />
       ) : (

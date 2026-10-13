@@ -153,7 +153,7 @@ function Credit({ recipe }: { recipe: Recipe }) {
 
 /** A recipe: photo, numbers per serving, allergens and diets, ingredients and method. */
 export function RecipePage({ id }: { id: number }) {
-  const { data: recipe, isPending, error } = useRecipe(id);
+  const { data: recipe, isPending, error, refetch } = useRecipe(id);
 
   if (isPending) {
     return (
@@ -172,7 +172,7 @@ export function RecipePage({ id }: { id: number }) {
         {error instanceof ApiError && error.status === 404 ? (
           <p className="text-sm text-muted-foreground">We couldn&apos;t find that recipe.</p>
         ) : (
-          <ErrorAlert error={error} />
+          <ErrorAlert error={error} onRetry={() => void refetch()} />
         )}
         <Link href="/plan" className={cn(buttonVariants({ variant: "outline" }))}>
           Go to your plan

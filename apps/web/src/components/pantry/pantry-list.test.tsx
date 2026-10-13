@@ -19,7 +19,7 @@ describe("ExpiryBadge", () => {
     ["2026-10-08", "Use today"],
     ["2026-10-09", "1 day"],
     ["2026-10-10", "2 days"],
-    ["2026-11-01", "by 2026-11-01"],
+    ["2026-11-01", "by Sun 1 Nov"],
   ])("%s -> %s", (date, text) => {
     render(<ExpiryBadge date={date} today={TODAY} />);
     expect(screen.getByText(text)).toBeInTheDocument();

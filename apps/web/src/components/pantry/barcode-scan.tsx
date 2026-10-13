@@ -48,9 +48,15 @@ export function BarcodeScan({ onFound }: { onFound: (food: FoodDetail) => void }
     <div className="flex flex-col gap-3 rounded-lg border p-3" aria-label="Scan a barcode">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Point the camera at the barcode</span>
-        <button type="button" aria-label="Close the scanner" onClick={() => setOpen(false)}>
-          <XIcon className="size-4" />
-        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Close the scanner"
+          onClick={() => setOpen(false)}
+        >
+          <XIcon />
+        </Button>
       </div>
       {cameraProblem ? (
         <p className="text-sm text-muted-foreground">{cameraProblem}</p>

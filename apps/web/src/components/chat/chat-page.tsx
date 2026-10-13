@@ -149,7 +149,13 @@ export function ChatPage() {
 
   // A failed poll keeps the conversation on screen; only a first load that fails shows it.
   const data = thread.data;
-  if (!data) return thread.error ? <ErrorAlert error={thread.error} /> : <ChatSkeleton />;
+  if (!data) {
+    return thread.error ? (
+      <ErrorAlert error={thread.error} onRetry={() => void thread.refetch()} />
+    ) : (
+      <ChatSkeleton />
+    );
+  }
 
   const today = localISODate();
   const last = messages.at(-1);

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type PantryItem, useDeletePantryItem, usePantry } from "@/lib/api/hooks";
-import { daysBetween, localISODate } from "@/lib/dates";
+import { daysBetween, localISODate, shortDate } from "@/lib/dates";
 
 /** Days until `isoDate` (local midnight to local midnight); negative when past. */
 export function daysUntil(isoDate: string, today: Date = new Date()): number {
@@ -19,7 +19,7 @@ export function ExpiryBadge({ date, today }: { date: string | null; today?: Date
   if (days < 0) return <Badge variant="destructive">Expired</Badge>;
   if (days === 0) return <Badge variant="destructive">Use today</Badge>;
   if (days <= 3) return <Badge variant="secondary">{days === 1 ? "1 day" : `${days} days`}</Badge>;
-  return <span className="text-xs text-muted-foreground">by {date}</span>;
+  return <span className="text-xs text-muted-foreground">by {shortDate(date)}</span>;
 }
 
 export function formatAmount(item: Pick<PantryItem, "quantity" | "unit" | "grams" | "approx">) {

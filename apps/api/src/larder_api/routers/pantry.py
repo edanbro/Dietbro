@@ -70,10 +70,11 @@ async def owned(session: AsyncSession, user: User, item_id: int) -> PantryItem:
 
 @router.get("", operation_id="listPantry")
 async def list_items(user: CurrentUser, session: Session) -> list[PantryItemOut]:
-    """Soonest-expiring first; items without a date last."""
+    """Soonest-expiring first; items without a date last. Used-up items (0 g left after meals
+    were marked eaten) are kept for undo but not listed."""
     rows = await session.scalars(
         select(PantryItem)
-        .where(PantryItem.user_id == user.id)
+        .where(PantryItem.user_id == user.id, PantryItem.grams > 0)
         .options(joinedload(PantryItem.food))
         .order_by(PantryItem.expires_on.asc().nulls_last(), PantryItem.id)
     )

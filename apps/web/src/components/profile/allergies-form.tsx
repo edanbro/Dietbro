@@ -87,6 +87,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
               {f.description}
               <button
                 type="button"
+                className="relative after:absolute after:-inset-3 after:content-['']"
                 aria-label={`Remove ${f.description}`}
                 onClick={() => setAvoid(avoided.filter((x) => x.id !== f.id))}
               >

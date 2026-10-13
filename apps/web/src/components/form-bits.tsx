@@ -5,6 +5,7 @@ import { AlertCircleIcon } from "lucide-react";
 import type * as React from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/browser";
@@ -38,8 +39,9 @@ export function LabeledInput({
   );
 }
 
-/** Server-side problems (unsafe targets, bad units...) shown as a list. */
-export function ErrorAlert({ error }: { error: unknown }) {
+/** Server-side problems (unsafe targets, bad units...) shown as a list; `onRetry` adds a Retry
+button (for data that failed to load). */
+export function ErrorAlert({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   if (!error) return null;
   const messages =
     error instanceof ApiError && error.messages.length ? error.messages : [String(error)];
@@ -52,6 +54,11 @@ export function ErrorAlert({ error }: { error: unknown }) {
             <li key={m}>{m}</li>
           ))}
         </ul>
+        {onRetry ? (
+          <Button size="sm" variant="outline" className="mt-2" onClick={onRetry}>
+            Retry
+          </Button>
+        ) : null}
       </AlertDescription>
     </Alert>
   );

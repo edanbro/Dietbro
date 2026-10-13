@@ -82,16 +82,18 @@ export function PantryAdd({
             {food.brand ? `${food.brand} ` : ""}
             {food.description}
           </span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label="Choose another food"
             onClick={() => {
               reset();
               onCleared?.();
             }}
           >
-            <XIcon className="size-4" />
-          </button>
+            <XIcon />
+          </Button>
         </div>
         {detail ? <FoodFacts detail={detail} /> : null}
       </div>
