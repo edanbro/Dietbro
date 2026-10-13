@@ -7,7 +7,7 @@ import { calls as nav, resetNavigation } from "@/test/navigation";
 
 import { RecipePage, safeUrl, steps } from "./recipe-page";
 
-vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => null }) }));
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "test-token" }) }));
 vi.mock("next/navigation", () => import("@/test/navigation"));
 
 const ALLERGENS = [

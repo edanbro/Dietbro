@@ -2,7 +2,7 @@ import base64
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,6 +64,19 @@ class Settings(BaseSettings):
     receipt_job_timeout_s: int = 120
     receipt_stale_after_min: int = 15  # queued/processing longer than this is marked failed
     ocr_max_side_px: int = 2_000  # photos are scaled down to this before OCR
+
+    @field_validator(
+        "anthropic_api_key",
+        "clerk_issuer",
+        "clerk_publishable_key",
+        "clerk_jwks_url",
+        mode="before",
+    )
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        """Compose passes optional variables as "" when they aren't set (`${VAR:-}`): treat that
+        as unset, not as an empty key (the chat would try Claude without one)."""
+        return None if isinstance(value, str) and not value.strip() else value
 
     @property
     def llm_enabled(self) -> bool:

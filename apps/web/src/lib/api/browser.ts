@@ -17,13 +17,45 @@ export function useApi(): ApiClient {
     const client = createClient<paths>({ baseUrl: PUBLIC_API_URL });
     client.use({
       async onRequest({ request }) {
-        const token = await getToken();
+        const token = await sessionToken(getToken);
         if (token) request.headers.set("Authorization", `Bearer ${token}`);
         return request;
       },
     });
     return client;
   }, [getToken]);
+}
+
+export const AUTH_UNREACHABLE =
+  "Couldn't reach the sign-in service. If an ad or tracker blocker is on, allow this site and try again.";
+
+/**
+ * The session token for an API call. Fails after `timeoutMs` instead of hanging when Clerk's
+ * servers are blocked (ad blockers, strict tracking prevention), and waits up to `graceMs` for
+ * a session that is still being set up right after sign-in instead of sending no token (401).
+ */
+export async function sessionToken(
+  getToken: () => Promise<string | null>,
+  { timeoutMs = 10_000, graceMs = 2_000, pollMs = 200 } = {},
+): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ApiError(0, [AUTH_UNREACHABLE])), timeoutMs);
+  });
+  const fetchToken = async () => {
+    const deadline = Date.now() + graceMs;
+    let token = await getToken();
+    while (!token && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, pollMs));
+      token = await getToken();
+    }
+    return token;
+  };
+  try {
+    return await Promise.race([fetchToken(), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export class ApiError extends Error {

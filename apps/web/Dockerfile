@@ -16,6 +16,10 @@ COPY apps/web apps/web
 # Inlined into the browser bundle at build time: where the browser reaches the API.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Public by design. Static pages (sign-in, sign-up) are prerendered here, so without it they
+# ship an empty key and render blank on a direct load.
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 RUN pnpm --filter web build
 
 

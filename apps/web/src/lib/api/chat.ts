@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { PUBLIC_API_URL, unwrap, useApi } from "./browser";
+import { PUBLIC_API_URL, sessionToken, unwrap, useApi } from "./browser";
 import { type ChatMessage, type ChatThread, keys } from "./hooks";
 import { type ChatEvent, type ChatMessageIn, sendChatMessage } from "./sse";
 
@@ -61,7 +61,7 @@ export function useChatSender() {
   const { getToken } = useAuth();
   return useCallback(
     async (body: ChatMessageIn, onEvent: (event: ChatEvent) => void, signal?: AbortSignal) =>
-      sendChatMessage(PUBLIC_API_URL, await getToken(), body, onEvent, signal),
+      sendChatMessage(PUBLIC_API_URL, await sessionToken(getToken), body, onEvent, signal),
     [getToken],
   );
 }
