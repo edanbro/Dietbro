@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { AccountControls } from "@/components/profile/account-controls";
 import { AllergiesForm } from "@/components/profile/allergies-form";
@@ -31,6 +32,12 @@ export default function ProfilePage() {
           <CardContent>{s.body}</CardContent>
         </Card>
       ))}
+      <Link
+        href="/attributions"
+        className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+      >
+        Data sources and licences
+      </Link>
     </div>
   );
 }

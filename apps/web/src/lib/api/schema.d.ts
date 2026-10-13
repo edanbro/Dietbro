@@ -252,7 +252,7 @@ export interface paths {
         };
         /**
          * Search
-         * @description Curated ingredient names first ("onion" -> "Onions, raw"), then trigram matches.
+         * @description A page of foods for `q`; a full page means there may be more (next `offset`).
          */
         get: operations["searchFoods"];
         put?: never;
@@ -1100,8 +1100,36 @@ export interface components {
             category: string | null;
             /** Kcal */
             kcal: number | null;
+            /**
+             * Kind
+             * @default food
+             * @enum {string}
+             */
+            kind: "food" | "product";
+            /** Brand */
+            brand?: string | null;
+            /**
+             * Source
+             * @default usda
+             */
+            source: string;
             /** Units */
             units: components["schemas"]["FoodUnit"][];
+            /** Barcode */
+            barcode?: string | null;
+            /**
+             * Allergens
+             * @default []
+             */
+            allergens: components["schemas"]["Allergen"][];
+            /**
+             * May Contain
+             * @default []
+             */
+            may_contain: components["schemas"]["Allergen"][];
+            counts_as?: components["schemas"]["FoodSummary"] | null;
+            /** Attribution */
+            attribution: string;
         };
         /** FoodSummary */
         FoodSummary: {
@@ -1113,6 +1141,19 @@ export interface components {
             category: string | null;
             /** Kcal */
             kcal: number | null;
+            /**
+             * Kind
+             * @default food
+             * @enum {string}
+             */
+            kind: "food" | "product";
+            /** Brand */
+            brand?: string | null;
+            /**
+             * Source
+             * @default usda
+             */
+            source: string;
         };
         /**
          * FoodUnit
@@ -2658,6 +2699,9 @@ export interface operations {
             query: {
                 q: string;
                 limit?: number;
+                offset?: number;
+                /** @description generic: foods only, no packaged products (allergies, preferences) */
+                scope?: "all" | "generic";
             };
             header?: never;
             path?: never;

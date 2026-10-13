@@ -7,6 +7,8 @@ trigram_food(name): up to 8 trigram candidates (pg_trgm on foods.description) ra
 overlap; the top one is taken only when it is a clear winner (every word of the name and fewer
 other words than any rival that also has them all). Nothing is cached here: user text must not
 leak into ingredient_matches, which the importer's resolver reuses for the shared catalogue.
+Candidates are the generic USDA foods recipes use (Foundation, SR Legacy), never survey foods,
+CoFID or Open Food Facts products, so receipts and the chat keep their measured accuracy.
 """
 
 import re
@@ -36,6 +38,7 @@ _CANDIDATES_SQL = text(
     SELECT id, description
     FROM foods
     WHERE kcal IS NOT NULL
+      AND source = 'usda' AND data_type <> 'survey_fndds'
       AND NOT (coalesce(category, '') = ANY(:excluded))
       AND (description ILIKE '%' || :q || '%' OR :q <% description)
     ORDER BY word_similarity(:q, description) DESC, (data_type = 'sr_legacy') DESC,

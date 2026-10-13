@@ -31,12 +31,12 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
-from larder_api.routers.foods import load_portions
+from larder_api.routers.foods import food_portions
 from larder_api.schemas import EatenOut, PantryChangeOut
 from larder_core.meals import Slot
 from larder_core.quantities import grams_for
@@ -241,7 +241,7 @@ async def _converts(session: AsyncSession, item: db.PantryItem, quantity: float)
     measure = parse_measure(f"{quantity:g} {item.unit}")
     grams = grams_for(
         measure,
-        await load_portions(session, item.food_id),
+        await food_portions(session, item.food),
         item.food.description.lower(),
         item.food.category,
     )
@@ -378,9 +378,14 @@ async def mark(
     pantry_rows = (
         await session.scalars(
             select(db.PantryItem)
-            .where(db.PantryItem.user_id == user_id, db.PantryItem.food_id.in_(needs))
+            .join(db.Food, db.Food.id == db.PantryItem.food_id)
+            .where(
+                db.PantryItem.user_id == user_id,
+                # A product or regional food counts as the generic food the recipe uses.
+                func.coalesce(db.Food.generic_food_id, db.PantryItem.food_id).in_(needs),
+            )
             .options(selectinload(db.PantryItem.food))
-            .with_for_update()
+            .with_for_update(of=db.PantryItem)
         )
     ).all()
     items = {i.id: i for i in pantry_rows}
@@ -389,7 +394,8 @@ async def mark(
         convertible = i.grams > 0 and i.quantity > 0
         if convertible:
             convertible = await _converts(session, i, i.quantity) is not None
-        stock.append(Stock(i.id, i.food_id, i.grams, i.quantity, i.unit, i.expires_on, convertible))
+        key = planning.pantry_key(i, needs)
+        stock.append(Stock(i.id, key, i.grams, i.quantity, i.unit, i.expires_on, convertible))
     taken = take(needs, stock)
     for t in taken:
         item = items[t.item_id]

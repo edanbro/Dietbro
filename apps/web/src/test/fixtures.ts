@@ -304,14 +304,28 @@ export function receiptLine(
   };
 }
 
-export const MILK = { id: 31, description: "Milk, reduced fat, 2%", category: "Dairy", kcal: 50 };
+const GENERIC = { kind: "food", source: "usda" } as const;
+export const MILK = {
+  id: 31,
+  description: "Milk, reduced fat, 2%",
+  category: "Dairy",
+  kcal: 50,
+  ...GENERIC,
+};
 export const TOMATOES = {
   id: 32,
   description: "Tomatoes, canned",
   category: "Vegetables",
   kcal: 20,
+  ...GENERIC,
 };
-export const BANANA = { id: 33, description: "Bananas, raw", category: "Fruits", kcal: 89 };
+export const BANANA = {
+  id: 33,
+  description: "Bananas, raw",
+  category: "Fruits",
+  kcal: 89,
+  ...GENERIC,
+};
 
 /** A ready pasted receipt bought 2026-10-09: milk and chopped tomatoes matched, one line not. */
 export function makeReceipt(overrides: Partial<Receipt> = {}): Receipt {

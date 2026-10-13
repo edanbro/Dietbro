@@ -623,7 +623,7 @@
           "foods"
         ],
         "summary": "Search",
-        "description": "Curated ingredient names first (\"onion\" -> \"Onions, raw\"), then trigram matches.",
+        "description": "A page of foods for `q`; a full page means there may be more (next `offset`).",
         "operationId": "searchFoods",
         "security": [
           {
@@ -648,11 +648,39 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 25,
+              "maximum": 50,
               "minimum": 1,
-              "default": 10,
+              "default": 20,
               "title": "Limit"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "generic"
+              ],
+              "type": "string",
+              "description": "generic: foods only, no packaged products (allergies, preferences)",
+              "default": "all",
+              "title": "Scope"
+            },
+            "description": "generic: foods only, no packaged products (allergies, preferences)"
           }
         ],
         "responses": {
@@ -3182,12 +3210,78 @@
             ],
             "title": "Kcal"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "food",
+              "product"
+            ],
+            "title": "Kind",
+            "default": "food"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "usda"
+          },
           "units": {
             "items": {
               "$ref": "#/components/schemas/FoodUnit"
             },
             "type": "array",
             "title": "Units"
+          },
+          "barcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barcode"
+          },
+          "allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Allergens",
+            "default": []
+          },
+          "may_contain": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "May Contain",
+            "default": []
+          },
+          "counts_as": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FoodSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
           }
         },
         "type": "object",
@@ -3196,7 +3290,8 @@
           "description",
           "category",
           "kcal",
-          "units"
+          "units",
+          "attribution"
         ],
         "title": "FoodDetail"
       },
@@ -3231,6 +3326,31 @@
               }
             ],
             "title": "Kcal"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "food",
+              "product"
+            ],
+            "title": "Kind",
+            "default": "food"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "usda"
           }
         },
         "type": "object",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { localISODate, localTime } from "@/lib/dates";
@@ -20,6 +20,7 @@ export type BodyOut = Schemas["BodyOut"];
 export type PreferencesIn = Schemas["PreferencesIn"];
 export type AllergiesIn = Schemas["AllergiesIn"];
 export type FoodSummary = Schemas["FoodSummary"];
+export type FoodDetail = Schemas["FoodDetail"];
 export type PantryItem = Schemas["PantryItemOut"];
 export type PantryItemIn = Schemas["PantryItemIn"];
 export type Plan = Schemas["PlanOut"];
@@ -66,7 +67,7 @@ export const keys = {
   cuisines: ["cuisines"] as const,
   regions: ["regions"] as const,
   food: (id: number) => ["food", id] as const,
-  search: (q: string) => ["foods", "search", q] as const,
+  search: (q: string, scope: string = "all") => ["foods", "search", q, scope] as const,
   currentPlan: ["plans", "current"] as const,
   shopping: (planId: number) => ["plans", planId, "shopping"] as const,
   recipe: (id: number) => ["recipes", id] as const,
@@ -144,15 +145,27 @@ export function useFood(id: number | null) {
   });
 }
 
-export function useFoodSearch(q: string) {
+export const SEARCH_PAGE = 20;
+export type FoodScope = "all" | "generic";
+
+/** Pages of food search results; a full page means there may be more. */
+export function useFoodSearch(q: string, scope: FoodScope = "all") {
   const api = useApi();
   const query = q.trim();
-  return useQuery({
-    queryKey: keys.search(query),
+  return useInfiniteQuery({
+    queryKey: keys.search(query, scope),
     enabled: query.length >= 2,
     staleTime: 60_000,
-    queryFn: async ({ signal }) =>
-      unwrap(await api.GET("/foods/search", { params: { query: { q: query } }, signal })),
+    initialPageParam: 0,
+    getNextPageParam: (last: FoodSummary[], _all, offset: number) =>
+      last.length === SEARCH_PAGE && offset + SEARCH_PAGE <= 200 ? offset + SEARCH_PAGE : undefined,
+    queryFn: async ({ signal, pageParam }) =>
+      unwrap(
+        await api.GET("/foods/search", {
+          params: { query: { q: query, scope, limit: SEARCH_PAGE, offset: pageParam } },
+          signal,
+        }),
+      ),
   });
 }
 

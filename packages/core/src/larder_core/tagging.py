@@ -127,6 +127,39 @@ def tag_food(fdc_id: int, description: str, category: str | None) -> FoodTags:
     return _minus((tags | add).normalised(), remove).normalised()
 
 
+@dataclass(frozen=True, slots=True)
+class FoodFacts:
+    """What tagging reads from any food row (USDA, CoFID or an Open Food Facts product)."""
+
+    id: int
+    description: str
+    category: str | None  # always a USDA category name (mapped for other sources)
+    source: str = "usda"
+    source_category: str | None = None
+    brand: str | None = None
+    ingredients: str | None = None
+    declared: frozenset[Allergen] = frozenset()  # allergens the label declares
+    traces: frozenset[Allergen] = frozenset()  # "may contain"
+
+
+def tag_any(food: FoodFacts, generic: FoodTags | None = None) -> FoodTags:
+    """Tags for any food. USDA foods: `tag_food`. Others are tagged at least as cautiously as the
+    generic food they count as: category rules | keyword rules on the name, its source category
+    and the ingredient list | declared allergens and traces | the generic's tags. Nothing is
+    ever removed here (no gluten-free or vegan claims from labels: crowdsourced data)."""
+    if food.source == "usda":
+        return tag_food(food.id, food.description, food.category)
+    text = _text(food.description)
+    tags = _category_tags(text.words, food.category) | _scan(text, across_punctuation=True)
+    for extra in (food.source_category, food.ingredients):
+        if extra:
+            tags |= tag_text(extra.replace(":", " ").replace("-", " "))
+    tags |= FoodTags(food.declared | food.traces)
+    if generic is not None:
+        tags |= generic
+    return tags.normalised()
+
+
 def tag_text(text: str) -> FoodTags:
     """Tags implied by free text: an ingredient line ("soy sauce", "worcestershire sauce"), a
     recipe name ("Egg Drop Soup") or instructions ("add 1 egg"). Utensil phrases ("fish slice",

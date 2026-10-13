@@ -75,6 +75,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
         <Label htmlFor="avoid-search">Other foods to always avoid</Label>
         <FoodPicker
           id="avoid-search"
+          scope="generic"
           placeholder="Search a food to avoid"
           onPick={(f) =>
             setAvoid(avoided.some((x) => x.id === f.id) ? avoided : [...avoided, f])

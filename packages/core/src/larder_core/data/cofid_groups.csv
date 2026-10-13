@@ -1,0 +1,52 @@
+prefix,category,note
+A,Cereal Grains and Pasta,cereals and cereal products (default)
+AA,Cereal Grains and Pasta,flours and grains
+AB,"Meals, Entrees, and Side Dishes",sandwiches
+AC,Cereal Grains and Pasta,rice
+AD,Cereal Grains and Pasta,pasta and noodles
+AE,"Meals, Entrees, and Side Dishes",pizzas
+AF,Baked Products,breads
+AG,Baked Products,bread rolls
+AI,Breakfast Cereals,
+AK,Baked Products,infant cereal rusks
+AM,Baked Products,biscuits
+AN,Baked Products,cakes
+AO,Baked Products,pastry
+AP,Baked Products,"buns, bagels and pastries"
+AS,Sweets,"puddings (crumbles, bread pudding)"
+AT,Cereal Grains and Pasta,"couscous, savoury cereal dishes"
+B,Dairy and Egg Products,milk and milk products (default)
+BH,Beverages,"cocoa and malted drink powders (milk from the name when made up with milk)"
+BP,Dairy and Egg Products,ice creams: dairy so they keep the milk tag
+BR,Dairy and Egg Products,dairy desserts: dairy so they keep the milk tag
+BTM,Fats and Oils,baking fats and margarines
+BV,Dairy and Egg Products,cheese dishes: dairy so they keep the milk tag
+C,Dairy and Egg Products,eggs and egg dishes
+D,Vegetables and Vegetable Products,vegetables (default)
+DB,Legumes and Legume Products,"beans and pulses (baked beans, lentils, chickpeas)"
+F,Fruits and Fruit Juices,
+G,Nut and Seed Products,
+H,Spices and Herbs,
+J,Finfish and Shellfish Products,fish and seafood
+M,"Meals, Entrees, and Side Dishes",meat products (default: meat dishes)
+MAA,Pork Products,bacon and ham
+MAC,Beef Products,
+MAE,"Lamb, Veal, and Game Products",lamb
+MAG,Pork Products,
+MAI,"Lamb, Veal, and Game Products",veal
+MBG,Beef Products,beef burgers
+MC,Poultry Products,"chicken, turkey, duck, goose and game birds"
+ME,"Lamb, Veal, and Game Products","game (hare, rabbit, venison)"
+MG,Beef Products,offal of several species: meat either way
+MI,Sausages and Luncheon Meats,"sausages, black pudding, pâté, brawn"
+MIG,"Meals, Entrees, and Side Dishes",meat ready meals
+MR,"Meals, Entrees, and Side Dishes",meat dishes
+O,Fats and Oils,
+OA,Dairy and Egg Products,butters: dairy so they keep the milk tag
+OB,Dairy and Egg Products,butteroil
+P,Beverages,
+Q,Beverages,alcoholic drinks
+S,Sweets,"sugars, preserves and confectionery"
+SN,Snacks,savoury snacks
+W,"Soups, Sauces, and Gravies",
+WY,Spices and Herbs,"miscellaneous (baking powder, yeast extract, salt)"

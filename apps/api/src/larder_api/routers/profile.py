@@ -334,11 +334,23 @@ async def put_preferences(
     row.diet = body.diet
     row.liked_cuisines = sorted(set(body.liked_cuisines))
     row.disliked_cuisines = sorted(set(body.disliked_cuisines))
-    row.liked_food_ids = sorted(set(body.liked_food_ids))
-    row.disliked_food_ids = sorted(set(body.disliked_food_ids))
+    row.liked_food_ids = await with_generics(session, body.liked_food_ids)
+    row.disliked_food_ids = await with_generics(session, body.disliked_food_ids)
     session.add(row)
     await session.commit()
     return PreferencesOut.model_validate(row)
+
+
+async def with_generics(session: AsyncSession, food_ids: Iterable[int]) -> list[int]:
+    """The foods plus the generic foods they count as: recipes use generic foods, so avoiding a
+    regional or branded food ("Peanuts, plain" from CoFID) must avoid its generic too."""
+    ids = set(food_ids)
+    if ids:
+        generics = await session.scalars(
+            select(Food.generic_food_id).where(Food.id.in_(ids), Food.generic_food_id.is_not(None))
+        )
+        ids |= {g for g in generics if g is not None}
+    return sorted(ids)
 
 
 async def _allergies_out(session: AsyncSession, row: Allergies) -> AllergiesOut:
@@ -361,7 +373,7 @@ async def put_allergies(body: AllergiesIn, user: CurrentUser, session: Session) 
     """Hard constraints: no planned recipe will contain these (enforced by the solver, M3)."""
     row = await session.get(Allergies, user.id) or Allergies(user_id=user.id)
     row.allergens = sorted({a.value for a in body.allergens})
-    row.avoid_food_ids = sorted(set(body.avoid_food_ids))
+    row.avoid_food_ids = await with_generics(session, body.avoid_food_ids)
     session.add(row)
     await session.commit()
     return await _allergies_out(session, row)

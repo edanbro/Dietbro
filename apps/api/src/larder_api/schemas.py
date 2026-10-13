@@ -128,11 +128,17 @@ class AllergenOption(BaseModel):
     label: str
 
 
+FoodKind = Literal["food", "product"]
+
+
 class FoodSummary(BaseModel):
     id: int
     description: str
     category: str | None
     kcal: float | None
+    kind: FoodKind = "food"  # product: a packaged, branded product (Open Food Facts)
+    brand: str | None = None
+    source: str = "usda"  # usda | cofid | off
 
 
 class FoodUnit(BaseModel):
@@ -144,6 +150,11 @@ class FoodUnit(BaseModel):
 
 class FoodDetail(FoodSummary):
     units: list[FoodUnit]
+    barcode: str | None = None
+    allergens: list[Allergen] = []  # what the food contains, as far as we can tell
+    may_contain: list[Allergen] = []  # declared "may contain" traces (products)
+    counts_as: "FoodSummary | None" = None  # the generic food it stands in for when planning
+    attribution: str  # where the data comes from (licences ask for credit)
 
 
 class PantryItemIn(BaseModel):

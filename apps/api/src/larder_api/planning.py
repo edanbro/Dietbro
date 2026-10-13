@@ -485,6 +485,13 @@ def taste_of(preferences: db.Preferences) -> TastePrefs:
     )
 
 
+def pantry_key(item: db.PantryItem, known: Mapping[int, object]) -> int:
+    """The food a pantry item counts as: its generic food when that is in `known` (the
+    planning catalogue), else itself. `item.food` must be loaded."""
+    generic = item.food.generic_food_id
+    return generic if generic is not None and generic in known else item.food_id
+
+
 def _priced(f: Food, currency: Currency, country: str | None) -> Food:
     """A catalogue food (GBP pence/kg, UK estimate) priced for the user's region and currency."""
     return replace(f, price_per_kg=local_price(f.price_per_kg, f.category, country, currency))
@@ -525,10 +532,12 @@ def make_problem(
         expires = (item.expires_on - start).days if item.expires_on else None
         if expires is not None and expires < 0:
             continue
-        if item.food_id not in foods:
+        # A product or regional food counts as its generic when recipes use the generic.
+        fid = pantry_key(item, foods)
+        if fid not in foods:
             basis = solver_food(item.food, food_info(item.food))
-            foods[item.food_id] = _priced(basis, currency, inputs.country)
-        lots.append(Lot(item.food_id, math.floor(item.grams), expires))
+            foods[fid] = _priced(basis, currency, inputs.country)
+        lots.append(Lot(fid, math.floor(item.grams), expires))
 
     targets = targets_from(inputs.goals, days)
     budget = (

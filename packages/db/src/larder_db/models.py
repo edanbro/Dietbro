@@ -17,6 +17,8 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
+    Computed,
     Date,
     DateTime,
     Float,
@@ -32,7 +34,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, deferred, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -64,8 +66,20 @@ class NutrientColumns:
     sodium_mg: Mapped[float | None] = mapped_column(Float)
 
 
+# Ids of non-USDA foods start here (foods_local_id_seq); USDA FDC ids are far below.
+LOCAL_ID_START = 1_000_000_000
+
+
 class Food(NutrientColumns, Base):
-    """A USDA FoodData Central food. `id` is the FDC id; nutrients are per 100 g."""
+    """A food; nutrients are per 100 g.
+
+    `source` usda: a USDA FoodData Central food, `id` = FDC id (data_type foundation, sr_legacy
+    or survey_fndds). cofid: UK McCance & Widdowson (`source_id` = food code). off: an Open Food
+    Facts product (`source_id` = barcode). `category` is always a USDA category name (other
+    sources are mapped, their own label kept in `source_category`), so allergen tags, prices,
+    shelf life and aisles work for every food. `generic_food_id` is the generic food a regional
+    or branded one counts as (pantry matching, prices); recipes only use generic foods.
+    """
 
     __tablename__ = "foods"
     __table_args__ = (
@@ -76,12 +90,50 @@ class Food(NutrientColumns, Base):
             postgresql_using="gin",
             postgresql_ops={"description": "gin_trgm_ops"},
         ),
+        Index("ix_foods_search_tsv", "search_tsv", postgresql_using="gin"),
+        Index("ix_foods_countries", "countries", postgresql_using="gin"),
+        Index(
+            "uq_foods_barcode",
+            "barcode",
+            unique=True,
+            postgresql_where=text("barcode IS NOT NULL"),
+        ),
+        UniqueConstraint("source", "source_id"),
+        CheckConstraint(f"(source = 'usda') = (id < {LOCAL_ID_START})", name="usda_ids"),
+        CheckConstraint(
+            "generic_food_id IS NULL OR generic_food_id <> id", name="generic_not_self"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     description: Mapped[str] = mapped_column(Text)
-    data_type: Mapped[str] = mapped_column(String(32))  # foundation | sr_legacy
+    # foundation | sr_legacy | survey_fndds | cofid | branded
+    data_type: Mapped[str] = mapped_column(String(32))
     category: Mapped[str | None] = mapped_column(String(128))
+    source: Mapped[str] = mapped_column(String(16), server_default="usda", default="usda")
+    source_id: Mapped[str | None] = mapped_column(String(32))  # NULL for USDA (the id is)
+    source_category: Mapped[str | None] = mapped_column(Text)
+    brand: Mapped[str | None] = mapped_column(Text)
+    barcode: Mapped[str | None] = mapped_column(String(14))  # GTIN, normalised
+    countries: Mapped[list[str] | None] = mapped_column(ARRAY(String(2)))  # NULL: anywhere
+    generic_food_id: Mapped[int | None] = mapped_column(
+        ForeignKey("foods.id", ondelete="SET NULL"), index=True
+    )
+    generic_method: Mapped[str | None] = mapped_column(String(16))  # how the link was made
+    allergens_declared: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
+    traces_declared: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
+    ingredients_text: Mapped[str | None] = deferred(mapped_column(Text))
+    origin: Mapped[str | None] = mapped_column(String(8))  # off: bulk | lookup
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    search_tsv: Mapped[Any] = deferred(
+        mapped_column(
+            TSVECTOR,
+            Computed(
+                "to_tsvector('english'::regconfig, coalesce(brand, '') || ' ' || description)",
+                persisted=True,
+            ),
+        )
+    )
 
     portions: Mapped[list["FoodPortion"]] = relationship(
         back_populates="food", cascade="all, delete-orphan", passive_deletes=True

@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed data bench bench-replan receipt-eval worker llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan receipt-eval worker llm-smoke up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -27,9 +27,16 @@ migrate: ## Apply DB migrations to $$DATABASE_URL (default: compose db)
 
 seed: migrate ## Load foods + recipes and resolve via curated aliases (no embeddings, ~1 min)
 	uv run larder-data import-usda
+	uv run larder-data import-fndds
+	uv run larder-data import-cofid
 	uv run larder-data import-mealdb
 	uv run larder-data import-curated
 	uv run larder-data resolve --aliases-only
+
+foods: ## Link UK/Irish foods to generics, then import Irish + UK products (1.3 GB, ~15 min)
+	uv run larder-data embed-foods
+	uv run larder-data link-generics --sources cofid
+	uv run larder-data import-off --countries ie,gb
 
 data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report (~5 min)
 	uv run larder-data pipeline --evaluate --min-coverage 0.95 --out data/reports/resolution.md

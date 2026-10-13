@@ -12,7 +12,8 @@ from sqlalchemy.orm import joinedload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
-from larder_api.routers.foods import load_portions, summary
+from larder_api.generic_link import ensure_generic
+from larder_api.routers.foods import food_portions, summary
 from larder_api.schemas import (
     ExpiringItem,
     ExpiringPantry,
@@ -33,7 +34,7 @@ _BAD_UNIT: dict[int | str, dict[str, Any]] = {status.HTTP_400_BAD_REQUEST: {"mod
 
 async def to_grams(session: AsyncSession, food: Food, quantity: float, unit: str) -> float:
     measure = parse_measure(f"{quantity:g} {unit}")
-    portions = await load_portions(session, food.id)
+    portions = await food_portions(session, food)
     grams = grams_for(measure, portions, food.description.lower(), food.category)
     if grams is None or measure.vague:
         raise HTTPException(
@@ -135,6 +136,7 @@ async def add_item(body: PantryItemIn, user: CurrentUser, session: Session) -> P
     food = await session.get(Food, body.food_id)
     if food is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "food not found")
+    await ensure_generic(session, food)  # a product counts as its generic food when planning
     item = PantryItem(
         user_id=user.id,
         food_id=food.id,

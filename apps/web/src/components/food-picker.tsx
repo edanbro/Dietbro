@@ -3,8 +3,9 @@
 import { SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { type FoodSummary, useFoodSearch } from "@/lib/api/hooks";
+import { type FoodScope, type FoodSummary, useFoodSearch } from "@/lib/api/hooks";
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -15,19 +16,26 @@ function useDebounced<T>(value: T, ms: number): T {
   return debounced;
 }
 
-/** Type-ahead over USDA foods; curated ingredient names rank first. */
+/**
+ * Type-ahead over foods (generic foods first, then packaged products sold where the user lives);
+ * curated ingredient names rank first. `scope="generic"` leaves products out (allergies and
+ * preferences are about foods, not brands).
+ */
 export function FoodPicker({
   onPick,
   placeholder = "Search foods, e.g. onion",
   id = "food-search",
+  scope = "all",
 }: {
   onPick: (food: FoodSummary) => void;
   placeholder?: string;
   id?: string;
+  scope?: FoodScope;
 }) {
   const [q, setQ] = useState("");
   const query = useDebounced(q, 250);
-  const { data, isFetching } = useFoodSearch(query);
+  const search = useFoodSearch(query, scope);
+  const data = search.data?.pages.flat();
 
   return (
     <div className="flex flex-col gap-2">
@@ -44,7 +52,10 @@ export function FoodPicker({
         />
       </div>
       {query.trim().length >= 2 ? (
-        <ul className="flex max-h-64 flex-col overflow-y-auto rounded-lg border" aria-busy={isFetching}>
+        <ul
+          className="flex max-h-72 flex-col overflow-y-auto rounded-lg border"
+          aria-busy={search.isFetching}
+        >
           {(data ?? []).map((food) => (
             <li key={food.id}>
               <button
@@ -55,9 +66,19 @@ export function FoodPicker({
                   setQ("");
                 }}
               >
-                <span className="text-sm">{food.description}</span>
+                <span className="flex w-full items-start justify-between gap-2 text-sm">
+                  <span>
+                    {food.brand ? <span className="font-medium">{food.brand} </span> : null}
+                    {food.description}
+                  </span>
+                  {food.kind === "product" ? (
+                    <Badge variant="secondary" className="shrink-0">
+                      Product
+                    </Badge>
+                  ) : null}
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  {food.category ?? "Food"}
+                  {food.category ?? (food.kind === "product" ? "Packaged food" : "Food")}
                   {food.kcal !== null && food.kcal !== undefined
                     ? ` · ${Math.round(food.kcal)} kcal/100 g`
                     : ""}
@@ -67,6 +88,18 @@ export function FoodPicker({
           ))}
           {data && data.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-muted-foreground">No matches</li>
+          ) : null}
+          {search.hasNextPage ? (
+            <li>
+              <button
+                type="button"
+                className="w-full px-3 py-2.5 text-left text-sm font-medium text-primary hover:bg-muted disabled:opacity-50"
+                disabled={search.isFetchingNextPage}
+                onClick={() => void search.fetchNextPage()}
+              >
+                {search.isFetchingNextPage ? "Loading…" : "More results"}
+              </button>
+            </li>
           ) : null}
         </ul>
       ) : null}

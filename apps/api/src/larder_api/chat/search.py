@@ -134,7 +134,11 @@ async def load_viewer(scope: ChatScope) -> Viewer | None:
             .where(db.PantryItem.user_id == scope.user_id)
             .options(selectinload(db.PantryItem.food))
         )
-        stock = {p.food_id: p.food.description for p in pantry}
+        stock: dict[int, str] = {}
+        for p in pantry:
+            stock[p.food_id] = p.food.description
+            if p.food.generic_food_id is not None:  # a product counts as its generic
+                stock.setdefault(p.food.generic_food_id, p.food.description)
     if allergies is None or prefs is None:
         return None
     return Viewer(planning.profile_of(allergies, prefs), planning.taste_of(prefs), stock)

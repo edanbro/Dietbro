@@ -17,7 +17,7 @@ from datetime import timedelta
 from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -269,9 +269,13 @@ async def _meal_facts(
     foods, info = await planning.load_foods(session, food_ids)
     pantry = (
         await session.scalars(
-            select(db.PantryItem).where(
-                db.PantryItem.user_id == user_id, db.PantryItem.food_id.in_(food_ids)
+            select(db.PantryItem)
+            .join(db.Food, db.Food.id == db.PantryItem.food_id)
+            .where(
+                db.PantryItem.user_id == user_id,
+                func.coalesce(db.Food.generic_food_id, db.PantryItem.food_id).in_(food_ids),
             )
+            .options(selectinload(db.PantryItem.food))
         )
     ).all()
     prefs = await session.get(db.Preferences, user_id)
@@ -303,10 +307,9 @@ async def _meal_facts(
         if prefs is not None and recipe.cuisine in prefs.liked_cuisines:
             facts["liked_cuisine"] = True
     used = [
-        f"{short_name(foods[p.food_id].description)}"
+        f"{short_name(p.food.description)}"
         + (f" (expires {p.expires_on.isoformat()})" if p.expires_on else "")
         for p in pantry
-        if p.food_id in foods
     ]
     if used:
         facts["uses_pantry"] = used

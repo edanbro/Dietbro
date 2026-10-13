@@ -28,8 +28,11 @@ Requires Docker and a free [Clerk](https://clerk.com) development instance (for 
 
 ```sh
 docker compose up --build
-make seed            # needs uv; ~1 minute
+make seed            # needs uv; foods (USDA, survey foods, UK CoFID) and recipes, ~2 minutes
+make foods           # optional: Irish + UK packaged products from Open Food Facts (~15 min)
 ```
+
+Without `make`, run the same `uv run larder-data ...` steps listed in the Makefile.
 
 - Web: http://localhost:3000 (works on a phone on the same network via your machine's IP if you
   add it to `CORS_ORIGINS` and rebuild with that `NEXT_PUBLIC_API_URL`)
