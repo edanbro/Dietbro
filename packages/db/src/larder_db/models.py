@@ -240,6 +240,11 @@ class User(Base):
     auth_subject: Mapped[str] = mapped_column(String(255), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = _now()
+    # Region (larder_core.regions): ISO country, IANA time zone, BCP 47 locale. NULL until the
+    # client saves the region it guessed from the browser (treated as GB meanwhile).
+    country: Mapped[str | None] = mapped_column(String(2))
+    timezone: Mapped[str | None] = mapped_column(String(64))
+    locale: Mapped[str | None] = mapped_column(String(35))
     # The chat turn in progress (one per user): taken with a conditional UPDATE, released by
     # token; a lock older than the turn deadline is stale and may be taken over.
     chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

@@ -27,6 +27,9 @@ from larder_api.schemas import (
     PreferencesOut,
     Problems,
     ProfileStatus,
+    RegionIn,
+    RegionOption,
+    RegionOut,
     SuggestedTargets,
 )
 from larder_core.allergens import LABELS, Allergen
@@ -42,6 +45,7 @@ from larder_core.energy import (
     validate_body,
     validate_targets,
 )
+from larder_core.regions import REGIONS, local_today, region_for, valid_timezone
 from larder_db.models import (
     Allergies,
     Base,
@@ -121,13 +125,48 @@ async def _status(session: AsyncSession, user: User, today: date) -> ProfileStat
 async def get_me(
     user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
 ) -> Me:
-    s = await _status(session, user, clock().astimezone(UTC).date())
+    s = await _status(session, user, local_today(user.timezone, clock()))
     return Me(
         id=user.id,
         created_at=user.created_at,
         profile=s,
         setup_complete=s.has_goals and s.has_allergies and s.has_preferences,
+        region=region_out(user),
     )
+
+
+def region_out(user: User) -> RegionOut:
+    r = region_for(user.country)
+    return RegionOut(
+        country=r.country,
+        name=r.name,
+        currency=r.currency,
+        locale=user.locale or r.locale,
+        timezone=user.timezone or r.timezone,
+        saved=user.country is not None,
+    )
+
+
+@router.put("/region", operation_id="putRegion", responses=_PROBLEMS)
+async def put_region(body: RegionIn, user: CurrentUser, session: Session) -> RegionOut:
+    """Where the user lives: currency, price estimates, dates. Moving to a region with another
+    currency also switches the goals' currency (the budget amount is kept)."""
+    country = body.country.upper()
+    if country not in REGIONS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, [f"{country} isn't supported yet."])
+    if body.timezone is not None and not valid_timezone(body.timezone):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, [f"Unknown time zone {body.timezone}."])
+    before = region_for(user.country).currency
+    user.country = country
+    user.timezone = body.timezone or user.timezone
+    user.locale = body.locale or user.locale
+    goals = await session.get(Goals, user.id)
+    after = region_for(country).currency
+    if goals is not None and after != before and goals.currency == before:
+        goals.currency = after
+    await session.commit()
+    await session.refresh(user)
+    return region_out(user)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, operation_id="deleteMe")
@@ -338,6 +377,18 @@ async def list_cuisines(session: Session) -> list[str]:
         .order_by(Recipe.cuisine)
     )
     return [c for c in rows if c]
+
+
+@allergens_router.get("/regions", operation_id="listRegions")
+async def list_regions() -> list[RegionOption]:
+    """Supported countries, by name."""
+    return sorted(
+        (
+            RegionOption(country=r.country, name=r.name, currency=r.currency)
+            for r in REGIONS.values()
+        ),
+        key=lambda o: o.name,
+    )
 
 
 @allergens_router.get("/allergens", operation_id="listAllergens")

@@ -27,7 +27,7 @@ from larder_api.chat.context import day_lines, latest_plan, money, plan_stats, s
 from larder_api.chat.scope import ChatScope
 from larder_api.schemas import Currency, OutcomeEvent, RecipeEvent
 from larder_core.meals import SLOT_ORDER, Slot
-from larder_core.prices import convert
+from larder_core.regions import local_price, region_for
 from larder_db import models as db
 from larder_llm.agent import Handler, ToolOutcome
 from larder_llm.schemas import (
@@ -275,13 +275,19 @@ async def _meal_facts(
         )
     ).all()
     prefs = await session.get(db.Preferences, user_id)
-    currency = CURRENCIES.get(plan.currency, "GBP")
+    user = await session.get(db.User, user_id)
+    country = user.country if user is not None else None
+    currency = CURRENCIES.get(plan.currency, region_for(country).currency)
     cost = 0.0
     for line in recipe.ingredients:
         if line.food_id is None or line.food_id not in info or recipe.servings is None:
             continue
         grams = planning.portion_grams(line.grams, recipe.servings, info[line.food_id].staple)
-        cost += grams * meal.portions * convert(info[line.food_id].price.pence_per_kg, currency)
+        food = foods[line.food_id]
+        per_kg = local_price(
+            info[line.food_id].price.pence_per_kg, food.category, country, currency
+        )
+        cost += grams * meal.portions * per_kg
     facts: dict[str, Any] = {
         "slot": meal.slot,
         "recipe_id": recipe.id,

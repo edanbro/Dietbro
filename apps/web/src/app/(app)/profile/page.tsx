@@ -5,6 +5,7 @@ import { AllergiesForm } from "@/components/profile/allergies-form";
 import { BodyForm } from "@/components/profile/body-form";
 import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
+import { RegionForm } from "@/components/profile/region-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -14,6 +15,7 @@ const SECTIONS = [
   { id: "allergies", title: "Allergies", body: <AllergiesForm /> },
   { id: "preferences", title: "Preferences", body: <PreferencesForm /> },
   { id: "body", title: "Body stats", body: <BodyForm /> },
+  { id: "region", title: "Region", body: <RegionForm /> },
   { id: "account", title: "Your data", body: <AccountControls /> },
 ];
 

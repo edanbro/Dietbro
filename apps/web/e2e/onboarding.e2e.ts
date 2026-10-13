@@ -26,6 +26,12 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/setup");
 
+    // 0. Region: pick one explicitly (the guess depends on the test machine).
+    await expect(page.getByRole("heading", { name: "Where are you?" })).toBeVisible();
+    await page.getByLabel("Country", { exact: true }).selectOption("IE");
+    await expect(page.getByText("estimated for Ireland")).toBeVisible();
+    await page.getByRole("button", { name: "Save region" }).click();
+
     // 1. Body stats are optional.
     await expect(page.getByRole("heading", { name: "About you" })).toBeVisible();
     await page.getByRole("button", { name: "Skip" }).click();

@@ -14,9 +14,11 @@ import {
   type Receipt,
   useReceipts,
   useSubmitReceiptText,
+  useMe,
   useUploadReceiptImage,
 } from "@/lib/api/hooks";
 import { localISODate, shortDate } from "@/lib/dates";
+import { currencySymbol } from "@/lib/region";
 
 export const MAX_PHOTO_BYTES = 8_000_000;
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -113,6 +115,8 @@ function PhotoForm({ purchasedOn, onQueued }: Form) {
 function TextForm({ purchasedOn, onQueued }: Form) {
   const [text, setText] = useState("");
   const submit = useSubmitReceiptText();
+  const { data: me } = useMe();
+  const symbol = currencySymbol(me?.region.currency ?? "GBP");
 
   function send(e: React.FormEvent) {
     e.preventDefault();
@@ -130,7 +134,7 @@ function TextForm({ purchasedOn, onQueued }: Form) {
           onChange={(e) => setText(e.target.value)}
           maxLength={20_000}
           rows={8}
-          placeholder={"Paste an online order or e-receipt, e.g.\nSEMI SKMD MILK 4PT   £1.45"}
+          placeholder={`Paste an online order or e-receipt, e.g.\nSEMI SKMD MILK 2L   ${symbol}1.45`}
           className="min-h-40 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         />
       </div>

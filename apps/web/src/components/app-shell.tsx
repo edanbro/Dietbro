@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useRegionSync } from "@/components/region-sync";
 import { useMe } from "@/lib/api/hooks";
 import { APP_NAME } from "@/lib/brand";
 
@@ -38,6 +39,7 @@ function CountBadge({ n }: { n: number }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: me } = useMe();
+  useRegionSync(me, pathname.startsWith("/setup"));
   const expiring = me?.profile.expiring_soon ?? 0;
   return (
     <div className="flex min-h-dvh flex-col">

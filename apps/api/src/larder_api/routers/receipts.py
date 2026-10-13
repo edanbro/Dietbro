@@ -5,7 +5,7 @@ Status flow: queued -> processing -> ready | failed; ready -> confirmed. Every q
 filtered by the signed-in user; other users' uploads and lines are 404s.
 """
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
@@ -32,6 +32,7 @@ from larder_api.schemas import (
     ReceiptTextIn,
 )
 from larder_api.settings import Settings, get_settings
+from larder_core.regions import local_today
 from larder_core.shelf_life import suggest_expiry
 from larder_db.models import Food, ReceiptLine, ReceiptUpload, User
 
@@ -174,7 +175,7 @@ async def upload_image(
         user_id=user.id,
         source="image",
         status="queued",
-        purchased_on=purchased_on or now.astimezone(UTC).date(),
+        purchased_on=purchased_on or local_today(user.timezone, now),
         image=data,
         image_type=kind,
         image_bytes=len(data),
@@ -204,7 +205,7 @@ async def submit_text(
         user_id=user.id,
         source="text",
         status="queued",
-        purchased_on=body.purchased_on or now.astimezone(UTC).date(),
+        purchased_on=body.purchased_on or local_today(user.timezone, now),
         text=body.text,
     )
     session.add(upload)

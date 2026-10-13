@@ -196,6 +196,12 @@ BRAND_FOODS: dict[str, str] = {
     "anchor": "butter",
     "muller": "yogurt",
     "quaker": "oats",
+    # Irish brands
+    "kerrygold": "butter",
+    "avonmore": "milk",
+    "brennans": "bread",
+    "clonakilty": "black pudding",
+    "glenisk": "yogurt",
 }
 # Store brands, tax flags and marketing words: never which food it is.
 NOISE: frozenset[str] = frozenset(
@@ -224,6 +230,16 @@ NOISE: frozenset[str] = frozenset(
         "kroger",
         "ks",
         "kirkland",
+        # Irish shops
+        "dunnes",
+        "stores",
+        "supervalu",
+        "centra",
+        "spar",
+        "eurospar",
+        "londis",
+        "mace",
+        "daybreak",
         "gg",
         "finest",
         "everyday",
@@ -240,6 +256,8 @@ NOISE: frozenset[str] = frozenset(
         "organic",
         "org",
         "british",
+        "irish",
+        "todays",
         "fresh",
         "loose",
         "ripe",

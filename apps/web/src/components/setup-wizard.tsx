@@ -9,9 +9,11 @@ import { AllergiesForm } from "@/components/profile/allergies-form";
 import { BodyForm } from "@/components/profile/body-form";
 import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
+import { RegionForm } from "@/components/profile/region-form";
 import { Button } from "@/components/ui/button";
 
 export const STEPS = [
+  { key: "region", title: "Where are you?", optional: false },
   { key: "body", title: "About you", optional: true },
   { key: "goals", title: "Your goals", optional: false },
   { key: "allergies", title: "Allergies", optional: false },
@@ -43,6 +45,7 @@ export function SetupWizard() {
         <h1 className="text-2xl font-semibold tracking-tight">{step.title}</h1>
       </div>
 
+      {step.key === "region" && <RegionForm onSaved={next} />}
       {step.key === "body" && <BodyForm onSaved={next} />}
       {step.key === "goals" && <GoalsForm onSaved={next} />}
       {step.key === "allergies" && <AllergiesForm onSaved={next} />}

@@ -11,6 +11,9 @@ import { ChatProblemError, isChatProblem } from "./sse";
 
 export type Schemas = components["schemas"];
 export type Me = Schemas["Me"];
+export type Region = Schemas["RegionOut"];
+export type RegionIn = Schemas["RegionIn"];
+export type RegionOption = Schemas["RegionOption"];
 export type GoalsIn = Schemas["GoalsIn"];
 export type BodyIn = Schemas["BodyIn"];
 export type BodyOut = Schemas["BodyOut"];
@@ -61,6 +64,7 @@ export const keys = {
   receipt: (id: number) => ["receipts", id] as const,
   allergens: ["allergens"] as const,
   cuisines: ["cuisines"] as const,
+  regions: ["regions"] as const,
   food: (id: number) => ["food", id] as const,
   search: (q: string) => ["foods", "search", q] as const,
   currentPlan: ["plans", "current"] as const,
@@ -187,6 +191,30 @@ export function useSavePreferences() {
     async (body: PreferencesIn) => unwrap(await api.PUT("/me/preferences", { body })),
     keys.preferences,
   );
+}
+
+export function useRegions() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.regions,
+    queryFn: async () => unwrap(await api.GET("/regions")),
+    staleTime: Infinity,
+  });
+}
+
+/** Saving a region can switch the goals' currency, and prices everywhere follow it. */
+export function useSaveRegion() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RegionIn) => unwrap(await api.PUT("/me/region", { body })),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.me }),
+        qc.invalidateQueries({ queryKey: keys.goals }),
+      ]);
+    },
+  });
 }
 
 export function useSaveAllergies() {

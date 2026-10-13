@@ -35,11 +35,30 @@ class ProfileStatus(BaseModel):
     expiring_soon: int = 0  # pantry items past or within 3 days of their use-by date
 
 
+class RegionOption(BaseModel):
+    country: str  # ISO 3166-1 alpha-2
+    name: str
+    currency: Currency
+
+
+class RegionOut(RegionOption):
+    locale: str  # BCP 47, for number and date formatting
+    timezone: str  # IANA
+    saved: bool  # False: nothing saved yet, these are the defaults (GB)
+
+
+class RegionIn(BaseModel):
+    country: str = Field(pattern=r"^[A-Za-z]{2}$")
+    timezone: str | None = Field(default=None, max_length=64)
+    locale: str | None = Field(default=None, pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+
+
 class Me(BaseModel):
     id: int
     created_at: datetime
     profile: ProfileStatus
     setup_complete: bool
+    region: RegionOut
 
 
 class GoalsIn(BaseModel):

@@ -103,6 +103,63 @@
         ]
       }
     },
+    "/me/region": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Region",
+        "description": "Where the user lives: currency, price estimates, dates. Moving to a region with another\ncurrency also switches the goals' currency (the budget amount is kept).",
+        "operationId": "putRegion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/export": {
       "get": {
         "tags": [
@@ -502,6 +559,32 @@
                   },
                   "type": "array",
                   "title": "Response Listcuisines"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/regions": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Regions",
+        "description": "Supported countries, by name.",
+        "operationId": "listRegions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegionOption"
+                  },
+                  "type": "array",
+                  "title": "Response Listregions"
                 }
               }
             }
@@ -1142,10 +1225,10 @@
                   "type": "null"
                 }
               ],
-              "description": "The user's local date (default UTC)",
+              "description": "The user's local date (default: today in their time zone)",
               "title": "Today"
             },
-            "description": "The user's local date (default UTC)"
+            "description": "The user's local date (default: today in their time zone)"
           }
         ],
         "responses": {
@@ -3615,6 +3698,9 @@
           "setup_complete": {
             "type": "boolean",
             "title": "Setup Complete"
+          },
+          "region": {
+            "$ref": "#/components/schemas/RegionOut"
           }
         },
         "type": "object",
@@ -3622,7 +3708,8 @@
           "id",
           "created_at",
           "profile",
-          "setup_complete"
+          "setup_complete",
+          "region"
         ],
         "title": "Me"
       },
@@ -5284,6 +5371,115 @@
           "grams"
         ],
         "title": "RecipeIngredientOut"
+      },
+      "RegionIn": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country"
+        ],
+        "title": "RegionIn"
+      },
+      "RegionOption": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "name",
+          "currency"
+        ],
+        "title": "RegionOption"
+      },
+      "RegionOut": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "saved": {
+            "type": "boolean",
+            "title": "Saved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "name",
+          "currency",
+          "locale",
+          "timezone",
+          "saved"
+        ],
+        "title": "RegionOut"
       },
       "ReplanRequest": {
         "properties": {

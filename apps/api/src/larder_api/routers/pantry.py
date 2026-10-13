@@ -1,7 +1,7 @@
 """Pantry CRUD and expiry alerts. Every query is filtered by the signed-in user; other users'
 items are 404s. Receipt intake (adding many items from a receipt) is routers/receipts.py."""
 
-from datetime import UTC, date, timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -22,6 +22,7 @@ from larder_api.schemas import (
     Problems,
 )
 from larder_core.quantities import grams_for
+from larder_core.regions import local_today
 from larder_core.units import parse_measure
 from larder_db.models import Food, PantryItem, User
 
@@ -99,12 +100,14 @@ async def list_expiring(
     session: Session,
     clock: Annotated[Clock, Depends(get_clock)],
     days: Annotated[int, Query(ge=0, le=60)] = EXPIRING_DAYS,
-    today: Annotated[date | None, Query(description="The user's local date (default UTC)")] = None,
+    today: Annotated[
+        date | None, Query(description="The user's local date (default: today in their time zone)")
+    ] = None,
 ) -> ExpiringPantry:
     """Expiry alerts: items with something left whose use-by date is before `today` + `days`
     (so days=3 means today, tomorrow and the day after), expired ones included, soonest
     first."""
-    today = today or clock().astimezone(UTC).date()
+    today = today or local_today(user.timezone, clock())
     rows = await session.scalars(
         select(PantryItem)
         .where(

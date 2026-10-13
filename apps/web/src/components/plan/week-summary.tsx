@@ -4,6 +4,8 @@ import { TriangleAlertIcon } from "lucide-react";
 import type { Plan } from "@/lib/api/hooks";
 import { formatBand, formatGrams, formatMoney, formatNumber } from "@/lib/format";
 
+import { PriceNote } from "@/components/price-note";
+
 import { MacroBar } from "./macro-bars";
 
 function Stat({
@@ -83,9 +85,7 @@ export function WeekSummary({ plan }: { plan: Plan }) {
         value={plan.week_totals.protein_g}
         band={plan.targets.weekly.protein_g}
       />
-      <p className="text-xs text-muted-foreground">
-        Costs are estimates from typical UK supermarket prices.
-      </p>
+      <PriceNote />
     </section>
   );
 }

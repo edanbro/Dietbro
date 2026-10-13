@@ -28,6 +28,14 @@ export const ME: Me = {
     expiring_soon: 0,
   },
   setup_complete: true,
+  region: {
+    country: "GB",
+    name: "United Kingdom",
+    currency: "GBP",
+    locale: "en-GB",
+    timezone: "Europe/London",
+    saved: true,
+  },
 };
 
 export function meal(

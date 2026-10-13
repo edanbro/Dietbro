@@ -1,30 +1,21 @@
 /** Display formatting shared by the plan, shopping and recipe screens. */
 
+import { numberFormat } from "@/lib/locale";
+
 export type Currency = "GBP" | "EUR" | "USD";
 export type Band = { min?: number | null; max?: number | null };
 export type BandStatus = "below" | "within" | "above" | "none";
 
-const NUMBER = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
-
 /** 1050 -> "1,050" */
 export function formatNumber(n: number): string {
-  return NUMBER.format(n);
+  return numberFormat({ maximumFractionDigits: 0 }).format(n);
 }
-
-const money = new Map<Currency, Intl.NumberFormat>();
 
 /** Minor units (pence, cents) -> "£4.20", "€4.20", "$4.20". */
 export function formatMoney(minor: number, currency: Currency): string {
-  let fmt = money.get(currency);
-  if (!fmt) {
-    fmt = new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency,
-      currencyDisplay: "narrowSymbol",
-    });
-    money.set(currency, fmt);
-  }
-  return fmt.format(minor / 100);
+  return numberFormat({ style: "currency", currency, currencyDisplay: "narrowSymbol" }).format(
+    minor / 100,
+  );
 }
 
 /** 450 -> "450 g", 1250 -> "1.3 kg", 2000 -> "2 kg". */

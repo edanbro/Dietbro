@@ -1,0 +1,15 @@
+Dunnes Stores
+Main Street
+VAT No IE1234567X
+
+KERRYGOLD BUTTER 227G          €3.29
+AVONMORE MILK 2L               €2.15
+BRENNANS WHITE BREAD 800G      €2.30
+DS IRISH RASHERS 200G          €2.99
+FREE RANGE EGGS 12             €4.49
+ROOSTER POTATOES 2.5KG         €3.49
+DS CARROTS 1KG                 €0.99
+SUBTOTAL                      €19.70
+VALUE CLUB SAVING             -€1.00
+TOTAL                         €18.70
+CARD                          €18.70

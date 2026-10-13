@@ -5,6 +5,7 @@ import { ArrowLeftIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 
 import { ErrorAlert } from "@/components/form-bits";
+import { PriceNote } from "@/components/price-note";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -192,10 +193,7 @@ function ListView({ plan }: { plan: Plan }) {
           </ul>
         </section>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        Amounts cover the whole plan after what&apos;s in your pantry. Prices are estimates from
-        typical UK supermarket prices.
-      </p>
+      <PriceNote>Amounts cover the whole plan after what&apos;s in your pantry.</PriceNote>
     </div>
   );
 }

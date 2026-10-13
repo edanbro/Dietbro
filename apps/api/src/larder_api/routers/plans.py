@@ -45,6 +45,7 @@ from larder_api.schemas import (
 from larder_api.settings import Settings, get_settings
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.quantities import Portion
+from larder_core.regions import local_today
 from larder_db.models import Food, FoodPortion, MealPlan, PlanMeal, ShoppingItem, User
 
 logger = logging.getLogger(__name__)
@@ -122,8 +123,8 @@ def get_replan_planner(settings: Annotated[Settings, Depends(get_settings)]) -> 
     )
 
 
-def _utc_today() -> date:
-    return datetime.now(UTC).date()
+def _today(user: User) -> date:
+    return local_today(user.timezone, datetime.now(UTC))
 
 
 def plan_out(row: MealPlan) -> PlanOut:
@@ -205,7 +206,7 @@ async def create_plan(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> PlanOut:
     started = time.perf_counter()
-    today = _utc_today()
+    today = _today(user)
     start = body.start or today
     if not today - timedelta(days=1) <= start <= today + timedelta(days=7):
         raise HTTPException(

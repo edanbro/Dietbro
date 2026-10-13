@@ -41,7 +41,8 @@ from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
 from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
-from larder_core.prices import Currency, Price, convert, price
+from larder_core.prices import PER_GBP, Currency, Price, price
+from larder_core.regions import local_price
 from larder_core.tagging import (
     FORBIDDEN,
     Diet,
@@ -73,6 +74,7 @@ from larder_solver import (
     Status,
     Targets,
     Violation,
+    Weights,
     check_problem,
     diagnose,
     greedy,
@@ -385,6 +387,7 @@ class UserInputs:
     preferences: db.Preferences
     body: db.BodyProfile | None = None
     pantry: Sequence[db.PantryItem] = ()  # with .food loaded
+    country: str | None = None  # prices are estimated for this region (larder_core.regions)
 
 
 async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
@@ -415,6 +418,7 @@ async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
         preferences=preferences,
         body=await session.get(db.BodyProfile, user.id),
         pantry=pantry,
+        country=user.country,
     )
 
 
@@ -481,8 +485,17 @@ def taste_of(preferences: db.Preferences) -> TastePrefs:
     )
 
 
-def _priced(f: Food, currency: Currency) -> Food:
-    return replace(f, price_per_kg=convert(f.price_per_kg, currency))
+def _priced(f: Food, currency: Currency, country: str | None) -> Food:
+    """A catalogue food (GBP pence/kg, UK estimate) priced for the user's region and currency."""
+    return replace(f, price_per_kg=local_price(f.price_per_kg, f.category, country, currency))
+
+
+def weights_for(currency: Currency) -> Weights:
+    """The objective weights with their money terms in `currency` minor units, so a repeat or a
+    snack is worth about the same to a user whatever they pay in (GBP: the defaults)."""
+    w, rate = Weights(), PER_GBP[currency]
+    money = ("preference", "pantry", "repeat", "optional_meal", "macro", "churn")
+    return replace(w, **{name: round(getattr(w, name) * rate) for name in money})
 
 
 type Cell = tuple[int, Slot]
@@ -506,14 +519,15 @@ def make_problem(
     with the user's `private` recipes, then (replans) `constrain` with the fixed state."""
     pool = catalog.merged(private)
     currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
-    foods = {fid: _priced(f, currency) for fid, f in pool.catalog.foods.items()}
+    foods = {fid: _priced(f, currency, inputs.country) for fid, f in pool.catalog.foods.items()}
     lots: list[Lot] = []
     for item in inputs.pantry:
         expires = (item.expires_on - start).days if item.expires_on else None
         if expires is not None and expires < 0:
             continue
         if item.food_id not in foods:
-            foods[item.food_id] = _priced(solver_food(item.food, food_info(item.food)), currency)
+            basis = solver_food(item.food, food_info(item.food))
+            foods[item.food_id] = _priced(basis, currency, inputs.country)
         lots.append(Lot(item.food_id, math.floor(item.grams), expires))
 
     targets = targets_from(inputs.goals, days)
@@ -554,6 +568,7 @@ def make_problem(
         profile=profile,
         pantry=tuple(lots),
         budget=budget,
+        weights=weights_for(currency),
     )
     return constrain(problem, inputs, pool, choices=choices or {}, empty=empty, extra=extra or {})
 
@@ -582,7 +597,7 @@ def constrain(
         recipes[rid] = replace(recipe, preference=preference(recipe, prefs))
         for i in recipe.ingredients:
             if i.food_id not in foods and i.food_id in pool.catalog.foods:
-                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], currency)
+                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], currency, inputs.country)
     out = replace(
         problem,
         recipes=recipes,

@@ -13,7 +13,7 @@ import {
 } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { type GoalsIn, useBody, useGoals, useSaveGoals } from "@/lib/api/hooks";
+import { type GoalsIn, useBody, useGoals, useMe, useSaveGoals } from "@/lib/api/hooks";
 
 type Goal = NonNullable<GoalsIn["goal"]>;
 type FormState = {
@@ -36,6 +36,7 @@ const GOALS: { value: Goal; label: string }[] = [
 export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
   const { data: saved } = useGoals();
   const { data: body } = useBody();
+  const { data: me } = useMe();
   const save = useSaveGoals();
   const [form, setForm] = useState<FormState | null>(null);
 
@@ -48,7 +49,7 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
       saved?.weekly_budget_minor === null || saved?.weekly_budget_minor === undefined
         ? ""
         : String(saved.weekly_budget_minor / 100),
-    currency: saved?.currency ?? "GBP",
+    currency: saved?.currency ?? me?.region.currency ?? "GBP",
     calorie_floor: fromNumber(saved?.calorie_floor ?? 1200),
   };
   const set = (patch: Partial<FormState>) => setForm({ ...current, ...patch });
