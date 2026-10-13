@@ -458,6 +458,7 @@ class ShoppingItemOut(BaseModel):
     grams: int
     cost_minor: int = Field(description="share of total_minor; lines sum exactly to the total")
     checked: bool
+    stocked: bool = Field(default=False, description="bought and moved into the pantry")
     staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
     # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
     approx_units: str | None = None
@@ -472,6 +473,28 @@ class ShoppingListOut(BaseModel):
 
 
 class ShoppingItemPatch(BaseModel):
+    checked: bool
+
+
+class StockIn(BaseModel):
+    """Lines to move into the pantry; default: every ticked line not moved yet."""
+
+    food_ids: list[int] | None = Field(default=None, max_length=500)
+
+
+class ShoppingExtraIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class ShoppingExtraPatch(BaseModel):
+    checked: bool
+
+
+class ShoppingExtraOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
     checked: bool
 
 

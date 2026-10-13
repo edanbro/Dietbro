@@ -472,9 +472,24 @@ class ShoppingItem(Base):
     cost_minor: Mapped[int] = mapped_column(Integer)
     staple: Mapped[bool] = mapped_column(Boolean, default=False)
     checked: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Bought and moved into the pantry (POST /plans/{id}/shopping/stock); kept across replans.
+    stocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     plan: Mapped[MealPlan] = relationship(back_populates="shopping")
     food: Mapped[Food] = relationship()
+
+
+class ShoppingExtra(Base):
+    """Something the user wants on their shopping list that no plan needs ("bin bags"). Per
+    user, not per plan, so it survives replans until bought and cleared."""
+
+    __tablename__ = "shopping_extras"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    checked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 # --- chat and LLM layer (M4) ------------------------------------------------------------------

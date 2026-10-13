@@ -1981,6 +1981,258 @@
         }
       }
     },
+    "/plans/{plan_id}/shopping/stock": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Stock Shopping Items",
+        "description": "Move bought lines into the pantry (default: every ticked line not moved yet), in grams,\nwith a suggested use-by date. Each line moves once; staples are never moved.",
+        "operationId": "stockShoppingItems",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PantryItemOut"
+                  },
+                  "title": "Response Stockshoppingitems"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shopping/extras": {
+      "get": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "List Extras",
+        "operationId": "listShoppingExtras",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShoppingExtraOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listshoppingextras"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Add Extra",
+        "operationId": "addShoppingExtra",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingExtraIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingExtraOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Clear Ticked",
+        "description": "Remove the items ticked off (bought).",
+        "operationId": "clearTickedShoppingExtras",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/shopping/extras/{extra_id}": {
+      "patch": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Patch Extra",
+        "operationId": "patchShoppingExtra",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Extra Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingExtraPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingExtraOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Delete Extra",
+        "operationId": "deleteShoppingExtra",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Extra Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{recipe_id}": {
       "get": {
         "tags": [
@@ -5846,6 +6098,57 @@
         ],
         "title": "Sex"
       },
+      "ShoppingExtraIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ShoppingExtraIn"
+      },
+      "ShoppingExtraOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "checked"
+        ],
+        "title": "ShoppingExtraOut"
+      },
+      "ShoppingExtraPatch": {
+        "properties": {
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked"
+        ],
+        "title": "ShoppingExtraPatch"
+      },
       "ShoppingItemOut": {
         "properties": {
           "food_id": {
@@ -5879,6 +6182,12 @@
           "checked": {
             "type": "boolean",
             "title": "Checked"
+          },
+          "stocked": {
+            "type": "boolean",
+            "title": "Stocked",
+            "description": "bought and moved into the pantry",
+            "default": false
           },
           "staple": {
             "type": "boolean",
@@ -6117,6 +6426,28 @@
           "text"
         ],
         "title": "StatusEvent"
+      },
+      "StockIn": {
+        "properties": {
+          "food_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "StockIn",
+        "description": "Lines to move into the pantry; default: every ticked line not moved yet."
       },
       "SuggestedTargets": {
         "properties": {

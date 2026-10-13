@@ -30,6 +30,7 @@ EXPORTED: dict[str, Rows] = {
     "preferences": lambda e: [e["preferences"]],
     "allergies": lambda e: [e["allergies"]],
     "pantry_items": lambda e: e["pantry"],
+    "shopping_extras": lambda e: e["shopping_extras"],
     "meal_plans": lambda e: e["plans"],
     "chat_threads": lambda e: e["threads"],
     "chat_messages": lambda e: [m for t in e["threads"] for m in t["messages"]],
@@ -122,7 +123,8 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         api_messages=[{"role": "user", "content": "had a pizza"}],
     )
     pantry = db.PantryItem(user_id=uid, food_id=ONION, grams=500, quantity=500, unit="g")
-    session.add_all([meal, line, message, pantry])
+    extra = db.ShoppingExtra(user_id=uid, name="bin bags", checked=False)
+    session.add_all([meal, line, message, pantry, extra])
     await session.flush()
     craving = db.Craving(
         user_id=uid,
@@ -191,6 +193,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "preferences": uid,
         "allergies": uid,
         "pantry_items": pantry.id,
+        "shopping_extras": extra.id,
         "meal_plans": plan.id,
         "chat_threads": thread.id,
         "chat_messages": message.id,

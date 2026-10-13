@@ -549,3 +549,39 @@ async def test_fibre_sugars_sat_fat_and_salt_are_reported(
     assert plan["week_totals"]["salt_g"] == round(
         sum(d["totals"]["salt_g"] or 0 for d in plan["days"]), 1
     )
+
+
+async def test_ticked_lines_move_into_the_pantry_once(api: httpx.AsyncClient, auth: Auth) -> None:
+    await set_up(api, auth)
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+    shopping = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
+    rice = next(i for i in shopping["items"] if i["food_id"] == RICE)
+    await api.patch(f"/plans/{plan['id']}/shopping/{RICE}", json={"checked": True}, headers=auth())
+
+    moved = await api.post(f"/plans/{plan['id']}/shopping/stock", json={}, headers=auth())
+    again = await api.post(f"/plans/{plan['id']}/shopping/stock", json={}, headers=auth())
+    pantry = (await api.get("/pantry", headers=auth())).json()
+    after = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
+
+    assert moved.status_code == 201
+    assert [(i["food"]["id"], i["grams"], i["source"]) for i in moved.json()] == [
+        (RICE, rice["grams"], "shopping")
+    ]
+    assert again.json() == []  # each line moves once
+    assert [i["food"]["id"] for i in pantry] == [RICE]
+    assert next(i for i in after["items"] if i["food_id"] == RICE)["stocked"] is True
+
+
+async def test_named_lines_can_be_moved_without_ticking(api: httpx.AsyncClient, auth: Auth) -> None:
+    await set_up(api, auth)
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+
+    moved = await api.post(
+        f"/plans/{plan['id']}/shopping/stock", json={"food_ids": [RICE]}, headers=auth()
+    )
+    other = await api.post(
+        f"/plans/{plan['id']}/shopping/stock", json={"food_ids": [RICE]}, headers=auth("user_b")
+    )
+
+    assert [i["food"]["id"] for i in moved.json()] == [RICE]
+    assert other.status_code == 404

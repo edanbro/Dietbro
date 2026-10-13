@@ -4,7 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from larder_api import __version__, health
 from larder_api.chat.gate import ChatRefused, problem_response
 from larder_api.resources import lifespan
-from larder_api.routers import chat, foods, pantry, plans, profile, receipts, recipes
+from larder_api.routers import (
+    chat,
+    foods,
+    pantry,
+    plans,
+    profile,
+    receipts,
+    recipes,
+    shopping,
+)
 from larder_api.settings import get_settings
 from larder_core.brand import APP_NAME
 
@@ -26,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(receipts.router)
     app.include_router(pantry.router)
     app.include_router(plans.router)
+    app.include_router(shopping.router)
     app.include_router(recipes.router)
     app.include_router(chat.router)
     return app

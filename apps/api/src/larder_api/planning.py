@@ -1020,6 +1020,7 @@ def save_plan(
                 cost_minor=line.cost_minor,
                 staple=line.staple,
                 checked=old is not None and old.checked and line.grams <= old.grams,
+                stocked_at=old.stocked_at if old is not None and line.grams <= old.grams else None,
             )
         )
     session.add(row)

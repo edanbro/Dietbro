@@ -115,6 +115,7 @@ export function item(
     grams: 500,
     cost_minor: 100,
     checked: false,
+    stocked: false,
     staple: false,
     approx_units: null,
     ...overrides,

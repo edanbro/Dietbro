@@ -623,6 +623,67 @@ export interface paths {
         patch: operations["patchShoppingItem"];
         trace?: never;
     };
+    "/plans/{plan_id}/shopping/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stock Shopping Items
+         * @description Move bought lines into the pantry (default: every ticked line not moved yet), in grams,
+         *     with a suggested use-by date. Each line moves once; staples are never moved.
+         */
+        post: operations["stockShoppingItems"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shopping/extras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Extras */
+        get: operations["listShoppingExtras"];
+        put?: never;
+        /** Add Extra */
+        post: operations["addShoppingExtra"];
+        /**
+         * Clear Ticked
+         * @description Remove the items ticked off (bought).
+         */
+        delete: operations["clearTickedShoppingExtras"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shopping/extras/{extra_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Extra */
+        delete: operations["deleteShoppingExtra"];
+        options?: never;
+        head?: never;
+        /** Patch Extra */
+        patch: operations["patchShoppingExtra"];
+        trace?: never;
+    };
     "/recipes/{recipe_id}": {
         parameters: {
             query?: never;
@@ -2035,6 +2096,25 @@ export interface components {
          * @enum {string}
          */
         Sex: "female" | "male";
+        /** ShoppingExtraIn */
+        ShoppingExtraIn: {
+            /** Name */
+            name: string;
+        };
+        /** ShoppingExtraOut */
+        ShoppingExtraOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Checked */
+            checked: boolean;
+        };
+        /** ShoppingExtraPatch */
+        ShoppingExtraPatch: {
+            /** Checked */
+            checked: boolean;
+        };
         /** ShoppingItemOut */
         ShoppingItemOut: {
             /** Food Id */
@@ -2052,6 +2132,12 @@ export interface components {
             cost_minor: number;
             /** Checked */
             checked: boolean;
+            /**
+             * Stocked
+             * @description bought and moved into the pantry
+             * @default false
+             */
+            stocked: boolean;
             /**
              * Staple
              * @description store-cupboard item to check you have; no grams or cost
@@ -2141,6 +2227,14 @@ export interface components {
             type: "status";
             /** Text */
             text: string;
+        };
+        /**
+         * StockIn
+         * @description Lines to move into the pantry; default: every ticked line not moved yet.
+         */
+        StockIn: {
+            /** Food Ids */
+            food_ids?: number[] | null;
         };
         /** SuggestedTargets */
         SuggestedTargets: {
@@ -3702,6 +3796,183 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stockShoppingItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PantryItemOut"][];
+                };
+            };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listShoppingExtras: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingExtraOut"][];
+                };
+            };
+        };
+    };
+    addShoppingExtra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingExtraIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingExtraOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clearTickedShoppingExtras: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteShoppingExtra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                extra_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patchShoppingExtra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                extra_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingExtraPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingExtraOut"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -34,6 +34,7 @@ export type ReferenceIntakes = Schemas["ReferenceIntakes"];
 export type Violation = Schemas["ViolationOut"];
 export type ShoppingList = Schemas["ShoppingListOut"];
 export type ShoppingItem = Schemas["ShoppingItemOut"];
+export type ShoppingExtra = Schemas["ShoppingExtraOut"];
 export type Recipe = Schemas["RecipeDetail"];
 export type LoggedEntry = Schemas["MealLogOut"];
 export type ChatThread = Schemas["ThreadOut"];
@@ -68,6 +69,7 @@ export const keys = {
   allergens: ["allergens"] as const,
   cuisines: ["cuisines"] as const,
   regions: ["regions"] as const,
+  shoppingExtras: ["shopping", "extras"] as const,
   food: (id: number) => ["food", id] as const,
   search: (q: string, scope: string = "all") => ["foods", "search", q, scope] as const,
   currentPlan: ["plans", "current"] as const,
@@ -372,6 +374,72 @@ export function useTickShoppingItem(planId: number) {
       // This mutation still counts as running here, so 1 means "the last one".
       if (qc.isMutating({ mutationKey }) === 1) await qc.invalidateQueries({ queryKey: key });
     },
+  });
+}
+
+/** Move bought lines into the pantry (default: every ticked line not moved yet). */
+export function useStockShopping(planId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (foodIds?: number[]) =>
+      unwrap(
+        await api.POST("/plans/{plan_id}/shopping/stock", {
+          params: { path: { plan_id: planId } },
+          body: { food_ids: foodIds ?? null },
+        }),
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.shopping(planId) }),
+        qc.invalidateQueries({ queryKey: keys.pantry }),
+        qc.invalidateQueries({ queryKey: keys.me }),
+      ]);
+    },
+  });
+}
+
+export function useShoppingExtras() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.shoppingExtras,
+    queryFn: async () => unwrap(await api.GET("/shopping/extras")),
+  });
+}
+
+/** Add, tick, delete or clear the user's own shopping items (one hook, `action` picks). */
+export function useShoppingExtra() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      action:
+        | { kind: "add"; name: string }
+        | { kind: "tick"; id: number; checked: boolean }
+        | { kind: "delete"; id: number }
+        | { kind: "clear" },
+    ) => {
+      switch (action.kind) {
+        case "add":
+          return unwrap(await api.POST("/shopping/extras", { body: { name: action.name } }));
+        case "tick":
+          return unwrap(
+            await api.PATCH("/shopping/extras/{extra_id}", {
+              params: { path: { extra_id: action.id } },
+              body: { checked: action.checked },
+            }),
+          );
+        case "delete":
+          return unwrap(
+            await api.DELETE("/shopping/extras/{extra_id}", {
+              params: { path: { extra_id: action.id } },
+            }),
+          );
+        case "clear":
+          return unwrap(await api.DELETE("/shopping/extras"));
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.shoppingExtras }),
   });
 }
 

@@ -3,12 +3,12 @@ import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/api";
-import { makePlan, makeShoppingList } from "@/test/fixtures";
+import { item, makePlan, makeShoppingList } from "@/test/fixtures";
 
-import { aisle, groupByAisle, ShoppingPage } from "./shopping-page";
+import { aisle, groupByAisle, listText, ShoppingPage } from "./shopping-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -200,5 +200,80 @@ describe("ShoppingPage", () => {
 
     expect(await screen.findByText(/No plan yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Plan my week" })).toHaveAttribute("href", "/plan");
+  });
+});
+
+
+describe("Shopping to pantry and your own items", () => {
+  const ticked = makeShoppingList({
+    items: [
+      item({ food_id: 11, name: "Onions, raw", checked: true }),
+      item({ food_id: 12, name: "Spinach, raw", checked: true, stocked: true }),
+      item({ food_id: 13, name: "Rice, white" }),
+    ],
+  });
+
+  it("moves ticked lines not moved yet into the pantry", async () => {
+    const calls = setup({
+      "GET /plans/7/shopping": json(ticked),
+      "GET /shopping/extras": json([]),
+      "POST /plans/7/shopping/stock": json([{ id: 1 }], 201),
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Move 1 ticked to pantry" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/plans/7/shopping/stock")).toBe(true));
+    expect(calls.find((c) => c.path === "/plans/7/shopping/stock")?.body).toEqual({
+      food_ids: null,
+    });
+    expect(screen.getByText(/· in your pantry/)).toBeInTheDocument();
+  });
+
+  it("hides ticked lines on request", async () => {
+    setup({ "GET /plans/7/shopping": json(ticked), "GET /shopping/extras": json([]) });
+
+    fireEvent.click(await screen.findByRole("switch", { name: "Hide ticked" }));
+
+    expect(screen.queryByText("Onions, raw")).not.toBeInTheDocument();
+    expect(screen.getByText("Rice, white")).toBeInTheDocument();
+  });
+
+  it("adds your own items", async () => {
+    const calls = setup({
+      "GET /shopping/extras": json([{ id: 1, name: "foil", checked: false }]),
+      "POST /shopping/extras": json({ id: 2, name: "bin bags", checked: false }, 201),
+    });
+
+    expect(await screen.findByText("foil")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Add your own item"), { target: { value: "bin bags" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "POST" && c.path === "/shopping/extras")?.body).toEqual(
+        { name: "bin bags" },
+      ),
+    );
+  });
+
+  it("writes the list as text by aisle, without ticked or staple lines", () => {
+    const list = makeShoppingList({
+      items: [
+        item({ food_id: 1, name: "Onions, raw", category: "Vegetables and Vegetable Products", approx_units: "≈ 3 medium" }),
+        item({ food_id: 2, name: "Rice, white", category: "Cereal Grains and Pasta", grams: 1000 }),
+        item({ food_id: 3, name: "Spinach, raw", checked: true }),
+        item({ food_id: 4, name: "Salt", staple: true }),
+      ],
+    });
+
+    expect(listText(list, [{ id: 1, name: "foil", checked: false }])).toBe(
+      [
+        "Vegetables:",
+        "- Onions, raw (≈ 3 medium)",
+        "Grains & pasta:",
+        "- Rice, white (1 kg)",
+        "Also:",
+        "- foil",
+      ].join("\n"),
+    );
   });
 });

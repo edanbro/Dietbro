@@ -22,7 +22,7 @@ afterEach(() => vi.unstubAllGlobals());
 const render = renderWithClient;
 
 describe("AppShell", () => {
-  it("puts Plan first and Chat next in the bottom nav, and the logo opens the plan", () => {
+  it("puts Plan and Shopping first in the bottom nav, and the logo opens the plan", () => {
     render(<AppShell>content</AppShell>);
 
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -32,6 +32,7 @@ describe("AppShell", () => {
         .map((a) => [a.textContent, a.getAttribute("href")]),
     ).toEqual([
       ["Plan", "/plan"],
+      ["Shopping", "/plan/shopping"],
       ["Chat", "/chat"],
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
@@ -41,7 +42,7 @@ describe("AppShell", () => {
 
   it.each([
     ["/plan", "Plan"],
-    ["/plan/shopping", "Plan"],
+    ["/plan/shopping", "Shopping"],
     ["/chat", "Chat"],
     ["/pantry", "Pantry"],
     ["/profile", "Profile"],

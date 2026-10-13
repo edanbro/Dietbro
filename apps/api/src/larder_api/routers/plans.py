@@ -27,6 +27,7 @@ from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
+from larder_api.routers.pantry import out as pantry_out
 from larder_api.schemas import (
     ChatProblem,
     DayOut,
@@ -34,6 +35,7 @@ from larder_api.schemas import (
     EatenOut,
     MacrosOut,
     OutcomeOut,
+    PantryItemOut,
     PlanOut,
     PlanRequest,
     Problems,
@@ -41,12 +43,22 @@ from larder_api.schemas import (
     ShoppingItemOut,
     ShoppingItemPatch,
     ShoppingListOut,
+    StockIn,
 )
 from larder_api.settings import Settings, get_settings
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.quantities import Portion
 from larder_core.regions import local_today
-from larder_db.models import Food, FoodPortion, MealPlan, PlanMeal, ShoppingItem, User
+from larder_core.shelf_life import suggest_expiry
+from larder_db.models import (
+    Food,
+    FoodPortion,
+    MealPlan,
+    PantryItem,
+    PlanMeal,
+    ShoppingItem,
+    User,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -372,6 +384,7 @@ async def _shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOu
             grams=s.grams,
             cost_minor=s.cost_minor,
             checked=s.checked,
+            stocked=s.stocked_at is not None,
             staple=s.staple,
             approx_units=None if s.staple else approx_units(s.grams, portions.get(s.food_id, [])),
         )
@@ -408,3 +421,57 @@ async def patch_shopping_item(
     await session.commit()
     out = await _shopping_out(session, await _load_plan(session, user, plan_id))
     return next(i for i in out.items if i.food_id == food_id)
+
+
+@router.post(
+    "/{plan_id}/shopping/stock",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="stockShoppingItems",
+    responses=_NOT_FOUND,
+)
+async def stock_shopping_items(
+    plan_id: int,
+    body: StockIn,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> list[PantryItemOut]:
+    """Move bought lines into the pantry (default: every ticked line not moved yet), in grams,
+    with a suggested use-by date. Each line moves once; staples are never moved."""
+    plan = await _load_plan(session, user, plan_id)
+    wanted = set(body.food_ids) if body.food_ids is not None else None
+    lines = [
+        s
+        for s in plan.shopping
+        if not s.staple
+        and s.stocked_at is None
+        and s.grams > 0
+        and (s.food_id in wanted if wanted is not None else s.checked)
+    ]
+    now = clock()
+    today = local_today(user.timezone, now)
+    foods = {
+        f.id: f
+        for f in await session.scalars(select(Food).where(Food.id.in_([s.food_id for s in lines])))
+    }
+    added: list[PantryItem] = []
+    for line in lines:
+        food = foods[line.food_id]
+        item = PantryItem(
+            user_id=user.id,
+            food_id=food.id,
+            grams=float(line.grams),
+            quantity=float(line.grams),
+            unit="g",
+            approx=False,
+            expires_on=suggest_expiry(today, food.description, food.category),
+            source="shopping",
+        )
+        session.add(item)
+        added.append(item)
+        line.checked = True
+        line.stocked_at = now
+    await session.commit()
+    for item in added:
+        await session.refresh(item, ["food", "created_at"])
+    return [pantry_out(i) for i in added]

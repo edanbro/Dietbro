@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   MessageCircleIcon,
   RefrigeratorIcon,
+  ShoppingCartIcon,
   UserIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,10 +18,18 @@ import { APP_NAME } from "@/lib/brand";
 
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
+  { href: "/plan/shopping", label: "Shopping", icon: ShoppingCartIcon },
   { href: "/chat", label: "Chat", icon: MessageCircleIcon },
   { href: "/pantry", label: "Pantry", icon: RefrigeratorIcon },
   { href: "/profile", label: "Profile", icon: UserIcon },
 ];
+
+/** The tab for a path: the longest matching href ("/plan/shopping" is Shopping, not Plan). */
+export function activeTab(pathname: string): string | undefined {
+  return NAV.map((n) => n.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
 
 /** Mobile-first shell: compact header, content column, thumb-reach bottom nav. */
 /** Count bubble on a nav icon (the pantry's food expiring within 3 days). */
@@ -58,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <ul className="mx-auto flex max-w-md">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const active = activeTab(pathname) === href;
             return (
               <li key={href} className="flex-1">
                 <Link

@@ -1,21 +1,35 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  PackageCheckIcon,
+  ShareIcon,
+  TriangleAlertIcon,
+  XIcon,
+} from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { ErrorAlert } from "@/components/form-bits";
 import { PriceNote } from "@/components/price-note";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   type Plan,
+  type ShoppingExtra,
   type ShoppingItem,
   type ShoppingList,
   useCurrentPlan,
+  useShoppingExtra,
+  useShoppingExtras,
   useShoppingList,
+  useStockShopping,
   useTickShoppingItem,
 } from "@/lib/api/hooks";
 import { dateRange } from "@/lib/dates";
@@ -95,6 +109,7 @@ function ItemRow({
         {amount ? (
           <span id={`${id}-amount`} className="text-xs text-muted-foreground">
             {amount}
+            {item.stocked ? " · in your pantry" : ""}
           </span>
         ) : null}
       </div>
@@ -138,6 +153,9 @@ function Total({ list }: { list: ShoppingList }) {
 function ListView({ plan }: { plan: Plan }) {
   const { data: list, isPending, error, refetch } = useShoppingList(plan.id);
   const tick = useTickShoppingItem(plan.id);
+  const stock = useStockShopping(plan.id);
+  const { data: extras } = useShoppingExtras();
+  const [hideTicked, setHideTicked] = useState(false);
 
   if (isPending) {
     return (
@@ -153,20 +171,53 @@ function ListView({ plan }: { plan: Plan }) {
   const toBuy = list.items.filter((i) => !i.staple);
   const staples = list.items.filter((i) => i.staple);
   const ticked = toBuy.filter((i) => i.checked).length;
+  const toStock = toBuy.filter((i) => i.checked && !i.stocked).length;
+  const shown = hideTicked ? toBuy.filter((i) => !i.checked) : toBuy;
 
   return (
     <div className="flex flex-col gap-5">
       <Total list={list} />
       {toBuy.length ? (
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          {ticked} of {toBuy.length} ticked
-        </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {ticked} of {toBuy.length} ticked
+            </p>
+            <div className="flex items-center gap-2">
+              <Switch id="hide-ticked" checked={hideTicked} onCheckedChange={setHideTicked} />
+              <Label htmlFor="hide-ticked" className="text-xs font-normal">
+                Hide ticked
+              </Label>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {toStock ? (
+              <Button
+                size="sm"
+                disabled={stock.isPending}
+                onClick={() =>
+                  stock.mutate(undefined, {
+                    onSuccess: (added) =>
+                      toast.success(
+                        `Moved ${added.length} ${added.length === 1 ? "item" : "items"} to your pantry`,
+                      ),
+                  })
+                }
+              >
+                <PackageCheckIcon aria-hidden />
+                Move {toStock} ticked to pantry
+              </Button>
+            ) : null}
+            <ShareButton list={list} extras={extras ?? []} />
+          </div>
+          <ErrorAlert error={stock.error} />
+        </div>
       ) : (
         <p className="py-4 text-center text-sm text-muted-foreground">
           Nothing to buy: your pantry covers this plan.
         </p>
       )}
-      {groupByAisle(toBuy).map(([name, items], i) => (
+      {groupByAisle(shown).map(([name, items], i) => (
         <section key={name} aria-labelledby={`aisle-${i}`} className="flex flex-col gap-2">
           <h2 id={`aisle-${i}`} className="text-sm font-semibold">
             {name}
@@ -193,8 +244,122 @@ function ListView({ plan }: { plan: Plan }) {
           </ul>
         </section>
       ) : null}
+      <Extras />
       <PriceNote>Amounts cover the whole plan after what&apos;s in your pantry.</PriceNote>
     </div>
+  );
+}
+
+/** The list as plain text, by aisle, for messaging apps or notes. */
+export function listText(list: ShoppingList, extras: ShoppingExtra[]): string {
+  const lines: string[] = [];
+  for (const [name, items] of groupByAisle(list.items.filter((i) => !i.staple && !i.checked))) {
+    lines.push(`${name}:`);
+    for (const i of items) {
+      lines.push(`- ${i.name}${i.approx_units ? ` (${i.approx_units})` : ` (${formatGrams(i.grams)})`}`);
+    }
+  }
+  const mine = extras.filter((e) => !e.checked);
+  if (mine.length) {
+    lines.push("Also:");
+    for (const e of mine) lines.push(`- ${e.name}`);
+  }
+  return lines.join("\n");
+}
+
+function ShareButton({ list, extras }: { list: ShoppingList; extras: ShoppingExtra[] }) {
+  async function share() {
+    const text = listText(list, extras);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Shopping list", text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      toast.success("Shopping list copied");
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return; // closed the share sheet
+      toast.error("Couldn't share the list");
+    }
+  }
+  return (
+    <Button size="sm" variant="outline" onClick={() => void share()}>
+      <ShareIcon aria-hidden />
+      Share
+    </Button>
+  );
+}
+
+/** Things you want that no recipe needs; kept until you clear them. */
+function Extras() {
+  const { data: extras } = useShoppingExtras();
+  const change = useShoppingExtra();
+  const [name, setName] = useState("");
+  const ticked = (extras ?? []).filter((e) => e.checked).length;
+  return (
+    <section aria-labelledby="extras" className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <h2 id="extras" className="text-sm font-semibold">
+          Your items
+        </h2>
+        {ticked ? (
+          <Button size="sm" variant="ghost" onClick={() => change.mutate({ kind: "clear" })}>
+            Clear {ticked} ticked
+          </Button>
+        ) : null}
+      </div>
+      {extras?.length ? (
+        <ul className="flex flex-col divide-y rounded-lg border">
+          {extras.map((e) => (
+            <li key={e.id} className="flex items-center gap-3 px-3 py-1.5">
+              <Checkbox
+                id={`extra-${e.id}`}
+                checked={e.checked}
+                onCheckedChange={(checked) =>
+                  change.mutate({ kind: "tick", id: e.id, checked: checked === true })
+                }
+              />
+              <Label
+                htmlFor={`extra-${e.id}`}
+                className={cn(
+                  "flex-1 font-normal",
+                  e.checked && "text-muted-foreground line-through",
+                )}
+              >
+                {e.name}
+              </Label>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Remove ${e.name}`}
+                onClick={() => change.mutate({ kind: "delete", id: e.id })}
+              >
+                <XIcon />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <form
+        className="flex gap-2"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          if (!name.trim()) return;
+          change.mutate({ kind: "add", name: name.trim() }, { onSuccess: () => setName("") });
+        }}
+      >
+        <Input
+          value={name}
+          onChange={(ev) => setName(ev.target.value)}
+          placeholder="Add something, e.g. bin bags"
+          aria-label="Add your own item"
+          maxLength={120}
+        />
+        <Button type="submit" variant="outline" disabled={!name.trim() || change.isPending}>
+          Add
+        </Button>
+      </form>
+    </section>
   );
 }
 

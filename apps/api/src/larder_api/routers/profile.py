@@ -61,6 +61,7 @@ from larder_db.models import (
     Preferences,
     ReceiptUpload,
     Recipe,
+    ShoppingExtra,
     User,
 )
 
@@ -237,6 +238,14 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "preferences": row(await session.get(Preferences, user.id), "user_id"),
         "allergies": row(await session.get(Allergies, user.id), "user_id"),
         "pantry": rows(pantry, "user_id"),
+        "shopping_extras": rows(
+            await session.scalars(
+                select(ShoppingExtra)
+                .where(ShoppingExtra.user_id == user.id)
+                .order_by(ShoppingExtra.id)
+            ),
+            "user_id",
+        ),
         "plans": [
             (row(p, "user_id") or {})
             | {"meals": rows(p.meals, "plan_id"), "shopping": rows(p.shopping, "plan_id")}
