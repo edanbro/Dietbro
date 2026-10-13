@@ -84,7 +84,7 @@ test("chat skips a dinner and logs an off-plan lunch, and the plan shows both", 
     // 2. The chat starts empty, in simple (offline) mode.
     await openChat(page);
     await expect(page.getByRole("note")).toContainText("Simple replies: no AI key");
-    await expect(page.getByText("Tell Larder what changed")).toBeVisible();
+    await expect(page.getByText("Tell Mealwright what changed")).toBeVisible();
 
     // 3. Skip tonight's dinner: a card says so, and the plan shows the skip.
     let log = await say(page, "skip dinner tonight");

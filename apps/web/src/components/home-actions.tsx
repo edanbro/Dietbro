@@ -4,13 +4,14 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { APP_NAME } from "@/lib/brand";
 
 export function HomeActions() {
   const { isLoaded, isSignedIn } = useAuth();
   if (isLoaded && isSignedIn) {
     return (
       <Link href="/plan" className={buttonVariants({ size: "lg" })}>
-        Open Larder
+        Open {APP_NAME}
       </Link>
     );
   }

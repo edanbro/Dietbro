@@ -6,11 +6,12 @@ from larder_api.chat.gate import ChatRefused, problem_response
 from larder_api.resources import lifespan
 from larder_api.routers import chat, foods, pantry, plans, profile, receipts, recipes
 from larder_api.settings import get_settings
+from larder_core.brand import APP_NAME
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="Larder API", version=__version__, lifespan=lifespan)
+    app = FastAPI(title=f"{APP_NAME} API", version=__version__, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

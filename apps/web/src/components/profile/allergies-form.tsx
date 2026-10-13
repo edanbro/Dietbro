@@ -17,6 +17,7 @@ import {
   useAllergies,
   useSaveAllergies,
 } from "@/lib/api/hooks";
+import { APP_NAME } from "@/lib/brand";
 
 type Allergen = NonNullable<AllergiesIn["allergens"]>[number];
 
@@ -53,7 +54,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Allergies">
       <p className="text-sm text-muted-foreground">
-        These are strict: Larder will never plan a meal containing them.
+        These are strict: {APP_NAME} will never plan a meal containing them.
       </p>
       <fieldset className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <legend className="sr-only">Allergens</legend>

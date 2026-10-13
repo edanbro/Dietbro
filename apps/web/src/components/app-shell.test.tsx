@@ -36,7 +36,7 @@ describe("AppShell", () => {
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
     ]);
-    expect(screen.getByRole("link", { name: "Larder" })).toHaveAttribute("href", "/plan");
+    expect(screen.getByRole("link", { name: "Mealwright" })).toHaveAttribute("href", "/plan");
   });
 
   it.each([

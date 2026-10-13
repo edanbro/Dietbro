@@ -30,6 +30,7 @@ from larder_api.schemas import (
     SuggestedTargets,
 )
 from larder_core.allergens import LABELS, Allergen
+from larder_core.brand import APP_NAME
 from larder_core.energy import (
     Activity,
     Body,
@@ -186,7 +187,9 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         .options(selectinload(ReceiptUpload.lines))
     )
 
-    response.headers["Content-Disposition"] = 'attachment; filename="larder-export.json"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{APP_NAME.lower()}-export.json"'
+    )
     return {
         "exported_at": datetime.now(UTC),
         "user": row(user),

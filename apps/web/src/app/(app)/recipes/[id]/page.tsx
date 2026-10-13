@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { RecipePage } from "@/components/recipe/recipe-page";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const metadata: Metadata = { title: "Recipe · Larder" };
+export const metadata: Metadata = { title: "Recipe" };
 
 async function Recipe({ params }: { params: PageProps<"/recipes/[id]">["params"] }) {
   const { id } = await params;

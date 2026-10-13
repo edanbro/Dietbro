@@ -7,7 +7,7 @@ import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Profile · Larder" };
+export const metadata: Metadata = { title: "Profile" };
 
 const SECTIONS = [
   { id: "goals", title: "Goals", body: <GoalsForm /> },

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useMe } from "@/lib/api/hooks";
+import { APP_NAME } from "@/lib/brand";
 
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
@@ -42,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur">
         <Link href="/plan" className="font-semibold tracking-tight">
-          Larder
+          {APP_NAME}
         </Link>
         <UserButton />
       </header>

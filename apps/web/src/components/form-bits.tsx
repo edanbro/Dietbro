@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/browser";
+import { APP_NAME } from "@/lib/brand";
 
 /** Native <select>: the platform picker is the best mobile UI for short lists. */
 export function NativeSelect({ className, ...props }: React.ComponentProps<"select">) {
@@ -70,7 +71,7 @@ export function fromNumber(value: number | null | undefined): string {
 export function NotMedicalAdvice() {
   return (
     <p className="text-xs text-muted-foreground">
-      Larder does planning arithmetic, not medical advice. Talk to a doctor or dietitian before
+      {APP_NAME} does planning arithmetic, not medical advice. Talk to a doctor or dietitian before
       big changes to how you eat.
     </p>
   );

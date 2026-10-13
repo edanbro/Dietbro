@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe } from "@/lib/api/hooks";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
+import { APP_NAME } from "@/lib/brand";
 
 /** http(s) URLs only: recipe data comes from third parties. */
 export function safeUrl(url: string | null): URL | null {
@@ -141,7 +142,7 @@ function Credit({ recipe }: { recipe: Recipe }) {
           .
         </p>
       ) : recipe.source === "curated" ? (
-        <p>A Larder recipe.</p>
+        <p>A {APP_NAME} recipe.</p>
       ) : (
         <p>Source: {recipe.source}</p>
       )}

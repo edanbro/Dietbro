@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { APP_NAME } from "@/lib/brand";
 
 /** Installable PWA ("Add to Home Screen"): cravings happen on phones. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Larder",
-    short_name: "Larder",
+    name: APP_NAME,
+    short_name: APP_NAME,
     description: "Plans your week around what's already in your kitchen.",
     start_url: "/plan",
     display: "standalone",

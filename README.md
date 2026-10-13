@@ -1,4 +1,8 @@
-# Larder (Dietbro)
+# Mealwright
+
+> Formerly "Larder". The product name lives in `apps/web/src/lib/brand.ts` and
+> `packages/core/src/larder_core/brand.py`; internal identifiers (`larder_*` packages, commands,
+> Docker and database names) keep the old name so existing setups and data keep working.
 
 AI meal planner: plans your week around what's already in your kitchen, then re-plans in real time
 when you get a craving or eat off-plan. **LLM for language, constraint solver for guarantees.**

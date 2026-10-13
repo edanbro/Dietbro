@@ -52,6 +52,7 @@ import { MealCard } from "./meal-card";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
+import { APP_NAME } from "@/lib/brand";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -162,7 +163,7 @@ export function PlanPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
         <Alert>
           <AlertDescription className="flex items-center justify-between gap-2">
-            Finish setting up so Larder can plan for you.
+            Finish setting up so {APP_NAME} can plan for you.
             <Link href="/setup" className={buttonVariants({ size: "sm" })}>
               Set up
             </Link>
@@ -182,7 +183,7 @@ export function PlanPage() {
           <CardHeader>
             <CardTitle>No plan yet</CardTitle>
             <CardDescription>
-              Larder plans breakfast, lunch and dinner for seven days around your goals, your
+              {APP_NAME} plans breakfast, lunch and dinner for seven days around your goals, your
               allergies and what&apos;s already in your kitchen.
             </CardDescription>
           </CardHeader>

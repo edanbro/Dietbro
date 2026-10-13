@@ -106,7 +106,7 @@ describe("RecipePage", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByText("Egyptian · Serves 2")).toBeInTheDocument();
     expect(screen.getByText(/Nutrition isn't available/)).toBeInTheDocument();
-    expect(screen.getByText("A Larder recipe.")).toBeInTheDocument();
+    expect(screen.getByText("A Mealwright recipe.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /alert/ })).not.toBeInTheDocument();
   });
 

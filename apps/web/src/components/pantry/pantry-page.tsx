@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/lib/api/hooks";
+import { APP_NAME } from "@/lib/brand";
 
 export function PantryPage() {
   const { data: me } = useMe();
@@ -25,7 +26,7 @@ export function PantryPage() {
       {me && !me.setup_complete ? (
         <Alert>
           <AlertDescription className="flex items-center justify-between gap-2">
-            Finish setting up so Larder can plan for you.
+            Finish setting up so {APP_NAME} can plan for you.
             <Link href="/setup" className={buttonVariants({ size: "sm" })}>
               Set up
             </Link>

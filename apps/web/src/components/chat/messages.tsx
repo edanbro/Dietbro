@@ -6,6 +6,7 @@ import type { ChatAttachment, ChatMessage } from "@/lib/api/hooks";
 
 import { Attachment } from "./outcome-card";
 import type { LiveTurn } from "./use-chat";
+import { APP_NAME } from "@/lib/brand";
 
 function UserBubble({ text, children }: { text: string; children?: React.ReactNode }) {
   return (
@@ -36,7 +37,7 @@ function AssistantBubble({
     <div className="flex flex-col items-start gap-2" aria-busy={busy || undefined}>
       {text || children ? (
         <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-3 py-2">
-          <span className="sr-only">Larder: </span>
+          <span className="sr-only">{APP_NAME}: </span>
           {text ? <p className="break-words whitespace-pre-line">{text}</p> : null}
           {children}
         </div>

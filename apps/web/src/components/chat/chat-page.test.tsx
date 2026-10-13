@@ -298,7 +298,7 @@ describe("ChatPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "New chat" }));
 
-    expect(await screen.findByText("Tell Larder what changed")).toBeInTheDocument();
+    expect(await screen.findByText("Tell Mealwright what changed")).toBeInTheDocument();
     expect(screen.queryByText("Hello!")).not.toBeInTheDocument();
     expect(calls.some((c) => c.method === "POST" && c.path === "/chat/threads")).toBe(true);
   });
@@ -334,7 +334,7 @@ describe("ChatPage", () => {
     await send("skip dinner tonight");
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Couldn't reach Larder.");
+    expect(alert).toHaveTextContent("Couldn't reach Mealwright.");
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled(); // nothing typed
 
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));

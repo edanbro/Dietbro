@@ -2,12 +2,13 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
+import { APP_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Larder",
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: "Plans your week around what's already in your kitchen.",
-  applicationName: "Larder",
-  appleWebApp: { capable: true, title: "Larder", statusBarStyle: "default" },
+  applicationName: APP_NAME,
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

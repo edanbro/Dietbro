@@ -14,6 +14,7 @@ import { formatWhen, localISODate } from "@/lib/dates";
 import { Composer } from "./composer";
 import { LiveReply, PendingReply, StoredMessage } from "./messages";
 import { type Chat, useChat } from "./use-chat";
+import { APP_NAME } from "@/lib/brand";
 
 /** The offline parser's examples (larder_llm.reply.HELP_TEXT): every one of them parses. */
 export const EXAMPLES = [
@@ -41,7 +42,7 @@ export function OfflineBanner({ thread }: { thread: ChatThread }) {
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>
         {reason === "budget" ? "You've used your AI chat allowance for now. " : null}
-        Larder follows short, plain requests like &ldquo;skip dinner tonight&rdquo; or &ldquo;had
+        {APP_NAME} follows short, plain requests like &ldquo;skip dinner tonight&rdquo; or &ldquo;had
         pizza for lunch&rdquo;.
       </AlertDescription>
     </Alert>
@@ -52,9 +53,9 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tell Larder what changed</CardTitle>
+        <CardTitle>Tell {APP_NAME} what changed</CardTitle>
         <CardDescription>
-          A craving, food you ate, a meal you&apos;ll skip: Larder re-plans the rest of your week
+          A craving, food you ate, a meal you&apos;ll skip: {APP_NAME} re-plans the rest of your week
           around it, still within your goals and allergies.
         </CardDescription>
       </CardHeader>
