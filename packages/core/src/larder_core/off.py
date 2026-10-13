@@ -121,6 +121,8 @@ class OffProduct:
     serving_g: float | None = None  # one serving, when the label gives it in g or ml
     packet_g: float | None = None  # the whole pack
     portions: tuple[tuple[str, float], ...] = field(default=())  # (unit, grams)
+    image_url: str | None = None  # a photo on images.openfoodfacts.org (CC BY-SA)
+    grade: str | None = None  # Open Food Facts' Nutri-Score grade, a-e
 
 
 def normalise_barcode(code: str) -> str | None:
@@ -216,7 +218,23 @@ def parse_product(fields: Mapping[str, Any], countries: Iterable[str] = ()) -> O
         serving_g=serving if serving and 0 < serving <= 5_000 else None,
         packet_g=packet if packet and 0 < packet <= 50_000 else None,
         portions=tuple(portions),
+        image_url=_image(fields),
+        grade=grade
+        if (grade := (_text(fields.get("nutriscore_grade")) or "").lower()) in _GRADES
+        else None,
     )
+
+
+_GRADES = frozenset("abcde")
+
+
+def _image(fields: Mapping[str, Any]) -> str | None:
+    """The product's small front photo on images.openfoodfacts.org (linked, never stored)."""
+    for key in ("image_front_small_url", "image_small_url", "image_front_url", "image_url"):
+        url = _text(fields.get(key))
+        if url and url.startswith("https://images.openfoodfacts.org/"):
+            return url
+    return None
 
 
 def _text(value: Any) -> str | None:

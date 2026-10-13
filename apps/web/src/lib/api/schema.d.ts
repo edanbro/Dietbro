@@ -1202,6 +1202,8 @@ export interface components {
              * @default usda
              */
             source: string;
+            /** Image Url */
+            image_url?: string | null;
             /** Units */
             units: components["schemas"]["FoodUnit"][];
             /** Barcode */
@@ -1219,6 +1221,8 @@ export interface components {
             counts_as?: components["schemas"]["FoodSummary"] | null;
             /** Attribution */
             attribution: string;
+            /** Grade */
+            grade?: ("A" | "B" | "C" | "D" | "E") | null;
         };
         /** FoodSummary */
         FoodSummary: {
@@ -1243,6 +1247,8 @@ export interface components {
              * @default usda
              */
             source: string;
+            /** Image Url */
+            image_url?: string | null;
         };
         /**
          * FoodUnit
@@ -1963,6 +1969,8 @@ export interface components {
             /** Servings Estimated */
             servings_estimated: boolean;
             per_serving: components["schemas"]["MacrosOut"] | null;
+            /** Grade */
+            grade?: ("A" | "B" | "C" | "D" | "E") | null;
             /** Meal Types */
             meal_types: components["schemas"]["Slot"][];
             /** Allergens */

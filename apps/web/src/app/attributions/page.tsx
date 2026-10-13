@@ -23,7 +23,7 @@ const SOURCES = [
     name: "Open Food Facts",
     what: "Packaged products sold in Ireland and the UK, with barcodes. Crowdsourced: always check the label.",
     licence:
-      "© Open Food Facts contributors. Database under the Open Database License (ODbL); contents under the Database Contents License. No product images are stored.",
+      "© Open Food Facts contributors. Database under the Open Database License (ODbL); contents under the Database Contents License. Product photos are shown from Open Food Facts (not stored), under Creative Commons Attribution-ShareAlike (CC BY-SA). Nutrition grades use the Nutri-Score method; this app isn't affiliated with Nutri-Score.",
     href: "https://world.openfoodfacts.org/",
   },
   {

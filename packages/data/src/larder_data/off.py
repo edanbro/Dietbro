@@ -2,33 +2,43 @@
 and the UK) from the nightly CSV export (~1.3 GB gzipped, tab-separated), streamed with the
 standard library. Only products with a name and plausible energy are kept (larder_core.off).
 
-Data: (c) Open Food Facts contributors, under the Open Database License (ODbL). We store no
-images. Products no longer in the export (for those countries) are marked retired, never
-deleted, because pantry items and receipts may point at them.
+Data: (c) Open Food Facts contributors, under the Open Database License (ODbL). Product photos
+are linked, not stored (CC BY-SA, credited on /attributions). Products no longer in the export
+(for those countries) are marked retired, never deleted, because pantry items and receipts may
+point at them.
 
-Products are matched to the generic food they count as later (link-generics); the category
-table gives many of them one at import.
+Products whose category is in the reviewed off_category_generics.csv are linked to that
+generic food at import (behind the plausibility rules); the rest later (link-generics).
 """
 
 import csv
 import gzip
 import logging
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-from sqlalchemy import String, any_, bindparam, update
+from sqlalchemy import String, any_, bindparam, select, update
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_core.categories import off_category
+from larder_core.categories import off_category, off_generic_ids
+from larder_core.generic_links import Facts, category_generic
 from larder_core.off import OffProduct, country_tags, parse_product
 from larder_data.local_foods import LocalFood, load_local_foods
 from larder_data.usda import PortionRecord
 from larder_db.models import Food
 
-__all__ = ["FILENAME", "URL", "download", "import_products", "iter_products", "local_food"]
+__all__ = [
+    "FILENAME",
+    "URL",
+    "category_generics",
+    "download",
+    "import_products",
+    "iter_products",
+    "local_food",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -78,15 +88,24 @@ def iter_products(path: Path, countries: Iterable[str]) -> Iterator[OffProduct]:
                 yield product
 
 
-def local_food(p: OffProduct, origin: str) -> LocalFood:
+def local_food(
+    p: OffProduct, origin: str, generics: Mapping[int, Facts] | None = None
+) -> LocalFood:
+    """`generics`: facts of the category table's generic foods, to link the product at import."""
     portions = [PortionRecord(1.0, unit, None, grams) for unit, grams in p.portions]
     ingredients = p.ingredients[:_MAX_INGREDIENTS] if p.ingredients else None
+    category = off_category(p.categories)
+    generic = (
+        category_generic(p.categories, Facts(category, p.kcal, p.protein_g, p.fat_g), generics)
+        if generics
+        else None
+    )
     return LocalFood(
         source=SOURCE,
         source_id=p.code,
         description=p.name,
         data_type="branded",
-        category=off_category(p.categories),
+        category=category,
         source_category=p.categories[-1] if p.categories else None,
         brand=p.brand,
         barcode=p.barcode,
@@ -95,6 +114,10 @@ def local_food(p: OffProduct, origin: str) -> LocalFood:
         traces_declared=sorted(a.value for a in p.traces) or None,
         ingredients_text=ingredients,
         origin=origin,
+        image_url=p.image_url,
+        off_grade=p.grade,
+        generic_food_id=generic,
+        generic_method="category" if generic is not None else None,
         nutrients={
             "kcal": p.kcal,
             "protein_g": p.protein_g,
@@ -117,8 +140,9 @@ async def import_products(
     started = datetime.now(UTC)
     seen: list[str] = []
     batch: list[LocalFood] = []
+    generics = await category_generics(session)
     for p in products:
-        batch.append(local_food(p, "bulk"))
+        batch.append(local_food(p, "bulk", generics))
         if len(batch) >= _BATCH:
             seen += [r.source_id for r in batch]
             await load_local_foods(session, batch)
@@ -145,3 +169,13 @@ async def import_products(
     await session.commit()
     logger.info("open food facts: %d written, %d retired", len(seen), len(retired))
     return len(seen)
+
+
+async def category_generics(session: AsyncSession) -> dict[int, Facts]:
+    """Facts of the category table's generic foods that are in the database."""
+    rows = await session.execute(
+        select(Food.id, Food.category, Food.kcal, Food.protein_g, Food.fat_g).where(
+            Food.id.in_(off_generic_ids()), Food.generic_food_id.is_(None)
+        )
+    )
+    return {r[0]: Facts(r[1], r[2], r[3], r[4]) for r in rows}

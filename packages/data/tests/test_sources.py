@@ -9,8 +9,14 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from larder_core.categories import UnmappedCategory
-from larder_core.generic_links import Facts, name_endings, name_forms, plausible
+from larder_core.categories import UnmappedCategory, off_generic, off_generic_ids
+from larder_core.generic_links import (
+    Facts,
+    category_generic,
+    name_endings,
+    name_forms,
+    plausible,
+)
 from larder_data import cofid, off
 from larder_data.fndds import parse_survey_portion
 from larder_data.local_foods import LocalFood, load_local_foods
@@ -273,3 +279,63 @@ def test_plausibility() -> None:
     almond = Facts("Beverages", 15, 0.5, 1.1)
     milk = Facts("Dairy and Egg Products", 61, 3.2, 3.3)
     assert not plausible(almond, milk, reviewed=True, same_category=True)
+
+
+BUTTER = 173410
+BUTTER_FACTS = Facts("Dairy and Egg Products", 717, 0.9, 81)
+
+
+def test_off_category_generics() -> None:
+    assert off_generic(["en:dairies", "en:butters", "en:salted-butters"]) == BUTTER
+    assert off_generic(["en:dairies", "en:milks", "en:whole-milks"]) == 171265  # most specific
+    assert off_generic(["en:snacks"]) is None
+    assert BUTTER in off_generic_ids()
+
+
+def test_category_links_need_a_plausible_generic() -> None:
+    butters = ["en:dairies", "en:butters"]
+    generics = {BUTTER: BUTTER_FACTS}
+    butter = Facts("Dairy and Egg Products", 740, 0.5, 82)
+    spread = Facts("Fats and Oils", 540, 0.2, 59)  # a spread filed under butters
+    light = Facts("Dairy and Egg Products", 300, 1, 33)  # too far from butter's energy
+
+    assert category_generic(butters, butter, generics) == BUTTER
+    assert category_generic(butters, spread, generics) is None
+    assert category_generic(butters, light, generics) is None
+    assert category_generic(butters, butter, {}) is None  # generic not in the database
+
+
+def test_off_products_link_by_category_at_import(tmp_path: Path) -> None:
+    (product,) = off.iter_products(_export(tmp_path, [PRODUCT]), ["IE"])
+
+    linked = off.local_food(product, "bulk", {BUTTER: BUTTER_FACTS})
+    unlinked = off.local_food(product, "bulk")
+
+    assert (linked.generic_food_id, linked.generic_method) == (BUTTER, "category")
+    assert (unlinked.generic_food_id, unlinked.generic_method) == (None, None)
+
+
+async def test_import_loads_the_category_generics(db_session: AsyncSession, tmp_path: Path) -> None:
+    db_session.add(
+        Food(
+            id=BUTTER,
+            description="Butter, salted",
+            data_type="sr_legacy",
+            category="Dairy and Egg Products",
+            kcal=717,
+            protein_g=0.9,
+            fat_g=81,
+        )
+    )
+    await db_session.commit()
+
+    await off.import_products(
+        db_session, off.iter_products(_export(tmp_path, [PRODUCT]), ["IE"]), ["IE"]
+    )
+
+    row = (
+        await db_session.execute(
+            select(Food.generic_food_id, Food.generic_method).where(Food.source == "off")
+        )
+    ).one()
+    assert tuple(row) == (BUTTER, "category")

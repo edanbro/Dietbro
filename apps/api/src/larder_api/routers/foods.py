@@ -10,7 +10,7 @@ and when sold in the user's country.
 """
 
 import re
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, text
@@ -20,12 +20,13 @@ from larder_api.auth import CurrentUser
 from larder_api.barcodes import Limits, OffClient, OffUnavailable, get_limits, get_off_client
 from larder_api.db import Session
 from larder_api.foodmatch import NOT_GROCERIES
-from larder_api.generic_link import ensure_generic
-from larder_api.schemas import FoodDetail, FoodSummary, FoodUnit, Problems
+from larder_api.generic_link import ensure_generic, link_by_category
+from larder_api.schemas import FoodDetail, FoodSummary, FoodUnit, NutritionGrade, Problems
 from larder_core.aliases import load_aliases
 from larder_core.allergens import Allergen
 from larder_core.categories import off_category
 from larder_core.names import normalise_name
+from larder_core.nutrigrade import NutriInput, grade
 from larder_core.off import OffProduct, normalise_barcode, parse_product
 from larder_core.quantities import Portion, count_portions, density
 from larder_core.receipts import load_receipt_foods
@@ -44,7 +45,7 @@ REGIONAL_TYPES: dict[str, tuple[str, ...]] = {"IE": ("cofid",), "GB": ("cofid",)
 
 _SEARCH_SQL = text(
     """
-    SELECT f.id, f.description, f.category, f.kcal, f.brand, f.source,
+    SELECT f.id, f.description, f.category, f.kcal, f.brand, f.source, f.image_url,
            (p.tsq IS NOT NULL AND f.search_tsv @@ p.tsq) AS every_word
     FROM foods f,
          (SELECT CASE WHEN :tsq = '' THEN NULL ELSE to_tsquery('english', :tsq) END AS tsq) p
@@ -127,7 +128,7 @@ async def search(
             "offset": max(0, offset - len(named)),
         },
     )
-    for fid, description, category, kcal, brand, source, _ in rows:
+    for fid, description, category, kcal, brand, source, image_url, _ in rows:
         ordered.setdefault(
             fid,
             FoodSummary(
@@ -138,6 +139,7 @@ async def search(
                 brand=brand,
                 source=source,
                 kind="product" if source == "off" else "food",
+                image_url=image_url,
             ),
         )
     return list(ordered.values())[:limit]
@@ -240,6 +242,8 @@ async def store_product(session: Session, p: OffProduct, barcode: str, country: 
     food.traces_declared = sorted(a.value for a in p.traces) or None
     food.ingredients_text = p.ingredients[:4000] if p.ingredients else None
     food.origin = existing.origin if existing else "lookup"
+    food.image_url = p.image_url
+    food.off_grade = p.grade
     food.retired_at = None
     food.kcal, food.protein_g, food.fat_g, food.carbs_g = p.kcal, p.protein_g, p.fat_g, p.carbs_g
     food.fiber_g, food.sugars_g, food.sat_fat_g, food.sodium_mg = (
@@ -254,6 +258,7 @@ async def store_product(session: Session, p: OffProduct, barcode: str, country: 
             FoodPortion(food_id=food_id, amount=1, unit=unit, grams=grams)
             for unit, grams in p.portions
         )
+    await link_by_category(session, food, p.categories)
     await ensure_generic(session, food)
     try:
         await session.commit()
@@ -291,6 +296,7 @@ async def food_detail(session: Session, food: Food) -> FoodDetail:
         may_contain=sorted(Allergen(a) for a in food.traces_declared or ()),
         counts_as=summary(generic) if generic is not None else None,
         attribution=ATTRIBUTION.get(food.source, food.source),
+        grade=food_grade(food),
     )
 
 
@@ -357,4 +363,38 @@ def summary(food: Food) -> FoodSummary:
         brand=food.brand,
         source=food.source,
         kind="product" if food.source == "off" else "food",
+        image_url=food.image_url,
     )
+
+
+# Generic foods of these groups are all fruit, vegetables or legumes (Nutri-Score's "fvl").
+FRUIT_VEG_CATEGORIES = frozenset(
+    {
+        "Fruits and Fruit Juices",
+        "Vegetables and Vegetable Products",
+        "Legumes and Legume Products",
+    }
+)
+
+
+def food_grade(food: Food) -> NutritionGrade | None:
+    """A product's own Nutri-Score when Open Food Facts has one, else ours (Nutri-Score method)
+    from its nutrients per 100 g. Products don't say how much fruit or veg they hold, so only
+    generic foods of those groups count it."""
+    if food.off_grade:
+        return cast(NutritionGrade, food.off_grade.upper())
+    fruit_veg = 100.0 if food.source != "off" and food.category in FRUIT_VEG_CATEGORIES else 0.0
+    found = grade(
+        NutriInput(
+            kcal=food.kcal,
+            sugars_g=food.sugars_g,
+            sat_fat_g=food.sat_fat_g,
+            sodium_mg=food.sodium_mg,
+            protein_g=food.protein_g,
+            fiber_g=food.fiber_g,
+            fruit_veg_pct=fruit_veg,
+        ),
+        category=food.category,
+        description=food.description,
+    )
+    return cast(NutritionGrade | None, found)

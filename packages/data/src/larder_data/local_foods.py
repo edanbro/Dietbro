@@ -35,6 +35,8 @@ class LocalFood:
     traces_declared: list[str] | None = None
     ingredients_text: str | None = None
     origin: str | None = None
+    image_url: str | None = None
+    off_grade: str | None = None
     generic_food_id: int | None = None
     generic_method: str | None = None
     nutrients: dict[str, float | None] = field(default_factory=dict[str, float | None])
@@ -100,6 +102,8 @@ async def _load_batch(session: AsyncSession, batch: list[LocalFood]) -> list[int
                 "traces_declared": r.traces_declared,
                 "ingredients_text": r.ingredients_text,
                 "origin": r.origin,
+                "image_url": r.image_url,
+                "off_grade": r.off_grade,
                 "generic_food_id": r.generic_food_id,
                 "generic_method": r.generic_method,
                 "retired_at": None,

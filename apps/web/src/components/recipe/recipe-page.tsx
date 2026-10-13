@@ -5,6 +5,7 @@ import { ArrowLeftIcon, ExternalLinkIcon, TriangleAlertIcon } from "lucide-react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { GradeBadge } from "@/components/food-bits";
 import { ErrorAlert } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -209,6 +210,7 @@ export function RecipePage({ id }: { id: number }) {
         {details.length ? (
           <p className="text-sm text-muted-foreground">{details.join(" · ")}</p>
         ) : null}
+        <GradeBadge grade={recipe.grade} className="mt-1" />
       </header>
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">

@@ -2,7 +2,8 @@
 generated recipes, which nobody else can see (docs/DESIGN.md §9.4)."""
 
 import logging
-from typing import Annotated, Any
+from collections.abc import Mapping
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -12,8 +13,10 @@ from sqlalchemy.orm import selectinload
 from larder_api import planning
 from larder_api.auth import AuthError, TokenVerifier
 from larder_api.db import Session
-from larder_api.schemas import MacrosOut, RecipeDetail, RecipeIngredientOut
+from larder_api.routers.foods import FRUIT_VEG_CATEGORIES
+from larder_api.schemas import MacrosOut, NutritionGrade, RecipeDetail, RecipeIngredientOut
 from larder_core.meals import SLOT_ORDER
+from larder_core.nutrigrade import NutriInput, grade
 from larder_db.models import Food, Recipe, User
 
 logger = logging.getLogger(__name__)
@@ -99,6 +102,7 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
         servings=recipe.servings,
         servings_estimated=recipe.servings_estimated,
         per_serving=per_serving,
+        grade=recipe_grade(recipe, foods),
         meal_types=sorted(facts.slots, key=SLOT_ORDER.index),
         allergens=sorted(facts.tags.allergens),
         allergens_complete=facts.tags.complete,
@@ -114,3 +118,32 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
             for i in sorted(recipe.ingredients, key=lambda i: i.position)
         ],
     )
+
+
+def recipe_grade(recipe: Recipe, foods: Mapping[int, Food]) -> NutritionGrade | None:
+    """Nutri-Score method per 100 g of the dish: the per-serving columns over the serving's
+    weight, fruit/veg/legumes from the ingredients' food groups."""
+    if not recipe.nutrition_complete or not recipe.servings:
+        return None
+    weighed = [(i.grams or 0.0, foods.get(i.food_id or 0)) for i in recipe.ingredients]
+    total = sum(g for g, _ in weighed)
+    if total <= 0:
+        return None
+    fruit_veg = sum(g for g, f in weighed if f is not None and f.category in FRUIT_VEG_CATEGORIES)
+    per_100g = 100 * recipe.servings / total  # columns are per serving
+
+    def scaled(value: float | None) -> float | None:
+        return None if value is None else value * per_100g
+
+    found = grade(
+        NutriInput(
+            kcal=scaled(recipe.kcal),
+            sugars_g=scaled(recipe.sugars_g),
+            sat_fat_g=scaled(recipe.sat_fat_g),
+            sodium_mg=scaled(recipe.sodium_mg),
+            protein_g=scaled(recipe.protein_g),
+            fiber_g=scaled(recipe.fiber_g),
+            fruit_veg_pct=100 * fruit_veg / total,
+        )
+    )
+    return cast(NutritionGrade | None, found)

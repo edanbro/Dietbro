@@ -139,6 +139,10 @@ class FoodSummary(BaseModel):
     kind: FoodKind = "food"  # product: a packaged, branded product (Open Food Facts)
     brand: str | None = None
     source: str = "usda"  # usda | cofid | off
+    image_url: str | None = None  # products: Open Food Facts' photo (CC BY-SA)
+
+
+NutritionGrade = Literal["A", "B", "C", "D", "E"]
 
 
 class FoodUnit(BaseModel):
@@ -155,6 +159,8 @@ class FoodDetail(FoodSummary):
     may_contain: list[Allergen] = []  # declared "may contain" traces (products)
     counts_as: "FoodSummary | None" = None  # the generic food it stands in for when planning
     attribution: str  # where the data comes from (licences ask for credit)
+    # Nutri-Score method (larder_core.nutrigrade); a product's own grade when it has one.
+    grade: NutritionGrade | None = None
 
 
 class PantryItemIn(BaseModel):
@@ -515,6 +521,7 @@ class RecipeDetail(RecipeCard):
     servings: int | None
     servings_estimated: bool
     per_serving: MacrosOut | None
+    grade: NutritionGrade | None = None  # Nutri-Score method, per 100 g of the dish
     meal_types: list[Slot]
     allergens: list[Allergen]
     # Allergen safety can't be proven when some ingredient lines matched no food.

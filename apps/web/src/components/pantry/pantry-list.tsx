@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ErrorAlert, LabeledInput, NativeSelect } from "@/components/form-bits";
 
 import { Badge } from "@/components/ui/badge";
+import { ProductThumb } from "@/components/food-bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -141,6 +142,7 @@ export function PantryList() {
                   </li>
                 ) : (
                   <li key={item.id} className="flex items-center gap-3 px-3 py-1.5">
+                    <ProductThumb url={item.food.image_url} size={32} />
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 flex-col py-1 text-left"

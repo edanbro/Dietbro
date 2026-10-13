@@ -24,6 +24,8 @@ __all__ = [
     "cofid_category",
     "known_categories",
     "off_category",
+    "off_generic",
+    "off_generic_ids",
     "wweia_category",
 ]
 
@@ -52,6 +54,23 @@ def cofid_category(group: str) -> str | None:
         if group[:n] in table:
             return table[group[:n]]
     raise UnmappedCategory(f"CoFID group {group!r} is not covered by cofid_groups.csv")
+
+
+def off_generic(tags: Iterable[str]) -> int | None:
+    """The generic food (FDC id) of a product's most specific mapped category tag, from the
+    reviewed off_category_generics.csv ("en:semi-skimmed-milks" -> semi-skimmed milk)."""
+    table = _off_generics()
+    return next((table[t] for t in reversed(list(tags)) if t in table), None)
+
+
+def off_generic_ids() -> frozenset[int]:
+    """Every generic food the category table links to (to load their facts once)."""
+    return frozenset(_off_generics().values())
+
+
+@cache
+def _off_generics() -> dict[str, int]:
+    return {r["tag"].strip(): int(r["fdc_id"]) for r in _rows("off_category_generics.csv")}
 
 
 def off_category(tags: Iterable[str]) -> str | None:

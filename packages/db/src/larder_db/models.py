@@ -125,6 +125,9 @@ class Food(NutrientColumns, Base):
     ingredients_text: Mapped[str | None] = deferred(mapped_column(Text))
     origin: Mapped[str | None] = mapped_column(String(8))  # off: bulk | lookup
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Products: a link to Open Food Facts' photo (CC BY-SA, not stored) and its Nutri-Score.
+    image_url: Mapped[str | None] = mapped_column(Text)
+    off_grade: Mapped[str | None] = mapped_column(String(1))  # a-e
     search_tsv: Mapped[Any] = deferred(
         mapped_column(
             TSVECTOR,

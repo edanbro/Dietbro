@@ -19,7 +19,7 @@ from larder_api.settings import Settings, get_settings
 FIELDS = (
     "code,product_name,product_name_en,generic_name,brands,countries_tags,categories_tags,"
     "allergens_tags,traces_tags,ingredients_text,ingredients_text_en,serving_quantity,"
-    "product_quantity,nutriments"
+    "product_quantity,nutriments,nutriscore_grade,image_front_small_url,image_small_url"
 )
 MISS_TTL_S = 24 * 3600
 

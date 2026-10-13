@@ -140,3 +140,22 @@ def test_search_synonyms_dont_change_the_resolver() -> None:
     assert rewrite("crisps") == "crisps"  # search-only synonym
     assert search_terms("Tayto Crisps") == "tayto potato chips"
     assert search_terms("crispbread") == "crispbread"
+
+
+def test_photo_and_grade() -> None:
+    p = parse_product(
+        CSV_ROW
+        | {
+            "image_front_small_url": "https://images.openfoodfacts.org/images/products/400/front.200.jpg",
+            "nutriscore_grade": "E",
+        }
+    )
+    assert p is not None
+    assert p.image_url == "https://images.openfoodfacts.org/images/products/400/front.200.jpg"
+    assert p.grade == "e"
+
+    elsewhere = parse_product(
+        CSV_ROW | {"image_small_url": "https://example.com/x.jpg", "nutriscore_grade": "unknown"}
+    )
+    assert elsewhere is not None
+    assert (elsewhere.image_url, elsewhere.grade) == (None, None)  # only OFF's image host

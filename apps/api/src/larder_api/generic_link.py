@@ -6,11 +6,21 @@ plausibility rules of larder_core.generic_links. Tried once per food: a miss is 
 (`generic_method = "none"`) and left for the batch linker (larder-data link-generics).
 """
 
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from larder_api.foodmatch import NOT_GROCERIES, trigram_food
-from larder_core.generic_links import Facts, name_endings, name_forms, plausible, vocabulary
+from larder_core.categories import off_generic
+from larder_core.generic_links import (
+    Facts,
+    category_generic,
+    name_endings,
+    name_forms,
+    plausible,
+    vocabulary,
+)
 from larder_core.names import normalise_name
 from larder_core.receipts import clean_name
 from larder_db.models import Food
@@ -44,6 +54,17 @@ async def ensure_generic(session: AsyncSession, food: Food) -> None:
         food.generic_food_id, food.generic_method = found[0].id, "trigram"
     else:
         food.generic_method = "none"
+
+
+async def link_by_category(session: AsyncSession, food: Food, tags: Sequence[str]) -> None:
+    """Link a product by its reviewed Open Food Facts category, if it agrees with the generic
+    (before ensure_generic, which then leaves it alone); the caller commits."""
+    if food.generic_food_id is not None:
+        return
+    fdc_id = off_generic(tags)
+    found = await _generics(session, [fdc_id]) if fdc_id is not None else []
+    if found and category_generic(tags, _facts(food), {found[0].id: _facts(found[0])}):
+        food.generic_food_id, food.generic_method = found[0].id, "category"
 
 
 async def _generics(session: AsyncSession, ids: list[int]) -> list[Food]:

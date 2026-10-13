@@ -28,6 +28,8 @@ OFF_BUTTER: dict[str, Any] = {
     "categories_tags": ["en:dairies", "en:butters"],
     "allergens_tags": ["en:milk"],
     "product_quantity": 227,
+    "image_front_small_url": "https://images.openfoodfacts.org/images/products/500/front.200.jpg",
+    "nutriscore_grade": "e",
     "nutriments": {"energy-kcal_100g": 740, "fat_100g": 82, "proteins_100g": 0.5},
 }
 
@@ -130,7 +132,8 @@ async def test_new_barcode_is_fetched_once_then_local(
     assert first.status_code == again.status_code == 200
     detail = first.json()
     assert (detail["kind"], detail["brand"], detail["barcode"]) == ("product", "Kerrygold", NEW)
-    assert detail["counts_as"]["id"] == BUTTER  # "butter" (same category)
+    assert detail["counts_as"]["id"] == BUTTER  # its category, en:butters
+    assert (detail["grade"], detail["image_url"]) == ("E", OFF_BUTTER["image_front_small_url"])
     assert detail["units"][0] == {"unit": "packet", "grams_each": 227.0}
     assert "milk" in detail["allergens"]
     assert off[0].calls == [NEW]
@@ -138,6 +141,7 @@ async def test_new_barcode_is_fetched_once_then_local(
         food = await session.scalar(select(Food).where(Food.barcode == NEW))
         assert food is not None
         assert (food.origin, food.countries) == ("lookup", ["GB", "IE"])  # scanned in Ireland
+        assert food.generic_method == "category"
 
 
 @pytest.mark.usefixtures("products")

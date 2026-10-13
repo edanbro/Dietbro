@@ -10,14 +10,24 @@ the batch linker, larder_data.generics, and the API's on-demand linking of produ
   energy, protein and fat close per 100 g.
 """
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import cache
 
 from larder_core.aliases import load_alias_rows
+from larder_core.categories import off_generic
 from larder_core.names import normalise_name
 from larder_core.receipts import load_receipt_foods
 
-__all__ = ["Facts", "close", "name_endings", "name_forms", "plausible", "vocabulary"]
+__all__ = [
+    "Facts",
+    "category_generic",
+    "close",
+    "name_endings",
+    "name_forms",
+    "plausible",
+    "vocabulary",
+]
 
 _AS_SOLD = frozenset(
     {
@@ -104,3 +114,14 @@ def plausible(food: Facts, generic: Facts, *, reviewed: bool, same_category: boo
         and close(food.protein_g, generic.protein_g, absolute=3, relative=0.25)
         and close(food.fat_g, generic.fat_g, absolute=3, relative=0.25)
     )
+
+
+def category_generic(tags: Iterable[str], food: Facts, generics: Mapping[int, Facts]) -> int | None:
+    """The generic of a product's reviewed Open Food Facts category (off_category_generics.csv),
+    when the product agrees with it: same category and energy within half ("en:butters" on a
+    butter, not on a butter-flavoured spread filed there)."""
+    fdc_id = off_generic(tags)
+    facts = generics.get(fdc_id) if fdc_id is not None else None
+    if facts is None or not plausible(food, facts, reviewed=True, same_category=True):
+        return None
+    return fdc_id

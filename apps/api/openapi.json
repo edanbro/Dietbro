@@ -3575,6 +3575,17 @@
             "title": "Source",
             "default": "usda"
           },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "units": {
             "items": {
               "$ref": "#/components/schemas/FoodUnit"
@@ -3622,6 +3633,24 @@
           "attribution": {
             "type": "string",
             "title": "Attribution"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
           }
         },
         "type": "object",
@@ -3691,6 +3720,17 @@
             "type": "string",
             "title": "Source",
             "default": "usda"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           }
         },
         "type": "object",
@@ -5752,6 +5792,24 @@
                 "type": "null"
               }
             ]
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
           },
           "meal_types": {
             "items": {

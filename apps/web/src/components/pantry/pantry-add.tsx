@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { FoodPicker } from "@/components/food-picker";
 import { ErrorAlert, LabeledInput, NativeSelect } from "@/components/form-bits";
+import { GradeBadge, ProductThumb } from "@/components/food-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -78,9 +79,12 @@ export function PantryAdd({
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Add to pantry">
       <div className="flex flex-col gap-1.5 rounded-lg bg-muted p-3">
         <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium">
-            {food.brand ? `${food.brand} ` : ""}
-            {food.description}
+          <span className="flex min-w-0 items-center gap-3">
+            <ProductThumb url={food.image_url} size={48} />
+            <span className="text-sm font-medium">
+              {food.brand ? `${food.brand} ` : ""}
+              {food.description}
+            </span>
           </span>
           <Button
             type="button"
@@ -148,6 +152,7 @@ function FoodFacts({ detail }: { detail: FoodDetail }) {
   const label = (codes: readonly string[]) => codes.map((a) => allergenLabel(a, options)).join(", ");
   return (
     <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <GradeBadge grade={detail.grade} />
       {detail.counts_as ? (
         <p>
           Counts as <span className="text-foreground">{detail.counts_as.description}</span> when
