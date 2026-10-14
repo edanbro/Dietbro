@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan receipt-eval worker llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker llm-smoke up down
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -41,6 +41,9 @@ foods: ## Match every recipe ingredient (~700 plannable recipes), link UK/Irish 
 
 data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report (~5 min)
 	uv run larder-data pipeline --evaluate --min-coverage 0.95 --out data/reports/resolution.md
+
+evals: ## Evals on the seeded catalog -> evals/REPORT.md (LLM baseline: add ARGS="--llm --yes", paid)
+	uv run larder-evals --catalog db --n 50 $(ARGS)
 
 PLANNER ?= auto
 bench: ## Planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)

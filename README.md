@@ -1,19 +1,82 @@
 # Mealwright
 
+**Plans your week of meals around what's already in your kitchen, and re-plans in real time
+when life happens.** LLM for language, constraint solver for guarantees.
+
+![Mealwright landing page](docs/images/landing.png)
+
+## Why it's built this way
+
+Ask a language model to plan a week and it will happily return something that *looks* right:
+it may also put peanuts in a peanut-allergic person's lunch, invent a recipe, or land 600 kcal
+off target. Mealwright splits the job:
+
+- **Claude handles language**: "had pizza for lunch", "something spicy tonight", "skip
+  Thursday dinner" become typed plan changes, and recipes are explained in plain words.
+- **A planner handles the plan**: hard rules (allergens, diet, avoided foods, calorie floor,
+  daily kcal bands, portions, repeats, budget) and soft goals (pantry use, waste, cost,
+  preferences, little churn on a replan).
+- **An independent validator checks every plan** before anyone sees it, whichever planner made
+  it. It shares no code with the planner, so the planner never grades itself.
+
+```mermaid
+flowchart LR
+    U([Phone / browser<br/>Next.js PWA]) -->|REST + SSE| API[FastAPI]
+    API -->|typed changes| LLM[Claude<br/>chat + parsing]
+    API --> PF[Prefilter<br/>safe candidates]
+    PF --> S[Planner<br/>CP-SAT · greedy baseline]
+    S --> V{Validator}
+    V -->|valid| DB[(Postgres + pgvector)]
+    V -->|violations| X[Refused, never shown]
+    W[arq worker<br/>receipt OCR] --> DB
+    DB --- D[(USDA · CoFID ·<br/>Open Food Facts · recipes)]
+```
+
+## What it does
+
+- **Plans a week** of breakfast, lunch, dinner (and snacks) for your calories, protein, fat,
+  carbs and budget, using up what's in your pantry before it expires.
+- **Re-plans when life happens**, from the chat or one tap on a meal: skip, swap (pick from
+  safe options), "had something else", rebuild a day, undo. Replans keep the rest of the week
+  calm (churn is penalised).
+- **Stocks the pantry fast**: scan a barcode, paste or photograph a receipt (offline OCR), or
+  search 200,000+ foods sold in Ireland and the UK. Product photos and nutrition grades
+  (Nutri-Score method) from Open Food Facts.
+- **Shops and cooks**: an aisle-sorted shopping list that works offline in the shop and moves
+  ticked items into the pantry; cook mode with scaled amounts, timers read from the method and
+  the screen kept awake.
+- **Learns your prices and tastes**: prices from your own receipts; favourite recipes, "never
+  again", foods you love or hate.
+- **Tracks what you ate**: a food diary against your goals and a weight trend.
+- **Installable and offline**: PWA with a hand-written service worker; light, dark or system
+  theme; phone-first with a desktop layout.
+
+## Measured
+
+| What | Result | Source |
+|---|---|---|
+| Plans with a safety violation (allergen, diet, avoided food, calorie floor) | **0 of 200** | [evals/REPORT.md](evals/REPORT.md) |
+| Plans with no hard violation at all | 94% (100% where a valid plan is known to exist) | [evals/REPORT.md](evals/REPORT.md) |
+| Plan a week, end to end (p95) | 66 ms | [evals/REPORT.md](evals/REPORT.md) |
+| Replan through the API (p95) | 319 ms | [docs/replan-bench-greedy.md](docs/replan-bench-greedy.md) |
+| Receipt lines read correctly, end to end (pasted text) | 98.1% | [docs/receipt-accuracy.md](docs/receipt-accuracy.md) |
+
+These numbers are for the greedy baseline planner standing in while the CP-SAT model is being
+written. The LLM-only comparison (`larder-evals --llm`, paid) is wired up and runs on request.
+
+## Stack
+
+Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind v4 · TanStack Query ·
+FastAPI · SQLAlchemy 2 · Alembic · Postgres + pgvector · Redis + arq · OR-Tools CP-SAT ·
+Claude (Sonnet for chat, Haiku for small structured calls) · Clerk · Docker Compose · uv ·
+pnpm · pytest + Hypothesis · Vitest + Testing Library · Playwright.
+
+Design: [docs/DESIGN.md](docs/DESIGN.md) and the [architecture decision records](docs/adr).
+Build plan: [PLAN.md](PLAN.md). Progress: [docs/progress.md](docs/progress.md).
+
 > Formerly "Larder". The product name lives in `apps/web/src/lib/brand.ts` and
 > `packages/core/src/larder_core/brand.py`; internal identifiers (`larder_*` packages, commands,
 > Docker and database names) keep the old name so existing setups and data keep working.
-
-AI meal planner: plans your week around what's already in your kitchen, then re-plans in real time
-when you get a craving or eat off-plan. **LLM for language, constraint solver for guarantees.**
-
-> Status: M6 — add groceries from a receipt: photograph it or paste the text, review what was
-> read (offline OCR and matching, no API key), confirm into the pantry, and see what expires
-> soon. Before that (M5): re-plan in real time from the plan screen or the chat (Claude for
-> language, the planner and an independent validator for every change; works offline; replans
-> p95 well under 1 s). The CP-SAT planner is being written (a greedy baseline stands in,
-> checked by the same validator). Build plan: [PLAN.md](PLAN.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
-> Progress: [docs/progress.md](docs/progress.md).
 
 ## Run it
 
@@ -61,6 +124,7 @@ make gen-api          # after changing API routes: regenerate OpenAPI + web type
 make migrate          # apply DB migrations
 make data             # import USDA + TheMealDB + curated recipes, resolve, write report (~4 min)
 make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
+uv run larder-evals --catalog db --n 50   # evals/REPORT.md (add --llm --yes for the paid baseline)
 make llm-smoke        # four real chat turns against Claude (needs ANTHROPIC_API_KEY; ~5 cents)
 uv run pytest packages/solver/tests/test_solve.py   # the spec the CP-SAT solve() must pass
 ```
@@ -76,5 +140,6 @@ packages/data   importers, ingredient normaliser, embeddings, curated recipes (C
 packages/llm    Claude clients, typed plan changes and tools, agent loop, offline rule parser
 packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT solve() (pure)
                 — modelling guide: packages/solver/README.md
-docs/           DESIGN.md, ADRs, progress notes
+evals           seeded scenarios, LLM-only baseline, report (CLI: larder-evals)
+docs/           DESIGN.md, ADRs, progress notes, benchmark reports
 ```

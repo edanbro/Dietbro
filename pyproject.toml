@@ -15,6 +15,7 @@ override-dependencies = ["redis>=8.1"]
 members = [
     "apps/api",
     "apps/worker",
+    "evals",
     "packages/core",
     "packages/db",
     "packages/data",
@@ -25,6 +26,7 @@ members = [
 [tool.uv.sources]
 larder-api = { workspace = true }
 larder-worker = { workspace = true }
+larder-evals = { workspace = true }
 larder-core = { workspace = true }
 larder-data = { workspace = true }
 larder-db = { workspace = true }
@@ -40,6 +42,7 @@ dev = [
     "larder-llm",
     "larder-solver",
     "larder-worker",
+    "larder-evals",
     "hypothesis>=6.168",
     "httpx>=0.28",
     "pre-commit>=4.6",
@@ -83,7 +86,7 @@ known-first-party = [
 ]
 
 [tool.pyright]
-include = ["apps/api", "apps/worker", "packages"]
+include = ["apps/api", "apps/worker", "packages", "evals"]
 exclude = ["**/.venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
@@ -98,6 +101,7 @@ testpaths = [
     "packages/db/tests",
     "packages/data/tests",
     "packages/llm/tests",
+    "evals/tests",
     "packages/solver/tests",
 ]
 asyncio_mode = "auto"

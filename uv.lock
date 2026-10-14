@@ -20,6 +20,7 @@ members = [
     "larder-core",
     "larder-data",
     "larder-db",
+    "larder-evals",
     "larder-llm",
     "larder-solver",
     "larder-worker",
@@ -1034,6 +1035,7 @@ dev = [
     { name = "larder-core" },
     { name = "larder-data" },
     { name = "larder-db" },
+    { name = "larder-evals" },
     { name = "larder-llm" },
     { name = "larder-solver" },
     { name = "larder-worker" },
@@ -1054,6 +1056,7 @@ dev = [
     { name = "larder-core", editable = "packages/core" },
     { name = "larder-data", editable = "packages/data" },
     { name = "larder-db", editable = "packages/db" },
+    { name = "larder-evals", editable = "evals" },
     { name = "larder-llm", editable = "packages/llm" },
     { name = "larder-solver", editable = "packages/solver" },
     { name = "larder-worker", editable = "apps/worker" },
@@ -1154,6 +1157,25 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.32" },
     { name = "pgvector", specifier = ">=0.5" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1" },
+]
+
+[[package]]
+name = "larder-evals"
+version = "0.0.0"
+source = { editable = "evals" }
+dependencies = [
+    { name = "larder-api" },
+    { name = "larder-core" },
+    { name = "larder-llm" },
+    { name = "larder-solver" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "larder-api", editable = "apps/api" },
+    { name = "larder-core", editable = "packages/core" },
+    { name = "larder-llm", editable = "packages/llm" },
+    { name = "larder-solver", editable = "packages/solver" },
 ]
 
 [[package]]
