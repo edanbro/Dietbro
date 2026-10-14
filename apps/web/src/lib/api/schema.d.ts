@@ -1962,6 +1962,10 @@ export interface components {
             liked_food_ids?: number[];
             /** Disliked Food Ids */
             disliked_food_ids?: number[];
+            /** Liked Foods */
+            liked_foods?: components["schemas"]["FoodSummary"][];
+            /** Disliked Foods */
+            disliked_foods?: components["schemas"]["FoodSummary"][];
         };
         /**
          * Problems

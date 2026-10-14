@@ -113,6 +113,10 @@ class PreferencesIn(BaseModel):
 class PreferencesOut(PreferencesIn):
     model_config = ConfigDict(from_attributes=True)
 
+    # The liked and disliked foods, named (the ids include the generics they count as).
+    liked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
+    disliked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
+
 
 class AllergiesIn(BaseModel):
     allergens: list[Allergen] = Field(default_factory=list[Allergen])

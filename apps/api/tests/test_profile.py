@@ -154,3 +154,18 @@ async def test_cuisines(api: httpx.AsyncClient, db_session: AsyncSession) -> Non
     await db_session.commit()
 
     assert (await api.get("/cuisines")).json() == ["British", "Thai"]
+
+
+@pytest.mark.usefixtures("foods")
+async def test_preferences_name_the_liked_and_disliked_foods(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    onion, olive_oil = 170000, 171413  # seeded by the `foods` fixture
+    body = {"liked_food_ids": [onion], "disliked_food_ids": [olive_oil, 999]}
+
+    saved = (await api.put("/me/preferences", json=body, headers=auth())).json()
+    read = (await api.get("/me/preferences", headers=auth())).json()
+
+    assert saved == read
+    assert [f["description"] for f in read["liked_foods"]] == ["Onions, raw"]
+    assert [f["id"] for f in read["disliked_foods"]] == [olive_oil]  # unknown ids not described

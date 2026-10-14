@@ -341,7 +341,7 @@ async def delete_body(user: CurrentUser, session: Session) -> Response:
 @router.get("/preferences", operation_id="getPreferences")
 async def get_preferences(user: CurrentUser, session: Session) -> PreferencesOut | None:
     row = await session.get(Preferences, user.id)
-    return PreferencesOut.model_validate(row) if row else None
+    return await _preferences_out(session, row) if row else None
 
 
 @router.put("/preferences", operation_id="putPreferences")
@@ -356,7 +356,21 @@ async def put_preferences(
     row.disliked_food_ids = await with_generics(session, body.disliked_food_ids)
     session.add(row)
     await session.commit()
-    return PreferencesOut.model_validate(row)
+    return await _preferences_out(session, row)
+
+
+async def _preferences_out(session: AsyncSession, row: Preferences) -> PreferencesOut:
+    ids = {*row.liked_food_ids, *row.disliked_food_ids}
+    foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
+    return PreferencesOut(
+        diet=row.diet,  # pyright: ignore[reportArgumentType]
+        liked_cuisines=row.liked_cuisines,
+        disliked_cuisines=row.disliked_cuisines,
+        liked_food_ids=row.liked_food_ids,
+        disliked_food_ids=row.disliked_food_ids,
+        liked_foods=[summary(foods[i]) for i in row.liked_food_ids if i in foods],
+        disliked_foods=[summary(foods[i]) for i in row.disliked_food_ids if i in foods],
+    )
 
 
 async def with_generics(session: AsyncSession, food_ids: Iterable[int]) -> list[int]:

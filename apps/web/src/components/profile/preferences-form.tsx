@@ -1,12 +1,16 @@
 "use client";
 
+import { XIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { FoodPicker } from "@/components/food-picker";
 import { ErrorAlert, NativeSelect } from "@/components/form-bits";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
+  type FoodSummary,
   type PreferencesIn,
   useCuisines,
   usePreferences,
@@ -16,6 +20,52 @@ import {
 type Diet = NonNullable<PreferencesIn["diet"]>;
 type Rating = "like" | "dislike" | "neutral";
 
+/** Foods picked for a list, shown as removable chips. */
+function FoodChips({
+  id,
+  label,
+  placeholder,
+  foods,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  foods: FoodSummary[];
+  onChange: (foods: FoodSummary[]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <FoodPicker
+        id={id}
+        scope="generic"
+        placeholder={placeholder}
+        onPick={(f) => onChange(foods.some((x) => x.id === f.id) ? foods : [...foods, f])}
+      />
+      {foods.length ? (
+        <ul className="flex flex-wrap gap-2" aria-label={label}>
+          {foods.map((f) => (
+            <li key={f.id}>
+              <Badge variant="secondary" className="gap-1">
+                {f.description}
+                <button
+                  type="button"
+                  className="relative after:absolute after:-inset-3 after:content-['']"
+                  aria-label={`Remove ${f.description}`}
+                  onClick={() => onChange(foods.filter((x) => x.id !== f.id))}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 /** Soft preferences: the planner favours likes and avoids dislikes, but never forbids. */
 export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
   const { data: cuisines } = useCuisines();
@@ -23,12 +73,16 @@ export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
   const save = useSavePreferences();
   const [diet, setDiet] = useState<Diet | "" | null>(null);
   const [ratings, setRatings] = useState<Record<string, Rating> | null>(null);
+  const [liked, setLiked] = useState<FoodSummary[] | null>(null);
+  const [disliked, setDisliked] = useState<FoodSummary[] | null>(null);
 
   const currentDiet = diet ?? saved?.diet ?? "";
   const currentRatings: Record<string, Rating> = ratings ?? {
     ...Object.fromEntries((saved?.liked_cuisines ?? []).map((c) => [c, "like" as const])),
     ...Object.fromEntries((saved?.disliked_cuisines ?? []).map((c) => [c, "dislike" as const])),
   };
+  const likedFoods = liked ?? saved?.liked_foods ?? [];
+  const dislikedFoods = disliked ?? saved?.disliked_foods ?? [];
   const next: Record<Rating, Rating> = { neutral: "like", like: "dislike", dislike: "neutral" };
 
   function submit(e: React.FormEvent) {
@@ -41,13 +95,15 @@ export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
       diet: currentDiet || null,
       liked_cuisines: pick("like"),
       disliked_cuisines: pick("dislike"),
-      liked_food_ids: saved?.liked_food_ids ?? [],
-      disliked_food_ids: saved?.disliked_food_ids ?? [],
+      liked_food_ids: likedFoods.map((f) => f.id),
+      disliked_food_ids: dislikedFoods.map((f) => f.id),
     };
     save.mutate(payload, {
       onSuccess: () => {
         setDiet(null);
         setRatings(null);
+        setLiked(null);
+        setDisliked(null);
         toast.success("Preferences saved");
         onSaved?.();
       },
@@ -91,6 +147,23 @@ export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
           })}
         </div>
       </div>
+      <FoodChips
+        id="liked-foods"
+        label="Foods you love"
+        placeholder="e.g. salmon, mushrooms"
+        foods={likedFoods}
+        onChange={setLiked}
+      />
+      <FoodChips
+        id="disliked-foods"
+        label="Foods you'd rather not have"
+        placeholder="e.g. olives, coriander"
+        foods={dislikedFoods}
+        onChange={setDisliked}
+      />
+      <p className="text-xs text-muted-foreground">
+        These steer the planner; for anything you must never eat, use Allergies.
+      </p>
       <ErrorAlert error={save.error} />
       <Button type="submit" disabled={save.isPending}>
         Save preferences

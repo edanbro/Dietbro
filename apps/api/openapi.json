@@ -5860,6 +5860,20 @@
             "type": "array",
             "maxItems": 200,
             "title": "Disliked Food Ids"
+          },
+          "liked_foods": {
+            "items": {
+              "$ref": "#/components/schemas/FoodSummary"
+            },
+            "type": "array",
+            "title": "Liked Foods"
+          },
+          "disliked_foods": {
+            "items": {
+              "$ref": "#/components/schemas/FoodSummary"
+            },
+            "type": "array",
+            "title": "Disliked Foods"
           }
         },
         "type": "object",
