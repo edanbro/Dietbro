@@ -5107,6 +5107,15 @@
             "title": "Status",
             "description": "eaten: marked eaten (POST /plans/{id}/meals/eaten)",
             "default": "planned"
+          },
+          "uses_pantry": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses Pantry",
+            "description": "foods in the user's pantry now that the recipe uses",
+            "default": []
           }
         },
         "type": "object",

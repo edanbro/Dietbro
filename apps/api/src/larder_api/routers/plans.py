@@ -59,6 +59,7 @@ from larder_db.models import (
     MealPlan,
     PantryItem,
     PlanMeal,
+    RecipeIngredient,
     ShoppingItem,
     User,
 )
@@ -280,7 +281,7 @@ async def create_plan(
     unshoppable = catalog.unshoppable | private.unshoppable
     row = planning.save_plan(session, user.id, prepared, result, plan, stats, currency, unshoppable)
     await session.commit()
-    return plan_out(await _load_plan(session, user, row.id))
+    return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, row.id)))
 
 
 @router.post("/replan", operation_id="replanPlan", responses=_REPLAN_ERRORS)
@@ -323,7 +324,9 @@ async def current_plan(
     null if there is none. Next week's plan doesn't replace this week's for this week's dates."""
     day = on or local_today(user.timezone, clock())
     plan_id = await planning.plan_id_for(session, user.id, day)
-    return plan_out(await _load_plan(session, user, plan_id)) if plan_id else None
+    if plan_id is None:
+        return None
+    return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, plan_id)))
 
 
 @router.get("/upcoming", operation_id="getUpcomingPlan")
@@ -341,7 +344,9 @@ async def upcoming_plan(
         return None
     row = await _load_plan(session, user, plan_id)
     covers = row.start_date <= after < row.start_date + timedelta(days=row.days)
-    return plan_out(row) if covers and row.start_date > today else None
+    if not covers or row.start_date <= today:
+        return None
+    return await with_pantry(session, user.id, plan_out(row))
 
 
 @router.get(
@@ -476,7 +481,40 @@ async def undo_plan_change(plan_id: int, user: CurrentUser, session: Session) ->
 
 @router.get("/{plan_id}", operation_id="getPlan", responses=_NOT_FOUND)
 async def get_plan(plan_id: int, user: CurrentUser, session: Session) -> PlanOut:
-    return plan_out(await _load_plan(session, user, plan_id))
+    return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, plan_id)))
+
+
+async def with_pantry(session: AsyncSession, user_id: int, plan: PlanOut) -> PlanOut:
+    """Each meal's `uses_pantry`: what's in the pantry now that its recipe uses (a product
+    counts as its generic). Read live, unlike the rest of the plan, which is a snapshot."""
+    recipe_ids = {m.recipe.id for d in plan.days for m in d.meals}
+    if not recipe_ids:
+        return plan
+    stock: dict[int, str] = {}
+    for item in await session.scalars(
+        select(PantryItem)
+        .where(PantryItem.user_id == user_id, PantryItem.grams > 0)
+        .options(selectinload(PantryItem.food))
+    ):
+        name = item.food.description.split(",", 1)[0].strip()
+        stock.setdefault(item.food_id, name)
+        if item.food.generic_food_id is not None:
+            stock.setdefault(item.food.generic_food_id, name)
+    if not stock:
+        return plan
+    uses: dict[int, list[str]] = {}
+    for recipe_id, food_id in await session.execute(
+        select(RecipeIngredient.recipe_id, RecipeIngredient.food_id)
+        .where(RecipeIngredient.recipe_id.in_(recipe_ids), RecipeIngredient.food_id.in_(stock))
+        .order_by(RecipeIngredient.recipe_id, RecipeIngredient.position)
+    ):
+        names = uses.setdefault(recipe_id, [])
+        if food_id is not None and stock[food_id] not in names:
+            names.append(stock[food_id])
+    for day in plan.days:
+        for meal in day.meals:
+            meal.uses_pantry = uses.get(meal.recipe.id, [])
+    return plan
 
 
 @router.post("/{plan_id}/meals/eaten", operation_id="markMealEaten", responses=_EATEN_ERRORS)

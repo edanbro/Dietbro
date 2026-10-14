@@ -22,7 +22,12 @@ export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsP
   const panelId = useId();
   const eaten = meal.status === "eaten";
   return (
-    <div className={cn("rounded-xl border", eaten && "bg-muted/40")}>
+    <div
+      className={cn(
+        "rounded-xl border bg-card shadow-xs motion-safe:transition-shadow hover:shadow-sm",
+        eaten && "bg-muted/40",
+      )}
+    >
       <div className="flex items-center">
         <MealLink meal={meal} chevron={!actions} />
         {actions ? (
@@ -98,6 +103,16 @@ function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
           {formatNumber(meal.nutrition.kcal)} kcal · {formatNumber(meal.nutrition.protein_g)} g
           protein
         </span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {formatNumber(meal.nutrition.carbs_g)} g carbs · {formatNumber(meal.nutrition.fat_g)} g
+          fat
+        </span>
+        {meal.uses_pantry.length ? (
+          <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
+            Uses your {meal.uses_pantry.slice(0, 2).join(", ").toLowerCase()}
+            {meal.uses_pantry.length > 2 ? ` +${meal.uses_pantry.length - 2}` : ""}
+          </span>
+        ) : null}
       </div>
       {chevron ? (
         <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />

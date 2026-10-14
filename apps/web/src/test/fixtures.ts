@@ -52,6 +52,7 @@ export function meal(
     nutrition: { kcal: 600, protein_g: 30, fat_g: 20, carbs_g: 70 },
     locked: false,
     status: "planned",
+    uses_pantry: [],
   };
 }
 

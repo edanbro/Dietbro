@@ -3,6 +3,25 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import { APP_NAME } from "@/lib/brand";
+import { THEME_SCRIPT } from "@/lib/theme";
+
+/** Clerk's sign-in and account screens in the app's colours, light or dark (CSS variables). */
+const CLERK_APPEARANCE = {
+  variables: {
+    colorPrimary: "var(--primary)",
+    colorPrimaryForeground: "var(--primary-foreground)",
+    colorBackground: "var(--card)",
+    colorForeground: "var(--card-foreground)",
+    colorMuted: "var(--muted)",
+    colorMutedForeground: "var(--muted-foreground)",
+    colorInput: "var(--background)",
+    colorInputForeground: "var(--foreground)",
+    colorBorder: "var(--border)",
+    colorRing: "var(--ring)",
+    colorDanger: "var(--destructive)",
+    borderRadius: "0.75rem",
+  },
+};
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
@@ -16,16 +35,21 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#fcfcf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#121a16" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    // The theme script sets the html class before hydration, hence suppressHydrationWarning.
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ClerkProvider
+          appearance={CLERK_APPEARANCE}
           proxyUrl="/__clerk"
           signInUrl="/sign-in"
           signUpUrl="/sign-up"

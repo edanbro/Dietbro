@@ -38,7 +38,9 @@ describe("AppShell", () => {
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
     ]);
-    expect(screen.getByRole("link", { name: "Mealwright" })).toHaveAttribute("href", "/plan");
+    for (const logo of screen.getAllByRole("link", { name: "Mealwright" })) {
+      expect(logo).toHaveAttribute("href", "/plan"); // header (phone) and rail (desktop)
+    }
   });
 
   it.each([
@@ -52,7 +54,10 @@ describe("AppShell", () => {
     resetNavigation(path);
     render(<AppShell>content</AppShell>);
 
-    const current = screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current"));
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    const current = within(nav)
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current"));
     expect(current.map((a) => a.textContent)).toEqual([label]);
   });
 
@@ -60,7 +65,16 @@ describe("AppShell", () => {
     resetNavigation("/diary");
     render(<AppShell>content</AppShell>);
 
-    expect(screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual([]);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(within(nav).getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual(
+      [],
+    );
+    // The desktop rail has the diary.
+    const rail = screen.getByRole("navigation", { name: "Sidebar" });
+    expect(within(rail).getByRole("link", { name: "Diary" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("badges the Pantry tab with how much food expires soon", async () => {

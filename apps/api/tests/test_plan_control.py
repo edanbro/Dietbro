@@ -196,3 +196,22 @@ async def test_no_undo_after_eating(
     assert response.status_code == 409
     assert "can't be undone" in response.json()["detail"][0]
     assert await plan_count(db_engine) == count
+
+
+async def test_meals_say_what_they_use_from_the_pantry(
+    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+) -> None:
+    auth = chat.auth("user_a")
+    plan = (await api.get("/plans/current", headers=auth)).json()
+    meal = plan["days"][3]["meals"][0]
+    recipe = (await api.get(f"/recipes/{meal['recipe']['id']}", headers=auth)).json()
+    food = next(i for i in recipe["ingredients"] if i["food_id"])
+    assert meal["uses_pantry"] == []
+
+    added = await api.post(
+        "/pantry", json={"food_id": food["food_id"], "quantity": 500, "unit": "g"}, headers=auth
+    )
+    assert added.status_code == 201, added.text
+    plan = (await api.get("/plans/current", headers=auth)).json()
+
+    assert plan["days"][3]["meals"][0]["uses_pantry"] == [food["food_name"].split(",")[0]]

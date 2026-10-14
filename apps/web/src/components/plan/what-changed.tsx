@@ -74,7 +74,7 @@ export function WhatChanged({
       ref={ref}
       tabIndex={-1}
       aria-labelledby={titleId}
-      className="flex flex-col gap-2 rounded-xl border bg-card p-3 text-sm text-card-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex flex-col gap-2 rounded-xl border bg-card p-3 text-sm text-card-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
     >
       <div className="flex items-center justify-between gap-2">
         <h2 id={titleId} className="flex items-center gap-1.5 font-medium">

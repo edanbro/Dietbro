@@ -359,6 +359,9 @@ class MealOut(BaseModel):
     status: Literal["planned", "eaten"] = Field(
         default="planned", description="eaten: marked eaten (POST /plans/{id}/meals/eaten)"
     )
+    uses_pantry: list[str] = Field(
+        default=[], description="foods in the user's pantry now that the recipe uses"
+    )
 
 
 class MealLogOut(Logged):

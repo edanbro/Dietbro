@@ -1703,6 +1703,12 @@ export interface components {
              * @enum {string}
              */
             status: "planned" | "eaten";
+            /**
+             * Uses Pantry
+             * @description foods in the user's pantry now that the recipe uses
+             * @default []
+             */
+            uses_pantry: string[];
         };
         /** NutrientBands */
         NutrientBands: {
