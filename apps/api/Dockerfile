@@ -20,6 +20,7 @@ COPY packages/db/pyproject.toml packages/db/
 COPY packages/data/pyproject.toml packages/data/
 COPY packages/llm/pyproject.toml packages/llm/
 COPY packages/solver/pyproject.toml packages/solver/
+COPY evals/pyproject.toml evals/
 
 
 FROM build-base AS build-api
