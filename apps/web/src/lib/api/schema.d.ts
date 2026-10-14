@@ -771,6 +771,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/diary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Diary
+         * @description `days` days up to `end`, oldest first.
+         */
+        get: operations["getDiary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Weights
+         * @description Weigh-ins of the last `days` days, oldest first.
+         */
+        get: operations["listWeights"];
+        /**
+         * Put Weight
+         * @description Record (or replace) the weigh-in of a day, at most a day ahead of the user's today.
+         */
+        put: operations["putWeight"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/weights/{measured_on}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Weight */
+        delete: operations["deleteWeight"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1051,6 +1112,55 @@ export interface components {
             totals: components["schemas"]["MacrosOut"];
             /** Logged */
             logged: components["schemas"]["MealLogOut"][];
+        };
+        /**
+         * DiaryDayOut
+         * @description What the user logged on a day: meals marked eaten, food logged off-plan and meals
+         *     skipped (a skip eaten elsewhere carries that meal's energy). `eaten` adds them up;
+         *     `planned_kcal` is the newest plan's total for the day (null: no plan covers it).
+         */
+        DiaryDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            eaten: components["schemas"]["MacrosOut"];
+            /** Logged */
+            logged: components["schemas"]["MealLogOut"][];
+            /** Planned Kcal */
+            planned_kcal?: number | null;
+            /**
+             * Status
+             * @description against the daily kcal goal; null when nothing is logged
+             */
+            status?: ("under" | "on" | "over") | null;
+        };
+        /** DiaryOut */
+        DiaryOut: {
+            /** Days */
+            days: components["schemas"]["DiaryDayOut"][];
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Kcal Min */
+            kcal_min?: number | null;
+            /** Kcal Max */
+            kcal_max?: number | null;
+            /** Protein G Min */
+            protein_g_min?: number | null;
+            /**
+             * Logged Days
+             * @default 0
+             */
+            logged_days: number;
+            /**
+             * On Target Days
+             * @default 0
+             */
+            on_target_days: number;
         };
         /**
          * Diet
@@ -2386,6 +2496,26 @@ export interface components {
             slot?: components["schemas"]["Slot"] | null;
             /** Recipe Id */
             recipe_id?: number | null;
+        };
+        /** WeightIn */
+        WeightIn: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Weight Kg */
+            weight_kg: number;
+        };
+        /** WeightOut */
+        WeightOut: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Weight Kg */
+            weight_kg: number;
         };
         /**
          * When
@@ -4148,6 +4278,139 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["ChatProblem"];
+                };
+            };
+        };
+    };
+    getDiary: {
+        parameters: {
+            query?: {
+                days?: number;
+                /** @description last day shown (default: today) */
+                end?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listWeights: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeightOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putWeight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeightIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeightOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteWeight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measured_on: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no weigh-in that day */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

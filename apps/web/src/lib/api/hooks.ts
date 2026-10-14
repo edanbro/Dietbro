@@ -54,6 +54,9 @@ export type ReceiptLine = Schemas["ReceiptLineOut"];
 export type ReceiptLinePatch = Schemas["ReceiptLinePatch"];
 export type ReceiptSummary = Schemas["ReceiptSummary"];
 export type ReceiptStatus = Receipt["status"];
+export type Diary = Schemas["DiaryOut"];
+export type DiaryDay = Schemas["DiaryDayOut"];
+export type Weight = Schemas["WeightOut"];
 
 export const keys = {
   me: ["me"] as const,
@@ -77,6 +80,9 @@ export const keys = {
   recipe: (id: number) => ["recipes", id] as const,
   /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
   plans: ["plans"] as const,
+  /** Under `plans`: marking meals eaten and chat logs change it. */
+  diary: (days: number) => ["plans", "diary", days] as const,
+  weights: ["me", "weights"] as const,
   chatThread: ["chat", "thread"] as const,
   /** Mutations that change the current plan from the plan screen (one at a time). */
   planChange: ["plan-change"] as const,
@@ -696,5 +702,49 @@ export function useDeleteReceipt() {
       qc.removeQueries({ queryKey: keys.receipt(id) });
       await qc.invalidateQueries({ queryKey: keys.receipts, exact: true });
     },
+  });
+}
+
+/** The last `days` days of what was eaten, against the goals (today last). */
+export function useDiary(days = 7) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.diary(days),
+    queryFn: async () => unwrap(await api.GET("/diary", { params: { query: { days } } })),
+  });
+}
+
+export function useWeights(days = 90) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.weights,
+    queryFn: async () => unwrap(await api.GET("/me/weights", { params: { query: { days } } })),
+  });
+}
+
+/** Record or delete a weigh-in; the newest also becomes the body profile's weight. */
+export function useWeight() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      action: { kind: "save"; measured_on: string; weight_kg: number } | { kind: "delete"; measured_on: string },
+    ) =>
+      action.kind === "save"
+        ? unwrap(
+            await api.PUT("/me/weights", {
+              body: { measured_on: action.measured_on, weight_kg: action.weight_kg },
+            }),
+          )
+        : unwrap(
+            await api.DELETE("/me/weights/{measured_on}", {
+              params: { path: { measured_on: action.measured_on } },
+            }),
+          ),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: keys.weights }),
+        qc.invalidateQueries({ queryKey: keys.body }),
+      ]),
   });
 }

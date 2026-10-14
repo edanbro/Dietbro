@@ -14,6 +14,7 @@ import { useIsMutating } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TodaySummary } from "@/components/diary/today-summary";
 import { ErrorAlert } from "@/components/form-bits";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -336,6 +337,7 @@ function PlanView({
         <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
         <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
       </div>
+      <TodaySummary />
       <div className="flex gap-2">
         <Link
           href="/plan/shopping"

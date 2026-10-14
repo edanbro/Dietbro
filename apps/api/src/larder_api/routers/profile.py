@@ -50,6 +50,7 @@ from larder_db.models import (
     Allergies,
     Base,
     BodyProfile,
+    BodyWeight,
     ChatThread,
     Craving,
     Food,
@@ -235,6 +236,14 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "user": row(user),
         "goals": row(await session.get(Goals, user.id), "user_id"),
         "body": row(await session.get(BodyProfile, user.id), "user_id"),
+        "weights": rows(
+            await session.scalars(
+                select(BodyWeight)
+                .where(BodyWeight.user_id == user.id)
+                .order_by(BodyWeight.measured_on)
+            ),
+            "user_id",
+        ),
         "preferences": row(await session.get(Preferences, user.id), "user_id"),
         "allergies": row(await session.get(Allergies, user.id), "user_id"),
         "pantry": rows(pantry, "user_id"),

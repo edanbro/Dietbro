@@ -347,6 +347,20 @@ class BodyProfile(Base):
     updated_at: Mapped[datetime] = _now()
 
 
+class BodyWeight(Base):
+    """A weigh-in (one per day; a second the same day replaces it). The newest is copied to
+    the body profile, so energy targets follow the user's weight."""
+
+    __tablename__ = "body_weights"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    measured_on: Mapped[date] = mapped_column(Date, primary_key=True)  # the user's local date
+    weight_kg: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Preferences(Base):
     """Soft preferences: the solver rewards likes and penalises dislikes, never forbids."""
 

@@ -1,0 +1,192 @@
+"""The food diary (what was eaten, day by day, against the goals) and weigh-ins.
+
+Nothing new is stored for the diary: it reads the meal logs every replan already rebuilds
+from (meals marked eaten, food logged off-plan, skips). Weigh-ins are one per day; the newest
+is copied to the body profile so the energy targets follow the user's weight.
+"""
+
+from datetime import date, timedelta
+from typing import Annotated, Any, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
+
+from larder_api import planning
+from larder_api.auth import CurrentUser
+from larder_api.clock import Clock, get_clock
+from larder_api.db import Session
+from larder_api.schemas import DiaryDayOut, DiaryOut, MacrosOut, WeightIn, WeightOut
+from larder_core.regions import local_today
+from larder_db.models import BodyProfile, BodyWeight, Goals, MealPlan, PlanMeal
+
+router = APIRouter(tags=["diary"])
+
+MAX_DAYS = 92
+_NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    status.HTTP_404_NOT_FOUND: {"description": "no weigh-in that day"}
+}
+
+
+def day_status(
+    kcal: int, kcal_min: float | None, kcal_max: float | None
+) -> Literal["under", "on", "over"]:
+    if kcal_min is not None and kcal < kcal_min:
+        return "under"
+    if kcal_max is not None and kcal > kcal_max:
+        return "over"
+    return "on"
+
+
+@router.get("/diary", operation_id="getDiary")
+async def get_diary(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    days: Annotated[int, Query(ge=1, le=MAX_DAYS)] = 7,
+    end: Annotated[date | None, Query(description="last day shown (default: today)")] = None,
+) -> DiaryOut:
+    """`days` days up to `end`, oldest first."""
+    today = local_today(user.timezone, clock())
+    last = end or today
+    first = last - timedelta(days=days - 1)
+    logs = await planning.active_logs(session, user.id, first, days)
+    planned = await _planned_kcal(session, user.id, first, last)
+    goals = await session.get(Goals, user.id)
+    kcal_min = goals.kcal_min if goals else None
+    kcal_max = goals.kcal_max if goals else None
+
+    out: list[DiaryDayOut] = []
+    for d in range(days):
+        on = first + timedelta(days=d)
+        mine = [log for log in logs if log.eaten_on == on]
+        eaten = MacrosOut(
+            kcal=sum(log.kcal for log in mine),
+            protein_g=sum(log.protein_g for log in mine),
+            fat_g=sum(log.fat_g for log in mine),
+            carbs_g=sum(log.carbs_g for log in mine),
+        )
+        out.append(
+            DiaryDayOut(
+                date=on,
+                eaten=eaten,
+                logged=[planning.logged_out(log) for log in mine],
+                planned_kcal=planned.get(on),
+                status=day_status(eaten.kcal, kcal_min, kcal_max) if mine else None,
+            )
+        )
+    past = [d for d in out if d.date < today and d.status is not None]
+    return DiaryOut(
+        days=out,
+        today=today,
+        kcal_min=kcal_min,
+        kcal_max=kcal_max,
+        protein_g_min=goals.protein_g_min if goals else None,
+        logged_days=len(past),
+        on_target_days=sum(d.status == "on" for d in past),
+    )
+
+
+async def _planned_kcal(session: Session, user_id: int, first: date, last: date) -> dict[date, int]:
+    """Each date's planned energy in the newest plan version covering it."""
+    plans = (
+        await session.scalars(
+            select(MealPlan)
+            .where(MealPlan.user_id == user_id, MealPlan.start_date <= last)
+            .order_by(MealPlan.id.desc())
+            .limit(50)
+        )
+    ).all()
+    owner: dict[date, int] = {}
+    for plan in plans:
+        for d in range(plan.days):
+            on = plan.start_date + timedelta(days=d)
+            if first <= on <= last:
+                owner.setdefault(on, plan.id)
+    if not owner:
+        return {}
+    meals = await session.execute(
+        select(PlanMeal.plan_id, PlanMeal.day, PlanMeal.kcal).where(
+            PlanMeal.plan_id.in_(set(owner.values()))
+        )
+    )
+    starts = {p.id: p.start_date for p in plans}
+    out = dict.fromkeys(owner, 0)
+    for plan_id, day, kcal in meals:
+        on = starts[plan_id] + timedelta(days=day)
+        if owner.get(on) == plan_id:
+            out[on] += kcal
+    return out
+
+
+@router.get("/me/weights", operation_id="listWeights")
+async def list_weights(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    days: Annotated[int, Query(ge=1, le=730)] = 90,
+) -> list[WeightOut]:
+    """Weigh-ins of the last `days` days, oldest first."""
+    since = local_today(user.timezone, clock()) - timedelta(days=days - 1)
+    rows = await session.scalars(
+        select(BodyWeight)
+        .where(BodyWeight.user_id == user.id, BodyWeight.measured_on >= since)
+        .order_by(BodyWeight.measured_on)
+    )
+    return [WeightOut.model_validate(r) for r in rows]
+
+
+@router.put("/me/weights", operation_id="putWeight")
+async def put_weight(
+    body: WeightIn,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> WeightOut:
+    """Record (or replace) the weigh-in of a day, at most a day ahead of the user's today."""
+    if body.measured_on > local_today(user.timezone, clock()) + timedelta(days=1):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, ["A weigh-in can't be in the future."])
+    weight = round(body.weight_kg, 1)
+    await session.execute(
+        insert(BodyWeight)
+        .values(user_id=user.id, measured_on=body.measured_on, weight_kg=weight)
+        .on_conflict_do_update(
+            index_elements=[BodyWeight.user_id, BodyWeight.measured_on],
+            set_={"weight_kg": weight},
+        )
+    )
+    await _sync_profile(session, user.id)
+    await session.commit()
+    return WeightOut(measured_on=body.measured_on, weight_kg=weight)
+
+
+@router.delete(
+    "/me/weights/{measured_on}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="deleteWeight",
+    responses=_NOT_FOUND,
+)
+async def delete_weight(measured_on: date, user: CurrentUser, session: Session) -> Response:
+    gone = await session.execute(
+        delete(BodyWeight)
+        .where(BodyWeight.user_id == user.id, BodyWeight.measured_on == measured_on)
+        .returning(BodyWeight.measured_on)
+    )
+    if gone.first() is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no weigh-in that day")
+    await _sync_profile(session, user.id)
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _sync_profile(session: Session, user_id: int) -> None:
+    """The body profile (if set up) takes the newest weigh-in's weight."""
+    newest = await session.scalar(
+        select(BodyWeight.weight_kg)
+        .where(BodyWeight.user_id == user_id)
+        .order_by(BodyWeight.measured_on.desc())
+        .limit(1)
+    )
+    profile = await session.get(BodyProfile, user_id)
+    if profile is not None and newest is not None:
+        profile.weight_kg = newest

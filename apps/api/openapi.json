@@ -2525,6 +2525,220 @@
           }
         ]
       }
+    },
+    "/diary": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Get Diary",
+        "description": "`days` days up to `end`, oldest first.",
+        "operationId": "getDiary",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 92,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "last day shown (default: today)",
+              "title": "End"
+            },
+            "description": "last day shown (default: today)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/weights": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "List Weights",
+        "description": "Weigh-ins of the last `days` days, oldest first.",
+        "operationId": "listWeights",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 730,
+              "minimum": 1,
+              "default": 90,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeightOut"
+                  },
+                  "title": "Response Listweights"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Put Weight",
+        "description": "Record (or replace) the weigh-in of a day, at most a day ahead of the user's today.",
+        "operationId": "putWeight",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeightIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeightOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/weights/{measured_on}": {
+      "delete": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Delete Weight",
+        "operationId": "deleteWeight",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "measured_on",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Measured On"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no weigh-in that day"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3263,6 +3477,126 @@
           "logged"
         ],
         "title": "DayOut"
+      },
+      "DiaryDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "eaten": {
+            "$ref": "#/components/schemas/MacrosOut"
+          },
+          "logged": {
+            "items": {
+              "$ref": "#/components/schemas/MealLogOut"
+            },
+            "type": "array",
+            "title": "Logged"
+          },
+          "planned_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Kcal"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "under",
+                  "on",
+                  "over"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "against the daily kcal goal; null when nothing is logged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "eaten",
+          "logged"
+        ],
+        "title": "DiaryDayOut",
+        "description": "What the user logged on a day: meals marked eaten, food logged off-plan and meals\nskipped (a skip eaten elsewhere carries that meal's energy). `eaten` adds them up;\n`planned_kcal` is the newest plan's total for the day (null: no plan covers it)."
+      },
+      "DiaryOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DiaryDayOut"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "kcal_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Max"
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "logged_days": {
+            "type": "integer",
+            "title": "Logged Days",
+            "default": 0
+          },
+          "on_target_days": {
+            "type": "integer",
+            "title": "On Target Days",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "today"
+        ],
+        "title": "DiaryOut"
       },
       "Diet": {
         "type": "string",
@@ -6885,6 +7219,46 @@
         ],
         "title": "ViolationOut",
         "description": "A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the\nbaseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.\nSafety rules (allergens, diet, calorie floor) are never broken in a saved plan."
+      },
+      "WeightIn": {
+        "properties": {
+          "measured_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 20.0,
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "measured_on",
+          "weight_kg"
+        ],
+        "title": "WeightIn"
+      },
+      "WeightOut": {
+        "properties": {
+          "measured_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "measured_on",
+          "weight_kg"
+        ],
+        "title": "WeightOut"
       },
       "When": {
         "properties": {

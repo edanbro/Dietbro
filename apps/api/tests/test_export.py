@@ -27,6 +27,7 @@ type Rows = Callable[[dict[str, Any]], list[dict[str, Any]]]
 EXPORTED: dict[str, Rows] = {
     "goals": lambda e: [e["goals"]],
     "body_profiles": lambda e: [e["body"]],
+    "body_weights": lambda e: e["weights"],
     "preferences": lambda e: [e["preferences"]],
     "allergies": lambda e: [e["allergies"]],
     "pantry_items": lambda e: e["pantry"],
@@ -94,6 +95,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
                 weight_kg=60,
                 activity="moderate",
             ),
+            db.BodyWeight(user_id=uid, measured_on=date(2026, 10, 12), weight_kg=60),
             db.Preferences(user_id=uid, liked_cuisines=["Thai"]),
             db.Allergies(user_id=uid, allergens=["peanuts"]),
             recipe,
@@ -190,6 +192,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
     return {
         "goals": uid,
         "body_profiles": uid,
+        "body_weights": uid,
         "preferences": uid,
         "allergies": uid,
         "pantry_items": pantry.id,

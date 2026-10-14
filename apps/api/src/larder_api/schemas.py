@@ -374,6 +374,46 @@ class DayOut(BaseModel):
     logged: list[MealLogOut]
 
 
+# --- diary and progress -----------------------------------------------------------------------
+
+
+class DiaryDayOut(BaseModel):
+    """What the user logged on a day: meals marked eaten, food logged off-plan and meals
+    skipped (a skip eaten elsewhere carries that meal's energy). `eaten` adds them up;
+    `planned_kcal` is the newest plan's total for the day (null: no plan covers it)."""
+
+    date: date
+    eaten: MacrosOut
+    logged: list[MealLogOut]
+    planned_kcal: int | None = None
+    status: Literal["under", "on", "over"] | None = Field(
+        default=None, description="against the daily kcal goal; null when nothing is logged"
+    )
+
+
+class DiaryOut(BaseModel):
+    days: list[DiaryDayOut]  # oldest first
+    today: date  # the user's local date
+    kcal_min: float | None = None
+    kcal_max: float | None = None
+    protein_g_min: float | None = None
+    # Of the logged days before today: how many landed within the kcal goal.
+    logged_days: int = 0
+    on_target_days: int = 0
+
+
+class WeightIn(BaseModel):
+    measured_on: date
+    weight_kg: float = Field(gt=20, le=500)
+
+
+class WeightOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    measured_on: date
+    weight_kg: float
+
+
 class ViolationOut(BaseModel):
     """A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the
     baseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.
