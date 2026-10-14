@@ -166,7 +166,7 @@ function ListView({ plan }: { plan: Plan }) {
       </div>
     );
   }
-  if (error) return <ErrorAlert error={error} onRetry={() => void refetch()} />;
+  if (error && !list) return <ErrorAlert error={error} onRetry={() => void refetch()} />;
 
   const toBuy = list.items.filter((i) => !i.staple);
   const staples = list.items.filter((i) => i.staple);
@@ -386,7 +386,7 @@ export function ShoppingPage() {
       </div>
       {isPending ? (
         <Skeleton className="h-16" />
-      ) : error ? (
+      ) : error && !plan ? (
         <ErrorAlert error={error} onRetry={() => void refetch()} />
       ) : plan ? (
         <ListView plan={plan} />

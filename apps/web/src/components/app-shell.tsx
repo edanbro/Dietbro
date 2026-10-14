@@ -15,9 +15,10 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { OfflineBanner } from "@/components/offline-banner";
 import { useRegionSync } from "@/components/region-sync";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useMe } from "@/lib/api/hooks";
+import { useMe, useOfflineSync } from "@/lib/api/hooks";
 import { APP_NAME } from "@/lib/brand";
 
 const NAV = [
@@ -115,6 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: me } = useMe();
   useRegionSync(me, pathname.startsWith("/setup"));
+  useOfflineSync();
   const expiring = me?.profile.expiring_soon ?? 0;
   return (
     <div className="flex min-h-dvh flex-col lg:pl-64">
@@ -123,6 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Brand />
         <UserButton />
       </header>
+      <OfflineBanner />
       <main className="mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-24 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12">
         {children}
       </main>

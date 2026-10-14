@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
+import { ServiceWorker } from "@/components/offline-banner";
 import { APP_NAME } from "@/lib/brand";
 import { THEME_SCRIPT } from "@/lib/theme";
 
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
   description: "Plans your week around what's already in your kitchen.",
   applicationName: APP_NAME,
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -59,6 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           {children}
         </ClerkProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

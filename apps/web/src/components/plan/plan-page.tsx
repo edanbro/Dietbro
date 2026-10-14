@@ -162,7 +162,9 @@ export function PlanPage() {
   };
 
   if (me.isPending || (me.data?.setup_complete && plan.isPending)) return <PlanSkeleton />;
-  if (me.error) return <ErrorAlert error={me.error} onRetry={() => void me.refetch()} />;
+  if (me.error && !me.data) {
+    return <ErrorAlert error={me.error} onRetry={() => void me.refetch()} />;
+  }
 
   if (!me.data.setup_complete) {
     return (
@@ -180,7 +182,9 @@ export function PlanPage() {
     );
   }
 
-  if (plan.error) return <ErrorAlert error={plan.error} onRetry={() => void plan.refetch()} />;
+  if (plan.error && !plan.data) {
+    return <ErrorAlert error={plan.error} onRetry={() => void plan.refetch()} />;
+  }
 
   if (!plan.data) {
     return (

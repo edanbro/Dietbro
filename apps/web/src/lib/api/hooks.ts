@@ -1,9 +1,19 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { localISODate, localTime } from "@/lib/dates";
+import {
+  dropTicks,
+  isNetworkError,
+  loadSnapshot,
+  pendingTicks,
+  queueTick,
+  saveSnapshot,
+} from "@/lib/offline";
 
 import { ApiError, unwrap, useApi } from "./browser";
 import type { components } from "./schema";
@@ -98,7 +108,17 @@ export const keys = {
 
 export function useMe() {
   const api = useApi();
-  return useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await api.GET("/me")) });
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: keys.me,
+    initialData: () => loadSnapshot<Me>(userId, "me"),
+    initialDataUpdatedAt: 0,
+    queryFn: async () => {
+      const me = unwrap(await api.GET("/me"));
+      saveSnapshot(userId, "me", me);
+      return me;
+    },
+  });
 }
 
 export function useGoals() {
@@ -305,12 +325,19 @@ export function useDeleteAccount() {
 
 // --- plans (M3) -------------------------------------------------------------------------------
 
-/** The latest plan, or null before the first one. */
+/** The plan in force today, or null before the first one. Offline: the last copy seen. */
 export function useCurrentPlan() {
   const api = useApi();
+  const { userId } = useAuth();
   return useQuery({
     queryKey: keys.currentPlan,
-    queryFn: async (): Promise<Plan | null> => unwrap(await api.GET("/plans/current")) ?? null,
+    initialData: () => loadSnapshot<Plan>(userId, "plan"),
+    initialDataUpdatedAt: 0, // always refetched when online
+    queryFn: async (): Promise<Plan | null> => {
+      const plan = unwrap(await api.GET("/plans/current")) ?? null;
+      saveSnapshot(userId, "plan", plan ?? undefined);
+      return plan;
+    },
   });
 }
 
@@ -373,17 +400,25 @@ export function useUndoPlan() {
   });
 }
 
+/** A plan's shopping list. Offline: the last copy seen, with ticks made since. */
 export function useShoppingList(planId: number | null) {
   const api = useApi();
+  const { userId } = useAuth();
+  const what = `shopping:${planId ?? 0}`;
   return useQuery({
     queryKey: keys.shopping(planId ?? 0),
     enabled: planId !== null,
-    queryFn: async () =>
-      unwrap(
+    initialData: () => loadSnapshot<ShoppingList>(userId, what),
+    initialDataUpdatedAt: 0,
+    queryFn: async () => {
+      const list = unwrap(
         await api.GET("/plans/{plan_id}/shopping", {
           params: { path: { plan_id: planId ?? 0 } },
         }),
-      ),
+      );
+      saveSnapshot(userId, what, list);
+      return list;
+    },
   });
 }
 
@@ -406,21 +441,37 @@ function withChecked(list: ShoppingList | undefined, foodId: number, checked: bo
 export function useTickShoppingItem(planId: number) {
   const api = useApi();
   const qc = useQueryClient();
+  const { userId } = useAuth();
   const key = keys.shopping(planId);
   const mutationKey = ["shopping-tick", planId];
   return useMutation({
     mutationKey,
     scope: { id: `shopping-${planId}` },
-    mutationFn: async ({ item, checked }: Tick) =>
-      unwrap(
-        await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
-          params: { path: { plan_id: planId, food_id: item.food_id } },
-          body: { checked },
-        }),
-      ),
+    mutationFn: async ({ item, checked }: Tick) => {
+      try {
+        return unwrap(
+          await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
+            params: { path: { plan_id: planId, food_id: item.food_id } },
+            body: { checked },
+          }),
+        );
+      } catch (error) {
+        // In a shop with no signal: keep the tick and send it when back online.
+        if (!userId || !isNetworkError(error)) throw error;
+        queueTick(userId, { planId, foodId: item.food_id, checked });
+        if (pendingTicks(userId).length === 1) {
+          toast("You're offline. Ticks are saved and will sync when you're back online.");
+        }
+        return null;
+      }
+    },
     onMutate: async ({ item, checked }: Tick) => {
       await qc.cancelQueries({ queryKey: key });
-      qc.setQueryData<ShoppingList>(key, (list) => withChecked(list, item.food_id, checked));
+      qc.setQueryData<ShoppingList>(key, (list) => {
+        const next = withChecked(list, item.food_id, checked);
+        saveSnapshot(userId, `shopping:${planId}`, next);
+        return next;
+      });
     },
     onError: (_error, { item, checked }) => {
       qc.setQueryData<ShoppingList>(key, (list) => {
@@ -434,6 +485,51 @@ export function useTickShoppingItem(planId: number) {
       if (qc.isMutating({ mutationKey }) === 1) await qc.invalidateQueries({ queryKey: key });
     },
   });
+}
+
+/**
+ * Send shopping ticks made offline once the connection is back (on load and on "online").
+ * A tick the server refuses (the plan changed meanwhile) is dropped; the list is refetched.
+ */
+export function useOfflineSync() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const { userId } = useAuth();
+  useEffect(() => {
+    if (!userId) return;
+    let running = false;
+    const flush = async () => {
+      const ticks = pendingTicks(userId);
+      if (running || !ticks.length || !navigator.onLine) return;
+      running = true;
+      const done: typeof ticks = [];
+      try {
+        for (const t of ticks) {
+          try {
+            unwrap(
+              await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
+                params: { path: { plan_id: t.planId, food_id: t.foodId } },
+                body: { checked: t.checked },
+              }),
+            );
+          } catch (error) {
+            if (isNetworkError(error)) break; // still offline: try again later
+          }
+          done.push(t);
+        }
+      } finally {
+        dropTicks(userId, done);
+        running = false;
+      }
+      if (done.length) {
+        await qc.invalidateQueries({ queryKey: keys.plans });
+        toast.success("Shopping list synced");
+      }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [api, qc, userId]);
 }
 
 /** Move bought lines into the pantry (default: every ticked line not moved yet). */
