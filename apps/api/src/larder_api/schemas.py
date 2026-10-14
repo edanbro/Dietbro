@@ -550,6 +550,8 @@ class RecipeIngredientOut(BaseModel):
     food_id: int | None
     food_name: str | None
     grams: float | None
+    # The signed-in viewer has this food (or a product that counts as it) in their pantry.
+    in_pantry: bool = False
 
 
 class RecipeDetail(RecipeCard):

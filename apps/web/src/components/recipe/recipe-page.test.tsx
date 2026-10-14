@@ -62,7 +62,11 @@ describe("RecipePage", () => {
     const ingredients = within(screen.getByRole("region", { name: "Ingredients" })).getAllByRole(
       "listitem",
     );
-    expect(ingredients.map((li) => li.textContent)).toEqual(["1 largeOnion", "4Eggs", "Feta"]);
+    expect(ingredients.map((li) => li.textContent)).toEqual([
+      "1 largeOnionIn your pantry",
+      "4Eggs",
+      "Feta",
+    ]);
 
     const method = screen.getByRole("region", { name: "Method" });
     expect([...method.querySelectorAll("p")].map((p) => p.textContent)).toEqual([

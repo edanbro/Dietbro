@@ -7,7 +7,7 @@ from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -29,7 +29,7 @@ from larder_api.schemas import (
 )
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.nutrigrade import NutriInput, grade
-from larder_db.models import Food, Preferences, Recipe, User
+from larder_db.models import Food, PantryItem, Preferences, Recipe, User
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +194,7 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
         raise HTTPException(status.HTTP_404_NOT_FOUND, "recipe not found")
     food_ids = {i.food_id for i in recipe.ingredients if i.food_id is not None}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(food_ids)))}
+    stocked = await _stocked(session, viewer, food_ids) if viewer else set[int]()
     info = {fid: planning.food_info(f) for fid, f in foods.items()}
     facts = planning.recipe_facts(recipe, foods, info)
     per_serving = (
@@ -233,10 +234,23 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
                 food_id=i.food_id,
                 food_name=foods[i.food_id].description if i.food_id is not None else None,
                 grams=i.grams,
+                in_pantry=i.food_id in stocked,
             )
             for i in sorted(recipe.ingredients, key=lambda i: i.position)
         ],
     )
+
+
+async def _stocked(session: Session, user_id: int, food_ids: set[int]) -> set[int]:
+    """Which of `food_ids` the user has in their pantry (a product counts as its generic)."""
+    key = func.coalesce(Food.generic_food_id, PantryItem.food_id)
+    rows = await session.scalars(
+        select(key)
+        .select_from(PantryItem)
+        .join(Food, Food.id == PantryItem.food_id)
+        .where(PantryItem.user_id == user_id, PantryItem.grams > 0, key.in_(food_ids))
+    )
+    return set(rows)
 
 
 def recipe_grade(recipe: Recipe, foods: Mapping[int, Food]) -> NutritionGrade | None:

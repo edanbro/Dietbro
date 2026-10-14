@@ -49,7 +49,7 @@ function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
   const Icon = SLOT_ICON[meal.slot];
   return (
     <Link
-      href={`/recipes/${meal.recipe.id}`}
+      href={`/recipes/${meal.recipe.id}?servings=${meal.servings}`}
       className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       {meal.recipe.image_url ? (

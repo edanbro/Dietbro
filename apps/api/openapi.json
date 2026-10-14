@@ -6716,6 +6716,11 @@
               }
             ],
             "title": "Grams"
+          },
+          "in_pantry": {
+            "type": "boolean",
+            "title": "In Pantry",
+            "default": false
           }
         },
         "type": "object",

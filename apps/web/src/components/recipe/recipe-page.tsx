@@ -4,12 +4,13 @@ import { cn } from "cn";
 import {
   ArrowLeftIcon,
   BanIcon,
+  ChefHatIcon,
   ExternalLinkIcon,
   HeartIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { GradeBadge } from "@/components/food-bits";
@@ -19,6 +20,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
+import { parseServings } from "@/lib/cooking";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
@@ -212,6 +214,7 @@ function Credit({ recipe }: { recipe: Recipe }) {
 /** A recipe: photo, numbers per serving, allergens and diets, ingredients and method. */
 export function RecipePage({ id }: { id: number }) {
   const { data: recipe, isPending, error, refetch } = useRecipe(id);
+  const servings = parseServings(useSearchParams().get("servings"));
 
   if (isPending) {
     return (
@@ -265,6 +268,13 @@ export function RecipePage({ id }: { id: number }) {
         ) : null}
         <GradeBadge grade={recipe.grade} className="mt-1" />
       </header>
+      <Link
+        href={`/recipes/${recipe.id}/cook${servings ? `?servings=${servings}` : ""}`}
+        className={cn(buttonVariants({ size: "lg" }), "w-full")}
+      >
+        <ChefHatIcon aria-hidden />
+        Start cooking{servings ? ` (${servings} ${servings === 1 ? "serving" : "servings"})` : ""}
+      </Link>
       <Feedback recipe={recipe} />
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">
@@ -285,6 +295,11 @@ export function RecipePage({ id }: { id: number }) {
             <li key={`${ing.name}-${i}`} className="flex gap-3 px-3 py-2">
               <span className="w-24 shrink-0 text-muted-foreground">{ing.measure}</span>
               <span className="min-w-0 flex-1">{ing.name}</span>
+              {ing.in_pantry ? (
+                <span className="shrink-0 text-xs text-emerald-700 dark:text-emerald-400">
+                  In your pantry
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

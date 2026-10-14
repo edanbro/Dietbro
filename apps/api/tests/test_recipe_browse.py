@@ -102,3 +102,24 @@ async def test_never_again_recipes_are_not_planned(
     planned = {m["recipe"]["name"] for d in response.json()["days"] for m in d["meals"]}
     assert planned
     assert not {"Porridge", "Oat and apple bowl"} & planned
+
+
+async def test_recipe_marks_what_is_in_the_pantry(
+    api: httpx.AsyncClient, auth: Auth, new_user: NewUser, menu: dict[str, int]
+) -> None:
+    await new_user("user_a")
+    bowl = menu["Oat and apple bowl"]
+    before = (await api.get(f"/recipes/{bowl}", headers=auth())).json()
+    oats = next(i for i in before["ingredients"] if i["name"] == "oat")
+    added = await api.post(
+        "/pantry", json={"food_id": oats["food_id"], "quantity": 500, "unit": "g"}, headers=auth()
+    )
+    assert added.status_code == 201, added.text
+
+    after = (await api.get(f"/recipes/{bowl}", headers=auth())).json()
+
+    assert [i["in_pantry"] for i in before["ingredients"]] == [False, False]
+    assert {i["name"]: i["in_pantry"] for i in after["ingredients"]} == {
+        "oat": True,
+        "apple": False,
+    }

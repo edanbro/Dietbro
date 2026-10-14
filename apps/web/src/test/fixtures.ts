@@ -184,9 +184,30 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     allergens_complete: false,
     suitable_for: ["vegetarian"],
     ingredients: [
-      { name: "Onion", measure: "1 large", food_id: 1, food_name: "Onions, raw", grams: 150 },
-      { name: "Eggs", measure: "4", food_id: 2, food_name: "Egg, whole, raw", grams: 200 },
-      { name: "Feta", measure: "", food_id: null, food_name: null, grams: null },
+      {
+        name: "Onion",
+        measure: "1 large",
+        food_id: 1,
+        food_name: "Onions, raw",
+        grams: 150,
+        in_pantry: true,
+      },
+      {
+        name: "Eggs",
+        measure: "4",
+        food_id: 2,
+        food_name: "Egg, whole, raw",
+        grams: 200,
+        in_pantry: false,
+      },
+      {
+        name: "Feta",
+        measure: "",
+        food_id: null,
+        food_name: null,
+        grams: null,
+        in_pantry: false,
+      },
     ],
     ...overrides,
   };

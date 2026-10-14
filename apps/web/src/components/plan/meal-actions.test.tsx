@@ -96,7 +96,7 @@ describe("meal options", () => {
     // The recipe stays a link next to the options.
     expect(within(list).getByRole("link", { name: /Lunch 1/ })).toHaveAttribute(
       "href",
-      "/recipes/200",
+      expect.stringMatching(/^\/recipes\/200(\?|$)/),
     );
 
     fireEvent.click(toggle);

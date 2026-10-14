@@ -2235,6 +2235,11 @@ export interface components {
             food_name: string | null;
             /** Grams */
             grams: number | null;
+            /**
+             * In Pantry
+             * @default false
+             */
+            in_pantry: boolean;
         };
         /** RecipeListItem */
         RecipeListItem: {

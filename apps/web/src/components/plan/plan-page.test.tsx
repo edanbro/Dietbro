@@ -158,9 +158,9 @@ describe("loaded plan", () => {
     const meals = screen.getByRole("list", { name: "Meals on Saturday 10 October" });
     const links = within(meals).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
-      "/recipes/101",
-      "/recipes/201",
-      "/recipes/301",
+      expect.stringMatching(/^\/recipes\/101(\?|$)/),
+      expect.stringMatching(/^\/recipes\/201(\?|$)/),
+      expect.stringMatching(/^\/recipes\/301(\?|$)/),
     ]);
     expect(links[0]).toHaveTextContent("Breakfast");
     expect(links[0]).toHaveTextContent("Breakfast 2");
@@ -220,7 +220,7 @@ describe("loaded plan", () => {
     expect(rows).toHaveLength(7);
     expect(within(rows[2]).getByRole("link", { name: "Hummus and carrots" })).toHaveAttribute(
       "href",
-      "/recipes/400",
+      expect.stringMatching(/^\/recipes\/400(\?|$)/),
     );
     expect(within(rows[0]).getByText("No snack")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("rowheader")).toHaveTextContent("Fri 91,900 kcal");
