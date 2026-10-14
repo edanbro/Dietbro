@@ -5,19 +5,31 @@ import logging
 from collections.abc import Mapping
 from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
-from larder_api.auth import AuthError, TokenVerifier
-from larder_api.db import Session
+from larder_api.auth import AuthError, CurrentUser, TokenVerifier
+from larder_api.chat.search import query_words, rank_recipes, viewer_of
+from larder_api.db import Session, get_sessionmaker
 from larder_api.routers.foods import FRUIT_VEG_CATEGORIES
-from larder_api.schemas import MacrosOut, NutritionGrade, RecipeDetail, RecipeIngredientOut
-from larder_core.meals import SLOT_ORDER
+from larder_api.routers.plans import get_catalog_cache
+from larder_api.schemas import (
+    MacrosOut,
+    NutritionGrade,
+    RecipeDetail,
+    RecipeFeedbackIn,
+    RecipeIngredientOut,
+    RecipeListItem,
+    RecipeListOut,
+    RecipeVerdict,
+)
+from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.nutrigrade import NutriInput, grade
-from larder_db.models import Food, Recipe, User
+from larder_db.models import Food, Preferences, Recipe, User
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +67,112 @@ async def viewer_id(
 
 
 Viewer = Annotated[int | None, Depends(viewer_id)]
+
+_SETUP = "Tell us about your allergies and diet first, so we only show recipes safe for you."
+
+
+@router.get("", operation_id="listRecipes", responses={409: {"description": "setup incomplete"}})
+async def list_recipes(
+    user: CurrentUser,
+    session: Session,
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    q: Annotated[str, Query(max_length=100)] = "",
+    slot: Slot | None = None,
+    favourites: bool = False,
+    limit: Annotated[int, Query(ge=1, le=60)] = 24,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> RecipeListOut:
+    """Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
+    blocked), matching `q` if given, ranked like the chat's search: match, then preference
+    (favourites first), then pantry use."""
+    viewer = await viewer_of(session, user.id)
+    if viewer is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
+    words = query_words(q)
+    if q.strip() and not words:
+        return RecipeListOut(items=[], total=0)
+    pool = (await cache.get(sessionmaker)).merged(
+        await planning.load_private_recipes(session, user.id)
+    )
+    hits = rank_recipes(pool, viewer, words, slot, favourites_only=favourites)
+    return RecipeListOut(
+        items=[
+            RecipeListItem(
+                id=h.id,
+                name=h.name,
+                category=h.category,
+                cuisine=h.cuisine,
+                image_url=h.image_url,
+                slots=list(h.slots),
+                kcal_per_serving=h.kcal_per_serving,
+                protein_g_per_serving=h.protein_g_per_serving,
+                uses_pantry=list(h.uses_pantry),
+                favourite=h.favourite,
+            )
+            for h in hits[offset : offset + limit]
+        ],
+        total=len(hits),
+    )
+
+
+@router.put(
+    "/{recipe_id}/feedback",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="putRecipeFeedback",
+    responses=_NOT_FOUND | {409: {"description": "setup incomplete"}},
+)
+async def put_feedback(
+    recipe_id: int, body: RecipeFeedbackIn, user: CurrentUser, session: Session
+) -> Response:
+    """Favourite a recipe (planned more often) or never plan it again; replaces any earlier
+    verdict. Plans already made keep it until the next plan or replan."""
+    prefs = await _feedback_target(session, user.id, recipe_id)
+    favourites = [r for r in prefs.favourite_recipe_ids or [] if r != recipe_id]
+    blocked = [r for r in prefs.blocked_recipe_ids or [] if r != recipe_id]
+    (favourites if body.verdict == "favourite" else blocked).append(recipe_id)
+    prefs.favourite_recipe_ids, prefs.blocked_recipe_ids = favourites, blocked
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/{recipe_id}/feedback",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="deleteRecipeFeedback",
+    responses=_NOT_FOUND | {409: {"description": "setup incomplete"}},
+)
+async def delete_feedback(recipe_id: int, user: CurrentUser, session: Session) -> Response:
+    prefs = await _feedback_target(session, user.id, recipe_id)
+    prefs.favourite_recipe_ids = [r for r in prefs.favourite_recipe_ids or [] if r != recipe_id]
+    prefs.blocked_recipe_ids = [r for r in prefs.blocked_recipe_ids or [] if r != recipe_id]
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _feedback_target(session: Session, user_id: int, recipe_id: int) -> Preferences:
+    visible = await session.scalar(
+        select(Recipe.id).where(
+            Recipe.id == recipe_id,
+            or_(Recipe.owner_user_id.is_(None), Recipe.owner_user_id == user_id),
+        )
+    )
+    if visible is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "recipe not found")
+    prefs = await session.get(Preferences, user_id)
+    if prefs is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
+    return prefs
+
+
+def verdict_of(prefs: Preferences | None, recipe_id: int) -> RecipeVerdict | None:
+    if prefs is None:
+        return None
+    if recipe_id in (prefs.favourite_recipe_ids or ()):
+        return "favourite"
+    if recipe_id in (prefs.blocked_recipe_ids or ()):
+        return "never"
+    return None
 
 
 @router.get("/{recipe_id}", operation_id="getRecipe", responses=_NOT_FOUND)
@@ -103,6 +221,7 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
         servings_estimated=recipe.servings_estimated,
         per_serving=per_serving,
         grade=recipe_grade(recipe, foods),
+        feedback=verdict_of(await session.get(Preferences, viewer), recipe.id) if viewer else None,
         meal_types=sorted(facts.slots, key=SLOT_ORDER.index),
         allergens=sorted(facts.tags.allergens),
         allergens_complete=facts.tags.complete,

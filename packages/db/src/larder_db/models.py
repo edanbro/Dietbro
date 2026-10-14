@@ -374,6 +374,13 @@ class Preferences(Base):
     disliked_cuisines: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
     liked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
     disliked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    # Recipe feedback: favourites are planned more often; blocked ones never again.
+    favourite_recipe_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer), default=list, server_default=text("'{}'")
+    )
+    blocked_recipe_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer), default=list, server_default=text("'{}'")
+    )
     updated_at: Mapped[datetime] = _now()
 
 

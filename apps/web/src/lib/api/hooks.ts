@@ -57,6 +57,9 @@ export type ReceiptStatus = Receipt["status"];
 export type Diary = Schemas["DiaryOut"];
 export type DiaryDay = Schemas["DiaryDayOut"];
 export type Weight = Schemas["WeightOut"];
+export type RecipeListItem = Schemas["RecipeListItem"];
+export type RecipeVerdict = Schemas["RecipeFeedbackIn"]["verdict"];
+export type RecipeQuery = { q: string; slot: Slot | null; favourites: boolean };
 
 export const keys = {
   me: ["me"] as const,
@@ -78,6 +81,8 @@ export const keys = {
   currentPlan: ["plans", "current"] as const,
   shopping: (planId: number) => ["plans", planId, "shopping"] as const,
   recipe: (id: number) => ["recipes", id] as const,
+  /** Under `recipes`: feedback on any recipe refreshes every list and the detail. */
+  recipeList: (query: RecipeQuery) => ["recipes", "list", query] as const,
   /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
   plans: ["plans"] as const,
   /** Under `plans`: marking meals eaten and chat logs change it. */
@@ -746,5 +751,51 @@ export function useWeight() {
         qc.invalidateQueries({ queryKey: keys.weights }),
         qc.invalidateQueries({ queryKey: keys.body }),
       ]),
+  });
+}
+
+const RECIPE_PAGE = 24;
+
+/** Safe recipes for the user, best first, paged ("More" loads the next page). */
+export function useRecipeList(query: RecipeQuery) {
+  const api = useApi();
+  return useInfiniteQuery({
+    queryKey: keys.recipeList(query),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/recipes", {
+          params: {
+            query: {
+              q: query.q,
+              slot: query.slot ?? undefined,
+              favourites: query.favourites,
+              limit: RECIPE_PAGE,
+              offset: pageParam,
+            },
+          },
+        }),
+      ),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0);
+      return loaded < last.total ? loaded : undefined;
+    },
+  });
+}
+
+/** Favourite a recipe, never plan it again, or clear the verdict (null). */
+export function useRecipeFeedback(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (verdict: RecipeVerdict | null) => {
+      const path = { recipe_id: recipeId };
+      return verdict
+        ? unwrap(
+            await api.PUT("/recipes/{recipe_id}/feedback", { params: { path }, body: { verdict } }),
+          )
+        : unwrap(await api.DELETE("/recipes/{recipe_id}/feedback", { params: { path } }));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["recipes"] }),
   });
 }

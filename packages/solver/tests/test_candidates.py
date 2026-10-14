@@ -387,3 +387,17 @@ def test_cuisine_cap_ignores_case() -> None:
     prefs = TastePrefs(liked_cuisines=frozenset({"THAI"}))
     specs, recipes = select(catalog(mixed + other), OPEN, prefs, (), [(L, True)], k=8)
     assert sum(recipes[rid].cuisine is not None for rid in specs[0].candidates) == 2
+
+
+def test_favourites_rank_up_and_blocked_recipes_are_never_candidates() -> None:
+    recipe = next(iter(CATALOG.recipes.values()))
+    assert preference(recipe, TastePrefs(favourite_recipe_ids=frozenset({recipe.id}))) == 40
+
+    _, chosen = select(
+        CATALOG,
+        OPEN,
+        TastePrefs(blocked_recipe_ids=frozenset({recipe.id})),
+        [],
+        [(s, True) for s in recipe.meal_types],
+    )
+    assert recipe.id not in chosen

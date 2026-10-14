@@ -6,6 +6,8 @@ slot. It is filled in order:
 
 (a) with a protein minimum in the targets, the ceil(k/4) recipes with the most protein per kcal;
 (b) with a budget, the ceil(k/8) cheapest per kcal of the rest;
+Recipes the user never wants again are dropped with the unsafe ones.
+
 (c) the rest by preference, minus 30 for recipes in `novelty` (last plan's), plus a pantry bonus
     of 0..30 (the share of a portion's grams the pantry covers, grams in lots expiring within 3
     days counting double). A cuisine (compared case-insensitively) may take at most k // 4 of
@@ -44,6 +46,8 @@ class TastePrefs:
     disliked_cuisines: frozenset[str] = frozenset()
     liked_food_ids: frozenset[int] = frozenset()
     disliked_food_ids: frozenset[int] = frozenset()
+    favourite_recipe_ids: frozenset[int] = frozenset()
+    blocked_recipe_ids: frozenset[int] = frozenset()  # never planned (dropped by `select`)
 
 
 def allowed(recipe: Recipe, foods: Mapping[int, Food], profile: Profile) -> bool:
@@ -65,7 +69,8 @@ def allowed(recipe: Recipe, foods: Mapping[int, Food], profile: Profile) -> bool
 
 def preference(recipe: Recipe, prefs: TastePrefs) -> int:
     """-100..100: +40 liked cuisine, -60 disliked cuisine, +15 per liked food (at most +45), -40
-    per disliked food (at most -80). Cuisines compare case-insensitively."""
+    per disliked food (at most -80), +40 a favourite recipe. Cuisines compare
+    case-insensitively."""
     cuisine = (recipe.cuisine or "").casefold()
     food_ids = {i.food_id for i in recipe.ingredients}
     points = min(15 * len(food_ids & prefs.liked_food_ids), 45)
@@ -74,6 +79,8 @@ def preference(recipe: Recipe, prefs: TastePrefs) -> int:
         points += 40
     if cuisine and cuisine in {c.casefold() for c in prefs.disliked_cuisines}:
         points -= 60
+    if recipe.id in prefs.favourite_recipe_ids:
+        points += 40
     return max(-100, min(100, points))
 
 
@@ -125,7 +132,7 @@ def select(
     ok = [
         replace(r, preference=preference(r, prefs))
         for r in catalog.recipes.values()
-        if allowed(r, catalog.foods, profile)
+        if allowed(r, catalog.foods, profile) and r.id not in prefs.blocked_recipe_ids
     ]
     soon: Counter[int] = Counter()  # grams per food in lots usable only on the first days
     later: Counter[int] = Counter()

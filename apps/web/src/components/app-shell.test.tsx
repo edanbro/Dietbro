@@ -33,6 +33,7 @@ describe("AppShell", () => {
     ).toEqual([
       ["Plan", "/plan"],
       ["Shopping", "/plan/shopping"],
+      ["Recipes", "/recipes"],
       ["Chat", "/chat"],
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
@@ -43,6 +44,7 @@ describe("AppShell", () => {
   it.each([
     ["/plan", "Plan"],
     ["/plan/shopping", "Shopping"],
+    ["/recipes/12", "Recipes"],
     ["/chat", "Chat"],
     ["/pantry", "Pantry"],
     ["/profile", "Profile"],
@@ -54,8 +56,8 @@ describe("AppShell", () => {
     expect(current.map((a) => a.textContent)).toEqual([label]);
   });
 
-  it("marks nothing on a recipe page", () => {
-    resetNavigation("/recipes/5");
+  it("marks nothing on a page outside the nav", () => {
+    resetNavigation("/diary");
     render(<AppShell>content</AppShell>);
 
     expect(screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual([]);

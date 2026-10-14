@@ -1,9 +1,10 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, ExternalLinkIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, BanIcon, ExternalLinkIcon, HeartIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { GradeBadge } from "@/components/food-bits";
 import { ErrorAlert } from "@/components/form-bits";
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
-import { type Recipe, useAllergens, useRecipe } from "@/lib/api/hooks";
+import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
@@ -118,6 +119,52 @@ function Allergens({ recipe }: { recipe: Recipe }) {
   );
 }
 
+/** Favourite (planned more often) or never again; pressing the active one clears it. */
+function Feedback({ recipe }: { recipe: Recipe }) {
+  const save = useRecipeFeedback(recipe.id);
+  const verdict = recipe.feedback ?? null;
+  const set = (next: "favourite" | "never") =>
+    save.mutate(verdict === next ? null : next, {
+      onSuccess: () =>
+        toast.success(
+          verdict === next
+            ? "Cleared"
+            : next === "favourite"
+              ? "Saved to favourites: planned more often"
+              : "We won't plan this again",
+        ),
+      onError: (e) =>
+        toast.error(e instanceof ApiError && e.messages[0] ? e.messages[0] : "Couldn't save that"),
+    });
+  return (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        aria-pressed={verdict === "favourite"}
+        disabled={save.isPending}
+        onClick={() => set("favourite")}
+      >
+        <HeartIcon
+          aria-hidden
+          className={cn(verdict === "favourite" && "fill-red-500 text-red-500")}
+        />
+        {verdict === "favourite" ? "Favourite" : "Add to favourites"}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-pressed={verdict === "never"}
+        disabled={save.isPending}
+        onClick={() => set("never")}
+      >
+        <BanIcon aria-hidden className={cn(verdict === "never" && "text-destructive")} />
+        {verdict === "never" ? "Never planned" : "Never again"}
+      </Button>
+    </div>
+  );
+}
+
 function Credit({ recipe }: { recipe: Recipe }) {
   const original = safeUrl(recipe.source_url);
   const link = original ? (
@@ -212,6 +259,7 @@ export function RecipePage({ id }: { id: number }) {
         ) : null}
         <GradeBadge grade={recipe.grade} className="mt-1" />
       </header>
+      <Feedback recipe={recipe} />
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">
         <h2 id="recipe-nutrition" className="text-base font-semibold">

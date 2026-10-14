@@ -3,6 +3,7 @@
 import { UserButton } from "@clerk/nextjs";
 import { cn } from "cn";
 import {
+  BookOpenIcon,
   CalendarDaysIcon,
   MessageCircleIcon,
   RefrigeratorIcon,
@@ -19,6 +20,7 @@ import { APP_NAME } from "@/lib/brand";
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
   { href: "/plan/shopping", label: "Shopping", icon: ShoppingCartIcon },
+  { href: "/recipes", label: "Recipes", icon: BookOpenIcon },
   { href: "/chat", label: "Chat", icon: MessageCircleIcon },
   { href: "/pantry", label: "Pantry", icon: RefrigeratorIcon },
   { href: "/profile", label: "Profile", icon: UserIcon },

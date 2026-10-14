@@ -140,6 +140,7 @@ class RecipeText:
     category: str | None
     tags: tuple[str, ...]  # TheMealDB tags
     ingredients: tuple[str, ...]  # ingredient lines as written
+    image_url: str | None = None  # for recipe browsing
 
 
 @dataclass(frozen=True, slots=True)
@@ -333,6 +334,7 @@ async def _load(session: AsyncSession, owner: ColumnElement[bool]) -> PlanningCa
             r.category,
             tuple(sorted(t.tag for t in r.tags)),
             tuple(line.raw_name for line in r.ingredients),
+            r.image_url,
         )
     used = {i.food_id for r in recipes.values() for i in r.ingredients}
     return PlanningCatalog(
@@ -486,6 +488,8 @@ def taste_of(preferences: db.Preferences) -> TastePrefs:
         disliked_cuisines=frozenset(preferences.disliked_cuisines),
         liked_food_ids=frozenset(preferences.liked_food_ids),
         disliked_food_ids=frozenset(preferences.disliked_food_ids),
+        favourite_recipe_ids=frozenset(preferences.favourite_recipe_ids or ()),
+        blocked_recipe_ids=frozenset(preferences.blocked_recipe_ids or ()),
     )
 
 

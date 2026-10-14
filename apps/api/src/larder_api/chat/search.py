@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
@@ -113,6 +114,9 @@ class RecipeHit:
     protein_g_per_serving: int
     matched: tuple[str, ...]  # which query words matched, for the model to explain
     uses_pantry: tuple[str, ...]  # pantry foods it uses
+    category: str | None = None
+    image_url: str | None = None
+    favourite: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,18 +131,22 @@ class Viewer:
 async def load_viewer(scope: ChatScope) -> Viewer | None:
     """None until the user has set allergies and preferences (nothing is known to be safe)."""
     async with scope.sessionmaker() as session:
-        allergies = await session.get(db.Allergies, scope.user_id)
-        prefs = await session.get(db.Preferences, scope.user_id)
-        pantry = await session.scalars(
-            select(db.PantryItem)
-            .where(db.PantryItem.user_id == scope.user_id)
-            .options(selectinload(db.PantryItem.food))
-        )
-        stock: dict[int, str] = {}
-        for p in pantry:
-            stock[p.food_id] = p.food.description
-            if p.food.generic_food_id is not None:  # a product counts as its generic
-                stock.setdefault(p.food.generic_food_id, p.food.description)
+        return await viewer_of(session, scope.user_id)
+
+
+async def viewer_of(session: AsyncSession, user_id: int) -> Viewer | None:
+    allergies = await session.get(db.Allergies, user_id)
+    prefs = await session.get(db.Preferences, user_id)
+    pantry = await session.scalars(
+        select(db.PantryItem)
+        .where(db.PantryItem.user_id == user_id)
+        .options(selectinload(db.PantryItem.food))
+    )
+    stock: dict[int, str] = {}
+    for p in pantry:
+        stock[p.food_id] = p.food.description
+        if p.food.generic_food_id is not None:  # a product counts as its generic
+            stock.setdefault(p.food.generic_food_id, p.food.description)
     if allergies is None or prefs is None:
         return None
     return Viewer(planning.profile_of(allergies, prefs), planning.taste_of(prefs), stock)
@@ -189,28 +197,39 @@ def match(
     return total, tuple(matched)
 
 
-async def search_recipes(
-    scope: ChatScope, query: str, slot: Slot | None, limit: int = 5
+def rank_recipes(
+    pool: planning.PlanningCatalog,
+    viewer: Viewer,
+    words: Iterable[str],
+    slot: Slot | None = None,
+    *,
+    favourites_only: bool = False,
 ) -> list[RecipeHit]:
-    words = query_words(query)
-    viewer = await load_viewer(scope)
-    if not words or viewer is None:
-        return []
-    pool = await recipe_pool(scope)
+    """Recipes safe for the viewer (never ones they blocked), best first: by how well they
+    match `words` (all of them when there are no words), then preference (favourites rank
+    up), then pantry use, then id. Shared by the chat's search and recipe browsing."""
+    words = list(words)
+    taste = viewer.taste
     ranked: list[tuple[tuple[int, int, int, int], RecipeHit]] = []
     for recipe in pool.catalog.recipes.values():
         if slot is not None and slot not in recipe.meal_types:
             continue
+        if recipe.id in taste.blocked_recipe_ids:
+            continue
+        favourite = recipe.id in taste.favourite_recipe_ids
+        if favourites_only and not favourite:
+            continue
         if not allowed(recipe, pool.catalog.foods, viewer.profile):
             continue
-        points, matched = match(words, _fields(pool, recipe))
-        if not points:
+        points, matched = match(words, _fields(pool, recipe)) if words else (0, ())
+        if words and not points:
             continue
         uses = tuple(
             dict.fromkeys(
                 viewer.pantry[i.food_id] for i in recipe.ingredients if i.food_id in viewer.pantry
             )
         )
+        text = pool.text.get(recipe.id)
         hit = RecipeHit(
             id=recipe.id,
             name=recipe.name,
@@ -220,11 +239,25 @@ async def search_recipes(
             protein_g_per_serving=recipe.per_portion.protein_g * 2,
             matched=matched,
             uses_pantry=uses,
+            category=text.category if text else None,
+            image_url=text.image_url if text else None,
+            favourite=favourite,
         )
-        key = (-points, -preference(recipe, viewer.taste), -len(uses), recipe.id)
+        key = (-points, -preference(recipe, taste), -len(uses), recipe.id)
         ranked.append((key, hit))
     ranked.sort(key=lambda pair: pair[0])
-    return [hit for _, hit in ranked[: max(limit, 0)]]
+    return [hit for _, hit in ranked]
+
+
+async def search_recipes(
+    scope: ChatScope, query: str, slot: Slot | None, limit: int = 5
+) -> list[RecipeHit]:
+    words = query_words(query)
+    viewer = await load_viewer(scope)
+    if not words or viewer is None:
+        return []
+    pool = await recipe_pool(scope)
+    return rank_recipes(pool, viewer, words, slot)[: max(limit, 0)]
 
 
 # --- one recipe the model names (handlers.visible_recipe / guard_recipe; also the executor) ----

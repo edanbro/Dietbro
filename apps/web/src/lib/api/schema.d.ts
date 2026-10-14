@@ -684,6 +684,50 @@ export interface paths {
         patch: operations["patchShoppingExtra"];
         trace?: never;
     };
+    "/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Recipes
+         * @description Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
+         *     blocked), matching `q` if given, ranked like the chat's search: match, then preference
+         *     (favourites first), then pantry use.
+         */
+        get: operations["listRecipes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recipes/{recipe_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Feedback
+         * @description Favourite a recipe (planned more often) or never plan it again; replaces any earlier
+         *     verdict. Plans already made keep it until the next plan or replan.
+         */
+        put: operations["putRecipeFeedback"];
+        post?: never;
+        /** Delete Feedback */
+        delete: operations["deleteRecipeFeedback"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recipes/{recipe_id}": {
         parameters: {
             query?: never;
@@ -2091,6 +2135,8 @@ export interface components {
             suitable_for: components["schemas"]["Diet"][];
             /** Ingredients */
             ingredients: components["schemas"]["RecipeIngredientOut"][];
+            /** Feedback */
+            feedback?: ("favourite" | "never") | null;
         };
         /** RecipeEvent */
         RecipeEvent: {
@@ -2104,6 +2150,14 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** RecipeFeedbackIn */
+        RecipeFeedbackIn: {
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "favourite" | "never";
+        };
         /** RecipeIngredientOut */
         RecipeIngredientOut: {
             /** Name */
@@ -2116,6 +2170,43 @@ export interface components {
             food_name: string | null;
             /** Grams */
             grams: number | null;
+        };
+        /** RecipeListItem */
+        RecipeListItem: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string | null;
+            /** Cuisine */
+            cuisine: string | null;
+            /** Image Url */
+            image_url: string | null;
+            /** Slots */
+            slots: components["schemas"]["Slot"][];
+            /** Kcal Per Serving */
+            kcal_per_serving: number;
+            /** Protein G Per Serving */
+            protein_g_per_serving: number;
+            /**
+             * Uses Pantry
+             * @description pantry foods it uses
+             * @default []
+             */
+            uses_pantry: string[];
+            /**
+             * Favourite
+             * @default false
+             */
+            favourite: boolean;
+        };
+        /** RecipeListOut */
+        RecipeListOut: {
+            /** Items */
+            items: components["schemas"]["RecipeListItem"][];
+            /** Total */
+            total: number;
         };
         /**
          * ReferenceIntakes
@@ -4111,6 +4202,138 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ShoppingExtraOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listRecipes: {
+        parameters: {
+            query?: {
+                q?: string;
+                slot?: components["schemas"]["Slot"] | null;
+                favourites?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeListOut"];
+                };
+            };
+            /** @description setup incomplete */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putRecipeFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeFeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description setup incomplete */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteRecipeFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description setup incomplete */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

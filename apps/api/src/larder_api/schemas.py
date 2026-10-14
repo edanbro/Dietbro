@@ -568,6 +568,28 @@ class RecipeDetail(RecipeCard):
     allergens_complete: bool
     suitable_for: list[Diet]
     ingredients: list[RecipeIngredientOut]
+    # The signed-in viewer's verdict on it (PUT /recipes/{id}/feedback).
+    feedback: "RecipeVerdict | None" = None
+
+
+RecipeVerdict = Literal["favourite", "never"]
+
+
+class RecipeFeedbackIn(BaseModel):
+    verdict: RecipeVerdict
+
+
+class RecipeListItem(RecipeCard):
+    slots: list[Slot]
+    kcal_per_serving: int
+    protein_g_per_serving: int
+    uses_pantry: list[str] = Field(default=[], description="pantry foods it uses")
+    favourite: bool = False
+
+
+class RecipeListOut(BaseModel):
+    items: list[RecipeListItem]
+    total: int  # how many match, for paging
 
 
 # --- chat (M4) --------------------------------------------------------------------------------

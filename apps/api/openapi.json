@@ -2233,6 +2233,209 @@
         }
       }
     },
+    "/recipes": {
+      "get": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "List Recipes",
+        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use.",
+        "operationId": "listRecipes",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Slot"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Slot"
+            }
+          },
+          {
+            "name": "favourites",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Favourites"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 24,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeListOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/feedback": {
+      "put": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Put Feedback",
+        "description": "Favourite a recipe (planned more often) or never plan it again; replaces any earlier\nverdict. Plans already made keep it until the next plan or replan.",
+        "operationId": "putRecipeFeedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeFeedbackIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Delete Feedback",
+        "operationId": "deleteRecipeFeedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{recipe_id}": {
       "get": {
         "tags": [
@@ -6176,6 +6379,21 @@
             },
             "type": "array",
             "title": "Ingredients"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "favourite",
+                  "never"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
           }
         },
         "type": "object",
@@ -6223,6 +6441,23 @@
           "name"
         ],
         "title": "RecipeEvent"
+      },
+      "RecipeFeedbackIn": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "favourite",
+              "never"
+            ],
+            "title": "Verdict"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "RecipeFeedbackIn"
       },
       "RecipeIngredientOut": {
         "properties": {
@@ -6277,6 +6512,113 @@
           "grams"
         ],
         "title": "RecipeIngredientOut"
+      },
+      "RecipeListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "kcal_per_serving": {
+            "type": "integer",
+            "title": "Kcal Per Serving"
+          },
+          "protein_g_per_serving": {
+            "type": "integer",
+            "title": "Protein G Per Serving"
+          },
+          "uses_pantry": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses Pantry",
+            "description": "pantry foods it uses",
+            "default": []
+          },
+          "favourite": {
+            "type": "boolean",
+            "title": "Favourite",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "cuisine",
+          "image_url",
+          "slots",
+          "kcal_per_serving",
+          "protein_g_per_serving"
+        ],
+        "title": "RecipeListItem"
+      },
+      "RecipeListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RecipeListOut"
       },
       "ReferenceIntakes": {
         "properties": {
