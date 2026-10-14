@@ -60,6 +60,7 @@ from larder_db.models import (
     MealPlan,
     PantryItem,
     Preferences,
+    PushSubscription,
     ReceiptUpload,
     Recipe,
     ShoppingExtra,
@@ -236,6 +237,17 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "user": row(user),
         "goals": row(await session.get(Goals, user.id), "user_id"),
         "body": row(await session.get(BodyProfile, user.id), "user_id"),
+        # Browsers reminders go to (their keys are left out: secrets of the browser).
+        "push_subscriptions": rows(
+            await session.scalars(
+                select(PushSubscription)
+                .where(PushSubscription.user_id == user.id)
+                .order_by(PushSubscription.id)
+            ),
+            "user_id",
+            "p256dh",
+            "auth",
+        ),
         "weights": rows(
             await session.scalars(
                 select(BodyWeight)

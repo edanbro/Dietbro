@@ -58,6 +58,10 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Optional: barcode lookups of products not imported yet (Open Food Facts).
       OFF_USER_AGENT: ${OFF_USER_AGENT:-}
+      # Optional: expiry reminders by Web Push (`uv run larder-vapid` makes the keys).
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
     ports:
       - "8000:8000"
     depends_on:
@@ -66,7 +70,8 @@ services:
       redis:
         condition: service_healthy
 
-  # Background jobs (arq on redis): reads receipt photos (OCR) and pasted receipts.
+  # Background jobs (arq on redis): reads receipt photos (OCR) and pasted receipts; sends
+  # expiry reminders hourly.
   worker:
     build:
       context: .
@@ -76,6 +81,9 @@ services:
     environment:
       DATABASE_URL: *database_url
       REDIS_URL: redis://redis:6379/0
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
     depends_on:
       migrate:
         condition: service_completed_successfully

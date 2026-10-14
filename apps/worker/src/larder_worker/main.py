@@ -6,21 +6,24 @@ Jobs (names in larder_api.jobs):
   retried once if the worker dies mid-job; failures are recorded on the upload.
 - sweep_receipts (cron, every 5 min): fail uploads stuck queued/processing past
   receipt_stale_after_min (e.g. a job killed by its timeout) and delete their photos.
+- send_reminders (cron, hourly): expiry reminders by Web Push to users for whom it is
+  reminder_hour now (larder_api.reminders); off without VAPID keys.
 
 Settings come from the same environment as the API (larder_api.settings).
 """
 
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
 from arq import cron, func
 from arq.connections import RedisSettings
 from arq.typing import WorkerCoroutine
 
-from larder_api.jobs import READ_RECEIPT, SWEEP_RECEIPTS
+from larder_api.jobs import READ_RECEIPT, SEND_REMINDERS, SWEEP_RECEIPTS
 from larder_api.receipts import ReceiptUnreadable, process_upload, sweep_stale
+from larder_api.reminders import send_due
 from larder_api.settings import get_settings
 from larder_db.engine import make_engine, make_sessionmaker
 from larder_worker.ocr import Ocr, UnreadableImage
@@ -68,6 +71,13 @@ async def sweep_receipts(ctx: dict[str, Any]) -> int:
     return swept
 
 
+async def send_reminders(ctx: dict[str, Any]) -> int:
+    sent = await send_due(ctx["maker"], datetime.now(UTC), settings)
+    if sent:
+        logger.info("sent %d expiry reminders", sent)
+    return sent
+
+
 class WorkerSettings:
     functions: ClassVar[list[Any]] = [
         func(
@@ -83,7 +93,12 @@ class WorkerSettings:
             name=SWEEP_RECEIPTS,
             minute=set(range(0, 60, 5)),
             run_at_startup=True,
-        )
+        ),
+        cron(
+            send_reminders,  # pyright: ignore[reportArgumentType]
+            name=SEND_REMINDERS,
+            minute=0,
+        ),
     ]
     on_startup: ClassVar[WorkerCoroutine] = startup  # pyright: ignore[reportAssignmentType]
     on_shutdown: ClassVar[WorkerCoroutine] = shutdown  # pyright: ignore[reportAssignmentType]

@@ -14,6 +14,7 @@ from fastapi import Request
 
 READ_RECEIPT = "read_receipt"
 SWEEP_RECEIPTS = "sweep_receipts"
+SEND_REMINDERS = "send_reminders"
 
 type Enqueue = Callable[[int], Awaitable[None]]
 

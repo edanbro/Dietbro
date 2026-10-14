@@ -11,6 +11,7 @@ from larder_api.routers import (
     pantry,
     plans,
     profile,
+    push,
     receipts,
     recipes,
     shopping,
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(recipes.router)
     app.include_router(chat.router)
     app.include_router(diary.router)
+    app.include_router(push.router)
     return app
 
 

@@ -409,6 +409,31 @@ class DiaryOut(BaseModel):
     on_target_days: int = 0
 
 
+class PushConfigOut(BaseModel):
+    """Whether this server sends reminders, the key browsers subscribe with, and whether this
+    user has any browser subscribed."""
+
+    enabled: bool
+    public_key: str | None = None
+    subscribed: int = 0  # browsers this user turned reminders on in
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=10, max_length=200)
+    auth: str = Field(min_length=8, max_length=100)
+
+
+class PushSubscriptionIn(BaseModel):
+    """A browser's PushSubscription.toJSON()."""
+
+    endpoint: str = Field(pattern=r"^https://", max_length=2000)
+    keys: PushKeys
+
+
+class PushUnsubscribeIn(BaseModel):
+    endpoint: str = Field(max_length=2000)
+
+
 class WeightIn(BaseModel):
     measured_on: date
     weight_kg: float = Field(gt=20, le=500)

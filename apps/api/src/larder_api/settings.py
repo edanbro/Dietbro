@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     # turns included (they run the planner). Model budget: $1 per calendar month (UTC), paced -
     # the model is used while today's spend is under what's left of the month divided by the
     # days left - and at most $0.10 per turn; otherwise the turn runs offline.
+    # Expiry reminders (Web Push, larder_api.reminders). Off unless both VAPID keys are set:
+    # generate them with `uv run larder-vapid` and keep them in .env only.
+    vapid_public_key: str | None = None  # base64url, uncompressed P-256 point (for browsers)
+    vapid_private_key: SecretStr | None = None  # base64url raw private key
+    vapid_subject: str = "mailto:admin@localhost"  # who push services contact about abuse
+    reminder_hour: int = 9  # local time
+
     llm_monthly_cap_usd: float = 1.0
     llm_turn_cap_usd: float = 0.10
     llm_daily_messages: int = 60

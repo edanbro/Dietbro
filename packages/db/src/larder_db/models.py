@@ -503,6 +503,21 @@ class ShoppingItem(Base):
     food: Mapped[Food] = relationship()
 
 
+class PushSubscription(Base):
+    """A browser that gets expiry reminders (Web Push): its push service endpoint and keys.
+    `last_sent_on` (the user's local date) keeps it to one reminder a day."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(100))
+    last_sent_on: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ShoppingExtra(Base):
     """Something the user wants on their shopping list that no plan needs ("bin bags"). Per
     user, not per plan, so it survives replans until bought and cleared."""

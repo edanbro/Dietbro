@@ -28,6 +28,7 @@ EXPORTED: dict[str, Rows] = {
     "goals": lambda e: [e["goals"]],
     "body_profiles": lambda e: [e["body"]],
     "body_weights": lambda e: e["weights"],
+    "push_subscriptions": lambda e: e["push_subscriptions"],
     "preferences": lambda e: [e["preferences"]],
     "allergies": lambda e: [e["allergies"]],
     "pantry_items": lambda e: e["pantry"],
@@ -126,7 +127,13 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
     )
     pantry = db.PantryItem(user_id=uid, food_id=ONION, grams=500, quantity=500, unit="g")
     extra = db.ShoppingExtra(user_id=uid, name="bin bags", checked=False)
-    session.add_all([meal, line, message, pantry, extra])
+    push = db.PushSubscription(
+        user_id=uid,
+        endpoint=f"https://push.example/{sub}",
+        p256dh="p" * 20,
+        auth="a" * 16,
+    )
+    session.add_all([meal, line, message, pantry, extra, push])
     await session.flush()
     craving = db.Craving(
         user_id=uid,
@@ -197,6 +204,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "allergies": uid,
         "pantry_items": pantry.id,
         "shopping_extras": extra.id,
+        "push_subscriptions": push.id,
         "meal_plans": plan.id,
         "chat_threads": thread.id,
         "chat_messages": message.id,
@@ -241,6 +249,7 @@ async def test_export_covers_every_table_and_delete_removes_only_that_user(
     assert export["recipes"][0]["ingredients"][0]["raw_name"] == "onion"
     assert export["plans"][0]["meals"][0]["recipe_id"] == mine["recipes"]
     assert export["receipts"][0]["lines"][0]["raw_text"] == "ONIONS 1KG 0.95"
+    assert not {"p256dh", "auth"} & export["push_subscriptions"][0].keys()  # browser secrets
     assert "image" not in export["receipts"][0]
 
     assert (await api.delete("/me", headers=auth("user_a"))).status_code == 204
