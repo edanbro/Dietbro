@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from larder_api.auth import JWKSCache, TokenVerifier
 from larder_api.barcodes import make_off_client
 from larder_api.chat.tasks import ChatTurns
+from larder_api.inline import InlineWorker
 from larder_api.jobs import make_queue
 from larder_api.planning import CatalogCache
 from larder_api.settings import Settings, get_settings
@@ -76,9 +77,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Chat turns run detached from their HTTP streams; shutdown lets running ones finish.
     app.state.chat_turns = turns = ChatTurns(settings.chat_turn_deadline_s)
     await turns.open()
+    # No separate worker on this host: background work runs here (larder_api.inline).
+    inline = InlineWorker(app.state.sessionmaker, settings) if settings.worker_in_api else None
+    app.state.inline = inline
+    if inline is not None:
+        inline.start()
     try:
         yield
     finally:
+        if inline is not None:
+            await inline.close()
         await turns.close()
         warm.cancel()
         await http.aclose()

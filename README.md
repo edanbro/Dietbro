@@ -108,6 +108,9 @@ only the barcode is sent). The camera works on `localhost` or HTTPS.
 To run the end-to-end test in CI, add the same two keys as repository secrets
 `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
 
+To put it online for free (Vercel, Render, Neon, Upstash) with a public demo account, see
+[docs/deploy.md](docs/deploy.md).
+
 ## Develop
 
 Requires [uv](https://docs.astral.sh/uv/), Node 22 and pnpm (`corepack enable`).

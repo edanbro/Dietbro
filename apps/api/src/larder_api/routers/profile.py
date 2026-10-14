@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.demo import is_demo
 from larder_api.routers.foods import summary
 from larder_api.routers.pantry import expiring_count
 from larder_api.schemas import (
@@ -32,6 +33,7 @@ from larder_api.schemas import (
     RegionOut,
     SuggestedTargets,
 )
+from larder_api.settings import Settings, get_settings
 from larder_core.allergens import LABELS, Allergen
 from larder_core.brand import APP_NAME
 from larder_core.energy import (
@@ -173,9 +175,13 @@ async def put_region(body: RegionIn, user: CurrentUser, session: Session) -> Reg
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, operation_id="deleteMe")
-async def delete_me(user: CurrentUser, session: Session) -> Response:
+async def delete_me(
+    user: CurrentUser, session: Session, settings: Annotated[Settings, Depends(get_settings)]
+) -> Response:
     """Delete the account and all its data (GDPR). The identity-provider account is deleted
-    by the client with its own SDK."""
+    by the client with its own SDK. The shared demo account can't be deleted."""
+    if is_demo(user.auth_subject, settings.demo_auth_subject):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, ["The demo account can't be deleted."])
     await session.execute(delete(User).where(User.id == user.id))
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -15,6 +15,7 @@ from fastapi import Request
 READ_RECEIPT = "read_receipt"
 SWEEP_RECEIPTS = "sweep_receipts"
 SEND_REMINDERS = "send_reminders"
+RESET_DEMO = "reset_demo"
 
 type Enqueue = Callable[[int], Awaitable[None]]
 
@@ -33,6 +34,9 @@ def job_id(upload_id: int) -> str:
 
 
 def get_enqueue(request: Request) -> Enqueue:
+    inline = getattr(request.app.state, "inline", None)
+    if inline is not None:  # WORKER_IN_API: read in this process (larder_api.inline)
+        return cast(Enqueue, inline.enqueue)
     queue = cast(ArqRedis, request.app.state.queue)
 
     async def enqueue(upload_id: int) -> None:

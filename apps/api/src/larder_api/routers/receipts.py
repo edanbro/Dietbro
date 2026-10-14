@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.inline import NO_PHOTOS
 from larder_api.jobs import Enqueue, QueueUnavailable, get_enqueue
 from larder_api.receipts import amount_for, confirm, item_of
 from larder_api.routers.foods import summary
@@ -154,6 +155,8 @@ async def upload_image(
     purchased_on: Annotated[date | None, Form()] = None,
 ) -> ReceiptOut:
     """Queue a receipt photo for reading. The photo is deleted as soon as it has been read."""
+    if settings.worker_in_api:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NO_PHOTOS)
     data = await file.read(settings.receipt_max_image_bytes + 1)
     if len(data) > settings.receipt_max_image_bytes:
         raise HTTPException(

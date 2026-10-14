@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:admin@localhost"  # who push services contact about abuse
     reminder_hour: int = 9  # local time
 
+    # Hosting without a separate worker (free tiers, larder_api.inline): pasted receipts are read
+    # in the API process and periodic jobs run on a minute ticker; receipt photos are refused.
+    worker_in_api: bool = False
+    # The public demo account (larder_api.demo): its Clerk user id. Reset nightly, chat offline,
+    # can't be deleted. The web app needs the same id (DEMO_CLERK_USER_ID) to sign visitors in.
+    demo_auth_subject: str | None = None
+
     llm_monthly_cap_usd: float = 1.0
     llm_turn_cap_usd: float = 0.10
     llm_daily_messages: int = 60

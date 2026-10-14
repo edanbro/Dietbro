@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from larder_api.chat import limits
 from larder_api.chat.scope import Models
+from larder_api.demo import is_demo
 from larder_api.schemas import ChatMessageIn, ChatProblem
 from larder_api.settings import Settings
 from larder_db import models as db
@@ -156,6 +157,10 @@ async def _prepare(
         )
 
     turn_cap = 0
+    if models.online and settings.demo_auth_subject:
+        subject = await session.scalar(select(db.User.auth_subject).where(db.User.id == user_id))
+        if is_demo(subject, settings.demo_auth_subject):
+            models = Models(offline_reason="no_key")  # visitors never spend model credit
     if models.online:
         budget = await limits.budget(session, user_id, settings, now)
         turn_cap = budget.turn_cap_micro_usd
