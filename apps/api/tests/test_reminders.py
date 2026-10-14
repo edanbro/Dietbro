@@ -28,6 +28,10 @@ SETTINGS = Settings.model_validate(
 )
 
 
+# Explicit: a developer's .env may hold real keys.
+NO_KEYS = Settings.model_validate({"vapid_public_key": None, "vapid_private_key": None})
+
+
 @pytest.fixture
 def push_enabled() -> Iterator[None]:
     app.dependency_overrides[get_settings] = lambda: SETTINGS
@@ -131,12 +135,11 @@ async def test_unsubscribed_browsers_are_forgotten(
 
 
 async def test_without_keys_nothing_is_sent(db_engine: AsyncEngine) -> None:
-    no_keys = Settings.model_validate({})
-    assert await send_due(make_sessionmaker(db_engine), NINE_IN_DUBLIN, no_keys) == 0
+    assert await send_due(make_sessionmaker(db_engine), NINE_IN_DUBLIN, NO_KEYS) == 0
 
 
 async def test_push_is_off_without_keys(api: httpx.AsyncClient, auth: Auth) -> None:
-    app.dependency_overrides[get_settings] = lambda: Settings.model_validate({})
+    app.dependency_overrides[get_settings] = lambda: NO_KEYS
     try:
         config = (await api.get("/me/push", headers=auth())).json()
         refused = await api.put(

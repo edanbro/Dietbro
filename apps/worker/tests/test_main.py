@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from larder_api.jobs import READ_RECEIPT, SWEEP_RECEIPTS
+from larder_api.jobs import READ_RECEIPT, SEND_REMINDERS, SWEEP_RECEIPTS
 from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 from larder_worker.main import NOT_AN_IMAGE, WorkerSettings, read_receipt
@@ -16,7 +16,7 @@ from larder_worker.ocr import Ocr
 
 def test_worker_runs_the_jobs_the_api_enqueues() -> None:
     assert [f.name for f in WorkerSettings.functions] == [READ_RECEIPT]
-    assert [c.name for c in WorkerSettings.cron_jobs] == [SWEEP_RECEIPTS]
+    assert [c.name for c in WorkerSettings.cron_jobs] == [SWEEP_RECEIPTS, SEND_REMINDERS]
 
 
 async def test_a_file_that_is_not_an_image_fails_politely(db_engine: AsyncEngine) -> None:
