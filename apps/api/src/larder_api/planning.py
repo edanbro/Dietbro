@@ -21,7 +21,7 @@ from typing import Literal
 
 import anyio
 from pydantic import BaseModel, Field
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -940,6 +940,43 @@ async def latest_plan(session: AsyncSession, user_id: int) -> db.MealPlan | None
         .where(db.MealPlan.user_id == user_id)
         .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
         .limit(1)
+        .options(selectinload(db.MealPlan.meals), selectinload(db.MealPlan.shopping))
+    )
+
+
+def covering(on: date) -> ColumnElement[bool]:
+    """Plan versions whose days include `on`."""
+    return (db.MealPlan.start_date <= on) & (
+        db.MealPlan.start_date + db.MealPlan.days * text("interval '1 day'") > on
+    )
+
+
+async def plan_id_for(session: AsyncSession, user_id: int, on: date) -> int | None:
+    """The plan in force on `on`: the newest version covering it, else the newest of all (an
+    ended plan, or before the first one starts). A plan for next week leaves this week's in
+    force for this week's dates."""
+    newest = (db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
+    found = await session.scalar(
+        select(db.MealPlan.id)
+        .where(db.MealPlan.user_id == user_id, covering(on))
+        .order_by(*newest)
+        .limit(1)
+    )
+    if found is not None:
+        return found
+    return await session.scalar(
+        select(db.MealPlan.id).where(db.MealPlan.user_id == user_id).order_by(*newest).limit(1)
+    )
+
+
+async def plan_for(session: AsyncSession, user_id: int, on: date) -> db.MealPlan | None:
+    """`plan_id_for` with the plan's meals and shopping loaded."""
+    plan_id = await plan_id_for(session, user_id, on)
+    if plan_id is None:
+        return None
+    return await session.scalar(
+        select(db.MealPlan)
+        .where(db.MealPlan.id == plan_id)
         .options(selectinload(db.MealPlan.meals), selectinload(db.MealPlan.shopping))
     )
 

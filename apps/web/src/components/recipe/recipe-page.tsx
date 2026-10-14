@@ -1,7 +1,13 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, BanIcon, ExternalLinkIcon, HeartIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  BanIcon,
+  ExternalLinkIcon,
+  HeartIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";

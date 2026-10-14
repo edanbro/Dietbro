@@ -131,7 +131,7 @@ def make_handlers(scope: ChatScope) -> dict[str, Handler]:
 
 async def _get_plan(scope: ChatScope) -> ToolOutcome:
     async with scope.sessionmaker() as session:
-        plan = await latest_plan(session, scope.user_id)
+        plan = await latest_plan(session, scope.user_id, scope.today)
         goals = await session.get(db.Goals, scope.user_id)
     if plan is None:
         return _ok({"plan": None, "note": NO_PLAN})
@@ -235,7 +235,7 @@ async def _search(scope: ChatScope, query: SearchRecipesInput) -> ToolOutcome:
 
 async def _explain_meal(scope: ChatScope, query: ExplainMealInput) -> ToolOutcome:
     async with scope.sessionmaker() as session:
-        plan = await latest_plan(session, scope.user_id)
+        plan = await latest_plan(session, scope.user_id, query.when.date)
         if plan is None:
             return _error(NO_PLAN)
         day = (query.when.date - plan.start_date).days
@@ -322,7 +322,7 @@ async def _meal_facts(
 async def _explain_diff(scope: ChatScope, plan_id: int | None) -> ToolOutcome:
     async with scope.sessionmaker() as session:
         if plan_id is None:
-            plan = await latest_plan(session, scope.user_id)
+            plan = await latest_plan(session, scope.user_id, scope.today)
         else:
             plan = await _user_plan(session, scope.user_id, plan_id)
         if plan is None:

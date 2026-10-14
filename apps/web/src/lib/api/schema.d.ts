@@ -535,11 +535,76 @@ export interface paths {
         };
         /**
          * Current Plan
-         * @description The most recently created plan, or null if there is none.
+         * @description The plan in force on `date` (the newest version covering it, else the newest plan), or
+         *     null if there is none. Next week's plan doesn't replace this week's for this week's dates.
          */
         get: operations["getCurrentPlan"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Upcoming Plan
+         * @description The plan for the days after the current one ends ("next week"), or null.
+         */
+        get: operations["getUpcomingPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}/alternatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Meal Alternatives
+         * @description A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
+         *     its recipe_id): ranked like recipe search, not already planned that day, close to the
+         *     meal's energy first.
+         */
+        get: operations["getMealAlternatives"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{plan_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Plan Change
+         * @description Bring back the version before the last change (as a new version: history is kept).
+         *     Only the newest version of a week can be undone, only when it came from a change to that
+         *     week, and not once food has been logged or meals marked eaten since that change.
+         */
+        post: operations["undoPlanChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3781,6 +3846,38 @@ export interface operations {
     };
     getCurrentPlan: {
         parameters: {
+            query?: {
+                /** @description default: today */
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getUpcomingPlan: {
+        parameters: {
             query?: never;
             header?: never;
             path?: never;
@@ -3795,6 +3892,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanOut"] | null;
+                };
+            };
+        };
+    };
+    getMealAlternatives: {
+        parameters: {
+            query: {
+                date: string;
+                slot: components["schemas"]["Slot"];
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeListItem"][];
+                };
+            };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description setup incomplete */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undoPlanChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description no such plan (or not yours) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description nothing to undo, or too late */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

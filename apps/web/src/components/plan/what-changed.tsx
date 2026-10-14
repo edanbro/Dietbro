@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { CalendarCheckIcon, TriangleAlertIcon, XIcon } from "lucide-react";
+import { CalendarCheckIcon, TriangleAlertIcon, Undo2Icon, XIcon } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 
 import { changeText, dayName, loggedText, RESULT } from "@/components/chat/outcome-card";
@@ -45,10 +45,15 @@ export function WhatChanged({
   outcome,
   today,
   onDismiss,
+  onUndo,
+  undoing = false,
 }: {
   outcome: ChatOutcome;
   today: string;
   onDismiss: () => void;
+  /** Shown when the change saved a version of an existing plan. */
+  onUndo?: () => void;
+  undoing?: boolean;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLElement>(null);
@@ -139,6 +144,18 @@ export function WhatChanged({
           {n}
         </p>
       ))}
+      {onUndo && saved && !outcome.fresh ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          disabled={undoing}
+          onClick={onUndo}
+        >
+          <Undo2Icon aria-hidden />
+          Undo this change
+        </Button>
+      ) : null}
     </section>
   );
 }

@@ -174,8 +174,8 @@ def check_dates(on: date, today: date, now: datetime) -> None:
 
 
 async def _plan(session: AsyncSession, user_id: int, plan_id: int, on: date) -> db.MealPlan:
-    """The user's plan, which must be their latest version and cover `on`; read under the plan
-    lock (taken here, held until the transaction ends)."""
+    """The user's plan, which must be the version in force on `on` (planning.plan_id_for) and
+    cover it; read under the plan lock (taken here, held until the transaction ends)."""
     await planning.lock_user_plans(session, user_id)
     plan = await session.scalar(
         select(db.MealPlan)
@@ -188,13 +188,7 @@ async def _plan(session: AsyncSession, user_id: int, plan_id: int, on: date) -> 
     )
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "plan not found")
-    latest = await session.scalar(
-        select(db.MealPlan.id)
-        .where(db.MealPlan.user_id == user_id)
-        .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
-        .limit(1)
-    )
-    if latest != plan.id:
+    if await planning.plan_id_for(session, user_id, on) != plan.id:
         raise HTTPException(
             status.HTTP_409_CONFLICT, ["Your plan has changed - reload it and try again."]
         )

@@ -33,13 +33,14 @@ def short_name(description: str) -> str:
     return description.split(",", 1)[0].strip().lower()
 
 
-async def latest_plan(session: AsyncSession, user_id: int) -> db.MealPlan | None:
-    """The user's latest plan version with its meals' recipes loaded."""
+async def latest_plan(session: AsyncSession, user_id: int, on: date) -> db.MealPlan | None:
+    """The plan in force on `on` (planning.plan_id_for) with its meals' recipes loaded."""
+    plan_id = await planning.plan_id_for(session, user_id, on)
+    if plan_id is None:
+        return None
     return await session.scalar(
         select(db.MealPlan)
-        .where(db.MealPlan.user_id == user_id)
-        .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
-        .limit(1)
+        .where(db.MealPlan.id == plan_id)
         .options(selectinload(db.MealPlan.meals).selectinload(db.PlanMeal.recipe))
     )
 
@@ -101,7 +102,7 @@ async def turn_context(scope: ChatScope) -> TurnContext:
         goals = await session.get(db.Goals, scope.user_id)
         allergies = await session.get(db.Allergies, scope.user_id)
         preferences = await session.get(db.Preferences, scope.user_id)
-        plan = await latest_plan(session, scope.user_id)
+        plan = await latest_plan(session, scope.user_id, scope.today)
         avoided: list[str] = (
             list(
                 await session.scalars(

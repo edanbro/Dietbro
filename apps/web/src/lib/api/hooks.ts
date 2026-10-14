@@ -79,6 +79,9 @@ export const keys = {
   food: (id: number) => ["food", id] as const,
   search: (q: string, scope: string = "all") => ["foods", "search", q, scope] as const,
   currentPlan: ["plans", "current"] as const,
+  upcomingPlan: ["plans", "upcoming"] as const,
+  alternatives: (planId: number, date: string, slot: string) =>
+    ["plans", planId, "alternatives", date, slot] as const,
   shopping: (planId: number) => ["plans", planId, "shopping"] as const,
   recipe: (id: number) => ["recipes", id] as const,
   /** Under `recipes`: feedback on any recipe refreshes every list and the detail. */
@@ -311,17 +314,62 @@ export function useCurrentPlan() {
   });
 }
 
-/** Plan a week starting today (the user's local date). Replaces the current plan. */
+/** The plan for the days after the current one ("next week"), if made. */
+export function useUpcomingPlan(enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.upcomingPlan,
+    enabled,
+    queryFn: async (): Promise<Plan | null> => unwrap(await api.GET("/plans/upcoming")) ?? null,
+  });
+}
+
+/**
+ * Plan a week starting today (the user's local date), replacing the current plan; or, with a
+ * later `start`, next week's plan beside this one.
+ */
 export function useCreatePlan() {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => unwrap(await api.POST("/plans", { body: { start: localISODate() } })),
-    onSuccess: async (plan) => {
+    mutationFn: async (start?: string) =>
+      unwrap(await api.POST("/plans", { body: { start: start ?? localISODate() } })),
+    onSuccess: async (plan, start) => {
+      if (start && start > localISODate()) {
+        await qc.invalidateQueries({ queryKey: keys.upcomingPlan });
+        return;
+      }
       // A refetch that started before the POST would bring back the old plan.
       await qc.cancelQueries({ queryKey: keys.currentPlan });
       qc.setQueryData(keys.currentPlan, plan);
     },
+  });
+}
+
+/** A few safe recipes to swap a planned meal for (fetched when `enabled`). */
+export function useAlternatives(planId: number, date: string, slot: Slot, enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.alternatives(planId, date, slot),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/plans/{plan_id}/alternatives", {
+          params: { path: { plan_id: planId }, query: { date, slot } },
+        }),
+      ),
+  });
+}
+
+/** Bring back the plan as it was before its last change. */
+export function useUndoPlan() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async (planId: number) =>
+      unwrap(await api.POST("/plans/{plan_id}/undo", { params: { path: { plan_id: planId } } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.plans }),
   });
 }
 
@@ -733,7 +781,9 @@ export function useWeight() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (
-      action: { kind: "save"; measured_on: string; weight_kg: number } | { kind: "delete"; measured_on: string },
+      action:
+        | { kind: "save"; measured_on: string; weight_kg: number }
+        | { kind: "delete"; measured_on: string },
     ) =>
       action.kind === "save"
         ? unwrap(

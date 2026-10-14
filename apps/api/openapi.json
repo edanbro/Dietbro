@@ -1615,8 +1615,34 @@
           "plans"
         ],
         "summary": "Current Plan",
-        "description": "The most recently created plan, or null if there is none.",
+        "description": "The plan in force on `date` (the newest version covering it, else the newest plan), or\nnull if there is none. Next week's plan doesn't replace this week's for this week's dates.",
         "operationId": "getCurrentPlan",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "default: today",
+              "title": "Date"
+            },
+            "description": "default: today"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1635,6 +1661,46 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/upcoming": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Upcoming Plan",
+        "description": "The plan for the days after the current one ends (\"next week\"), or null.",
+        "operationId": "getUpcomingPlan",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getupcomingplan"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1642,6 +1708,155 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/plans/{plan_id}/alternatives": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Meal Alternatives",
+        "description": "A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and\nits recipe_id): ranked like recipe search, not already planned that day, close to the\nmeal's energy first.",
+        "operationId": "getMealAlternatives",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 6,
+              "minimum": 1,
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeListItem"
+                  },
+                  "title": "Response Getmealalternatives"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/undo": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Undo Plan Change",
+        "description": "Bring back the version before the last change (as a new version: history is kept).\nOnly the newest version of a week can be undone, only when it came from a change to that\nweek, and not once food has been logged or meals marked eaten since that change.",
+        "operationId": "undoPlanChange",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "409": {
+            "description": "nothing to undo, or too late",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/plans/{plan_id}": {

@@ -2,6 +2,7 @@
 
 import { cn } from "cn";
 import {
+  CalendarPlusIcon,
   InfoIcon,
   LoaderCircleIcon,
   RefreshCwIcon,
@@ -24,6 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api/browser";
 import {
+  useUndoPlan,
+  useUpcomingPlan,
   type ChatOutcome,
   keys,
   type Plan,
@@ -36,6 +39,7 @@ import {
   type Violation,
 } from "@/lib/api/hooks";
 import {
+  addDays,
   dateRange,
   dayOfMonth,
   daysBetween,
@@ -73,6 +77,7 @@ function useViewState() {
   };
   return {
     view: (params.get("view") === "week" ? "week" : "day") as View,
+    next: params.get("week") === "next",
     day: params.get("day"),
     set,
   };
@@ -147,6 +152,7 @@ function PlanningStatus({ pending }: { pending: boolean }) {
 export function PlanPage() {
   const me = useMe();
   const plan = useCurrentPlan();
+  const upcoming = useUpcomingPlan(Boolean(plan.data));
   const create = useCreatePlan();
   const { set } = useViewState();
 
@@ -200,7 +206,14 @@ export function PlanPage() {
     );
   }
 
-  return <PlanView plan={plan.data} create={create} onCreated={onCreated} />;
+  return (
+    <PlanView
+      plan={plan.data}
+      upcoming={upcoming.data ?? null}
+      create={create}
+      onCreated={onCreated}
+    />
+  );
 }
 
 function Exclusions({ plan }: { plan: Plan }) {
@@ -289,9 +302,22 @@ function PlanNotes({ plan }: { plan: Plan }) {
 function useMealActions(plan: Plan, today: string, creating: boolean) {
   const eaten = useMarkEaten(plan.id);
   const replan = useReplan();
+  const undo = useUndoPlan();
   const busy = useIsMutating({ mutationKey: keys.planChange }) > 0 || creating;
   const [outcome, setOutcome] = useState<ChatOutcome | null>(null);
+  const undoLast = () => {
+    if (outcome?.plan_id == null) return;
+    undo.mutate(outcome.plan_id, {
+      onSuccess: () => {
+        setOutcome(null);
+        toast.success("Change undone");
+      },
+      onError: (e) =>
+        toast.error(e instanceof ApiError && e.messages[0] ? e.messages[0] : "Couldn't undo that"),
+    });
+  };
   const actions = (date: string): MealActionsProps => ({
+    planId: plan.id,
     date,
     today,
     busy,
@@ -304,22 +330,55 @@ function useMealActions(plan: Plan, today: string, creating: boolean) {
       setOutcome(await replan.mutateAsync(changes));
     },
   });
-  return { actions, outcome, setOutcome };
+  return { actions, outcome, setOutcome, undoLast, undoing: undo.isPending };
+}
+
+/** "This week | Next week" when next week's plan is made. */
+function WeekToggle({ next, onChange }: { next: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <div
+      role="group"
+      aria-label="Which week"
+      className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+    >
+      {[false, true].map((n) => (
+        <button
+          key={String(n)}
+          type="button"
+          aria-pressed={next === n}
+          onClick={() => onChange(n)}
+          className={cn(
+            "h-9 rounded-md text-sm font-medium transition-colors",
+            next === n ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {n ? "Next week" : "This week"}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function PlanView({
-  plan,
+  plan: current,
+  upcoming,
   create,
   onCreated: created,
 }: {
   plan: Plan;
+  upcoming: Plan | null;
   create: CreatePlan;
   onCreated: () => void;
 }) {
-  const { view, day, set } = useViewState();
+  const { view, day, set, next } = useViewState();
+  const plan = next && upcoming ? upcoming : current;
   const [confirming, setConfirming] = useState(false);
   const today = localISODate();
-  const { actions, outcome, setOutcome } = useMealActions(plan, today, create.isPending);
+  const { actions, outcome, setOutcome, undoLast, undoing } = useMealActions(
+    plan,
+    today,
+    create.isPending,
+  );
   const onCreated = () => {
     setOutcome(null);
     created();
@@ -327,6 +386,8 @@ function PlanView({
   const ended = planEnded(plan, today);
   const first = plan.days[0]?.date ?? plan.start;
   const last = plan.days.at(-1)?.date ?? plan.start;
+  // Next week can be planned in the last 3 days of this one.
+  const canPlanNext = !upcoming && plan === current && !ended && daysBetween(today, last) <= 2;
   const dates = plan.days.map((d) => d.date);
   const selected =
     day && dates.includes(day) ? day : dates.includes(today) ? today : (dates[0] ?? "");
@@ -334,10 +395,35 @@ function PlanView({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {plan === current ? "Your week" : "Next week"}
+        </h1>
         <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
       </div>
-      <TodaySummary />
+      {upcoming ? (
+        <WeekToggle
+          next={plan !== current}
+          onChange={(n) => set({ week: n ? "next" : null, day: null })}
+        />
+      ) : null}
+      {plan === current ? <TodaySummary /> : null}
+      {canPlanNext ? (
+        <Button
+          variant="outline"
+          disabled={create.isPending}
+          onClick={() =>
+            create.mutate(addDays(last, 1), {
+              onSuccess: () => {
+                set({ week: "next", day: null });
+                toast.success("Next week is planned");
+              },
+            })
+          }
+        >
+          <CalendarPlusIcon aria-hidden />
+          {create.isPending ? "Planning…" : "Plan next week"}
+        </Button>
+      ) : null}
       <div className="flex gap-2">
         <Link
           href="/plan/shopping"
@@ -346,7 +432,7 @@ function PlanView({
           <ShoppingBasketIcon aria-hidden />
           Shopping list
         </Link>
-        {ended ? null : (
+        {ended || plan !== current ? null : (
           <Button
             variant="outline"
             className="flex-1"
@@ -410,7 +496,13 @@ function PlanView({
       <Exclusions plan={plan} />
       <PlanNotes plan={plan} />
       {outcome ? (
-        <WhatChanged outcome={outcome} today={today} onDismiss={() => setOutcome(null)} />
+        <WhatChanged
+          outcome={outcome}
+          today={today}
+          onDismiss={() => setOutcome(null)}
+          onUndo={undoLast}
+          undoing={undoing}
+        />
       ) : null}
 
       <Tabs value={view} onValueChange={(v: View) => set({ view: v === "week" ? "week" : null })}>
@@ -454,6 +546,29 @@ function PlanView({
                     </li>
                   ))}
                 </ul>
+                {d.date > today && d.meals.some((m) => m.status !== "eaten") ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="self-start"
+                    disabled={actions(d.date).busy}
+                    onClick={() =>
+                      void actions(d.date)
+                        .onReplan(
+                          d.meals
+                            .filter((m) => m.status !== "eaten")
+                            .map((m) => ({
+                              intent: "swap" as const,
+                              when: { date: d.date, slot: m.slot },
+                            })),
+                        )
+                        .catch(() => undefined)
+                    }
+                  >
+                    <RefreshCwIcon aria-hidden />
+                    Rebuild {weekday(d.date)}
+                  </Button>
+                ) : null}
                 <div className="flex flex-col gap-2">
                   <DayMacros
                     totals={d.totals}

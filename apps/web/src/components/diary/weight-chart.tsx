@@ -28,7 +28,8 @@ export function WeightChart({ weights }: { weights: Weight[] }) {
   const y = (kg: number) => PAD.top + ((hi - kg) / (hi - lo)) * (H - PAD.top - PAD.bottom);
   const points = weights.map((w) => `${x(w.measured_on).toFixed(1)},${y(w.weight_kg).toFixed(1)}`);
   const change = Math.round((last.weight_kg - first.weight_kg) * 10) / 10;
-  const summary = `${change === 0 ? "No change" : `${change > 0 ? "Up" : "Down"} ${Math.abs(change)} kg`} since ${shortDate(first.measured_on)}`;
+  const moved = change === 0 ? "No change" : `${change > 0 ? "Up" : "Down"} ${Math.abs(change)} kg`;
+  const summary = `${moved} since ${shortDate(first.measured_on)}`;
 
   return (
     <figure className="flex flex-col gap-1">

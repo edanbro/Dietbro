@@ -18,12 +18,13 @@ from typing import Annotated, Any
 
 import anyio
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from larder_api import eaten, planning, replans
 from larder_api.auth import CurrentUser
+from larder_api.chat import search
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
@@ -39,6 +40,7 @@ from larder_api.schemas import (
     PlanOut,
     PlanRequest,
     Problems,
+    RecipeListItem,
     ReplanRequest,
     ShoppingItemOut,
     ShoppingItemPatch,
@@ -53,6 +55,7 @@ from larder_core.shelf_life import suggest_expiry
 from larder_db.models import (
     Food,
     FoodPortion,
+    MealLog,
     MealPlan,
     PantryItem,
     PlanMeal,
@@ -236,7 +239,7 @@ async def create_plan(
         )
     catalog = await cache.get(sessionmaker)
     private = await planning.load_private_recipes(session, user.id)
-    current = await planning.latest_plan(session, user.id)
+    current = await planning.plan_for(session, user.id, today)
     version = await planning.next_version(session, user.id, start)
     seed = planning.plan_seed(user.id, start, version)
     novelty = frozenset(m.recipe_id for m in current.meals) if current else frozenset[int]()
@@ -271,7 +274,7 @@ async def create_plan(
     # One save at a time per user (chat replans take the same lock): the version and the
     # parent are read under it.
     await planning.lock_user_plans(session, user.id)
-    latest = await planning.latest_plan(session, user.id)
+    latest = await planning.plan_for(session, user.id, start)
     prepared.parent_id = latest.id if latest else None
     prepared.version = await planning.next_version(session, user.id, start)
     unshoppable = catalog.unshoppable | private.unshoppable
@@ -310,10 +313,165 @@ async def replan_plan(
 
 
 @router.get("/current", operation_id="getCurrentPlan")
-async def current_plan(user: CurrentUser, session: Session) -> PlanOut | None:
-    """The most recently created plan, or null if there is none."""
-    latest = await planning.latest_plan(session, user.id)
-    return plan_out(await _load_plan(session, user, latest.id)) if latest else None
+async def current_plan(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    on: Annotated[date | None, Query(alias="date", description="default: today")] = None,
+) -> PlanOut | None:
+    """The plan in force on `date` (the newest version covering it, else the newest plan), or
+    null if there is none. Next week's plan doesn't replace this week's for this week's dates."""
+    day = on or local_today(user.timezone, clock())
+    plan_id = await planning.plan_id_for(session, user.id, day)
+    return plan_out(await _load_plan(session, user, plan_id)) if plan_id else None
+
+
+@router.get("/upcoming", operation_id="getUpcomingPlan")
+async def upcoming_plan(
+    user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
+) -> PlanOut | None:
+    """The plan for the days after the current one ends ("next week"), or null."""
+    today = local_today(user.timezone, clock())
+    current = await planning.plan_for(session, user.id, today)
+    if current is None:
+        return None
+    after = current.start_date + timedelta(days=current.days)
+    plan_id = await planning.plan_id_for(session, user.id, after)
+    if plan_id is None or plan_id == current.id:
+        return None
+    row = await _load_plan(session, user, plan_id)
+    covers = row.start_date <= after < row.start_date + timedelta(days=row.days)
+    return plan_out(row) if covers and row.start_date > today else None
+
+
+@router.get(
+    "/{plan_id}/alternatives",
+    operation_id="getMealAlternatives",
+    responses=_NOT_FOUND | {409: {"description": "setup incomplete"}},
+)
+async def meal_alternatives(
+    plan_id: int,
+    on: Annotated[date, Query(alias="date")],
+    slot: Slot,
+    user: CurrentUser,
+    session: Session,
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    limit: Annotated[int, Query(ge=1, le=6)] = 3,
+) -> list[RecipeListItem]:
+    """A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
+    its recipe_id): ranked like recipe search, not already planned that day, close to the
+    meal's energy first."""
+    plan = await _load_plan(session, user, plan_id)
+    day = (on - plan.start_date).days
+    if not 0 <= day < plan.days:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, ["That day isn't in this plan."])
+    viewer = await search.viewer_of(session, user.id)
+    if viewer is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, ["Finish setting up first."])
+    pool = (await cache.get(sessionmaker)).merged(
+        await planning.load_private_recipes(session, user.id)
+    )
+    that_day = {m.recipe_id for m in plan.meals if m.day == day}
+    meal = next((m for m in plan.meals if m.day == day and m.slot == slot), None)
+    target = round(meal.kcal * 2 / max(meal.portions, 1)) if meal else None
+    hits = [h for h in search.rank_recipes(pool, viewer, [], slot) if h.id not in that_day]
+
+    def close(kcal: int) -> bool:
+        return target is None or abs(kcal - target) <= 0.35 * target
+
+    picked = [h for h in hits if close(h.kcal_per_serving)][:limit]
+    picked += [h for h in hits if h not in picked][: limit - len(picked)]
+    return [
+        RecipeListItem(
+            id=h.id,
+            name=h.name,
+            category=h.category,
+            cuisine=h.cuisine,
+            image_url=h.image_url,
+            slots=list(h.slots),
+            kcal_per_serving=h.kcal_per_serving,
+            protein_g_per_serving=h.protein_g_per_serving,
+            uses_pantry=list(h.uses_pantry),
+            favourite=h.favourite,
+        )
+        for h in picked
+    ]
+
+
+_UNDO_ERRORS: dict[int | str, dict[str, Any]] = _NOT_FOUND | {
+    status.HTTP_409_CONFLICT: {"model": Problems, "description": "nothing to undo, or too late"}
+}
+
+
+@router.post("/{plan_id}/undo", operation_id="undoPlanChange", responses=_UNDO_ERRORS)
+async def undo_plan_change(plan_id: int, user: CurrentUser, session: Session) -> PlanOut:
+    """Bring back the version before the last change (as a new version: history is kept).
+    Only the newest version of a week can be undone, only when it came from a change to that
+    week, and not once food has been logged or meals marked eaten since that change."""
+    await planning.lock_user_plans(session, user.id)
+    plan = await _load_plan(session, user, plan_id)
+    newer = await session.scalar(
+        select(MealPlan.id).where(
+            MealPlan.user_id == user.id,
+            MealPlan.start_date == plan.start_date,
+            MealPlan.version > plan.version,
+        )
+    )
+    if newer is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, ["Your plan has changed - reload it and try again."]
+        )
+    parent = await _load_plan(session, user, plan.parent_id) if plan.parent_id else None
+    if parent is None or parent.start_date != plan.start_date:
+        raise HTTPException(status.HTTP_409_CONFLICT, ["There's no change to undo."])
+    logged = await session.scalar(
+        select(MealLog.id)
+        .where(
+            MealLog.user_id == user.id,
+            or_(MealLog.created_at >= plan.created_at, MealLog.voided_at >= plan.created_at),
+        )
+        .limit(1)
+    )
+    if logged is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            [
+                "Food was logged or a meal marked eaten since that change, so it can't be "
+                "undone. Ask the chat to change it back instead."
+            ],
+        )
+    restored = MealPlan(
+        user_id=user.id,
+        start_date=parent.start_date,
+        days=parent.days,
+        version=await planning.next_version(session, user.id, parent.start_date),
+        parent_id=plan.id,
+        planner=parent.planner,
+        status=parent.status,
+        objective=parent.objective,
+        solve_ms=parent.solve_ms,
+        currency=parent.currency,
+        stats=parent.stats,
+    )
+    restored.meals.extend(planning.copy_meal(m) for m in parent.meals)
+    ticked = {s.food_id: s for s in plan.shopping}
+    for item in parent.shopping:
+        now = ticked.get(item.food_id)
+        keep = now is not None and item.grams <= now.grams
+        restored.shopping.append(
+            ShoppingItem(
+                food_id=item.food_id,
+                grams=item.grams,
+                cost_minor=item.cost_minor,
+                staple=item.staple,
+                checked=keep and now is not None and now.checked,
+                stocked_at=now.stocked_at if keep and now is not None else None,
+            )
+        )
+    session.add(restored)
+    await session.commit()
+    return plan_out(await _load_plan(session, user, restored.id))
 
 
 @router.get("/{plan_id}", operation_id="getPlan", responses=_NOT_FOUND)

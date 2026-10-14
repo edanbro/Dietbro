@@ -31,7 +31,11 @@ const day = (date: string, kcal: number, status: DiaryDay["status"]): DiaryDay =
 });
 
 const DIARY: Diary = {
-  days: [day("2026-10-12", 0, null), day("2026-10-13", 1900, "on"), day("2026-10-14", 600, "under")],
+  days: [
+    day("2026-10-12", 0, null),
+    day("2026-10-13", 1900, "on"),
+    day("2026-10-14", 600, "under"),
+  ],
   today: "2026-10-14",
   kcal_min: 1800,
   kcal_max: 2200,

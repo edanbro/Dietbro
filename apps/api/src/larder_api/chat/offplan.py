@@ -82,9 +82,9 @@ async def _fallback(scope: ChatScope, change: AteOffPlan, unmatched: list[str]) 
 
 
 async def planned_meal(scope: ChatScope, on: date, slot: Slot) -> tuple[str, Macros] | None:
-    """The latest plan's meal at (date, slot), if that plan covers the date."""
+    """The planned meal at (date, slot) in the plan in force that day, if it covers the date."""
     async with scope.sessionmaker() as session:
-        plan = await planning.latest_plan(session, scope.user_id)
+        plan = await planning.plan_for(session, scope.user_id, on)
         if plan is None:
             return None
         day = (on - plan.start_date).days

@@ -94,7 +94,7 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
   );
 }
 
-/** Every recipe safe for the user: search, filter by meal and favourites, newest pages on demand. */
+/** Every recipe safe for the user: search, filter by meal and favourites, more on demand. */
 export function RecipeBrowser() {
   const [q, setQ] = useState("");
   const [slot, setSlot] = useState<Slot | null>(null);
