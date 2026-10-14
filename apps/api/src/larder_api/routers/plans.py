@@ -12,7 +12,7 @@ Every query is filtered by the signed-in user; other users' plans are 404s.
 import logging
 import math
 import time
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from functools import partial
 from typing import Annotated, Any
 
@@ -135,10 +135,6 @@ def get_replan_planner(settings: Annotated[Settings, Depends(get_settings)]) -> 
     )
 
 
-def _today(user: User) -> date:
-    return local_today(user.timezone, datetime.now(UTC))
-
-
 def plan_out(row: MealPlan) -> PlanOut:
     """Built only from stored rows and the stats snapshot, never from live goals or prices."""
     stats = planning.PlanStats.model_validate(row.stats)
@@ -220,9 +216,10 @@ async def create_plan(
     cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
     planner: Annotated[planning.Planner, Depends(get_planner)],
     settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
 ) -> PlanOut:
     started = time.perf_counter()
-    today = _today(user)
+    today = local_today(user.timezone, clock())
     start = body.start or today
     if not today - timedelta(days=1) <= start <= today + timedelta(days=7):
         raise HTTPException(

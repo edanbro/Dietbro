@@ -13,7 +13,7 @@ Unknown or invisible ids get the same answer as a missing one ("I can't use that
 """
 
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from pydantic import BaseModel
@@ -25,6 +25,7 @@ from larder_api import planning
 from larder_api.chat import create, replan, search
 from larder_api.chat.context import day_lines, latest_plan, money, plan_stats, short_name
 from larder_api.chat.scope import ChatScope
+from larder_api.prices import price_with_receipts, receipt_prices
 from larder_api.schemas import Currency, OutcomeEvent, RecipeEvent
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.regions import local_price, region_for
@@ -282,15 +283,17 @@ async def _meal_facts(
     user = await session.get(db.User, user_id)
     country = user.country if user is not None else None
     currency = CURRENCIES.get(plan.currency, region_for(country).currency)
+    paid = await receipt_prices(session, user_id, date.today())
     cost = 0.0
     for line in recipe.ingredients:
         if line.food_id is None or line.food_id not in info or recipe.servings is None:
             continue
         grams = planning.portion_grams(line.grams, recipe.servings, info[line.food_id].staple)
         food = foods[line.food_id]
-        per_kg = local_price(
+        estimate = local_price(
             info[line.food_id].price.pence_per_kg, food.category, country, currency
         )
+        per_kg = price_with_receipts(estimate, line.food_id, paid)
         cost += grams * meal.portions * per_kg
     facts: dict[str, Any] = {
         "slot": meal.slot,

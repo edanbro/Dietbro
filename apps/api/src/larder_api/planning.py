@@ -25,6 +25,7 @@ from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
+from larder_api.prices import price_with_receipts, receipt_prices
 from larder_api.routers.profile import body_from_row
 from larder_api.schemas import (
     BandOut,
@@ -388,6 +389,8 @@ class UserInputs:
     body: db.BodyProfile | None = None
     pantry: Sequence[db.PantryItem] = ()  # with .food loaded
     country: str | None = None  # prices are estimated for this region (larder_core.regions)
+    # what the user paid per kg, newest first (larder_api.prices), in their currency
+    paid: Mapping[int, Sequence[int]] = field(default_factory=dict[int, Sequence[int]])
 
 
 async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
@@ -419,6 +422,7 @@ async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
         body=await session.get(db.BodyProfile, user.id),
         pantry=pantry,
         country=user.country,
+        paid=await receipt_prices(session, user.id, date.today()),
     )
 
 
@@ -492,9 +496,12 @@ def pantry_key(item: db.PantryItem, known: Mapping[int, object]) -> int:
     return generic if generic is not None and generic in known else item.food_id
 
 
-def _priced(f: Food, currency: Currency, country: str | None) -> Food:
-    """A catalogue food (GBP pence/kg, UK estimate) priced for the user's region and currency."""
-    return replace(f, price_per_kg=local_price(f.price_per_kg, f.category, country, currency))
+def _priced(f: Food, inputs: UserInputs) -> Food:
+    """A catalogue food (GBP pence/kg, UK estimate) priced for the user's region and currency,
+    or at what they paid when their receipts say (larder_api.prices)."""
+    currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
+    estimate = local_price(f.price_per_kg, f.category, inputs.country, currency)
+    return replace(f, price_per_kg=price_with_receipts(estimate, f.id, inputs.paid))
 
 
 def weights_for(currency: Currency) -> Weights:
@@ -526,7 +533,7 @@ def make_problem(
     with the user's `private` recipes, then (replans) `constrain` with the fixed state."""
     pool = catalog.merged(private)
     currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
-    foods = {fid: _priced(f, currency, inputs.country) for fid, f in pool.catalog.foods.items()}
+    foods = {fid: _priced(f, inputs) for fid, f in pool.catalog.foods.items()}
     lots: list[Lot] = []
     for item in inputs.pantry:
         expires = (item.expires_on - start).days if item.expires_on else None
@@ -536,7 +543,7 @@ def make_problem(
         fid = pantry_key(item, foods)
         if fid not in foods:
             basis = solver_food(item.food, food_info(item.food))
-            foods[fid] = _priced(basis, currency, inputs.country)
+            foods[fid] = _priced(basis, inputs)
         lots.append(Lot(fid, math.floor(item.grams), expires))
 
     targets = targets_from(inputs.goals, days)
@@ -595,7 +602,6 @@ def constrain(
     `choices` (from `pool`, with their foods priced in the user's currency and their preference
     set), cells kept `empty` (locked to None), intake already fixed per day (`extra`), and the
     per-day kcal bands that follow (`day_bands`). Raises if the result breaks check_problem."""
-    currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
     prefs = taste_of(inputs.preferences)
     recipes = dict(problem.recipes)
     foods = dict(problem.foods)
@@ -606,7 +612,7 @@ def constrain(
         recipes[rid] = replace(recipe, preference=preference(recipe, prefs))
         for i in recipe.ingredients:
             if i.food_id not in foods and i.food_id in pool.catalog.foods:
-                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], currency, inputs.country)
+                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], inputs)
     out = replace(
         problem,
         recipes=recipes,
