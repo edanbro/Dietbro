@@ -15,8 +15,8 @@ describe("foodName", () => {
     ["Thyme, fresh", "Fresh thyme", null],
     [
       "Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",
-      "Raisins",
-      "dark, seedless",
+      "Dark raisins",
+      "seedless",
     ],
     ["Salt, table", "Salt", null],
     ["Wheat flour, white, all-purpose, enriched, unbleached", "White wheat flour", "all-purpose"],
