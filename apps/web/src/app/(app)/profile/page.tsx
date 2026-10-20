@@ -27,9 +27,24 @@ const SECTIONS = [
 export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+      <h1 className="text-3xl font-semibold">Profile</h1>
+      {/* A long page: jump straight to a section. */}
+      <nav aria-label="Profile sections" className="-mx-4 overflow-x-auto px-4 pb-1">
+        <ul className="flex w-max gap-2">
+          {SECTIONS.map((s) => (
+            <li key={s.id}>
+              <a
+                href={`#${s.id}`}
+                className="inline-flex h-9 items-center rounded-full border bg-card px-3.5 text-sm hover:bg-muted"
+              >
+                {s.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
       {SECTIONS.map((s) => (
-        <Card key={s.id} id={s.id}>
+        <Card key={s.id} id={s.id} className="scroll-mt-20">
           <CardHeader>
             <CardTitle>{s.title}</CardTitle>
           </CardHeader>

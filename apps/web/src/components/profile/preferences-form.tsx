@@ -21,6 +21,26 @@ type Diet = NonNullable<PreferencesIn["diet"]>;
 type Rating = "like" | "dislike" | "neutral";
 
 /** Foods picked for a list, shown as removable chips. */
+/** Shown first; the rest (TheMealDB has dozens of areas) sit behind "All cuisines". */
+const COMMON_CUISINES = new Set([
+  "American",
+  "British",
+  "Chinese",
+  "French",
+  "Greek",
+  "Indian",
+  "Irish",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Mexican",
+  "Moroccan",
+  "Spanish",
+  "Thai",
+  "Turkish",
+  "Vietnamese",
+]);
+
 function FoodChips({
   id,
   label,
@@ -69,6 +89,7 @@ function FoodChips({
 /** Soft preferences: the planner favours likes and avoids dislikes, but never forbids. */
 export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
   const { data: cuisines } = useCuisines();
+  const [allCuisines, setAllCuisines] = useState(false);
   const { data: saved } = usePreferences();
   const save = useSavePreferences();
   const [diet, setDiet] = useState<Diet | "" | null>(null);
@@ -128,7 +149,9 @@ export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
       <div className="flex flex-col gap-2">
         <Label>Cuisines (tap: like → dislike → no preference)</Label>
         <div className="flex flex-wrap gap-2">
-          {(cuisines ?? []).map((c) => {
+          {(cuisines ?? [])
+            .filter((c) => allCuisines || COMMON_CUISINES.has(c) || currentRatings[c])
+            .map((c) => {
             const r = currentRatings[c] ?? "neutral";
             return (
               <Button
@@ -145,6 +168,17 @@ export function PreferencesForm({ onSaved }: { onSaved?: () => void }) {
               </Button>
             );
           })}
+          {(cuisines?.length ?? 0) > COMMON_CUISINES.size ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-expanded={allCuisines}
+              onClick={() => setAllCuisines(!allCuisines)}
+            >
+              {allCuisines ? "Fewer" : `All ${cuisines?.length} cuisines`}
+            </Button>
+          ) : null}
         </div>
       </div>
       <FoodChips

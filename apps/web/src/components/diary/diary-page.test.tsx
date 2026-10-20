@@ -66,6 +66,22 @@ describe("DiaryPage", () => {
     expect(days[1]).toHaveTextContent("Lunch: Toasted sandwich");
   });
 
+  it("shows the last week, with the rest on request", async () => {
+    const days = Array.from({ length: 14 }, (_, i) =>
+      day(`2026-10-${String(i + 1).padStart(2, "0")}`, 0, null),
+    );
+    mockApi({
+      "GET /diary": json({ ...DIARY, days, today: "2026-10-14" }),
+      "GET /me/weights": json([]),
+    });
+    renderWithClient(<DiaryPage />);
+
+    const region = await screen.findByRole("region", { name: "Days" });
+    expect(within(region).getAllByRole("listitem")).toHaveLength(7);
+    fireEvent.click(within(region).getByRole("button", { name: "Show all 14 days" }));
+    expect(within(region).getAllByRole("listitem")).toHaveLength(14);
+  });
+
   it("saves today's weight", async () => {
     const calls = mockApi({
       "GET /diary": json(DIARY),

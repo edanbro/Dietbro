@@ -177,6 +177,7 @@ function Weights() {
 /** The last two weeks of what was eaten against the goals, and weigh-ins with their trend. */
 export function DiaryPage() {
   const diary = useDiary(14);
+  const [allDays, setAllDays] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -221,10 +222,24 @@ export function DiaryPage() {
               Days
             </h2>
             <ul className="flex flex-col divide-y rounded-lg border">
-              {[...diary.data.days].reverse().map((d) => (
-                <DayRow key={d.date} day={d} today={diary.data.today} />
-              ))}
+              {[...diary.data.days]
+                .reverse()
+                .slice(0, allDays ? undefined : 7)
+                .map((d) => (
+                  <DayRow key={d.date} day={d} today={diary.data.today} />
+                ))}
             </ul>
+            {diary.data.days.length > 7 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-start"
+                aria-expanded={allDays}
+                onClick={() => setAllDays(!allDays)}
+              >
+                {allDays ? "Show the last week" : `Show all ${diary.data.days.length} days`}
+              </Button>
+            ) : null}
           </section>
         </>
       )}
