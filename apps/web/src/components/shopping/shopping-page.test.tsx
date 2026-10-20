@@ -198,7 +198,7 @@ describe("ShoppingPage", () => {
   it("points to the plan when there isn't one", async () => {
     setup({ "GET /plans/current": json(null) });
 
-    expect(await screen.findByText(/No plan yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing to buy yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Plan my week" })).toHaveAttribute("href", "/plan");
   });
 });

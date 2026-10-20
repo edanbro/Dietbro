@@ -9,7 +9,6 @@ import {
   NotebookPenIcon,
   RefrigeratorIcon,
   ShoppingCartIcon,
-  SproutIcon,
   UserIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,7 +18,7 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { useRegionSync } from "@/components/region-sync";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useMe, useOfflineSync } from "@/lib/api/hooks";
-import { APP_NAME } from "@/lib/brand";
+import { Logo } from "@/components/logo";
 
 const NAV = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
@@ -43,11 +42,8 @@ const MORE = [{ href: "/diary", label: "Diary", icon: NotebookPenIcon }];
 /** The app's mark and name. */
 function Brand() {
   return (
-    <Link href="/plan" className="flex items-center gap-2 font-semibold tracking-tight">
-      <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
-        <SproutIcon aria-hidden className="size-4" />
-      </span>
-      {APP_NAME}
+    <Link href="/plan">
+      <Logo />
     </Link>
   );
 }

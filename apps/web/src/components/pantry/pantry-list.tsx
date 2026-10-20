@@ -20,6 +20,7 @@ import {
   useUpdatePantryItem,
 } from "@/lib/api/hooks";
 import { daysBetween, localISODate, shortDate } from "@/lib/dates";
+import { EmptyState } from "@/components/empty-state";
 
 /** Days until `isoDate` (local midnight to local midnight); negative when past. */
 export function daysUntil(isoDate: string, today: Date = new Date()): number {
@@ -102,9 +103,9 @@ export function PantryList() {
   const items = (data ?? []).filter((i) => !hidden.has(i.id));
   if (!items.length) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Your pantry is empty. Add what&apos;s in your fridge and cupboards.
-      </p>
+      <EmptyState art="pantry" title="Your pantry is empty">
+        Add what&apos;s in your fridge and cupboards and plans will use it up first.
+      </EmptyState>
     );
   }
   const q = query.trim().toLowerCase();

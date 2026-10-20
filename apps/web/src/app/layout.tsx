@@ -1,10 +1,21 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
+import { Figtree, Fraunces } from "next/font/google";
 
 import "./globals.css";
 import { ServiceWorker } from "@/components/offline-banner";
 import { APP_NAME } from "@/lib/brand";
 import { THEME_SCRIPT } from "@/lib/theme";
+
+/** Body text: Figtree, a friendly geometric sans. Headings: Fraunces, a soft "old style"
+ * serif that gives the app a warm, cookbook feel. Both self-hosted by next/font at build. */
+const sans = Figtree({ subsets: ["latin"], variable: "--font-figtree", display: "swap" });
+const serif = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["SOFT", "opsz"],
+});
 
 /** Clerk's sign-in and account screens in the app's colours, light or dark (CSS variables). */
 const CLERK_APPEARANCE = {
@@ -21,6 +32,7 @@ const CLERK_APPEARANCE = {
     colorRing: "var(--ring)",
     colorDanger: "var(--destructive)",
     borderRadius: "0.75rem",
+    fontFamily: "var(--font-figtree), system-ui, sans-serif",
   },
 };
 
@@ -45,7 +57,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // The theme script sets the html class before hydration, hence suppressHydrationWarning.
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`h-full antialiased ${sans.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

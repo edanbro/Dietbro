@@ -20,7 +20,6 @@ import { ErrorAlert } from "@/components/form-bits";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api/browser";
@@ -58,6 +57,7 @@ import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
 import { APP_NAME } from "@/lib/brand";
+import { EmptyState } from "@/components/empty-state";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -190,22 +190,22 @@ export function PlanPage() {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
-        <Card>
-          <CardHeader>
-            <CardTitle>No plan yet</CardTitle>
-            <CardDescription>
-              {APP_NAME} plans breakfast, lunch and dinner for seven days around your goals, your
-              allergies and what&apos;s already in your kitchen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <PlanButton create={create} onCreated={onCreated} size="lg">
-              Plan my week
-            </PlanButton>
-            <PlanningStatus pending={create.isPending} />
-            <CreateError error={create.error} />
-          </CardContent>
-        </Card>
+        <EmptyState
+          art="plan"
+          title="No plan yet"
+          action={
+            <div className="flex flex-col items-center gap-3">
+              <PlanButton create={create} onCreated={onCreated} size="lg">
+                Plan my week
+              </PlanButton>
+              <PlanningStatus pending={create.isPending} />
+              <CreateError error={create.error} />
+            </div>
+          }
+        >
+          {APP_NAME} plans breakfast, lunch and dinner for seven days around your goals, your
+          allergies and what&apos;s already in your kitchen.
+        </EmptyState>
       </div>
     );
   }

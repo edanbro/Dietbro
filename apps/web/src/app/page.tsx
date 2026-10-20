@@ -6,7 +6,6 @@ import {
   RefrigeratorIcon,
   ScanBarcodeIcon,
   ShieldCheckIcon,
-  SproutIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,6 +13,7 @@ import { Suspense } from "react";
 
 import { HomeActions } from "@/components/home-actions";
 import { APP_NAME } from "@/lib/brand";
+import { Logo } from "@/components/logo";
 
 const FEATURES = [
   {
@@ -68,12 +68,7 @@ export default function Home() {
       <Suspense>
         <SignedInRedirect />
       </Suspense>
-      <div className="flex items-center gap-2 font-semibold tracking-tight">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-          <SproutIcon aria-hidden className="size-4" />
-        </span>
-        {APP_NAME}
-      </div>
+      <Logo size="lg" />
 
       <section className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
         <div className="flex flex-col gap-6">

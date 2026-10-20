@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type RecipeListItem, type Slot, useRecipeList } from "@/lib/api/hooks";
 import { formatNumber } from "@/lib/format";
+import { EmptyState } from "@/components/empty-state";
 
 const SLOTS: { value: Slot | null; label: string }[] = [
   { value: null, label: "All" },
@@ -169,11 +170,17 @@ export function RecipeBrowser() {
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {favourites
-            ? "No favourites yet. Tap the heart on a recipe you love."
-            : "No safe recipe matches that. Try other words."}
-        </p>
+        <div aria-live="polite">
+          {favourites ? (
+            <EmptyState art="search" title="No favourites yet">
+              Tap the heart on a recipe you love and the planner will pick it more often.
+            </EmptyState>
+          ) : (
+            <EmptyState art="search" title="Nothing matches">
+              No safe recipe matches that. Try other words.
+            </EmptyState>
+          )}
+        </div>
       )}
     </div>
   );

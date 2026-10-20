@@ -34,6 +34,7 @@ import {
 } from "@/lib/api/hooks";
 import { dateRange } from "@/lib/dates";
 import { formatGrams, formatMoney } from "@/lib/format";
+import { EmptyState } from "@/components/empty-state";
 
 /** Supermarket-aisle names for USDA food groups. */
 const AISLE: Record<string, string> = {
@@ -391,14 +392,17 @@ export function ShoppingPage() {
       ) : plan ? (
         <ListView plan={plan} />
       ) : (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No plan yet. Plan your week and the shopping list appears here.
-          </p>
-          <Link href="/plan" className={buttonVariants()}>
-            Plan my week
-          </Link>
-        </div>
+        <EmptyState
+          art="shopping"
+          title="Nothing to buy yet"
+          action={
+            <Link href="/plan" className={buttonVariants()}>
+              Plan my week
+            </Link>
+          }
+        >
+          Plan your week and the shopping list appears here.
+        </EmptyState>
       )}
     </div>
   );
