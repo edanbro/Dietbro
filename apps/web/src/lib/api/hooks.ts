@@ -893,6 +893,31 @@ export function useDeleteReceipt() {
 }
 
 /** The last `days` days of what was eaten, against the goals (today last). */
+export type ImportDraft = Schemas["ImportDraft"];
+export type ImportResult = Schemas["ImportResultOut"];
+
+/** Read the recipe a web page publishes into an editable draft (nothing saved yet). */
+export function useReadRecipePage() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (url: string): Promise<ImportDraft> =>
+      unwrap(await api.POST("/recipes/import/read", { body: { url } })),
+  });
+}
+
+/** Check and save a draft as the user's own recipe, or get back what to fix. */
+export function useImportRecipe() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: ImportDraft): Promise<ImportResult> =>
+      unwrap(await api.POST("/recipes/import", { body: draft })),
+    onSuccess: (result) => {
+      if (result.recipe_id !== null) void qc.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+}
+
 export type Spending = Schemas["SpendingOut"];
 
 /** Grocery spending from confirmed receipts per week, beside the plans' estimates. */

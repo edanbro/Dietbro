@@ -19,7 +19,8 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from datetime import time as wall_time
 
 from fastapi import status
 from sqlalchemy import select
@@ -85,6 +86,45 @@ async def _gate(
         raise
 
 
+def app_scope(
+    user_id: int,
+    *,
+    today: date,
+    local_time: wall_time | None,
+    now: datetime,
+    sessionmaker: async_sessionmaker[AsyncSession],
+    catalog: planning.CatalogCache,
+    planner: planning.Planner,
+    settings: Settings,
+    client_id: uuid.UUID | None = None,
+) -> ChatScope:
+    """A scope for work started from the app's own screens: no thread, message or models."""
+
+    async def nothing(_: object) -> None:
+        return None
+
+    async def no_calls(_: ModelCall) -> None:
+        raise AssertionError("app screens never call a model")
+
+    return ChatScope(
+        user_id=user_id,
+        today=today,
+        local_time=local_time,
+        now=now,
+        thread_id=None,
+        message_id=None,
+        raw_text="",
+        sessionmaker=sessionmaker,
+        catalog=catalog,
+        planner=planner,
+        settings=settings,
+        models=Models(offline_reason="no_key"),
+        emit=nothing,
+        log_call=no_calls,
+        client_id=client_id,
+    )
+
+
 async def run(
     session: AsyncSession,
     user_id: int,
@@ -100,27 +140,15 @@ async def run(
     token = await _gate(session, user_id, body, settings, now)
     started = time.perf_counter()
 
-    async def nothing(_: object) -> None:
-        return None
-
-    async def no_calls(_: ModelCall) -> None:
-        raise AssertionError("a plan-screen replan never calls a model")
-
-    scope = ChatScope(
-        user_id=user_id,
+    scope = app_scope(
+        user_id,
         today=body.today,
         local_time=body.local_time,
         now=now,
-        thread_id=None,
-        message_id=None,
-        raw_text="",
         sessionmaker=sessionmaker,
         catalog=catalog,
         planner=planner,
         settings=settings,
-        models=Models(offline_reason="no_key"),
-        emit=nothing,
-        log_call=no_calls,
         client_id=body.client_id,
     )
     try:

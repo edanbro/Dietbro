@@ -432,6 +432,35 @@ class SpendingOut(BaseModel):
     unmatched_minor: int = Field(description="spent on lines not matched to a food")
 
 
+class ImportReadIn(BaseModel):
+    url: str = Field(max_length=2000)
+
+
+class ImportIngredient(BaseModel):
+    line: str = Field(default="", max_length=300, description="as written on the page")
+    name: str = Field(max_length=120)
+    quantity: str = Field(default="", max_length=40)
+
+
+class ImportDraft(BaseModel):
+    """A recipe read from a page (or typed in), before it is checked and saved. The user can
+    change anything first."""
+
+    name: str = Field(min_length=1, max_length=120)
+    slot: Slot
+    servings: int = Field(ge=1, le=8)
+    cuisine: str | None = Field(default=None, max_length=40)
+    ingredients: list[ImportIngredient] = Field(min_length=2, max_length=25)
+    instructions: str = Field(max_length=4000)
+    image_url: str | None = Field(default=None, max_length=2000)
+    source_url: str | None = Field(default=None, max_length=2000)
+
+
+class ImportResultOut(BaseModel):
+    recipe_id: int | None  # set when saved
+    problems: list[str]  # what to fix when not saved, e.g. "couldn't match 'X'"
+
+
 class PushConfigOut(BaseModel):
     """Whether this server sends reminders, the key browsers subscribe with, and whether this
     user has any browser subscribed."""

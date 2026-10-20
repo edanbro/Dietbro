@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { HeartIcon, SearchIcon } from "lucide-react";
+import { DownloadIcon, HeartIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -95,7 +95,13 @@ export function RecipeBrowser() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Recipes</h1>
+      <div className="flex items-end justify-between gap-3">
+        <h1 className="text-3xl font-semibold">Recipes</h1>
+        <Link href="/recipes/import" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <DownloadIcon aria-hidden />
+          Import
+        </Link>
+      </div>
       <div className="relative">
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input

@@ -815,6 +815,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recipes/import/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Recipe Page
+         * @description Read the recipe a web page publishes for search engines (schema.org JSON-LD) into a
+         *     draft to check and save. Nothing is saved yet.
+         */
+        post: operations["readRecipePage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recipes/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Recipe
+         * @description Check and save a draft as the user's own recipe: the same path as recipes the chat
+         *     drafts (ingredients matched to foods, amounts weighed, nutrition from food data, the
+         *     planner's allergy and diet checks). Problems come back to fix instead of a recipe.
+         */
+        post: operations["importRecipe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/chat/thread": {
         parameters: {
             query?: never;
@@ -1697,6 +1740,56 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /**
+         * ImportDraft
+         * @description A recipe read from a page (or typed in), before it is checked and saved. The user can
+         *     change anything first.
+         */
+        ImportDraft: {
+            /** Name */
+            name: string;
+            slot: components["schemas"]["Slot"];
+            /** Servings */
+            servings: number;
+            /** Cuisine */
+            cuisine?: string | null;
+            /** Ingredients */
+            ingredients: components["schemas"]["ImportIngredient"][];
+            /** Instructions */
+            instructions: string;
+            /** Image Url */
+            image_url?: string | null;
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /** ImportIngredient */
+        ImportIngredient: {
+            /**
+             * Line
+             * @description as written on the page
+             * @default
+             */
+            line: string;
+            /** Name */
+            name: string;
+            /**
+             * Quantity
+             * @default
+             */
+            quantity: string;
+        };
+        /** ImportReadIn */
+        ImportReadIn: {
+            /** Url */
+            url: string;
+        };
+        /** ImportResultOut */
+        ImportResultOut: {
+            /** Recipe Id */
+            recipe_id: number | null;
+            /** Problems */
+            problems: string[];
         };
         /**
          * Logged
@@ -4782,6 +4875,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readRecipePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportReadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportDraft"];
+                };
+            };
+            /** @description no recipe found, or the address can't be used */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    importRecipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResultOut"];
+                };
             };
             /** @description Validation Error */
             422: {

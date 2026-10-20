@@ -11,13 +11,19 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from larder_api import planning
+from larder_api import planning, recipe_import, replans
 from larder_api.auth import AuthError, CurrentUser, TokenVerifier
+from larder_api.chat.create import create_recipe
 from larder_api.chat.search import query_words, rank_recipes, viewer_of
+from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.routers.foods import FRUIT_VEG_CATEGORIES
-from larder_api.routers.plans import get_catalog_cache
+from larder_api.routers.plans import get_catalog_cache, get_replan_planner
 from larder_api.schemas import (
+    ImportDraft,
+    ImportIngredient,
+    ImportReadIn,
+    ImportResultOut,
     MacrosOut,
     NutritionGrade,
     RecipeDetail,
@@ -27,9 +33,13 @@ from larder_api.schemas import (
     RecipeListOut,
     RecipeVerdict,
 )
+from larder_api.settings import Settings, get_settings
 from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.nutrigrade import NutriInput, grade
+from larder_core.recipe_import import ImportedRecipe, split_line
+from larder_core.regions import local_today
 from larder_db.models import Food, PantryItem, Preferences, Recipe, User
+from larder_llm.schemas import CreateRecipeInput, DraftIngredient
 
 logger = logging.getLogger(__name__)
 
@@ -280,3 +290,102 @@ def recipe_grade(recipe: Recipe, foods: Mapping[int, Food]) -> NutritionGrade | 
         )
     )
     return cast(NutritionGrade | None, found)
+
+
+# --- import from a web page or typed text ------------------------------------------------------
+
+_BREAKFAST = ("breakfast", "brunch")
+_SNACK = ("snack", "dessert", "baking", "drink", "smoothie")
+
+
+def guess_slot(category: str | None, name: str) -> Slot:
+    words = f"{category or ''} {name}".lower()
+    if any(w in words for w in _BREAKFAST):
+        return Slot.BREAKFAST
+    if any(w in words for w in _SNACK):
+        return Slot.SNACK
+    return Slot.DINNER
+
+
+def draft_of(found: ImportedRecipe, url: str) -> ImportDraft:
+    """The page's recipe as an editable draft, trimmed to what a saved recipe allows."""
+    ingredients: list[ImportIngredient] = []
+    for line in found.ingredients[:25]:
+        quantity, name = split_line(line)
+        ingredients.append(
+            ImportIngredient(line=line[:300], name=name[:120], quantity=quantity[:40])
+        )
+    return ImportDraft.model_construct(
+        name=found.name[:120],
+        slot=guess_slot(found.category, found.name),
+        servings=min(max(found.servings or 4, 1), 8),
+        cuisine=(found.cuisine or None) and found.cuisine[:40],
+        ingredients=ingredients,
+        instructions=found.instructions[:4000],
+        image_url=found.image_url if found.image_url and len(found.image_url) <= 2000 else None,
+        source_url=url,
+    )
+
+
+@router.post(
+    "/import/read",
+    operation_id="readRecipePage",
+    responses={422: {"description": "no recipe found, or the address can't be used"}},
+)
+async def read_recipe_page(body: ImportReadIn, user: CurrentUser) -> ImportDraft:
+    """Read the recipe a web page publishes for search engines (schema.org JSON-LD) into a
+    draft to check and save. Nothing is saved yet."""
+    try:
+        found = await recipe_import.fetch_recipe(body.url)
+    except recipe_import.ImportError_ as e:
+        logger.info("recipe import for user %s refused: %s", user.id, e)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    return draft_of(found, body.url.strip())
+
+
+@router.post("/import", operation_id="importRecipe", status_code=status.HTTP_200_OK)
+async def import_recipe(
+    body: ImportDraft,
+    user: CurrentUser,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> ImportResultOut:
+    """Check and save a draft as the user's own recipe: the same path as recipes the chat
+    drafts (ingredients matched to foods, amounts weighed, nutrition from food data, the
+    planner's allergy and diet checks). Problems come back to fix instead of a recipe."""
+    now = clock()
+    scope = replans.app_scope(
+        user.id,
+        today=local_today(user.timezone, now),
+        local_time=None,
+        now=now,
+        sessionmaker=sessionmaker,
+        catalog=cache,
+        planner=planner,
+        settings=settings,
+    )
+    draft = CreateRecipeInput(
+        name=body.name,
+        slot=body.slot,
+        servings=body.servings,
+        cuisine=body.cuisine,
+        ingredients=[
+            DraftIngredient(name=i.name, quantity=i.quantity or "1") for i in body.ingredients
+        ],
+        instructions=body.instructions,
+    )
+    created = await create_recipe(
+        scope,
+        draft,
+        source="imported",
+        source_url=_web_address(body.source_url),
+        image_url=_web_address(body.image_url),
+    )
+    return ImportResultOut(recipe_id=created.recipe_id, problems=created.problems)
+
+
+def _web_address(url: str | None) -> str | None:
+    return url if url and url.startswith(("https://", "http://")) else None

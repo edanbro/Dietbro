@@ -2702,6 +2702,93 @@
         }
       }
     },
+    "/recipes/import/read": {
+      "post": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Read Recipe Page",
+        "description": "Read the recipe a web page publishes for search engines (schema.org JSON-LD) into a\ndraft to check and save. Nothing is saved yet.",
+        "operationId": "readRecipePage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportReadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDraft"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "no recipe found, or the address can't be used"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/recipes/import": {
+      "post": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Import Recipe",
+        "description": "Check and save a draft as the user's own recipe: the same path as recipes the chat\ndrafts (ingredients matched to foods, amounts weighed, nutrition from food data, the\nplanner's allergy and diet checks). Problems come back to fix instead of a recipe.",
+        "operationId": "importRecipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/chat/thread": {
       "get": {
         "tags": [
@@ -5159,6 +5246,154 @@
         },
         "type": "object",
         "title": "Health"
+      },
+      "ImportDraft": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "servings": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Servings"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIngredient"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "minItems": 2,
+            "title": "Ingredients"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Instructions"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "slot",
+          "servings",
+          "ingredients",
+          "instructions"
+        ],
+        "title": "ImportDraft",
+        "description": "A recipe read from a page (or typed in), before it is checked and saved. The user can\nchange anything first."
+      },
+      "ImportIngredient": {
+        "properties": {
+          "line": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Line",
+            "description": "as written on the page",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name"
+          },
+          "quantity": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Quantity",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ImportIngredient"
+      },
+      "ImportReadIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ImportReadIn"
+      },
+      "ImportResultOut": {
+        "properties": {
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "problems"
+        ],
+        "title": "ImportResultOut"
       },
       "Logged": {
         "properties": {

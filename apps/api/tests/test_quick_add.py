@@ -12,7 +12,6 @@ from chat_support import ChatEnv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from conftest import BROCCOLI, RICE
 from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 
@@ -20,6 +19,7 @@ NewUser = Callable[..., Awaitable[int]]
 MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
 MON = date(2026, 10, 12)
 WED = MON + timedelta(days=2)
+RICE, BROCCOLI = 168877, 321900  # seeded by the `menu` fixture (conftest)
 
 
 def body(*items: tuple[int, float], slot: str | None = "dinner", on: date = WED) -> dict[str, Any]:

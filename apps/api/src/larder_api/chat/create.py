@@ -61,7 +61,16 @@ class _Line:
     grams: float
 
 
-async def create_recipe(scope: ChatScope, draft: CreateRecipeInput) -> Created:
+async def create_recipe(
+    scope: ChatScope,
+    draft: CreateRecipeInput,
+    *,
+    source: str = "generated",
+    source_url: str | None = None,
+    image_url: str | None = None,
+) -> Created:
+    """`source` "imported" (with the page's address and photo) for recipes read from the web;
+    they go through exactly the same checks."""
     lines, problems = await _resolve(scope, draft)
     if problems:
         return Created(None, problems)
@@ -81,6 +90,7 @@ async def create_recipe(scope: ChatScope, draft: CreateRecipeInput) -> Created:
     if missing:
         return Created(None, [f"couldn't get nutrition for {_quoted(missing)}"])
     row = _row(scope, draft, lines, food_rows)
+    row.source, row.source_url, row.image_url = source, source_url, image_url
     facts = planning.recipe_facts(row, food_rows, info)
     problems = _text_problems(draft, avoided, profile.allergens)
     if draft.slot not in facts.slots:
