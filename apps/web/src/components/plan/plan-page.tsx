@@ -412,16 +412,17 @@ function PlanView({
           <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/plan/shopping" className={buttonVariants({ variant: "outline" })}>
+            <ShoppingBasketIcon aria-hidden />
+            Shopping list
+          </Link>
           <ShareLinkButton
             target={{ kind: "week", start: plan.start }}
             title={`Meals for ${dateRange(first, last)}`}
             label="Share week"
             size="default"
+            compact
           />
-          <Link href="/plan/shopping" className={buttonVariants({ variant: "outline" })}>
-            <ShoppingBasketIcon aria-hidden />
-            Shopping list
-          </Link>
           {ended || plan !== current ? null : (
             <Button
               variant="ghost"

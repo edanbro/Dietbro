@@ -15,11 +15,14 @@ export function ShareLinkButton({
   title,
   label = "Share",
   size = "sm",
+  compact = false,
 }: {
   target: ShareTarget;
   title: string;
   label?: string;
   size?: "sm" | "default";
+  /** Icon only on phones (the label stays for screen readers). */
+  compact?: boolean;
 }) {
   const create = useShareLink();
   const revoke = useRevokeShareLink();
@@ -60,7 +63,7 @@ export function ShareLinkButton({
   return (
     <Button variant="outline" size={size} disabled={create.isPending} onClick={() => void share()}>
       <Link2Icon aria-hidden />
-      {label}
+      {compact ? <span className="sr-only sm:not-sr-only">{label}</span> : label}
     </Button>
   );
 }

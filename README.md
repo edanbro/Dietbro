@@ -3,7 +3,16 @@
 **Plans your week of meals around what's already in your kitchen, and re-plans in real time
 when life happens.** LLM for language, constraint solver for guarantees.
 
-![Mealwright landing page](docs/images/landing.png)
+<p align="center">
+  <img src="docs/images/walkthrough.gif" width="260" alt="Planning a week, opening a dinner, cook mode and ticking the shopping list on a phone">
+</p>
+
+<p align="center">
+  <img src="docs/images/plan.png" width="180" alt="The week's plan: meals with photos, kcal and macros, what's eaten today">
+  <img src="docs/images/recipe.png" width="180" alt="A recipe with nutrition per serving, favourites and sharing">
+  <img src="docs/images/shopping.png" width="180" alt="The shopping list by aisle against the weekly budget">
+  <img src="docs/images/diary.png" width="180" alt="The diary with quick-add, days against the goal and the weight trend">
+</p>
 
 ## Why it's built this way
 
@@ -47,7 +56,16 @@ flowchart LR
   the screen kept awake.
 - **Learns your prices and tastes**: prices from your own receipts; favourite recipes, "never
   again", foods you love or hate.
-- **Tracks what you ate**: a food diary against your goals and a weight trend.
+- **Tracks what you ate**: a food diary against your goals, a weight trend, and quick-add for
+  anything off the plan (search or scan, exact amounts; the rest of the day rebalances).
+- **Imports recipes from a link**: reads the recipe data most recipe sites publish, splits the
+  ingredients, lets you check them, then runs the same allergy and nutrition checks as every
+  other recipe. The fetch is SSRF-guarded (public addresses only, re-checked on redirects).
+- **Spending insights**: weekly grocery spend from your receipts beside what the plan expected,
+  and the aisles the money went on.
+- **Shares and syncs**: a read-only link to a recipe or a week (revocable, nothing personal in
+  it), and a private calendar feed so meals show up in Google, Apple or Outlook Calendar.
+- **Cook once, eat twice**: cook extra tonight and tomorrow's lunch becomes the leftovers.
 - **Installable and offline**: PWA with a hand-written service worker; light, dark or system
   theme; phone-first with a desktop layout.
 
@@ -122,6 +140,9 @@ uv run uvicorn larder_api.main:app --reload    # API on :8000 (reads .env)
 pnpm -C apps/web dev                           # web on :3000; put NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
                                                # and CLERK_SECRET_KEY in apps/web/.env.local
 pnpm -C apps/web e2e                           # Playwright, needs CLERK_* keys exported
+SHOTS=1 pnpm -C apps/web e2e pages             # + accessibility check of every page, light/dark,
+                                               #   phone/desktop; screenshots in e2e-shots/
+MEDIA=1 pnpm -C apps/web e2e media --project=setup --project=phone &&   (cd apps/web && sh scripts/readme-media.sh)   # README screenshots and GIF (needs ffmpeg)
 make check            # lint, types, tests (what CI runs, minus Docker)
 make gen-api          # after changing API routes: regenerate OpenAPI + web types
 make migrate          # apply DB migrations
