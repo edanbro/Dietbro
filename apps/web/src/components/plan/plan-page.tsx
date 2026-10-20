@@ -59,6 +59,7 @@ import { WhatChanged } from "./what-changed";
 import { APP_NAME } from "@/lib/brand";
 import { EmptyState } from "@/components/empty-state";
 import { ShareLinkButton } from "@/components/share-link-button";
+import { cookExtraFor, leftoverNotes, noteFor } from "@/lib/leftovers";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -397,6 +398,7 @@ function PlanView({
   // Next week can be planned in the last 3 days of this one.
   const canPlanNext = !upcoming && plan === current && !ended && daysBetween(today, last) <= 2;
   const dates = plan.days.map((d) => d.date);
+  const leftovers = leftoverNotes(plan.days);
   const selected =
     day && dates.includes(day) ? day : dates.includes(today) ? today : (dates[0] ?? "");
 
@@ -558,7 +560,11 @@ function PlanView({
                         <MealCard
                           key={row.meal.recipe.id}
                           meal={row.meal}
-                          actions={actions(d.date)}
+                          note={noteFor(leftovers, d.date, row.meal.slot)}
+                          actions={{
+                            ...actions(d.date),
+                            cookExtraFor: cookExtraFor(plan.days, d.date, today),
+                          }}
                         />
                       ) : (
                         <LoggedCard entry={row.entry} />

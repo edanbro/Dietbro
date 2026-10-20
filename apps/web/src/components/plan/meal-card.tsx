@@ -18,7 +18,16 @@ import { RecipeArt } from "@/components/recipe/recipe-art";
  * check when it was marked eaten. With `actions`, an options button opens the meal's actions
  * under the card.
  */
-export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsProps }) {
+export function MealCard({
+  meal,
+  actions,
+  note,
+}: {
+  meal: Meal;
+  actions?: MealActionsProps;
+  /** e.g. "Leftovers from last night's dinner" */
+  note?: string;
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const eaten = meal.status === "eaten";
@@ -30,7 +39,7 @@ export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsP
       )}
     >
       <div className="flex items-center">
-        <MealLink meal={meal} chevron={!actions} />
+        <MealLink meal={meal} chevron={!actions} note={note} />
         {actions ? (
           <Button
             variant="ghost"
@@ -51,7 +60,7 @@ export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsP
   );
 }
 
-function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
+function MealLink({ meal, chevron, note }: { meal: Meal; chevron: boolean; note?: string }) {
   const Icon = SLOT_ICON[meal.slot];
   return (
     <Link
@@ -88,6 +97,9 @@ function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
           {formatNumber(meal.nutrition.carbs_g)} g carbs · {formatNumber(meal.nutrition.fat_g)} g
           fat
         </span>
+        {note ? (
+          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{note}</span>
+        ) : null}
         {meal.uses_pantry.length ? (
           <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
             Uses your {meal.uses_pantry.slice(0, 2).join(", ").toLowerCase()}

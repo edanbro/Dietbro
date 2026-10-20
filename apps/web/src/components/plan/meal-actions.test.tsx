@@ -114,6 +114,34 @@ describe("meal options", () => {
     expect(names(await openOptions("Meals on Sunday 11 October", "Dinner"))).toEqual([
       "Skip",
       "Swap for something else",
+      "Cook extra for tomorrow's lunch",
+    ]);
+  });
+
+  it("cooks tonight's dinner in double for tomorrow's lunch", async () => {
+    vi.setSystemTime(new Date(2026, 9, 10, 10, 0));
+    const plan = makePlan();
+    const calls = setup({
+      "GET /plans/current": json(plan),
+      "POST /plans/replan": json({ type: "outcome", results: [], changes: [] }),
+    });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Sun 11 October" }));
+    const group = await openOptions("Meals on Sunday 11 October", "Dinner");
+    fireEvent.click(within(group).getByRole("button", { name: "Cook extra for tomorrow's lunch" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/plans/replan")).toBe(true));
+    const body = calls.find((c) => c.path === "/plans/replan")!.body as {
+      changes: { intent: string; when: { date: string; slot: string }; recipe_id: number }[];
+    };
+    const sunday = plan.days.find((d) => d.date === "2026-10-11")!;
+    const dinner = sunday.meals.find((m) => m.slot === "dinner")!;
+    expect(body.changes).toEqual([
+      {
+        intent: "swap",
+        when: { date: "2026-10-12", slot: "lunch" },
+        recipe_id: dinner.recipe.id,
+      },
     ]);
   });
 

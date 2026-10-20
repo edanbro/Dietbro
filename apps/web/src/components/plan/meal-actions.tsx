@@ -4,6 +4,7 @@ import {
   ArrowLeftIcon,
   CircleCheckIcon,
   CircleSlashIcon,
+  CookingPotIcon,
   NotebookPenIcon,
   RefreshCwIcon,
   Undo2Icon,
@@ -37,6 +38,8 @@ export type MealActionsProps = {
   /** Resolve when done; rejections are reported by the caller (toasts), not here. */
   onEaten: (cell: MealCell, undo: boolean) => Promise<unknown>;
   onReplan: (changes: PlanChange[]) => Promise<unknown>;
+  /** Tomorrow's date when this dinner can be cooked in double for tomorrow's lunch. */
+  cookExtraFor?: string | null;
 };
 
 type Mode = "menu" | "skip" | "other" | "swap";
@@ -83,6 +86,7 @@ export function MealActions({
   busy,
   onEaten,
   onReplan,
+  cookExtraFor = null,
   onDone,
 }: MealActionsProps & { id: string; meal: Meal; onDone: () => void }) {
   const [mode, setMode] = useState<Mode>("menu");
@@ -141,6 +145,22 @@ export function MealActions({
                     <RefreshCwIcon aria-hidden />
                     Swap for something else
                   </Button>
+                  {slot === "dinner" && cookExtraFor ? (
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        replan({
+                          intent: "swap",
+                          when: { date: cookExtraFor, slot: "lunch" },
+                          recipe_id: meal.recipe.id,
+                        })
+                      }
+                    >
+                      <CookingPotIcon aria-hidden />
+                      Cook extra for tomorrow&apos;s lunch
+                    </Button>
+                  ) : null}
                 </>
               )}
               {date === today ? (
