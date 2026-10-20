@@ -518,6 +518,30 @@ class PushSubscription(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ShareLink(Base):
+    """A read-only public link (/s/<token>) to one recipe or to a week's plan (the newest version
+    starting on `plan_start`). Shows only the recipe or the meals: never pantry, goals, weight
+    or allergies. Revoking it stops the link working."""
+
+    __tablename__ = "share_links"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'recipe' AND recipe_id IS NOT NULL AND plan_start IS NULL)"
+            " OR (kind = 'week' AND plan_start IS NOT NULL AND recipe_id IS NULL)",
+            name="ck_share_links_target",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token: Mapped[str] = mapped_column(String(32), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(8))  # recipe | week
+    recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
+    plan_start: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class ShoppingExtra(Base):
     """Something the user wants on their shopping list that no plan needs ("bin bags"). Per
     user, not per plan, so it survives replans until bought and cleared."""

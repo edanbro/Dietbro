@@ -25,6 +25,7 @@ import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { RecipeArt } from "@/components/recipe/recipe-art";
+import { ShareLinkButton } from "@/components/share-link-button";
 
 /** http(s) URLs only: recipe data comes from third parties. */
 export function safeUrl(url: string | null): URL | null {
@@ -146,7 +147,7 @@ function Feedback({ recipe }: { recipe: Recipe }) {
         toast.error(e instanceof ApiError && e.messages[0] ? e.messages[0] : "Couldn't save that"),
     });
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Button
         variant="outline"
         size="sm"
@@ -170,6 +171,7 @@ function Feedback({ recipe }: { recipe: Recipe }) {
         <BanIcon aria-hidden className={cn(verdict === "never" && "text-destructive")} />
         {verdict === "never" ? "Never planned" : "Never again"}
       </Button>
+      <ShareLinkButton target={{ kind: "recipe", recipe_id: recipe.id }} title={recipe.name} />
     </div>
   );
 }

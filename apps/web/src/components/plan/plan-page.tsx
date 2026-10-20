@@ -58,6 +58,7 @@ import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
 import { APP_NAME } from "@/lib/brand";
 import { EmptyState } from "@/components/empty-state";
+import { ShareLinkButton } from "@/components/share-link-button";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -408,7 +409,13 @@ function PlanView({
           </h1>
           <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <ShareLinkButton
+            target={{ kind: "week", start: plan.start }}
+            title={`Meals for ${dateRange(first, last)}`}
+            label="Share week"
+            size="default"
+          />
           <Link href="/plan/shopping" className={buttonVariants({ variant: "outline" })}>
             <ShoppingBasketIcon aria-hidden />
             Shopping list

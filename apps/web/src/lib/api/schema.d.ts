@@ -1065,6 +1065,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Share Link
+         * @description A link to one of the user's recipes (or a catalogue one), or to a week of their plan.
+         */
+        post: operations["createShareLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/share/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Share Link */
+        delete: operations["revokeShareLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/share/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Shared
+         * @description What a share link shows. No sign-in: the token is the permission.
+         */
+        get: operations["getShared"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2634,6 +2691,59 @@ export interface components {
          * @enum {string}
          */
         Sex: "female" | "male";
+        /** ShareIn */
+        ShareIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "recipe" | "week";
+            /** Recipe Id */
+            recipe_id?: number | null;
+            /**
+             * Start
+             * @description for a week: the plan's start date
+             */
+            start?: string | null;
+        };
+        /** ShareOut */
+        ShareOut: {
+            /** Token */
+            token: string;
+            /** Path */
+            path: string;
+        };
+        /** SharedDayOut */
+        SharedDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Meals */
+            meals: components["schemas"]["SharedMealOut"][];
+        };
+        /** SharedMealOut */
+        SharedMealOut: {
+            slot: components["schemas"]["Slot"];
+            recipe: components["schemas"]["RecipeCard"];
+            /** Kcal */
+            kcal: number;
+        };
+        /**
+         * SharedOut
+         * @description What a share link shows: one recipe, or a week's meals. Nothing about the person.
+         */
+        SharedOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "recipe" | "week";
+            recipe?: components["schemas"]["RecipeDetail"] | null;
+            /** Days */
+            days?: components["schemas"]["SharedDayOut"][] | null;
+        };
         /** ShoppingExtraIn */
         ShoppingExtraIn: {
             /** Name */
@@ -5360,6 +5470,120 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createShareLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareOut"];
+                };
+            };
+            /** @description no such link, or it was revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revokeShareLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no such link, or it was revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getShared: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedOut"];
+                };
+            };
+            /** @description no such link, or it was revoked */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

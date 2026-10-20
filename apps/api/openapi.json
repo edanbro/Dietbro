@@ -3468,6 +3468,145 @@
           }
         ]
       }
+    },
+    "/share": {
+      "post": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Create Share Link",
+        "description": "A link to one of the user's recipes (or a catalogue one), or to a week of their plan.",
+        "operationId": "createShareLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/share/{token}": {
+      "delete": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Revoke Share Link",
+        "operationId": "revokeShareLink",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/share/{token}": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Get Shared",
+        "description": "What a share link shows. No sign-in: the token is the permission.",
+        "operationId": "getShared",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7702,6 +7841,150 @@
           "male"
         ],
         "title": "Sex"
+      },
+      "ShareIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recipe",
+              "week"
+            ],
+            "title": "Kind"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "for a week: the plan's start date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "ShareIn"
+      },
+      "ShareOut": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "path"
+        ],
+        "title": "ShareOut"
+      },
+      "SharedDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/SharedMealOut"
+            },
+            "type": "array",
+            "title": "Meals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "meals"
+        ],
+        "title": "SharedDayOut"
+      },
+      "SharedMealOut": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "recipe",
+          "kcal"
+        ],
+        "title": "SharedMealOut"
+      },
+      "SharedOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recipe",
+              "week"
+            ],
+            "title": "Kind"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SharedDayOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "SharedOut",
+        "description": "What a share link shows: one recipe, or a week's meals. Nothing about the person."
       },
       "ShoppingExtraIn": {
         "properties": {

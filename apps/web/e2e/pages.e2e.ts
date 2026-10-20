@@ -16,7 +16,12 @@ const SHOTS = !!process.env.SHOTS;
 
 type ClerkWindow = { Clerk: { session: { getToken(): Promise<string | null> } | null } };
 
-async function api(page: Page, method: "PUT" | "POST" | "DELETE", path: string, data?: unknown) {
+async function api(
+  page: Page,
+  method: "GET" | "PUT" | "POST" | "DELETE",
+  path: string,
+  data?: unknown,
+) {
   const token = await page.evaluate(() =>
     (window as unknown as ClerkWindow).Clerk.session?.getToken(),
   );
@@ -99,6 +104,14 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     await visit("chat", "/chat");
     await visit("profile", "/profile");
     await visit("setup", "/setup");
+
+    // Public share pages (no sign-in needed to view them).
+    const recipeId = Number(recipe!.split("/").at(-1));
+    const recipeLink = await api(page, "POST", "/share", { kind: "recipe", recipe_id: recipeId });
+    const plan = await (await api(page, "GET", "/plans/current")).json();
+    const weekLink = await api(page, "POST", "/share", { kind: "week", start: plan.start });
+    await visit("shared-recipe", (await recipeLink.json()).path);
+    await visit("shared-week", (await weekLink.json()).path);
 
     await api(page, "DELETE", "/me");
   } finally {

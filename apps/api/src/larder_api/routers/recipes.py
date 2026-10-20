@@ -202,6 +202,12 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
     )
     if recipe is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "recipe not found")
+    return await recipe_detail(session, recipe, viewer)
+
+
+async def recipe_detail(session: AsyncSession, recipe: Recipe, viewer: int | None) -> RecipeDetail:
+    """A loaded recipe (with its ingredients) as the API shows it; `viewer` adds their pantry
+    and verdict, None (a share link) shows the recipe alone."""
     food_ids = {i.food_id for i in recipe.ingredients if i.food_id is not None}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(food_ids)))}
     stocked = await _stocked(session, viewer, food_ids) if viewer else set[int]()

@@ -893,6 +893,28 @@ export function useDeleteReceipt() {
 }
 
 /** The last `days` days of what was eaten, against the goals (today last). */
+export type ShareTarget = { kind: "recipe"; recipe_id: number } | { kind: "week"; start: string };
+
+/** A read-only public link to a recipe or a week (the same link when asked again). */
+export function useShareLink() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (target: ShareTarget) =>
+      unwrap(await api.POST("/share", { body: target })),
+  });
+}
+
+/** Stop a share link working. */
+export function useRevokeShareLink() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const result = await api.DELETE("/share/{token}", { params: { path: { token } } });
+      if (!result.response.ok) unwrap(result);
+    },
+  });
+}
+
 export type ImportDraft = Schemas["ImportDraft"];
 export type ImportResult = Schemas["ImportResultOut"];
 

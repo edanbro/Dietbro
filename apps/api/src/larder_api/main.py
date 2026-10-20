@@ -14,6 +14,7 @@ from larder_api.routers import (
     push,
     receipts,
     recipes,
+    share,
     shopping,
 )
 from larder_api.settings import get_settings
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(diary.router)
     app.include_router(push.router)
+    app.include_router(share.router)
     return app
 
 

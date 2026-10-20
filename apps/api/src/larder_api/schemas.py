@@ -834,3 +834,33 @@ ChatEvent = Annotated[
     | ErrorEvent,
     Field(discriminator="type"),
 ]
+
+
+class ShareIn(BaseModel):
+    kind: Literal["recipe", "week"]
+    recipe_id: int | None = None  # for a recipe
+    start: date | None = Field(default=None, description="for a week: the plan's start date")
+
+
+class ShareOut(BaseModel):
+    token: str
+    path: str  # the web page: /s/<token>
+
+
+class SharedMealOut(BaseModel):
+    slot: Slot
+    recipe: RecipeCard
+    kcal: int
+
+
+class SharedDayOut(BaseModel):
+    date: date
+    meals: list[SharedMealOut]
+
+
+class SharedOut(BaseModel):
+    """What a share link shows: one recipe, or a week's meals. Nothing about the person."""
+
+    kind: Literal["recipe", "week"]
+    recipe: RecipeDetail | None = None
+    days: list[SharedDayOut] | None = None
