@@ -166,7 +166,7 @@ describe("loaded plan", () => {
     expect(links[0]).toHaveTextContent("Breakfast 2");
     expect(links[0]).toHaveTextContent("×1½");
     expect(links[0]).toHaveTextContent("600 kcal · 30 g protein");
-    expect(within(meals).getAllByTestId("meal-placeholder")).toHaveLength(3);
+    expect(within(meals).getAllByTestId("recipe-art")).toHaveLength(3);
 
     expect(screen.getByRole("meter", { name: "Calories" })).toHaveAttribute(
       "aria-valuenow",
@@ -182,7 +182,7 @@ describe("loaded plan", () => {
     const img = meals.querySelector("img");
     expect(img).toHaveAttribute("src", "https://img.example/b1.jpg");
     expect(img).toHaveAttribute("loading", "lazy");
-    expect(within(meals).getAllByTestId("meal-placeholder")).toHaveLength(2);
+    expect(within(meals).getAllByTestId("recipe-art")).toHaveLength(2);
   });
 
   it("switches days through the URL", async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { HeartIcon, SearchIcon, UtensilsIcon } from "lucide-react";
+import { HeartIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -14,6 +14,7 @@ import { ApiError } from "@/lib/api/browser";
 import { type RecipeListItem, type Slot, useRecipeList } from "@/lib/api/hooks";
 import { formatNumber } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
+import { RecipeArt } from "@/components/recipe/recipe-art";
 
 const SLOTS: { value: Slot | null; label: string }[] = [
   { value: null, label: "All" },
@@ -55,21 +56,7 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
         className="flex h-full flex-col overflow-hidden rounded-xl border transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <div className="relative aspect-[4/3] bg-muted">
-          {recipe.image_url ? (
-            // Third-party photo of unknown size; see MealCard.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={recipe.image_url}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="size-full object-cover"
-            />
-          ) : (
-            <div className="grid size-full place-items-center text-muted-foreground">
-              <UtensilsIcon aria-hidden className="size-8" />
-            </div>
-          )}
+          <RecipeArt recipe={recipe} className="size-full" />
           {recipe.favourite ? (
             <span className="absolute top-2 right-2 grid size-7 place-items-center rounded-full bg-background/90">
               <HeartIcon aria-label="Favourite" className="size-4 fill-red-500 text-red-500" />

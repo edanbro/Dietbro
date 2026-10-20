@@ -11,6 +11,7 @@ import { formatNumber, formatServings, servingsLabel } from "@/lib/format";
 
 import { MealActions, type MealActionsProps } from "./meal-actions";
 import { SLOT_ICON, SLOT_LABEL } from "./slots";
+import { RecipeArt } from "@/components/recipe/recipe-art";
 
 /**
  * A planned meal: photo (or the slot's icon), name, servings and the numbers that matter; a
@@ -57,27 +58,7 @@ function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
       href={`/recipes/${meal.recipe.id}?servings=${meal.servings}`}
       className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      {meal.recipe.image_url ? (
-        // Recipe photos come from many hosts at arbitrary sizes; a plain lazy <img> avoids
-        // routing every one through the image optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={meal.recipe.image_url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          width={64}
-          height={64}
-          className="size-16 shrink-0 rounded-lg bg-muted object-cover"
-        />
-      ) : (
-        <div
-          data-testid="meal-placeholder"
-          className="grid size-16 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground"
-        >
-          <Icon aria-hidden className="size-6" />
-        </div>
-      )}
+      <RecipeArt recipe={meal.recipe} className="size-16 shrink-0 rounded-lg" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Icon aria-hidden className="size-3.5" />

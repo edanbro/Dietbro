@@ -24,6 +24,7 @@ import { parseServings } from "@/lib/cooking";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
+import { RecipeArt } from "@/components/recipe/recipe-art";
 
 /** http(s) URLs only: recipe data comes from third parties. */
 export function safeUrl(url: string | null): URL | null {
@@ -252,15 +253,12 @@ export function RecipePage({ id }: { id: number }) {
   return (
     <article className="flex flex-col gap-5">
       <BackButton />
-      {recipe.image_url ? (
-        // Third-party photo of unknown size; see MealCard.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={recipe.image_url}
-          alt={recipe.name}
-          className="aspect-video w-full rounded-xl bg-muted object-cover"
-        />
-      ) : null}
+      <RecipeArt
+        recipe={recipe}
+        alt={recipe.image_url ? recipe.name : ""}
+        eager
+        className="aspect-video w-full rounded-xl"
+      />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">{recipe.name}</h1>
         {details.length ? (
