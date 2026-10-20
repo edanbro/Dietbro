@@ -409,6 +409,29 @@ class DiaryOut(BaseModel):
     on_target_days: int = 0
 
 
+class SpendingWeekOut(BaseModel):
+    start: date  # the Monday
+    spent_minor: int = Field(description="confirmed receipt lines bought that week")
+    planned_minor: int | None = Field(
+        description="estimated food cost of the plans starting that week (latest versions)"
+    )
+
+
+class SpendingCategoryOut(BaseModel):
+    category: str | None  # USDA food group (a product counts as its generic food's group)
+    spent_minor: int
+
+
+class SpendingOut(BaseModel):
+    """Grocery spending from the user's own confirmed receipts, week by week, beside what the
+    plans estimated. Lines without a price, or rejected, don't count."""
+
+    currency: Currency
+    weeks: list[SpendingWeekOut]  # oldest first, ending with this week
+    categories: list[SpendingCategoryOut]  # most spent first, over the whole period
+    unmatched_minor: int = Field(description="spent on lines not matched to a food")
+
+
 class PushConfigOut(BaseModel):
     """Whether this server sends reminders, the key browsers subscribe with, and whether this
     user has any browser subscribed."""

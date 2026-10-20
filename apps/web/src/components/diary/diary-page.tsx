@@ -14,6 +14,7 @@ import { localISODate, shortDate } from "@/lib/dates";
 import { formatNumber, humanize } from "@/lib/format";
 
 import { QuickAdd } from "./quick-add";
+import { SpendingSection } from "./spending";
 import { WeightChart } from "./weight-chart";
 
 const STATUS: Record<NonNullable<DiaryDay["status"]>, { label: string; className: string }> = {
@@ -246,6 +247,7 @@ export function DiaryPage() {
         </>
       )}
       <Weights />
+      <SpendingSection />
     </div>
   );
 }

@@ -9,10 +9,10 @@ from typing import Any
 
 import httpx
 from chat_support import ChatEnv
-from conftest import BROCCOLI, RICE
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from conftest import BROCCOLI, RICE
 from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 

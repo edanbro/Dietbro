@@ -3228,6 +3228,57 @@
         ]
       }
     },
+    "/insights/spending": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Spending",
+        "description": "What the user spent on groceries (their confirmed receipts) per week, beside the plans'\nestimated food cost, and where the money went by food group.",
+        "operationId": "getSpending",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 52,
+              "minimum": 1,
+              "default": 12,
+              "title": "Weeks"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/push": {
       "get": {
         "tags": [
@@ -7726,6 +7777,105 @@
         ],
         "title": "SlotChange",
         "description": "One meal that differs between the parent and the new plan version (recipe or size)."
+      },
+      "SpendingCategoryOut": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "spent_minor"
+        ],
+        "title": "SpendingCategoryOut"
+      },
+      "SpendingOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/SpendingWeekOut"
+            },
+            "type": "array",
+            "title": "Weeks"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/SpendingCategoryOut"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "unmatched_minor": {
+            "type": "integer",
+            "title": "Unmatched Minor",
+            "description": "spent on lines not matched to a food"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "weeks",
+          "categories",
+          "unmatched_minor"
+        ],
+        "title": "SpendingOut",
+        "description": "Grocery spending from the user's own confirmed receipts, week by week, beside what the\nplans estimated. Lines without a price, or rejected, don't count."
+      },
+      "SpendingWeekOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor",
+            "description": "confirmed receipt lines bought that week"
+          },
+          "planned_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Minor",
+            "description": "estimated food cost of the plans starting that week (latest versions)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "spent_minor",
+          "planned_minor"
+        ],
+        "title": "SpendingWeekOut"
       },
       "StatusEvent": {
         "properties": {

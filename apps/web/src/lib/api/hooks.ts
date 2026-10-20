@@ -893,6 +893,18 @@ export function useDeleteReceipt() {
 }
 
 /** The last `days` days of what was eaten, against the goals (today last). */
+export type Spending = Schemas["SpendingOut"];
+
+/** Grocery spending from confirmed receipts per week, beside the plans' estimates. */
+export function useSpending(weeks = 12) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["spending", weeks] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/spending", { params: { query: { weeks } } })),
+  });
+}
+
 export function useDiary(days = 7) {
   const api = useApi();
   return useQuery({

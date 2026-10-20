@@ -963,6 +963,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/insights/spending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spending
+         * @description What the user spent on groceries (their confirmed receipts) per week, beside the plans'
+         *     estimated food cost, and where the money went by food group.
+         */
+        get: operations["getSpending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/push": {
         parameters: {
             query?: never;
@@ -2641,6 +2662,52 @@ export interface components {
             /** Change Index */
             change_index?: number | null;
             reason: components["schemas"]["ChangeReason"];
+        };
+        /** SpendingCategoryOut */
+        SpendingCategoryOut: {
+            /** Category */
+            category: string | null;
+            /** Spent Minor */
+            spent_minor: number;
+        };
+        /**
+         * SpendingOut
+         * @description Grocery spending from the user's own confirmed receipts, week by week, beside what the
+         *     plans estimated. Lines without a price, or rejected, don't count.
+         */
+        SpendingOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "GBP" | "EUR" | "USD";
+            /** Weeks */
+            weeks: components["schemas"]["SpendingWeekOut"][];
+            /** Categories */
+            categories: components["schemas"]["SpendingCategoryOut"][];
+            /**
+             * Unmatched Minor
+             * @description spent on lines not matched to a food
+             */
+            unmatched_minor: number;
+        };
+        /** SpendingWeekOut */
+        SpendingWeekOut: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * Spent Minor
+             * @description confirmed receipt lines bought that week
+             */
+            spent_minor: number;
+            /**
+             * Planned Minor
+             * @description estimated food cost of the plans starting that week (latest versions)
+             */
+            planned_minor: number | null;
         };
         /** StatusEvent */
         StatusEvent: {
@@ -5026,6 +5093,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatProblem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSpending: {
+        parameters: {
+            query?: {
+                weeks?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingOut"];
                 };
             };
             /** @description Validation Error */

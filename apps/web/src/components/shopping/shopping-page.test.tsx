@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/api";
+import { aisle } from "@/lib/aisles";
 import { item, makePlan, makeShoppingList } from "@/test/fixtures";
 
-import { aisle, groupByAisle, listText, ShoppingPage } from "./shopping-page";
+import { groupByAisle, listText, ShoppingPage } from "./shopping-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
