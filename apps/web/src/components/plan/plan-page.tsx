@@ -290,9 +290,12 @@ function PlanNotes({ plan }: { plan: Plan }) {
           {greedy ? (
             <p>Made by the quick planner: fast, but it can miss a target now and then.</p>
           ) : null}
-          {plan.notes.map((n) => (
-            <p key={n}>{n}</p>
-          ))}
+          {plan.notes
+            // The API notes the quick planner too; say it once.
+            .filter((n) => !(greedy && n.startsWith("Made by the quick planner")))
+            .map((n) => (
+              <p key={n}>{n}</p>
+            ))}
         </div>
       ) : null}
     </>
@@ -398,12 +401,33 @@ function PlanView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {plan === current ? "Your week" : "Next week"}
-        </h1>
-        <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-semibold">
+            {plan === current ? "Your week" : "Next week"}
+          </h1>
+          <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/plan/shopping" className={buttonVariants({ variant: "outline" })}>
+            <ShoppingBasketIcon aria-hidden />
+            Shopping list
+          </Link>
+          {ended || plan !== current ? null : (
+            <Button
+              variant="ghost"
+              aria-expanded={confirming}
+              aria-controls="new-plan-confirm"
+              disabled={create.isPending}
+              onClick={() => setConfirming(!confirming)}
+            >
+              <RefreshCwIcon aria-hidden />
+              New plan
+            </Button>
+          )}
+        </div>
       </div>
+      <Exclusions plan={plan} />
       {upcoming ? (
         <WeekToggle
           next={plan !== current}
@@ -428,28 +452,6 @@ function PlanView({
           {create.isPending ? "Planning…" : "Plan next week"}
         </Button>
       ) : null}
-      <div className="flex gap-2">
-        <Link
-          href="/plan/shopping"
-          className={cn(buttonVariants({ variant: "outline" }), "flex-1")}
-        >
-          <ShoppingBasketIcon aria-hidden />
-          Shopping list
-        </Link>
-        {ended || plan !== current ? null : (
-          <Button
-            variant="outline"
-            className="flex-1"
-            aria-expanded={confirming}
-            aria-controls="new-plan-confirm"
-            disabled={create.isPending}
-            onClick={() => setConfirming(!confirming)}
-          >
-            <RefreshCwIcon aria-hidden />
-            New plan
-          </Button>
-        )}
-      </div>
 
       {confirming && !ended ? (
         <div
@@ -497,8 +499,6 @@ function PlanView({
 
       <PlanningStatus pending={create.isPending} />
       <CreateError error={create.error} />
-      <Exclusions plan={plan} />
-      <PlanNotes plan={plan} />
       {outcome ? (
         <WhatChanged
           outcome={outcome}
@@ -601,6 +601,7 @@ function PlanView({
       </Tabs>
 
       <WeekSummary plan={plan} />
+      <PlanNotes plan={plan} />
     </div>
   );
 }

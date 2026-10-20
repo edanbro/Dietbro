@@ -55,7 +55,10 @@ describe("DayMacros", () => {
     expect(within(section).getAllByRole("meter")).toHaveLength(2);
     expect(within(section).getByText("50 kcal under")).toHaveClass("text-destructive");
     expect(within(section).getByText("12 g under")).not.toHaveClass("text-destructive");
-    expect(within(section).getAllByText("No target set")).toHaveLength(2);
+    const plain = within(section).getByLabelText("Macros without a target");
+    expect(within(plain).getByText("Fat")).toBeInTheDocument();
+    expect(within(plain).getByText("Carbs")).toBeInTheDocument();
+    expect(within(plain).getByText("230 g")).toBeInTheDocument();
   });
 });
 
