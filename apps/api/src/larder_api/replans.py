@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from larder_api import planning
 from larder_api.chat import limits, replan
 from larder_api.chat.gate import BAD_TODAY, BUSY, ChatRefused, Code
+from larder_api.chat.offplan import Estimate
 from larder_api.chat.scope import ChatScope, Models
 from larder_api.schemas import ChatProblem, ReplanRequest
 from larder_api.settings import Settings
@@ -94,6 +95,7 @@ async def run(
     planner: planning.Planner,
     settings: Settings,
     now: datetime,
+    estimates: dict[int, Estimate] | None = None,
 ) -> Timed:
     token = await _gate(session, user_id, body, settings, now)
     started = time.perf_counter()
@@ -122,7 +124,7 @@ async def run(
         client_id=body.client_id,
     )
     try:
-        outcome = await replan.apply_changes(scope, body.changes, source="app")
+        outcome = await replan.apply_changes(scope, body.changes, source="app", estimates=estimates)
     finally:
         await limits.release_turn(sessionmaker, user_id, token)
     timed = Timed(

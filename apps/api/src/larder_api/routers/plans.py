@@ -99,7 +99,7 @@ _EATEN_ERRORS: dict[int | str, dict[str, Any]] = {
         "description": "the plan isn't the latest version (reload it)",
     },
 }
-_REPLAN_ERRORS: dict[int | str, dict[str, Any]] = {
+REPLAN_ERRORS: dict[int | str, dict[str, Any]] = {
     status.HTTP_400_BAD_REQUEST: {"model": ChatProblem, "description": "bad_today"},
     status.HTTP_409_CONFLICT: {
         "model": ChatProblem,
@@ -284,7 +284,7 @@ async def create_plan(
     return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, row.id)))
 
 
-@router.post("/replan", operation_id="replanPlan", responses=_REPLAN_ERRORS)
+@router.post("/replan", operation_id="replanPlan", responses=REPLAN_ERRORS)
 async def replan_plan(
     body: ReplanRequest,
     response: Response,

@@ -58,7 +58,7 @@ export interface paths {
         /**
          * Delete Me
          * @description Delete the account and all its data (GDPR). The identity-provider account is deleted
-         *     by the client with its own SDK.
+         *     by the client with its own SDK. The shared demo account can't be deleted.
          */
         delete: operations["deleteMe"];
         options?: never;
@@ -941,6 +941,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/diary/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log Food
+         * @description Log food the user picked (search or barcode) with exact grams. It goes through the same
+         *     executor as "I had X" in the chat, so it counts toward the day and the rest of that day's
+         *     plan rebalances around it; nutrition comes from the food data, never a guess.
+         */
+        post: operations["logFood"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/push": {
         parameters: {
             query?: never;
@@ -1480,6 +1502,44 @@ export interface components {
             attribution: string;
             /** Grade */
             grade?: ("A" | "B" | "C" | "D" | "E") | null;
+        };
+        /** FoodLogItem */
+        FoodLogItem: {
+            /** Food Id */
+            food_id: number;
+            /** Grams */
+            grams: number;
+        };
+        /**
+         * FoodLogRequest
+         * @description Food the user picked themselves (diary quick-add). Logged like food told to the chat,
+         *     with exact amounts, so the rest of that day's plan rebalances around it.
+         */
+        FoodLogRequest: {
+            /**
+             * Eaten On
+             * Format: date
+             * @description the day it was eaten (the user's local date)
+             */
+            eaten_on: string;
+            /** @description default: the next meal by local time */
+            slot?: components["schemas"]["Slot"] | null;
+            /** Items */
+            items: components["schemas"]["FoodLogItem"][];
+            /**
+             * Client Id
+             * Format: uuid
+             * @description the client's id for this request: resending is safe
+             */
+            client_id: string;
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date
+             */
+            today: string;
+            /** Local Time */
+            local_time?: string | null;
         };
         /** FoodSummary */
         FoodSummary: {
@@ -4909,6 +4969,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logFood: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodLogRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeOut"];
+                };
+            };
+            /** @description bad_today */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProblem"];
+                };
+            };
+            /** @description a food doesn't exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProblem"];
+                };
             };
             /** @description Validation Error */
             422: {

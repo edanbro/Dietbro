@@ -11,14 +11,29 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from larder_api import planning
+from larder_api import planning, replans
 from larder_api.auth import CurrentUser
+from larder_api.chat import offplan
+from larder_api.chat.context import short_name
 from larder_api.clock import Clock, get_clock
-from larder_api.db import Session
-from larder_api.schemas import DiaryDayOut, DiaryOut, MacrosOut, WeightIn, WeightOut
+from larder_api.db import Session, get_sessionmaker
+from larder_api.routers.plans import REPLAN_ERRORS, get_catalog_cache, get_replan_planner
+from larder_api.schemas import (
+    DiaryDayOut,
+    DiaryOut,
+    FoodLogRequest,
+    MacrosOut,
+    OutcomeOut,
+    ReplanRequest,
+    WeightIn,
+    WeightOut,
+)
+from larder_api.settings import Settings, get_settings
 from larder_core.regions import local_today
-from larder_db.models import BodyProfile, BodyWeight, Goals, MealPlan, PlanMeal
+from larder_db.models import BodyProfile, BodyWeight, Food, Goals, MealPlan, PlanMeal
+from larder_llm.schemas import AteOffPlan, OffPlanItem, When
 
 router = APIRouter(tags=["diary"])
 
@@ -190,3 +205,54 @@ async def _sync_profile(session: Session, user_id: int) -> None:
     profile = await session.get(BodyProfile, user_id)
     if profile is not None and newest is not None:
         profile.weight_kg = newest
+
+
+_LOG_ERRORS: dict[int | str, dict[str, Any]] = {
+    **REPLAN_ERRORS,
+    status.HTTP_404_NOT_FOUND: {"description": "a food doesn't exist"},
+}
+
+
+@router.post("/diary/log", operation_id="logFood", responses=_LOG_ERRORS)
+async def log_food(
+    body: FoodLogRequest,
+    response: Response,
+    user: CurrentUser,
+    session: Session,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> OutcomeOut:
+    """Log food the user picked (search or barcode) with exact grams. It goes through the same
+    executor as "I had X" in the chat, so it counts toward the day and the rest of that day's
+    plan rebalances around it; nutrition comes from the food data, never a guess."""
+    ids = {i.food_id for i in body.items}
+    found = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
+    if missing := ids - found.keys():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"no food {min(missing)}")
+    picks = [(found[i.food_id], i.grams) for i in body.items]
+    names = [short_name(f.description) for f, _ in picks]
+    change = AteOffPlan(
+        intent="ate_off_plan",
+        when=When(date=body.eaten_on, slot=body.slot),
+        description=", ".join(dict.fromkeys(names)).capitalize(),
+        items=[OffPlanItem(name=short_name(f.description), quantity=f"{g:g} g") for f, g in picks],
+    )
+    request = ReplanRequest(
+        changes=[change], client_id=body.client_id, today=body.today, local_time=body.local_time
+    )
+    timed = await replans.run(
+        session,
+        user.id,
+        request,
+        sessionmaker=sessionmaker,
+        catalog=cache,
+        planner=planner,
+        settings=settings,
+        now=clock(),
+        estimates={0: offplan.exact(picks)},
+    )
+    response.headers["Server-Timing"] = timed.server_timing
+    return OutcomeOut.model_validate(timed.outcome.model_dump())

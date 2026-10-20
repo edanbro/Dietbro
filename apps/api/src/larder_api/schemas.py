@@ -661,6 +661,23 @@ class OutcomeOut(ReplanOutcome):
     type: Literal["outcome"] = "outcome"
 
 
+class FoodLogItem(BaseModel):
+    food_id: int
+    grams: float = Field(gt=0, le=5000)
+
+
+class FoodLogRequest(BaseModel):
+    """Food the user picked themselves (diary quick-add). Logged like food told to the chat,
+    with exact amounts, so the rest of that day's plan rebalances around it."""
+
+    eaten_on: date = Field(description="the day it was eaten (the user's local date)")
+    slot: Slot | None = Field(default=None, description="default: the next meal by local time")
+    items: list[FoodLogItem] = Field(min_length=1, max_length=10)
+    client_id: UUID = Field(description="the client's id for this request: resending is safe")
+    today: date = Field(description="the user's local date")
+    local_time: time | None = None
+
+
 class ReplanRequest(BaseModel):
     """Plan changes made from the plan screen (no chat): the same typed changes the chat's
     model and offline parser produce, applied by the same executor."""

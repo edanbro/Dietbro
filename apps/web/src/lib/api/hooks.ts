@@ -702,6 +702,44 @@ export function useReplan() {
   });
 }
 
+export type FoodLogItem = { food_id: number; grams: number };
+
+/**
+ * Log food picked from search or a barcode, with exact grams (diary quick-add). The API runs it
+ * through the same executor as the chat, so the rest of that day's plan rebalances.
+ */
+export function useLogFood() {
+  const api = useApi();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async ({
+      items,
+      slot,
+      date = localISODate(),
+    }: {
+      items: FoodLogItem[];
+      slot: Slot | null;
+      date?: string;
+    }): Promise<ChatOutcome> => {
+      const result = await api.POST("/diary/log", {
+        body: {
+          eaten_on: date,
+          slot,
+          items,
+          client_id: crypto.randomUUID(),
+          today: localISODate(),
+          local_time: localTime(),
+        },
+      });
+      if (isChatProblem(result.error)) {
+        throw new ChatProblemError(result.response.status, result.error);
+      }
+      return unwrap(result);
+    },
+    ...usePlanChangeHandlers(),
+  });
+}
+
 // --- pantry intake (M6) -----------------------------------------------------------------------
 
 /** Pantry items expired or expiring within `days` of the user's local today, soonest first. */

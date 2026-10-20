@@ -69,6 +69,26 @@ async def estimate(scope: ChatScope, change: AteOffPlan) -> Estimate:
     )
 
 
+def exact(picks: list[tuple[db.Food, float]]) -> Estimate:
+    """Food the user picked themselves (diary quick-add): exact foods and grams, no guessing."""
+    kcal = protein = fat = carbs = 0.0
+    for food, grams in picks:
+        kcal += (food.kcal or 0) * grams / 100
+        protein += (food.protein_g or 0) * grams / 100
+        fat += (food.fat_g or 0) * grams / 100
+        carbs += (food.carbs_g or 0) * grams / 100
+    return Estimate(
+        macros=Macros(round(kcal), round(protein), round(fat), round(carbs)),
+        items=[
+            {"name": f.description, "food_id": f.id, "food": f.description, "grams": round(g)}
+            for f, g in picks
+        ],
+        unmatched=[],
+        note=None,
+        estimated=False,
+    )
+
+
 async def _fallback(scope: ChatScope, change: AteOffPlan, unmatched: list[str]) -> Estimate:
     slot = change.when.slot or Slot.DINNER
     planned = await planned_meal(scope, change.when.date, slot)

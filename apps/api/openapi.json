@@ -89,7 +89,7 @@
           "profile"
         ],
         "summary": "Delete Me",
-        "description": "Delete the account and all its data (GDPR). The identity-provider account is deleted\nby the client with its own SDK.",
+        "description": "Delete the account and all its data (GDPR). The identity-provider account is deleted\nby the client with its own SDK. The shared demo account can't be deleted.",
         "operationId": "deleteMe",
         "responses": {
           "204": {
@@ -3158,6 +3158,76 @@
         }
       }
     },
+    "/diary/log": {
+      "post": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Log Food",
+        "description": "Log food the user picked (search or barcode) with exact grams. It goes through the same\nexecutor as \"I had X\" in the chat, so it counts toward the day and the rest of that day's\nplan rebalances around it; nutrition comes from the food data, never a guess.",
+        "operationId": "logFood",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FoodLogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutcomeOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad_today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "a food doesn't exist"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/push": {
       "get": {
         "tags": [
@@ -4518,6 +4588,89 @@
           "attribution"
         ],
         "title": "FoodDetail"
+      },
+      "FoodLogItem": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "grams": {
+            "type": "number",
+            "maximum": 5000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Grams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "grams"
+        ],
+        "title": "FoodLogItem"
+      },
+      "FoodLogRequest": {
+        "properties": {
+          "eaten_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Eaten On",
+            "description": "the day it was eaten (the user's local date)"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "default: the next meal by local time"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FoodLogItem"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Client Id",
+            "description": "the client's id for this request: resending is safe"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "eaten_on",
+          "items",
+          "client_id",
+          "today"
+        ],
+        "title": "FoodLogRequest",
+        "description": "Food the user picked themselves (diary quick-add). Logged like food told to the chat,\nwith exact amounts, so the rest of that day's plan rebalances around it."
       },
       "FoodSummary": {
         "properties": {

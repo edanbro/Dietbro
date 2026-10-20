@@ -13,6 +13,7 @@ import { type DiaryDay, useDiary, useWeight, useWeights } from "@/lib/api/hooks"
 import { localISODate, shortDate } from "@/lib/dates";
 import { formatNumber, humanize } from "@/lib/format";
 
+import { QuickAdd } from "./quick-add";
 import { WeightChart } from "./weight-chart";
 
 const STATUS: Record<NonNullable<DiaryDay["status"]>, { label: string; className: string }> = {
@@ -217,6 +218,7 @@ export function DiaryPage() {
               )}
             </p>
           </section>
+          <QuickAdd />
           <section aria-labelledby="diary-days" className="flex flex-col gap-2">
             <h2 id="diary-days" className="text-base font-semibold">
               Days

@@ -287,9 +287,15 @@ class _Plan:
 
 
 async def apply_changes(
-    scope: ChatScope, changes: Sequence[Change], *, source: Source
+    scope: ChatScope,
+    changes: Sequence[Change],
+    *,
+    source: Source,
+    estimates: dict[int, offplan.Estimate] | None = None,
 ) -> ReplanOutcome:
-    estimates: dict[int, offplan.Estimate] = {}
+    """`estimates` (by change index) are used as they are instead of estimating from names:
+    the diary's quick-add knows the exact foods and grams."""
+    estimates = dict(estimates or {})
     started = clock.perf_counter()
     for attempt in range(2):
         outcome = await _attempt(scope, changes, source, estimates, started, last=attempt == 1)
