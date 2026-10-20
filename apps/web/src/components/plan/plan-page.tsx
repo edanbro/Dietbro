@@ -20,7 +20,7 @@ import { ErrorAlert } from "@/components/form-bits";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonMealCard } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api/browser";
 import {
@@ -93,9 +93,9 @@ function PlanSkeleton() {
     <div className="flex flex-col gap-4" aria-busy>
       <Skeleton className="h-8 w-40" />
       <Skeleton className="h-12" />
-      <Skeleton className="h-20" />
-      <Skeleton className="h-20" />
-      <Skeleton className="h-20" />
+      <SkeletonMealCard />
+      <SkeletonMealCard />
+      <SkeletonMealCard />
     </div>
   );
 }
@@ -540,10 +540,19 @@ function PlanView({
             {plan.days.map((d) => (
               <TabsContent key={d.date} value={d.date} className="flex flex-col gap-4 pt-2">
                 <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
-                  {dayRows(d).map((row) => (
-                    <li key={row.key}>
+                  {dayRows(d).map((row, i) => (
+                    <li
+                      key={row.key}
+                      className="motion-safe:animate-rise"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    >
                       {row.meal ? (
-                        <MealCard meal={row.meal} actions={actions(d.date)} />
+                        // Keyed by recipe: a swapped meal is a new card and rises in.
+                        <MealCard
+                          key={row.meal.recipe.id}
+                          meal={row.meal}
+                          actions={actions(d.date)}
+                        />
                       ) : (
                         <LoggedCard entry={row.entry} />
                       )}

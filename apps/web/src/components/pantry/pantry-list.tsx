@@ -11,7 +11,7 @@ import { ProductThumb } from "@/components/food-bits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonRows } from "@/components/ui/skeleton";
 import {
   type PantryItem,
   useDeletePantryItem,
@@ -94,10 +94,7 @@ export function PantryList() {
 
   if (isPending) {
     return (
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-14" />
-        <Skeleton className="h-14" />
-      </div>
+      <SkeletonRows count={5} />
     );
   }
   const items = (data ?? []).filter((i) => !hidden.has(i.id));

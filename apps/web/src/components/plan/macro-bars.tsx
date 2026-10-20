@@ -68,7 +68,7 @@ export function MacroBar({ label, value, unit, band, hard = false }: Props) {
             <div
               aria-hidden
               className={cn(
-                "absolute top-1/2 left-0 h-1.5 -translate-y-1/2 rounded-full",
+                "absolute top-1/2 left-0 h-1.5 origin-left -translate-y-1/2 rounded-full motion-safe:animate-grow-x",
                 !off && "bg-foreground",
                 off && hard && "bg-destructive",
                 off && !hard && "bg-amber-500",

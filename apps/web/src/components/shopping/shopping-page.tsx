@@ -18,7 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonRows } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
   type Plan,
@@ -101,7 +101,7 @@ function ItemRow({
         <Label
           htmlFor={id}
           className={cn(
-            "leading-snug font-normal",
+            "leading-snug font-normal decoration-muted-foreground/70 motion-safe:transition-colors motion-safe:duration-300",
             item.checked && "text-muted-foreground line-through",
           )}
         >
@@ -160,10 +160,9 @@ function ListView({ plan }: { plan: Plan }) {
 
   if (isPending) {
     return (
-      <div className="flex flex-col gap-2" aria-busy>
+      <div className="flex flex-col gap-3" aria-busy>
         <Skeleton className="h-16" />
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
+        <SkeletonRows count={6} />
       </div>
     );
   }
