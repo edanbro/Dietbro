@@ -77,10 +77,10 @@ describe("PantryList", () => {
     renderWithClient(<PantryList />);
 
     expect(await screen.findByRole("region", { name: "Fridge" })).toHaveTextContent("Milk");
-    expect(screen.getByRole("region", { name: "Freezer" })).toHaveTextContent("Peas");
+    expect(screen.getByRole("region", { name: "Freezer" })).toHaveTextContent("Frozen peas");
     fireEvent.change(screen.getByLabelText("Search your pantry"), { target: { value: "ric" } });
-    expect(screen.queryByText("Milk, whole")).not.toBeInTheDocument();
-    expect(screen.getByText("Rice, white")).toBeInTheDocument();
+    expect(screen.queryByText("Milk · whole")).not.toBeInTheDocument();
+    expect(screen.getByText("White rice")).toBeInTheDocument();
   });
 
   it("edits an item", async () => {

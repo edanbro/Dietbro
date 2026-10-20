@@ -35,6 +35,7 @@ import {
 import { dateRange } from "@/lib/dates";
 import { formatGrams, formatMoney } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
+import { foodName } from "@/lib/food-name";
 
 /** Supermarket-aisle names for USDA food groups. */
 const AISLE: Record<string, string> = {
@@ -86,9 +87,10 @@ function ItemRow({
   currency: ShoppingList["currency"];
 }) {
   const id = `shop-${item.food_id}`;
+  const { name, detail } = foodName(item.name);
   const amount = item.staple
-    ? null
-    : [formatGrams(item.grams), item.approx_units].filter(Boolean).join(" · ");
+    ? detail
+    : [formatGrams(item.grams), item.approx_units, detail].filter(Boolean).join(" · ");
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
       <Checkbox
@@ -105,7 +107,7 @@ function ItemRow({
             item.checked && "text-muted-foreground line-through",
           )}
         >
-          {item.name}
+          {name}
         </Label>
         {amount ? (
           <span id={`${id}-amount`} className="text-xs text-muted-foreground">

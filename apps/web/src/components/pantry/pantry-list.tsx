@@ -21,6 +21,12 @@ import {
 } from "@/lib/api/hooks";
 import { daysBetween, localISODate, shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/empty-state";
+import { foodName } from "@/lib/food-name";
+
+function friendly(description: string): string {
+  const { name, detail } = foodName(description);
+  return detail ? `${name} · ${detail}` : name;
+}
 
 /** Days until `isoDate` (local midnight to local midnight); negative when past. */
 export function daysUntil(isoDate: string, today: Date = new Date()): number {
@@ -148,8 +154,9 @@ export function PantryList() {
                       onClick={() => setEditing(item.id)}
                     >
                       <span className="truncate text-sm">
-                        {item.food.brand ? `${item.food.brand} ` : ""}
-                        {item.food.description}
+                        {item.food.brand
+                          ? `${item.food.brand} ${item.food.description}`
+                          : friendly(item.food.description)}
                       </span>
                       <span className="text-xs text-muted-foreground">{formatAmount(item)}</span>
                     </button>

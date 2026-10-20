@@ -257,7 +257,7 @@ export function RecipePage({ id }: { id: number }) {
         recipe={recipe}
         alt={recipe.image_url ? recipe.name : ""}
         eager
-        className="aspect-video w-full rounded-xl"
+        className={cn("w-full rounded-xl", recipe.image_url ? "aspect-video" : "aspect-[3/1]")}
       />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">{recipe.name}</h1>
