@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
+    // Locally without Playwright's own Chromium: E2E_CHANNEL=msedge (or chrome).
+    channel: process.env.E2E_CHANNEL,
     screenshot: "only-on-failure",
   },
   projects: [
@@ -21,6 +23,12 @@ export default defineConfig({
       name: "phone",
       testMatch: /.*\.e2e\.ts/,
       use: { ...devices["Pixel 7"] },
+      dependencies: ["setup"],
+    },
+    {
+      name: "desktop",
+      testMatch: /pages\.e2e\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
       dependencies: ["setup"],
     },
   ],

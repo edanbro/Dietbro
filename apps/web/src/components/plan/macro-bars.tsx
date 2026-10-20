@@ -154,7 +154,7 @@ export function MoreNutrients({
           <div key={key} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
             <dt className="text-xs text-muted-foreground">{label}</dt>
             <dd
-              className={`text-sm font-semibold tabular-nums ${off ? "text-amber-600 dark:text-amber-400" : ""}`}
+              className={`text-sm font-semibold tabular-nums ${off ? "text-amber-700 dark:text-amber-400" : ""}`}
             >
               {value === null || value === undefined ? "–" : `${value.toFixed(1)} g`}
             </dd>
