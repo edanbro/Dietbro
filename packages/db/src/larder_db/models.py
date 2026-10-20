@@ -305,6 +305,12 @@ class User(Base):
     chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     chat_turn_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     chat_turn_message_id: Mapped[int | None] = mapped_column(Integer)  # the user's message
+    # The private calendar feed (/calendar/<token>.ics): NULL when off. Meal times for it as
+    # {"breakfast": "08:00", ...}; NULL means the defaults.
+    calendar_token: Mapped[str | None] = mapped_column(
+        String(32), unique=True, info={"constraint": "uq_users_calendar_token"}
+    )
+    calendar_times: Mapped[dict[str, str] | None] = mapped_column(JSONB)
 
 
 class Goals(Base):
@@ -528,7 +534,7 @@ class ShareLink(Base):
         CheckConstraint(
             "(kind = 'recipe' AND recipe_id IS NOT NULL AND plan_start IS NULL)"
             " OR (kind = 'week' AND plan_start IS NOT NULL AND recipe_id IS NULL)",
-            name="ck_share_links_target",
+            name="target",  # ck_share_links_target by the naming convention
         ),
     )
 

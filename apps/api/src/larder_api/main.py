@@ -5,6 +5,7 @@ from larder_api import __version__, health
 from larder_api.chat.gate import ChatRefused, problem_response
 from larder_api.resources import lifespan
 from larder_api.routers import (
+    calendar,
     chat,
     diary,
     foods,
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(diary.router)
     app.include_router(push.router)
     app.include_router(share.router)
+    app.include_router(calendar.router)
     return app
 
 

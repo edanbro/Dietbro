@@ -3607,6 +3607,169 @@
           }
         }
       }
+    },
+    "/me/calendar": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Get Calendar",
+        "operationId": "getCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Reset Calendar",
+        "description": "Turn the feed on with a new private address (the old one, if any, stops working).",
+        "operationId": "resetCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Disable Calendar",
+        "operationId": "disableCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/calendar/times": {
+      "put": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Put Calendar Times",
+        "operationId": "putCalendarTimes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarTimes"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/calendar/{token}.ics": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Calendar Feed",
+        "description": "The feed itself. No sign-in: the token in the address is the permission.",
+        "operationId": "getCalendarFeed",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/calendar": {}
+            }
+          },
+          "404": {
+            "description": "no such feed (turned off or reset)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3888,6 +4051,66 @@
           "file"
         ],
         "title": "Body_uploadReceiptImage"
+      },
+      "CalendarOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "times": {
+            "$ref": "#/components/schemas/CalendarTimes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "path",
+          "times"
+        ],
+        "title": "CalendarOut"
+      },
+      "CalendarTimes": {
+        "properties": {
+          "breakfast": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Breakfast",
+            "default": "08:00"
+          },
+          "lunch": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Lunch",
+            "default": "13:00"
+          },
+          "dinner": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Dinner",
+            "default": "19:00"
+          },
+          "snack": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Snack",
+            "default": "16:00"
+          }
+        },
+        "type": "object",
+        "title": "CalendarTimes",
+        "description": "When each meal shows on the calendar (24-hour HH:MM, the user's local time)."
       },
       "ChangeReason": {
         "type": "string",

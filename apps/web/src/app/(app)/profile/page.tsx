@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AccountControls } from "@/components/profile/account-controls";
 import { AllergiesForm } from "@/components/profile/allergies-form";
 import { BodyForm } from "@/components/profile/body-form";
+import { CalendarForm } from "@/components/profile/calendar-form";
 import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
 import { RegionForm } from "@/components/profile/region-form";
@@ -20,6 +21,7 @@ const SECTIONS = [
   { id: "body", title: "Body stats", body: <BodyForm /> },
   { id: "region", title: "Region", body: <RegionForm /> },
   { id: "reminders", title: "Reminders", body: <RemindersForm /> },
+  { id: "calendar", title: "Calendar", body: <CalendarForm /> },
   { id: "appearance", title: "Appearance", body: <ThemeToggle /> },
   { id: "account", title: "Your data", body: <AccountControls /> },
 ];

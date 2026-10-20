@@ -864,3 +864,21 @@ class SharedOut(BaseModel):
     kind: Literal["recipe", "week"]
     recipe: RecipeDetail | None = None
     days: list[SharedDayOut] | None = None
+
+
+_HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
+
+
+class CalendarTimes(BaseModel):
+    """When each meal shows on the calendar (24-hour HH:MM, the user's local time)."""
+
+    breakfast: str = Field(default="08:00", pattern=_HHMM)
+    lunch: str = Field(default="13:00", pattern=_HHMM)
+    dinner: str = Field(default="19:00", pattern=_HHMM)
+    snack: str = Field(default="16:00", pattern=_HHMM)
+
+
+class CalendarOut(BaseModel):
+    enabled: bool
+    path: str | None  # on the API: /calendar/<token>.ics
+    times: CalendarTimes

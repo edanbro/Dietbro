@@ -1122,6 +1122,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Calendar */
+        get: operations["getCalendar"];
+        put?: never;
+        /**
+         * Reset Calendar
+         * @description Turn the feed on with a new private address (the old one, if any, stops working).
+         */
+        post: operations["resetCalendar"];
+        /** Disable Calendar */
+        delete: operations["disableCalendar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/calendar/times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Calendar Times */
+        put: operations["putCalendarTimes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calendar/{token}.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calendar Feed
+         * @description The feed itself. No sign-in: the token in the address is the permission.
+         */
+        get: operations["getCalendarFeed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1224,6 +1283,40 @@ export interface components {
             file: string;
             /** Purchased On */
             purchased_on?: string | null;
+        };
+        /** CalendarOut */
+        CalendarOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Path */
+            path: string | null;
+            times: components["schemas"]["CalendarTimes"];
+        };
+        /**
+         * CalendarTimes
+         * @description When each meal shows on the calendar (24-hour HH:MM, the user's local time).
+         */
+        CalendarTimes: {
+            /**
+             * Breakfast
+             * @default 08:00
+             */
+            breakfast: string;
+            /**
+             * Lunch
+             * @default 13:00
+             */
+            lunch: string;
+            /**
+             * Dinner
+             * @default 19:00
+             */
+            dinner: string;
+            /**
+             * Snack
+             * @default 16:00
+             */
+            snack: string;
         };
         /** @enum {string} */
         ChangeReason: "craving" | "swap" | "skip" | "ate_off_plan" | "rebalance" | "resize";
@@ -5583,6 +5676,137 @@ export interface operations {
                 };
             };
             /** @description no such link, or it was revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarOut"];
+                };
+            };
+        };
+    };
+    resetCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarOut"];
+                };
+            };
+        };
+    };
+    disableCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarOut"];
+                };
+            };
+        };
+    };
+    putCalendarTimes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarTimes"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getCalendarFeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/calendar": unknown;
+                };
+            };
+            /** @description no such feed (turned off or reset) */
             404: {
                 headers: {
                     [name: string]: unknown;
