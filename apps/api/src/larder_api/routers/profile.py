@@ -65,6 +65,7 @@ from larder_db.models import (
     PushSubscription,
     ReceiptUpload,
     Recipe,
+    ShareLink,
     ShoppingExtra,
     User,
 )
@@ -253,6 +254,13 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
             "user_id",
             "p256dh",
             "auth",
+        ),
+        # Public links the user made (recipe or week), revoked ones included.
+        "share_links": rows(
+            await session.scalars(
+                select(ShareLink).where(ShareLink.user_id == user.id).order_by(ShareLink.id)
+            ),
+            "user_id",
         ),
         "weights": rows(
             await session.scalars(
