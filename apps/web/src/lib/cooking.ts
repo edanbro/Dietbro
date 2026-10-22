@@ -1,4 +1,4 @@
-/** Cook mode helpers: timers read from a method step, and ingredient amounts scaled. */
+/** Cook mode helpers: a method split into steps, timers read from a step, amounts scaled. */
 
 export type StepTimer = { label: string; seconds: number };
 
@@ -60,4 +60,19 @@ export function parseServings(value: string | null): number | null {
   if (!Number.isFinite(n)) return null;
   const halves = Math.round(n * 2) / 2;
   return halves >= 0.5 && halves <= 20 ? halves : null;
+}
+
+// "STEP 1", "Step 2:", "3. " or "4) " at the start of a line: the numbering is ours to show.
+// A number needs a space after its point, so "1.5 kg" stays.
+const NUMBERING = /^(?:step\s*\d+\s*[.):-]?\s*|\d{1,2}[.)]\s+)/i;
+
+/**
+ * A recipe's method as steps: one per line, without the "STEP 1" headings and "1." numbers
+ * some sources write (a heading on its own line is dropped, a number before text is removed).
+ */
+export function steps(instructions: string): string[] {
+  return instructions
+    .split(/\r?\n+/)
+    .map((s) => s.trim().replace(NUMBERING, "").trim())
+    .filter(Boolean);
 }

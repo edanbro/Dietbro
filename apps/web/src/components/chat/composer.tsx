@@ -8,7 +8,7 @@ import type { Chat } from "./use-chat";
 import { APP_NAME } from "@/lib/brand";
 
 /**
- * The message box, pinned above the bottom nav. Enter sends (Shift+Enter for a new line);
+ * The message box, pinned above the bottom nav (on desktop, to the bottom of the page column). Enter sends (Shift+Enter for a new line);
  * typing stays possible while a reply streams, sending doesn't.
  */
 export function Composer({
@@ -27,9 +27,9 @@ export function Composer({
         e.preventDefault();
         chat.send(chat.draft);
       }}
-      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t bg-background/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 border-t bg-background/95 backdrop-blur lg:bottom-0 lg:left-64"
     >
-      <div className="mx-auto flex max-w-md items-end gap-2 px-4 py-2">
+      <div className="mx-auto flex max-w-md items-end gap-2 px-4 py-2 lg:max-w-4xl lg:px-10 lg:py-3">
         <label htmlFor="chat-message" className="sr-only">
           Message
         </label>

@@ -5,10 +5,12 @@ export type Theme = "light" | "dark" | "system";
 export const THEME_KEY = "theme";
 
 /**
- * Runs inline in <head> before the page paints (no flash of the wrong theme). Kept tiny and
- * self-contained; storage can throw (private mode, blocked site data), then System applies.
+ * Runs inline in <head> before the page paints (no flash of the wrong theme), and again when
+ * the device switches between light and dark, on every page (the landing and share pages have
+ * no theme toggle to listen for them). Kept tiny and self-contained; storage can throw
+ * (private mode, blocked site data), then System applies.
  */
-export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}")}catch(e){}var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);var c=document.documentElement.classList;c.toggle("dark",d);c.toggle("light",!d)})()`;
+export const THEME_SCRIPT = `(function(){var m=matchMedia("(prefers-color-scheme: dark)");function a(){try{var t=localStorage.getItem("${THEME_KEY}")}catch(e){}var d=t==="dark"||(t!=="light"&&m.matches);var c=document.documentElement.classList;c.toggle("dark",d);c.toggle("light",!d)}a();m.addEventListener("change",a)})()`;
 
 export function readTheme(): Theme {
   try {

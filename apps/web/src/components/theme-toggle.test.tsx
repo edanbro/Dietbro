@@ -49,4 +49,25 @@ describe("THEME_SCRIPT", () => {
     new Function(THEME_SCRIPT)();
     expect(root().contains(expected)).toBe(true);
   });
+
+  it("follows the device when it switches, on pages without a toggle", () => {
+    let dark = false;
+    let onChange: () => void = () => undefined;
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        get matches() {
+          return dark;
+        },
+        addEventListener: (_: string, f: () => void) => {
+          onChange = f;
+        },
+      })),
+    );
+    new Function(THEME_SCRIPT)();
+    expect(root().contains("light")).toBe(true);
+    dark = true;
+    onChange();
+    expect(root().contains("dark")).toBe(true);
+  });
 });

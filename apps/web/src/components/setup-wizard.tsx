@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import { LoaderCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,12 +18,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Me, useCreatePlan, useCurrentPlan, useMe } from "@/lib/api/hooks";
 
 export const STEPS = [
-  { key: "region", title: "Where are you?", optional: false },
-  { key: "body", title: "About you", optional: true },
-  { key: "goals", title: "Your goals", optional: false },
-  { key: "allergies", title: "Allergies", optional: false },
-  { key: "preferences", title: "What you like", optional: false },
-  { key: "pantry", title: "What's in your kitchen", optional: true },
+  { key: "region", title: "Where are you?", short: "Where", optional: false },
+  { key: "body", title: "About you", short: "You", optional: true },
+  { key: "goals", title: "Your goals", short: "Goals", optional: false },
+  { key: "allergies", title: "Allergies", short: "Allergies", optional: false },
+  { key: "preferences", title: "What you like", short: "Likes", optional: false },
+  { key: "pantry", title: "What's in your kitchen", short: "Kitchen", optional: true },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
@@ -95,18 +96,50 @@ function Wizard({ start }: { start: number }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <p className="text-xs text-muted-foreground">
           Step {index + 1} of {STEPS.length}
         </p>
-        <div className="flex gap-1" aria-hidden>
-          {STEPS.map((s, i) => (
-            <span
-              key={s.key}
-              className={`h-1 flex-1 rounded-full ${i <= index ? "bg-primary" : "bg-muted"}`}
-            />
-          ))}
-        </div>
+        {/* Each step named under its bar; steps already done can be opened again. */}
+        <ol className="grid grid-cols-6 gap-1" aria-label="Steps">
+          {STEPS.map((s, i) => {
+            const bar = (
+              <>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "h-1 w-full rounded-full transition-colors motion-reduce:transition-none",
+                    i <= index ? "bg-primary" : "bg-muted",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "truncate text-[0.65rem]",
+                    i === index ? "font-medium text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {i < index ? <span className="sr-only">Back to </span> : null}
+                  {s.short}
+                </span>
+              </>
+            );
+            return (
+              <li key={s.key} aria-current={i === index ? "step" : undefined}>
+                {i < index ? (
+                  <button
+                    type="button"
+                    className="flex w-full flex-col items-start gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => setIndex(i)}
+                  >
+                    {bar}
+                  </button>
+                ) : (
+                  <span className="flex flex-col items-start gap-1">{bar}</span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
         <h1 className="text-2xl font-semibold tracking-tight">{step.title}</h1>
       </div>
 
@@ -121,7 +154,8 @@ function Wizard({ start }: { start: number }) {
             Add what you already have, and plans use it up first. You can skip this.
           </p>
           <PantryAdd />
-          <PantryList />
+          {/* A first pantry is short: one search box (adding) is enough. */}
+          <PantryList searchFrom={12} />
           <Finish />
         </div>
       )}

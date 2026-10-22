@@ -33,9 +33,10 @@ export function WeightChart({ weights }: { weights: Weight[] }) {
 
   return (
     <figure className="flex flex-col gap-1">
+      {/* Drawn for a phone; capped so its labels don't grow huge on a wide screen. */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full text-primary"
+        className="h-auto w-full max-w-lg text-primary"
         role="img"
         aria-label={`Weight from ${first.weight_kg} kg to ${last.weight_kg} kg. ${summary}.`}
       >

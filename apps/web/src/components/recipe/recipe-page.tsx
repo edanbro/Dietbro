@@ -20,7 +20,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
-import { parseServings } from "@/lib/cooking";
+import { parseServings, steps } from "@/lib/cooking";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
@@ -36,14 +36,6 @@ export function safeUrl(url: string | null): URL | null {
   } catch {
     return null;
   }
-}
-
-/** Recipe text as paragraphs (TheMealDB separates steps with line breaks). */
-export function steps(instructions: string): string[] {
-  return instructions
-    .split(/\r?\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function BackButton() {

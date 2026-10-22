@@ -34,7 +34,12 @@ export function SpendingChart({ data }: { data: Spending }) {
 
   return (
     <figure className="flex flex-col gap-2">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={summary}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-auto w-full max-w-lg"
+        role="img"
+        aria-label={summary}
+      >
         <line
           x1={PAD.left}
           x2={W - PAD.right}

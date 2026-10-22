@@ -59,7 +59,8 @@ const UNDO_MS = 5000;
  * The pantry by where things are kept, searchable; tap an item to edit it. Deleting waits a few
  * seconds so it can be undone.
  */
-export function PantryList() {
+/** `searchFrom`: show the search box once there are this many items (default: always). */
+export function PantryList({ searchFrom = 0 }: { searchFrom?: number } = {}) {
   const { data, isPending } = usePantry();
   const remove = useDeletePantryItem();
   const [query, setQuery] = useState("");
@@ -117,16 +118,18 @@ export function PantryList() {
     : items;
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your pantry"
-          aria-label="Search your pantry"
-          className="pl-8"
-        />
-      </div>
+      {items.length >= searchFrom || q ? (
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your pantry"
+            aria-label="Search your pantry"
+            className="pl-8"
+          />
+        </div>
+      ) : null}
       {!shown.length ? (
         <p className="py-4 text-center text-sm text-muted-foreground">Nothing matches.</p>
       ) : null}

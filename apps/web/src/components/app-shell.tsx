@@ -108,12 +108,16 @@ function CountBadge({ n }: { n: number }) {
   );
 }
 
+const IMMERSIVE = /^\/recipes\/\d+\/cook/;
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: me } = useMe();
   useRegionSync(me, pathname.startsWith("/setup"));
   useOfflineSync();
   const expiring = me?.profile.expiring_soon ?? 0;
+  // Cooking: the whole phone screen is the recipe, no tab bar to tap by accident.
+  const immersive = IMMERSIVE.test(pathname);
   return (
     <div className="flex min-h-dvh flex-col lg:pl-64">
       <Rail pathname={pathname} expiring={expiring} />
@@ -122,43 +126,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <UserButton />
       </header>
       <OfflineBanner />
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pt-4 pb-24 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12">
+      <main
+        className={cn(
+          "mx-auto w-full max-w-md flex-1 px-4 pt-4 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12",
+          immersive ? "pb-8 md:max-w-3xl" : "pb-24",
+        )}
+      >
         {children}
       </main>
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-      >
-        <ul className="mx-auto flex max-w-md">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = activeTab(pathname) === href;
-            return (
-              <li key={href} className="flex-1">
-                <Link
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  // One name, not label + sr-only text: browsers join those with a stray space.
-                  aria-label={
-                    href === "/pantry" && expiring
-                      ? `${label}, ${expiring} expiring soon`
-                      : undefined
-                  }
-                  className={cn(
-                    "flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors",
-                    active ? "font-medium text-primary" : "text-muted-foreground",
-                  )}
-                >
-                  <span className="relative">
-                    <Icon className="size-5" />
-                    {href === "/pantry" ? <CountBadge n={expiring} /> : null}
-                  </span>
-                  {label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      {immersive ? null : (
+        <nav
+          aria-label="Main"
+          className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        >
+          <ul className="mx-auto flex max-w-md">
+            {NAV.map(({ href, label, icon: Icon }) => {
+              const active = activeTab(pathname) === href;
+              return (
+                <li key={href} className="flex-1">
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    // One name, not label + sr-only text: browsers join those with a stray space.
+                    aria-label={
+                      href === "/pantry" && expiring
+                        ? `${label}, ${expiring} expiring soon`
+                        : undefined
+                    }
+                    className={cn(
+                      "flex h-16 flex-col items-center justify-center gap-1 text-xs transition-colors",
+                      active ? "font-medium text-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    <span className="relative">
+                      <Icon className="size-5" />
+                      {href === "/pantry" ? <CountBadge n={expiring} /> : null}
+                    </span>
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </div>
   );
 }

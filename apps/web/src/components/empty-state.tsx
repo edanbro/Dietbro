@@ -43,6 +43,15 @@ const ART = {
       <path d="M93 45l11 11" />
     </>
   ),
+  chat: (
+    <>
+      <path d="M18 28a10 10 0 0 1 10-10h40a10 10 0 0 1 10 10v20a10 10 0 0 1-10 10H40l-12 10V58a10 10 0 0 1-10-10z" className="fill-primary/15" />
+      <path d="M32 34h32M32 44h20" />
+      <path d="M58 64h34a10 10 0 0 0 10-10V44" className="fill-brand-warm/20" />
+      <path d="M92 64v12l-10-12" />
+      <circle cx="96" cy="26" r="8" className="fill-brand-warm/40" />
+    </>
+  ),
   shopping: (
     <>
       <path d="M28 36h64l-6 46H34z" className="fill-primary/15" />

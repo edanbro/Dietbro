@@ -5,7 +5,9 @@ import { json, mockApi, renderWithClient } from "@/test/api";
 import { makeRecipe } from "@/test/fixtures";
 import { calls as nav, resetNavigation } from "@/test/navigation";
 
-import { RecipePage, safeUrl, steps } from "./recipe-page";
+import { steps } from "@/lib/cooking";
+
+import { RecipePage, safeUrl } from "./recipe-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "test-token" }) }));
 vi.mock("next/navigation", () => import("@/test/navigation"));
@@ -28,6 +30,16 @@ describe("helpers", () => {
 
   it("splits instructions into steps", () => {
     expect(steps("One.\r\n\r\nTwo.\nThree. ")).toEqual(["One.", "Two.", "Three."]);
+  });
+
+  it("drops step headings and the numbers a source wrote", () => {
+    expect(steps("STEP 1\r\nHeat the oven.\r\nstep 2:\r\n2. Bake.\n3) Rest.\nStep 4 - Serve.")).toEqual(
+      ["Heat the oven.", "Bake.", "Rest.", "Serve."],
+    );
+    expect(steps("2 eggs go in first.\n1.5 kg is plenty.")).toEqual([
+      "2 eggs go in first.",
+      "1.5 kg is plenty.",
+    ]);
   });
 });
 
