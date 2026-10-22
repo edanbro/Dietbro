@@ -14,6 +14,7 @@ import httpx
 from fastapi import Request
 from redis.asyncio import Redis
 
+from larder_api.ratelimit import RedisCounter
 from larder_api.settings import Settings, get_settings
 
 FIELDS = (
@@ -93,10 +94,7 @@ class RedisLimits:
         return await self._take(f"off:rate:{minute}", self.per_minute, 60)
 
     async def _take(self, key: str, limit: int, ttl: int) -> bool:
-        count = int(await self.redis.incr(key))
-        if count == 1:
-            await self.redis.expire(key, ttl)
-        return count <= limit
+        return await RedisCounter(self.redis).hit(key, ttl) <= limit
 
 
 def get_off_client(request: Request) -> OffClient | None:

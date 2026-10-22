@@ -20,6 +20,7 @@ from larder_api.chat import offplan
 from larder_api.chat.context import short_name
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
+from larder_api.ratelimit import per_user
 from larder_api.routers.plans import REPLAN_ERRORS, get_catalog_cache, get_replan_planner
 from larder_api.schemas import (
     Currency,
@@ -227,7 +228,12 @@ _LOG_ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 
-@router.post("/diary/log", operation_id="logFood", responses=_LOG_ERRORS)
+@router.post(
+    "/diary/log",
+    operation_id="logFood",
+    responses=_LOG_ERRORS,
+    dependencies=[Depends(per_user("diary_log"))],
+)
 async def log_food(
     body: FoodLogRequest,
     response: Response,

@@ -48,6 +48,12 @@ Create a Redis database (region: eu-west-1) and copy the `rediss://` URL (TLS).
      `OFF_USER_AGENT` (barcode lookups), `DEMO_AUTH_SUBJECT` (step 5).
 3. Deploy. Migrations run when the container starts. Check `https://YOUR-API.onrender.com/readyz`.
 
+Rate limits (`larder_api/ratelimit.py`) count per user, per link or per client address in the
+same Redis. `render.yaml` sets `TRUSTED_PROXY_HOPS=1` so the client's address comes from the
+`X-Forwarded-For` entry Render's proxy adds. On a host with no proxy in front, leave it at 0:
+the header is then ignored, since anyone can send it. A limit can be raised by name with
+`RATE_LIMIT_OVERRIDES='{"import_read": 100}'`.
+
 ## 4. Web (Vercel)
 
 1. New Project → this repository. Root directory: `apps/web`. Framework: Next.js. Install

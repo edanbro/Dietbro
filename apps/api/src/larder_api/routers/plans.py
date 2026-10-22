@@ -28,6 +28,7 @@ from larder_api.chat import search
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
+from larder_api.ratelimit import per_user
 from larder_api.routers.pantry import out as pantry_out
 from larder_api.schemas import (
     ChatProblem,
@@ -211,6 +212,7 @@ async def _load_plan(session: AsyncSession, user: User, plan_id: int) -> MealPla
     status_code=status.HTTP_201_CREATED,
     operation_id="createPlan",
     responses=_CREATE_ERRORS,
+    dependencies=[Depends(per_user("plan"))],
 )
 async def create_plan(
     body: PlanRequest,
@@ -284,7 +286,12 @@ async def create_plan(
     return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, row.id)))
 
 
-@router.post("/replan", operation_id="replanPlan", responses=REPLAN_ERRORS)
+@router.post(
+    "/replan",
+    operation_id="replanPlan",
+    responses=REPLAN_ERRORS,
+    dependencies=[Depends(per_user("plan"))],
+)
 async def replan_plan(
     body: ReplanRequest,
     response: Response,

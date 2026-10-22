@@ -17,6 +17,7 @@ from larder_api.chat.create import create_recipe
 from larder_api.chat.search import query_words, rank_recipes, viewer_of
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
+from larder_api.ratelimit import per_user
 from larder_api.routers.foods import FRUIT_VEG_CATEGORIES
 from larder_api.routers.plans import get_catalog_cache, get_replan_planner
 from larder_api.schemas import (
@@ -336,6 +337,7 @@ def draft_of(found: ImportedRecipe, url: str) -> ImportDraft:
 @router.post(
     "/import/read",
     operation_id="readRecipePage",
+    dependencies=[Depends(per_user("import_read"))],
     responses={422: {"description": "no recipe found, or the address can't be used"}},
 )
 async def read_recipe_page(body: ImportReadIn, user: CurrentUser) -> ImportDraft:
@@ -349,7 +351,12 @@ async def read_recipe_page(body: ImportReadIn, user: CurrentUser) -> ImportDraft
     return draft_of(found, body.url.strip())
 
 
-@router.post("/import", operation_id="importRecipe", status_code=status.HTTP_200_OK)
+@router.post(
+    "/import",
+    operation_id="importRecipe",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(per_user("import_save"))],
+)
 async def import_recipe(
     body: ImportDraft,
     user: CurrentUser,

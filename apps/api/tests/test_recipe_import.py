@@ -1,8 +1,10 @@
 """Importing recipes from web pages: the guarded fetch (larder_api.recipe_import) and the routes
 POST /recipes/import/read and POST /recipes/import."""
 
+import gzip
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
+from typing import cast
 
 import httpx
 import pytest
@@ -46,9 +48,22 @@ def fake_dns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(recipe_import, "resolve", resolve)
 
 
-def client(routes: dict[str, httpx.Response]) -> httpx.AsyncClient:
+def client(
+    routes: dict[str, httpx.Response], seen: list[httpx.Request] | None = None
+) -> httpx.AsyncClient:
+    """Answers by the address as the user wrote it: the request itself goes to the checked IP,
+    with the name in the Host header."""
+
     def handle(request: httpx.Request) -> httpx.Response:
-        return routes.get(str(request.url), httpx.Response(404))
+        if seen is not None:
+            seen.append(request)
+        url = request.url.copy_with(netloc=request.headers["host"].encode())
+        canned = routes.get(str(url), httpx.Response(404))
+        # A fresh, unread stream each time, as from the network (the fetch reads it raw).
+        raw = b"".join(cast(Iterable[bytes], canned.stream))  # as sent, still compressed
+        return httpx.Response(
+            canned.status_code, headers=canned.headers, stream=httpx.ByteStream(raw)
+        )
 
     return httpx.AsyncClient(transport=httpx.MockTransport(handle))
 
@@ -70,6 +85,11 @@ def html(body: str) -> httpx.Response:
         ("::ffff:127.0.0.1", False),
         ("fd00::1", False),
         ("0.0.0.0", False),
+        ("64:ff9b::7f00:1", False),  # NAT64 for 127.0.0.1
+        ("64:ff9b::a9fe:a9fe", False),  # NAT64 for 169.254.169.254
+        ("2002:7f00:1::1", False),  # 6to4 around 127.0.0.1
+        ("2002:c0a8:1::1", False),  # 6to4 around 192.168.0.1
+        ("2001:0:4136:e378:8000:63bf:3fff:fdd2", False),  # Teredo, client 192.0.2.45
     ],
 )
 def test_only_public_addresses(ip: str, public: bool) -> None:
@@ -102,6 +122,40 @@ async def test_reads_the_recipe_and_follows_a_public_redirect() -> None:
     recipe = await fetch_recipe("https://example.com/r", client(routes))
     assert recipe.name == "Chicken and rice"
     assert recipe.ingredients[0] == "300g chicken breast, diced"
+
+
+async def test_the_connection_goes_to_the_checked_address() -> None:
+    seen: list[httpx.Request] = []
+    await fetch_recipe(
+        "https://example.com/recipe", client({"https://example.com/recipe": html(PAGE)}, seen)
+    )
+    [request] = seen
+    assert request.url.host == "93.184.216.34"  # not a second lookup of the name
+    assert request.headers["host"] == "example.com"
+    assert request.extensions["sni_hostname"] == "example.com"  # TLS checks the name
+
+
+async def test_compressed_pages_are_read_and_bombs_are_refused() -> None:
+    def gz(body: bytes) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=gzip.compress(body),
+            headers={"content-type": "text/html", "content-encoding": "gzip"},
+        )
+
+    routes = {
+        "https://example.com/recipe": gz(PAGE.encode()),
+        "https://example.com/bomb": gz(b" " * (recipe_import.MAX_BYTES * 5)),
+        "https://example.com/br": httpx.Response(
+            200, content=b"x", headers={"content-type": "text/html", "content-encoding": "br"}
+        ),
+    }
+    recipe = await fetch_recipe("https://example.com/recipe", client(routes))
+    assert recipe.name == "Chicken and rice"
+    with pytest.raises(ImportError_, match="too big"):
+        await fetch_recipe("https://example.com/bomb", client(routes))
+    with pytest.raises(ImportError_, match="can't be read"):
+        await fetch_recipe("https://example.com/br", client(routes))
 
 
 async def test_a_redirect_to_a_private_address_is_refused() -> None:

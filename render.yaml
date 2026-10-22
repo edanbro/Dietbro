@@ -22,6 +22,8 @@ services:
         value: "1"
       - key: PLAN_CONCURRENCY
         value: "1"
+      - key: TRUSTED_PROXY_HOPS # Render's proxy adds the client's address to X-Forwarded-For
+        value: "1"
       - key: DATABASE_URL # Neon, asyncpg form: postgresql+asyncpg://...?ssl=require
         sync: false
       - key: REDIS_URL # Upstash, TLS form: rediss://default:...@...upstash.io:6379

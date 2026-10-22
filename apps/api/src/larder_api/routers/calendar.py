@@ -21,6 +21,7 @@ from larder_api import planning
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.ratelimit import per_ip, per_path
 from larder_api.schemas import CalendarOut, CalendarTimes
 from larder_api.settings import Settings, get_settings
 from larder_core.brand import APP_NAME
@@ -96,6 +97,10 @@ def _description(meal: db.PlanMeal, recipe: db.Recipe) -> str:
 @router.get(
     "/calendar/{token}.ics",
     operation_id="getCalendarFeed",
+    dependencies=[
+        Depends(per_path("calendar_feed", "token")),
+        Depends(per_ip("calendar_feed_ip")),
+    ],
     response_class=Response,
     responses={200: {"content": {"text/calendar": {}}}, **_GONE},
 )

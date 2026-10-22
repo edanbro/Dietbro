@@ -9,12 +9,13 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import selectinload
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
+from larder_api.ratelimit import per_ip, per_path, per_user
 from larder_api.routers.recipes import recipe_detail
 from larder_api.schemas import (
     RecipeCard,
@@ -38,7 +39,12 @@ def _out(link: ShareLink) -> ShareOut:
     return ShareOut(token=link.token, path=f"/s/{link.token}")
 
 
-@router.post("/share", operation_id="createShareLink", responses=_GONE)
+@router.post(
+    "/share",
+    operation_id="createShareLink",
+    responses=_GONE,
+    dependencies=[Depends(per_user("share_create"))],
+)
 async def create_share_link(body: ShareIn, user: CurrentUser, session: Session) -> ShareOut:
     """A link to one of the user's recipes (or a catalogue one), or to a week of their plan."""
     if body.kind == "recipe":
@@ -107,7 +113,15 @@ async def revoke_share_link(token: str, user: CurrentUser, session: Session) -> 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/public/share/{token}", operation_id="getShared", responses=_GONE)
+@router.get(
+    "/public/share/{token}",
+    operation_id="getShared",
+    responses=_GONE,
+    dependencies=[
+        Depends(per_path("share_view", "token")),
+        Depends(per_ip("share_view_ip")),
+    ],
+)
 async def get_shared(token: str, response: Response, session: Session) -> SharedOut:
     """What a share link shows. No sign-in: the token is the permission."""
     link = await session.scalar(
