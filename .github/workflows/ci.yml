@@ -255,6 +255,9 @@ jobs:
         run: |
           pnpm exec playwright install --with-deps chromium
           pnpm e2e
+      - name: Visual comparison (Playwright container, against e2e/__screenshots__)
+        if: steps.clerk.outputs.enabled == 'true'
+        run: sh apps/web/scripts/visual.sh
       - name: Logs and report on failure
         if: failure() && steps.clerk.outputs.enabled == 'true'
         run: tail -n 100 api.log worker.log apps/web/web.log || true
@@ -262,5 +265,7 @@ jobs:
         if: failure() && steps.clerk.outputs.enabled == 'true'
         with:
           name: playwright-report
-          path: apps/web/playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results-visual
           if-no-files-found: ignore

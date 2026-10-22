@@ -22,6 +22,7 @@ coverage/
 apps/web/e2e-shots/
 apps/web/test-results/
 apps/web/playwright-report/
+apps/web/test-results-visual/
 
 # Env / secrets
 .env

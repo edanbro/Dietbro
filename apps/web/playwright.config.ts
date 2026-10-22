@@ -22,6 +22,7 @@ export default defineConfig({
     {
       name: "phone",
       testMatch: /.*\.e2e\.ts/,
+      testIgnore: /visual\.e2e\.ts/,
       use: { ...devices["Pixel 7"] },
       dependencies: ["setup"],
     },
@@ -31,5 +32,21 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
       dependencies: ["setup"],
     },
+    // Screenshot comparison (e2e/visual.e2e.ts): made and compared in the Playwright Linux
+    // container only (make visual), so the names carry no platform.
+    ...(["phone", "desktop"] as const).map((size) => ({
+      name: `visual-${size}`,
+      testMatch: /visual\.e2e\.ts/,
+      snapshotPathTemplate: `{testDir}/__screenshots__/${size}/{arg}{ext}`,
+      use:
+        size === "phone"
+          ? { ...devices["Pixel 7"] }
+          : { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
+      dependencies: ["setup"],
+    })),
   ],
+  expect: {
+    // Small rendering noise is allowed; a moved, missing or recoloured element is not.
+    toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled", caret: "hide" },
+  },
 });

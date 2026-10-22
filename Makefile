@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker llm-smoke up down visual visual-update
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -67,3 +67,9 @@ up: ## Build and start the full stack (web :3000, api :8000)
 
 down:
 	docker compose down
+
+visual: ## Compare every page with its committed screenshot (Playwright Linux container; web on :3000)
+	cd apps/web && sh scripts/visual.sh
+
+visual-update: ## Rewrite the page screenshots after a deliberate UI change
+	cd apps/web && sh scripts/visual.sh --update-snapshots

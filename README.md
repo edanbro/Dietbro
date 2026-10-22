@@ -143,6 +143,8 @@ pnpm -C apps/web e2e                           # Playwright, needs CLERK_* keys 
 SHOTS=1 pnpm -C apps/web e2e pages             # + accessibility check of every page, light/dark,
                                                #   phone/desktop; screenshots in e2e-shots/
 MEDIA=1 pnpm -C apps/web e2e media --project=setup --project=phone &&   (cd apps/web && sh scripts/readme-media.sh)   # README screenshots and GIF (needs ffmpeg)
+make visual           # every page against its committed screenshot, in the Playwright Linux
+                      #   container (make visual-update after a deliberate UI change)
 make check            # lint, types, tests (what CI runs, minus Docker)
 make gen-api          # after changing API routes: regenerate OpenAPI + web types
 make migrate          # apply DB migrations
