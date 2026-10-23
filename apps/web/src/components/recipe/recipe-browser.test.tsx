@@ -1,13 +1,16 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RecipeListItem } from "@/lib/api/hooks";
 import { json, mockApi, renderWithClient } from "@/test/api";
+import { resetNavigation } from "@/test/navigation";
 
 import { RecipeBrowser } from "./recipe-browser";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
+vi.mock("next/navigation", () => import("@/test/navigation"));
 
+beforeEach(() => resetNavigation("/recipes"));
 afterEach(() => vi.unstubAllGlobals());
 
 const item = (id: number, name: string, extra: Partial<RecipeListItem> = {}): RecipeListItem => ({
@@ -100,6 +103,64 @@ describe("RecipeBrowser", () => {
       expect(urls.some((u) => u.searchParams.get("max_minutes") === "30")).toBe(true),
     );
     expect(urls[0]!.searchParams.has("max_minutes")).toBe(false);
+  });
+
+  it("shows what can be cooked from the pantry and what's still needed", async () => {
+    const urls: URL[] = [];
+    mockApi({
+      "GET /recipes": (req: Request) => {
+        const url = new URL(req.url);
+        urls.push(url);
+        return Response.json(
+          url.searchParams.get("pantry") === "true"
+            ? {
+                items: [
+                  item(1, "Traybake", { uses_pantry: ["Chicken, raw"], missing: [] }),
+                  item(2, "Curry", {
+                    uses_pantry: ["Chicken, raw"],
+                    missing: ["Rice", "Garlic", "Spinach"],
+                  }),
+                ],
+                total: 2,
+              }
+            : { items: [item(3, "Stew")], total: 1 },
+        );
+      },
+    });
+    renderWithClient(<RecipeBrowser />);
+    await screen.findByText("1 recipe safe for you");
+
+    const chip = screen.getByRole("button", { name: "From my pantry" });
+    fireEvent.click(chip);
+
+    expect(await screen.findByText("2 recipes using what's in your pantry")).toBeInTheDocument();
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: /Traybake/ })).toHaveTextContent("Nothing else to get");
+    expect(screen.getByRole("link", { name: /Curry/ })).toHaveTextContent("Need rice, garlic +1");
+    expect(urls[0]!.searchParams.has("pantry")).toBe(false);
+  });
+
+  it("opens on the pantry from ?pantry=1, and says when nothing can be cooked", async () => {
+    resetNavigation("/recipes?pantry=1");
+    const urls: URL[] = [];
+    mockApi({
+      "GET /recipes": (req: Request) => {
+        urls.push(new URL(req.url));
+        return Response.json({ items: [], total: 0 });
+      },
+    });
+    renderWithClient(<RecipeBrowser />);
+
+    expect(await screen.findByText("Nothing to cook from your pantry")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add to your pantry" })).toHaveAttribute(
+      "href",
+      "/pantry",
+    );
+    expect(urls[0]!.searchParams.get("pantry")).toBe("true");
+    expect(screen.getByRole("button", { name: "From my pantry" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("asks to finish setup first", async () => {

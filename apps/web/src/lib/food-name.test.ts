@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { foodName, pantryUse } from "./food-name";
+import { foodName, pantryUse, stillNeeded } from "./food-name";
 
 describe("foodName", () => {
   it.each([
@@ -51,6 +51,17 @@ describe("pantryUse", () => {
     );
     expect(pantryUse(["Carrots, raw", "Onions, raw", "Rice, white, long-grain", "Leeks"])).toBe(
       "Uses your carrots, onions +2",
+    );
+  });
+});
+
+describe("stillNeeded", () => {
+  it("names what a recipe still needs, or says there's nothing to get", () => {
+    expect(stillNeeded([])).toBe("Nothing else to get");
+    expect(stillNeeded(["Carrots, raw"])).toBe("Need carrots");
+    expect(stillNeeded(["Carrots, raw", "Onions, raw"])).toBe("Need carrots and onions");
+    expect(stillNeeded(["Carrots, raw", "Onions, raw", "Garlic, raw", "Leeks, raw"])).toBe(
+      "Need carrots, onions +2",
     );
   });
 });

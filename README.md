@@ -51,6 +51,8 @@ flowchart LR
 - **Stocks the pantry fast**: scan a barcode, paste or photograph a receipt (offline OCR), or
   search 200,000+ foods sold in Ireland and the UK. Product photos and nutrition grades
   (Nutri-Score method) from Open Food Facts.
+- **Cooks from what you have**: "What can I cook?" lists the safe recipes that use your pantry,
+  fewest things to buy first, and names what's still needed.
 - **Shops and cooks**: an aisle-sorted shopping list that works offline in the shop and moves
   ticked items into the pantry; cook mode with scaled amounts, timers read from the method and
   the screen kept awake.

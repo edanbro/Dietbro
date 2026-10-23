@@ -1,6 +1,6 @@
 "use client";
 
-import { ReceiptTextIcon } from "lucide-react";
+import { ChefHatIcon, ReceiptTextIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -11,11 +11,12 @@ import { PantryList } from "@/components/pantry/pantry-list";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type FoodSummary, useMe } from "@/lib/api/hooks";
+import { type FoodSummary, useMe, usePantry } from "@/lib/api/hooks";
 import { APP_NAME } from "@/lib/brand";
 
 export function PantryPage() {
   const { data: me } = useMe();
+  const { data: pantry } = usePantry();
   const [scanned, setScanned] = useState<FoodSummary | null>(null);
   return (
     <div className="flex flex-col gap-4">
@@ -37,6 +38,15 @@ export function PantryPage() {
         </Alert>
       ) : null}
       <ExpiryAlerts />
+      {pantry?.length ? (
+        <Link
+          href="/recipes?pantry=1"
+          className={buttonVariants({ variant: "outline", className: "self-start" })}
+        >
+          <ChefHatIcon aria-hidden />
+          What can I cook?
+        </Link>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Add food</CardTitle>

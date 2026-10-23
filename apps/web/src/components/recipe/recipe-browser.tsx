@@ -1,8 +1,9 @@
 "use client";
 
 import { cn } from "cn";
-import { ClockIcon, DownloadIcon, HeartIcon, SearchIcon } from "lucide-react";
+import { ClockIcon, DownloadIcon, HeartIcon, RefrigeratorIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { useDebounced } from "@/components/food-picker";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type RecipeListItem, type Slot, useRecipeList } from "@/lib/api/hooks";
-import { pantryUse } from "@/lib/food-name";
+import { pantryUse, stillNeeded } from "@/lib/food-name";
 import { formatMinutes, formatNumber } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { RecipeArt } from "@/components/recipe/recipe-art";
@@ -87,23 +88,38 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
           ) : recipe.cuisine ? (
             <span className="text-xs text-muted-foreground">{recipe.cuisine}</span>
           ) : null}
+          {recipe.missing ? (
+            <span
+              className={cn(
+                "line-clamp-1 text-xs",
+                recipe.missing.length ? "text-muted-foreground" : "font-medium text-primary",
+              )}
+            >
+              {stillNeeded(recipe.missing)}
+            </span>
+          ) : null}
         </div>
       </Link>
     </li>
   );
 }
 
-/** Every recipe safe for the user: search, filter by meal and favourites, more on demand. */
+/**
+ * Every recipe safe for the user: search, filter by meal and favourites, or what can be cooked
+ * from the pantry (?pantry=1 opens on it), more on demand.
+ */
 export function RecipeBrowser() {
   const [q, setQ] = useState("");
   const [slot, setSlot] = useState<Slot | null>(null);
   const [favourites, setFavourites] = useState(false);
   const [quick, setQuick] = useState(false);
+  const [pantry, setPantry] = useState(useSearchParams().get("pantry") === "1");
   const query = {
     q: useDebounced(q.trim(), 300),
     slot,
     favourites,
     maxMinutes: quick ? QUICK_MINUTES : null,
+    pantry,
   };
   const list = useRecipeList(query);
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
@@ -131,6 +147,10 @@ export function RecipeBrowser() {
         />
       </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="group" aria-label="Filters">
+        <Chip pressed={pantry} onClick={() => setPantry(!pantry)}>
+          <RefrigeratorIcon aria-hidden className="size-4" />
+          From my pantry
+        </Chip>
         <Chip pressed={favourites} onClick={() => setFavourites(!favourites)}>
           <HeartIcon aria-hidden className={cn("size-4", favourites && "fill-current")} />
           Favourites
@@ -166,7 +186,8 @@ export function RecipeBrowser() {
       ) : items.length ? (
         <>
           <p className="text-xs text-muted-foreground" aria-live="polite">
-            {formatNumber(total)} {total === 1 ? "recipe" : "recipes"} safe for you
+            {formatNumber(total)} {total === 1 ? "recipe" : "recipes"}{" "}
+            {pantry ? "using what's in your pantry" : "safe for you"}
           </p>
           <ul className="grid grid-cols-2 gap-3">
             {items.map((r) => (
@@ -185,7 +206,20 @@ export function RecipeBrowser() {
         </>
       ) : (
         <div aria-live="polite">
-          {favourites ? (
+          {pantry ? (
+            <EmptyState
+              art="pantry"
+              title="Nothing to cook from your pantry"
+              action={
+                <Link href="/pantry" className={buttonVariants({ variant: "outline" })}>
+                  Add to your pantry
+                </Link>
+              }
+            >
+              No safe recipe uses what you have{q.trim() || slot || quick || favourites ? " with these filters" : ""}.
+              Add what&apos;s in your kitchen and try again.
+            </EmptyState>
+          ) : favourites ? (
             <EmptyState art="search" title="No favourites yet">
               Tap the heart on a recipe you love and the planner will pick it more often.
             </EmptyState>

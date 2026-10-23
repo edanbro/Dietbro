@@ -99,10 +99,23 @@ export function foodName(description: string): FoodName {
  * by readable name (foodName), each food once.
  */
 export function pantryUse(descriptions: readonly string[], shown = 2): string {
+  return `Uses your ${shortList(descriptions, shown)}`;
+}
+
+/**
+ * "Need rice", "Need rice and chilli", "Need rice, chilli +2", or "Nothing else to get": what a
+ * recipe still needs that the pantry hasn't got.
+ */
+export function stillNeeded(descriptions: readonly string[], shown = 2): string {
+  return descriptions.length ? `Need ${shortList(descriptions, shown)}` : "Nothing else to get";
+}
+
+/** Readable names (each once), the first `shown` of them, then how many more. */
+function shortList(descriptions: readonly string[], shown: number): string {
   const names = [...new Set(descriptions.map((d) => foodName(d).name.toLowerCase()))];
   const first = names.slice(0, shown);
   const more = names.length - first.length;
   const list =
     first.length === 2 && !more ? `${first[0]} and ${first[1]}` : first.join(", ");
-  return `Uses your ${list}${more ? ` +${more}` : ""}`;
+  return `${list}${more ? ` +${more}` : ""}`;
 }

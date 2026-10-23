@@ -842,7 +842,8 @@ export interface paths {
          * List Recipes
          * @description Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
          *     blocked), matching `q` if given, ranked like the chat's search: match, then preference
-         *     (favourites first), then pantry use.
+         *     (favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest
+         *     foods still to get first, each with those foods (`missing`).
          */
         get: operations["listRecipes"];
         put?: never;
@@ -3217,6 +3218,11 @@ export interface components {
              * @default false
              */
             favourite: boolean;
+            /**
+             * Missing
+             * @description ?pantry=true: the foods it needs that the pantry hasn't got
+             */
+            missing?: string[] | null;
         };
         /** RecipeListOut */
         RecipeListOut: {
@@ -5713,6 +5719,7 @@ export interface operations {
                 slot?: components["schemas"]["Slot"] | null;
                 favourites?: boolean;
                 max_minutes?: number | null;
+                pantry?: boolean;
                 limit?: number;
                 offset?: number;
             };
