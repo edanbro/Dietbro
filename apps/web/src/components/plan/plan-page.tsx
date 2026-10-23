@@ -342,6 +342,7 @@ function useMealActions(plan: Plan, today: string, creating: boolean) {
     onReplan: async (changes) => {
       setOutcome(await replan.mutateAsync(changes));
     },
+    week: plan.days,
   });
   return { actions, outcome, setOutcome, undoLast, undoing: undo.isPending };
 }
