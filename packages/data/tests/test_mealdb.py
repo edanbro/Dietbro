@@ -61,6 +61,60 @@ async def test_fetch_meals_dedupes_and_caches(tmp_path: Path) -> None:
     assert len(calls) == 26  # second run is served from the cache
 
 
+async def test_fetch_meals_retries_a_slow_or_failing_letter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(mealdb, "RETRY_DELAY", 0)
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        letter = request.url.params["f"]
+        calls.append(letter)
+        if letter == "a" and calls.count("a") == 1:
+            raise httpx.ReadTimeout("slow", request=request)
+        if letter == "b" and calls.count("b") == 1:
+            return httpx.Response(503)
+        return httpx.Response(200, text=FIXTURE.read_text() if letter == "a" else "{}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        found = await mealdb.fetch_meals(client, tmp_path)
+
+    assert len(found) == 2
+    assert calls.count("a") == calls.count("b") == 2
+    assert len(calls) == 28
+
+
+async def test_fetch_meals_gives_up_after_three_tries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(mealdb, "RETRY_DELAY", 0)
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.params["f"])
+        raise httpx.ReadTimeout("slow", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(httpx.ReadTimeout):
+            await mealdb.fetch_meals(client, tmp_path)
+
+    assert calls == ["a", "a", "a"]
+
+
+async def test_fetch_meals_does_not_retry_a_client_error(tmp_path: Path) -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.params["f"])
+        return httpx.Response(404)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await mealdb.fetch_meals(client, tmp_path)
+
+    assert calls == ["a"]
+
+
 async def test_load_recipes_inserts_then_updates(
     db_session: AsyncSession, meals: list[dict[str, Any]]
 ) -> None:
