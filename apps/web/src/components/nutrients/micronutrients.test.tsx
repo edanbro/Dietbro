@@ -34,12 +34,24 @@ describe("Micronutrients", () => {
 });
 
 describe("WeekMicronutrients", () => {
-  it("averages the week over its days", () => {
+  it("averages the meals over the days, and says when only some meals have data", () => {
     const plan = makePlan();
-    plan.week_totals = { ...plan.week_totals, iron_mg: 70, vitamin_b12_ug: null };
+    const meals = plan.days.flatMap((d) => d.meals);
+    meals.forEach((m, i) => {
+      m.nutrition = { ...m.nutrition, iron_mg: 2, vitamin_d_ug: i === 0 ? null : 1 };
+    });
     render(<WeekMicronutrients plan={plan} />);
     expect(screen.getByRole("heading", { name: "Vitamins and minerals" })).toBeInTheDocument();
-    expect(screen.getByText("Iron").parentElement).toHaveTextContent("10 mg · 71%"); // 70 / 7 days
-    expect(screen.getByText("Vitamin B12").parentElement).toHaveTextContent("no data");
+    const perDay = (meals.length * 2) / plan.days.length;
+    expect(screen.getByText("Iron").parentElement).toHaveTextContent(`${perDay.toFixed(1)} mg`);
+    expect(screen.getByText("Iron").parentElement).not.toHaveTextContent("at least");
+    expect(screen.getByText("Vitamin D").parentElement).toHaveTextContent(
+      `at least ${((meals.length - 1) / plan.days.length).toFixed(1)} µg`,
+    );
+    expect(screen.getByText("Vitamin D").parentElement).toHaveTextContent(
+      `data for ${meals.length - 1} of ${meals.length} meals`,
+    );
+    expect(screen.getByText("Vitamin D").parentElement).not.toHaveTextContent("low");
+    expect(screen.getByText("Folate").parentElement).toHaveTextContent("no data");
   });
 });
