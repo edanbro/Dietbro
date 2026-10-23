@@ -5,6 +5,7 @@ import {
   CalendarPlusIcon,
   InfoIcon,
   LoaderCircleIcon,
+  PrinterIcon,
   RefreshCwIcon,
   ShoppingBasketIcon,
   TriangleAlertIcon,
@@ -56,6 +57,7 @@ import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
 import { CopyDay, RepeatChoices, SaveTemplate } from "./plan-templates";
 import { PrepPicker } from "./prep-picker";
+import { PrintWeek } from "./print-week";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
@@ -408,7 +410,8 @@ function PlanView({
     day && dates.includes(day) ? day : dates.includes(today) ? today : (dates[0] ?? "");
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
+    <div className="flex flex-col gap-4 print:hidden">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="flex flex-col">
           <h1 className="text-3xl font-semibold">
@@ -637,7 +640,11 @@ function PlanView({
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="week" className="pt-2">
+        <TabsContent value="week" className="flex flex-col gap-2 pt-2">
+          <Button variant="ghost" size="sm" className="self-end" onClick={() => window.print()}>
+            <PrinterIcon aria-hidden />
+            Print week
+          </Button>
           <WeekGrid
             days={plan.days}
             today={today}
@@ -651,5 +658,7 @@ function PlanView({
       <WeekMicronutrients plan={plan} />
       <PlanNotes plan={plan} />
     </div>
+    <PrintWeek plan={plan} />
+    </>
   );
 }

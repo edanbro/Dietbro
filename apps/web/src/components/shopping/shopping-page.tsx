@@ -4,6 +4,7 @@ import { cn } from "cn";
 import {
   ArrowLeftIcon,
   PackageCheckIcon,
+  PrinterIcon,
   ShareIcon,
   TriangleAlertIcon,
   UsersIcon,
@@ -158,7 +159,7 @@ function ListView({ plan }: { plan: Plan }) {
       <Total list={list} />
       {toBuy.length ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
             <p className="text-xs text-muted-foreground" aria-live="polite">
               {ticked} of {toBuy.length} ticked
             </p>
@@ -169,7 +170,7 @@ function ListView({ plan }: { plan: Plan }) {
               </Label>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 print:hidden">
             {toStock ? (
               <Button
                 size="sm"
@@ -195,6 +196,10 @@ function ListView({ plan }: { plan: Plan }) {
               reach="can tick things off"
             />
             <ShareButton list={list} extras={extras ?? []} />
+            <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <PrinterIcon aria-hidden />
+              Print
+            </Button>
           </div>
           <ErrorAlert error={stock.error} />
         </div>
@@ -283,13 +288,21 @@ function Extras() {
   const [name, setName] = useState("");
   const ticked = (extras ?? []).filter((e) => e.checked).length;
   return (
-    <section aria-labelledby="extras" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="extras"
+      className={cn("flex flex-col gap-2", !extras?.length && "print:hidden")}
+    >
       <div className="flex items-center justify-between">
         <h2 id="extras" className="text-sm font-semibold">
           Your items
         </h2>
         {ticked ? (
-          <Button size="sm" variant="ghost" onClick={() => change.mutate({ kind: "clear" })}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="print:hidden"
+            onClick={() => change.mutate({ kind: "clear" })}
+          >
             Clear {ticked} ticked
           </Button>
         ) : null}
@@ -317,6 +330,7 @@ function Extras() {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="print:hidden"
                 aria-label={`Remove ${e.name}`}
                 onClick={() => change.mutate({ kind: "delete", id: e.id })}
               >
@@ -327,7 +341,7 @@ function Extras() {
         </ul>
       ) : null}
       <form
-        className="flex gap-2"
+        className="flex gap-2 print:hidden"
         onSubmit={(ev) => {
           ev.preventDefault();
           if (!name.trim()) return;
@@ -359,7 +373,10 @@ export function ShoppingPage() {
     <div className="flex flex-col gap-4">
       <Link
         href="/plan"
-        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 self-start")}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "-ml-2 self-start print:hidden",
+        )}
       >
         <ArrowLeftIcon aria-hidden />
         Plan

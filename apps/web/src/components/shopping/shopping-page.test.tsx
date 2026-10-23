@@ -305,3 +305,16 @@ describe("sharing the list", () => {
     expect(screen.getByRole("button", { name: "Send as text" })).toBeInTheDocument();
   });
 });
+
+describe("printing the list", () => {
+  it("prints from the list's own button", async () => {
+    const print = vi.fn();
+    vi.stubGlobal("print", print);
+    setup();
+
+    vi.mocked(print).mockClear();
+    (await screen.findByRole("button", { name: "Print" })).click();
+
+    expect(print).toHaveBeenCalledOnce();
+  });
+});
