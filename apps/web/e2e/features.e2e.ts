@@ -156,6 +156,38 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       await visitor.close();
     });
 
+    await test.step("shop together: tick the list signed out, the owner sees it", async () => {
+      await page.goto("/plan/shopping");
+      const made = page.waitForResponse(
+        (r) => r.url().endsWith("/share") && r.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Shop together" }).click();
+      const { path } = await (await made).json();
+      const visitor = await browser.newContext();
+      const open = await visitor.newPage();
+      await open.goto(new URL(path, page.url()).toString());
+      await expect(open.getByRole("heading", { level: 1 })).toHaveText("Shopping list");
+      await expect(open.getByText(/£|€|\$/)).toHaveCount(0); // no prices
+      const row = open.getByRole("listitem").first();
+      const name = (await row.locator("label").innerText()).trim();
+      const saved = open.waitForResponse(
+        (r) => r.request().method() === "PATCH" && r.url().includes("/public/share/"),
+      );
+      await row.getByRole("checkbox").click();
+      expect((await saved).ok()).toBe(true);
+      await expect(row.getByRole("checkbox")).toBeChecked();
+
+      await page.reload();
+      await expect(page.getByRole("checkbox", { name, exact: true }).first()).toBeChecked();
+      await page.getByRole("button", { name: "Shop together" }).click();
+      const revoked = page.waitForResponse(
+        (r) => r.request().method() === "DELETE" && r.url().includes("/share/"),
+      );
+      await page.getByRole("button", { name: "Stop sharing" }).click();
+      expect((await revoked).status()).toBe(204);
+      await visitor.close();
+    });
+
     await test.step("calendar feed", async () => {
       await page.goto("/profile");
       const turnedOn = page.waitForResponse(

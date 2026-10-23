@@ -1,8 +1,11 @@
-"""Share links: a read-only public page (/s/<token>) for one recipe or a week's plan.
+"""Share links: a public page (/s/<token>) for one recipe, a week's plan or a week's shopping
+list.
 
-The token is 128 random bits, so links can't be guessed; anyone with one sees only the recipe or
-the week's meals (names, photos, kcal), never the person's pantry, goals, weight, allergies or
-name. Asking twice for the same thing gives the same link; revoking it stops it working.
+The token is 128 random bits, so links can't be guessed; anyone with one sees only the recipe,
+the week's meals (names, photos, kcal) or the shopping list (no prices), never the person's
+pantry, goals, weight, allergies or name. Recipes and weeks are read-only; a shopping list can
+be ticked off through its link, so a household can shop together without accounts. Asking twice
+for the same thing gives the same link; revoking it stops it working.
 """
 
 import secrets
@@ -11,22 +14,28 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
 from larder_api.ratelimit import per_ip, per_path, per_user
+from larder_api.routers.plans import shopping_out
 from larder_api.routers.recipes import recipe_detail
 from larder_api.schemas import (
     RecipeCard,
     SharedDayOut,
+    SharedExtraOut,
+    SharedItemOut,
+    SharedListOut,
     SharedMealOut,
     SharedOut,
+    SharedTickIn,
     ShareIn,
     ShareOut,
 )
 from larder_core.meals import SLOT_ORDER, Slot
-from larder_db.models import MealPlan, Recipe, ShareLink
+from larder_db.models import MealPlan, Recipe, ShareLink, ShoppingExtra
 
 router = APIRouter(tags=["share"])
 
@@ -46,7 +55,8 @@ def _out(link: ShareLink) -> ShareOut:
     dependencies=[Depends(per_user("share_create"))],
 )
 async def create_share_link(body: ShareIn, user: CurrentUser, session: Session) -> ShareOut:
-    """A link to one of the user's recipes (or a catalogue one), or to a week of their plan."""
+    """A link to one of the user's recipes (or a catalogue one), or to a week of their plan or
+    its shopping list."""
     if body.kind == "recipe":
         if body.recipe_id is None:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "recipe_id is required")
@@ -85,7 +95,7 @@ async def create_share_link(body: ShareIn, user: CurrentUser, session: Session) 
         user_id=user.id,
         kind=body.kind,
         recipe_id=body.recipe_id if body.kind == "recipe" else None,
-        plan_start=body.start if body.kind == "week" else None,
+        plan_start=body.start if body.kind != "recipe" else None,
     )
     session.add(link)
     await session.commit()
@@ -124,13 +134,12 @@ async def revoke_share_link(token: str, user: CurrentUser, session: Session) -> 
 )
 async def get_shared(token: str, response: Response, session: Session) -> SharedOut:
     """What a share link shows. No sign-in: the token is the permission."""
-    link = await session.scalar(
-        select(ShareLink).where(ShareLink.token == token, ShareLink.revoked_at.is_(None))
-    )
-    if link is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "link not found")
-    response.headers["Cache-Control"] = "private, max-age=60"
+    link = await _live_link(session, token)
+    # A shopping list changes as people tick it; the others don't change much.
+    response.headers["Cache-Control"] = "no-store" if link.kind == "list" else "private, max-age=60"
     response.headers["X-Robots-Tag"] = "noindex"
+    if link.kind == "list":
+        return SharedOut(kind="list", shopping=await _shared_list(session, link))
     if link.kind == "recipe":
         recipe = await session.scalar(
             select(Recipe)
@@ -179,3 +188,102 @@ async def get_shared(token: str, response: Response, session: Session) -> Shared
             )
         )
     return SharedOut(kind="week", days=days)
+
+
+async def _live_link(session: AsyncSession, token: str, kind: str | None = None) -> ShareLink:
+    """The link with this token, not revoked (and of `kind`, if given); else 404."""
+    link = await session.scalar(
+        select(ShareLink).where(ShareLink.token == token, ShareLink.revoked_at.is_(None))
+    )
+    if link is None or (kind is not None and link.kind != kind):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "link not found")
+    return link
+
+
+async def _list_plan(session: AsyncSession, link: ShareLink) -> MealPlan:
+    """The newest version of the shared week's plan, its shopping list loaded."""
+    plan = await session.scalar(
+        select(MealPlan)
+        .where(MealPlan.user_id == link.user_id, MealPlan.start_date == link.plan_start)
+        .order_by(MealPlan.version.desc())
+        .limit(1)
+        .options(selectinload(MealPlan.shopping))
+    )
+    if plan is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "link not found")
+    return plan
+
+
+async def _shared_list(session: AsyncSession, link: ShareLink) -> SharedListOut:
+    full = await shopping_out(session, await _list_plan(session, link))
+    extras = await session.scalars(
+        select(ShoppingExtra)
+        .where(ShoppingExtra.user_id == link.user_id)
+        .order_by(ShoppingExtra.id)
+    )
+    assert link.plan_start is not None  # a list link always has its week (ck_share_links_target)
+    return SharedListOut(
+        start=link.plan_start,
+        household=full.household,
+        items=[
+            SharedItemOut(
+                food_id=i.food_id,
+                name=i.name,
+                category=i.category,
+                grams=i.grams,
+                approx_units=i.approx_units,
+                checked=i.checked,
+                staple=i.staple,
+            )
+            for i in full.items
+        ],
+        extras=[SharedExtraOut(id=e.id, name=e.name, checked=e.checked) for e in extras],
+    )
+
+
+_TICK = [Depends(per_path("share_tick", "token")), Depends(per_ip("share_tick_ip"))]
+
+
+@router.patch(
+    "/public/share/{token}/items/{food_id}",
+    operation_id="tickSharedItem",
+    responses=_GONE,
+    dependencies=_TICK,
+)
+async def tick_shared_item(
+    token: str, food_id: int, body: SharedTickIn, response: Response, session: Session
+) -> SharedListOut:
+    """Tick (or untick) a line of a shared shopping list; the whole list as it is now."""
+    link = await _live_link(session, token, "list")
+    plan = await _list_plan(session, link)
+    line = next((s for s in plan.shopping if s.food_id == food_id), None)
+    if line is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "item not on this list")
+    line.checked = body.checked
+    await session.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return await _shared_list(session, link)
+
+
+@router.patch(
+    "/public/share/{token}/extras/{extra_id}",
+    operation_id="tickSharedExtra",
+    responses=_GONE,
+    dependencies=_TICK,
+)
+async def tick_shared_extra(
+    token: str, extra_id: int, body: SharedTickIn, response: Response, session: Session
+) -> SharedListOut:
+    """Tick (or untick) one of the owner's own items on a shared shopping list."""
+    link = await _live_link(session, token, "list")
+    extra = await session.scalar(
+        select(ShoppingExtra).where(
+            ShoppingExtra.id == extra_id, ShoppingExtra.user_id == link.user_id
+        )
+    )
+    if extra is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "item not on this list")
+    extra.checked = body.checked
+    await session.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return await _shared_list(session, link)

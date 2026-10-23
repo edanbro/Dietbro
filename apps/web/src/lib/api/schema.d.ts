@@ -1270,7 +1270,8 @@ export interface paths {
         put?: never;
         /**
          * Create Share Link
-         * @description A link to one of the user's recipes (or a catalogue one), or to a week of their plan.
+         * @description A link to one of the user's recipes (or a catalogue one), or to a week of their plan or
+         *     its shopping list.
          */
         post: operations["createShareLink"];
         delete?: never;
@@ -1314,6 +1315,46 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/public/share/{token}/items/{food_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Tick Shared Item
+         * @description Tick (or untick) a line of a shared shopping list; the whole list as it is now.
+         */
+        patch: operations["tickSharedItem"];
+        trace?: never;
+    };
+    "/public/share/{token}/extras/{extra_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Tick Shared Extra
+         * @description Tick (or untick) one of the owner's own items on a shared shopping list.
+         */
+        patch: operations["tickSharedExtra"];
         trace?: never;
     };
     "/me/calendar": {
@@ -3389,12 +3430,12 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "recipe" | "week";
+            kind: "recipe" | "week" | "list";
             /** Recipe Id */
             recipe_id?: number | null;
             /**
              * Start
-             * @description for a week: the plan's start date
+             * @description for a week or its shopping list: the plan's start date
              */
             start?: string | null;
         };
@@ -3415,6 +3456,52 @@ export interface components {
             /** Meals */
             meals: components["schemas"]["SharedMealOut"][];
         };
+        /** SharedExtraOut */
+        SharedExtraOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Checked */
+            checked: boolean;
+        };
+        /**
+         * SharedItemOut
+         * @description A line of a shared shopping list: what to buy (no prices), ticked or not.
+         */
+        SharedItemOut: {
+            /** Food Id */
+            food_id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string | null;
+            /** Grams */
+            grams: number;
+            /** Approx Units */
+            approx_units?: string | null;
+            /** Checked */
+            checked: boolean;
+            /** Staple */
+            staple: boolean;
+        };
+        /** SharedListOut */
+        SharedListOut: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Household */
+            household: number;
+            /** Items */
+            items: components["schemas"]["SharedItemOut"][];
+            /**
+             * Extras
+             * @description the owner's own items (bin bags)
+             */
+            extras: components["schemas"]["SharedExtraOut"][];
+        };
         /** SharedMealOut */
         SharedMealOut: {
             slot: components["schemas"]["Slot"];
@@ -3424,17 +3511,24 @@ export interface components {
         };
         /**
          * SharedOut
-         * @description What a share link shows: one recipe, or a week's meals. Nothing about the person.
+         * @description What a share link shows: one recipe, a week's meals, or a week's shopping list. Nothing
+         *     about the person.
          */
         SharedOut: {
             /**
              * Kind
              * @enum {string}
              */
-            kind: "recipe" | "week";
+            kind: "recipe" | "week" | "list";
             recipe?: components["schemas"]["RecipeDetail"] | null;
             /** Days */
             days?: components["schemas"]["SharedDayOut"][] | null;
+            shopping?: components["schemas"]["SharedListOut"] | null;
+        };
+        /** SharedTickIn */
+        SharedTickIn: {
+            /** Checked */
+            checked: boolean;
         };
         /** ShoppingExtraIn */
         ShoppingExtraIn: {
@@ -6712,6 +6806,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SharedOut"];
+                };
+            };
+            /** @description no such link, or it was revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tickSharedItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                food_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedTickIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedListOut"];
+                };
+            };
+            /** @description no such link, or it was revoked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tickSharedExtra: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                extra_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SharedTickIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedListOut"];
                 };
             };
             /** @description no such link, or it was revoked */

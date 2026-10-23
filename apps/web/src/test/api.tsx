@@ -18,7 +18,8 @@ export function mockApi(routes: Routes): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (req: Request) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = input instanceof Request ? input : new Request(input, init);
       const path = new URL(req.url).pathname;
       const text = req.method === "GET" ? "" : await req.clone().text();
       calls.push({ method: req.method, path, body: text ? parseBody(text) : undefined });

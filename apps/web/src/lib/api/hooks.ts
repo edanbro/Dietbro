@@ -967,7 +967,9 @@ export function useDeleteReceipt() {
 }
 
 /** The last `days` days of what was eaten, against the goals (today last). */
-export type ShareTarget = { kind: "recipe"; recipe_id: number } | { kind: "week"; start: string };
+export type ShareTarget =
+  | { kind: "recipe"; recipe_id: number }
+  | { kind: "week" | "list"; start: string };
 
 /** A read-only public link to a recipe or a week (the same link when asked again). */
 export function useShareLink() {

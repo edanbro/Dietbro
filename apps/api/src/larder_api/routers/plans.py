@@ -701,7 +701,8 @@ def approx_units(grams: int, portions: list[Portion]) -> str | None:
     return f"≈ {count} {unit}"
 
 
-async def _shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut:
+async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut:
+    """A plan's shopping list (`plan.shopping` loaded) as the API shows it."""
     food_ids = [s.food_id for s in plan.shopping]
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(food_ids)))}
     portions: dict[int, list[Portion]] = {}
@@ -739,7 +740,7 @@ async def _shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOu
 
 @router.get("/{plan_id}/shopping", operation_id="getShoppingList", responses=_NOT_FOUND)
 async def shopping_list(plan_id: int, user: CurrentUser, session: Session) -> ShoppingListOut:
-    return await _shopping_out(session, await _load_plan(session, user, plan_id))
+    return await shopping_out(session, await _load_plan(session, user, plan_id))
 
 
 @router.patch(
@@ -754,7 +755,7 @@ async def patch_shopping_item(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "item not on this shopping list")
     line.checked = body.checked
     await session.commit()
-    out = await _shopping_out(session, await _load_plan(session, user, plan_id))
+    out = await shopping_out(session, await _load_plan(session, user, plan_id))
     return next(i for i in out.items if i.food_id == food_id)
 
 

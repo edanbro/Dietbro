@@ -284,3 +284,24 @@ describe("Shopping to pantry and your own items", () => {
     );
   });
 });
+
+describe("sharing the list", () => {
+  it("offers a live link to shop together, and the list as text", async () => {
+    const calls = setup({ "POST /share": json({ token: "list1", path: "/s/list1" }) });
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      share: undefined,
+      clipboard: { writeText: vi.fn(async () => undefined) },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Shop together" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.path === "/share")?.body).toEqual({
+        kind: "list",
+        start: "2026-10-09",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Send as text" })).toBeInTheDocument();
+  });
+});

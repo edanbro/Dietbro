@@ -4081,7 +4081,7 @@
           "share"
         ],
         "summary": "Create Share Link",
-        "description": "A link to one of the user's recipes (or a catalogue one), or to a week of their plan.",
+        "description": "A link to one of the user's recipes (or a catalogue one), or to a week of their plan or\nits shopping list.",
         "operationId": "createShareLink",
         "requestBody": {
           "content": {
@@ -4194,6 +4194,136 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SharedOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/share/{token}/items/{food_id}": {
+      "patch": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Tick Shared Item",
+        "description": "Tick (or untick) a line of a shared shopping list; the whole list as it is now.",
+        "operationId": "tickSharedItem",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "food_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Food Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SharedTickIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedListOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/share/{token}/extras/{extra_id}": {
+      "patch": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Tick Shared Extra",
+        "description": "Tick (or untick) one of the owner's own items on a shared shopping list.",
+        "operationId": "tickSharedExtra",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "extra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Extra Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SharedTickIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedListOut"
                 }
               }
             }
@@ -9680,7 +9810,8 @@
             "type": "string",
             "enum": [
               "recipe",
-              "week"
+              "week",
+              "list"
             ],
             "title": "Kind"
           },
@@ -9706,7 +9837,7 @@
               }
             ],
             "title": "Start",
-            "description": "for a week: the plan's start date"
+            "description": "for a week or its shopping list: the plan's start date"
           }
         },
         "type": "object",
@@ -9755,6 +9886,122 @@
         ],
         "title": "SharedDayOut"
       },
+      "SharedExtraOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "checked"
+        ],
+        "title": "SharedExtraOut"
+      },
+      "SharedItemOut": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "grams": {
+            "type": "integer",
+            "title": "Grams"
+          },
+          "approx_units": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approx Units"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          },
+          "staple": {
+            "type": "boolean",
+            "title": "Staple"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "name",
+          "category",
+          "grams",
+          "checked",
+          "staple"
+        ],
+        "title": "SharedItemOut",
+        "description": "A line of a shared shopping list: what to buy (no prices), ticked or not."
+      },
+      "SharedListOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "household": {
+            "type": "integer",
+            "title": "Household"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SharedItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "extras": {
+            "items": {
+              "$ref": "#/components/schemas/SharedExtraOut"
+            },
+            "type": "array",
+            "title": "Extras",
+            "description": "the owner's own items (bin bags)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "household",
+          "items",
+          "extras"
+        ],
+        "title": "SharedListOut"
+      },
       "SharedMealOut": {
         "properties": {
           "slot": {
@@ -9782,7 +10029,8 @@
             "type": "string",
             "enum": [
               "recipe",
-              "week"
+              "week",
+              "list"
             ],
             "title": "Kind"
           },
@@ -9809,6 +10057,16 @@
               }
             ],
             "title": "Days"
+          },
+          "shopping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedListOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9816,7 +10074,20 @@
           "kind"
         ],
         "title": "SharedOut",
-        "description": "What a share link shows: one recipe, or a week's meals. Nothing about the person."
+        "description": "What a share link shows: one recipe, a week's meals, or a week's shopping list. Nothing\nabout the person."
+      },
+      "SharedTickIn": {
+        "properties": {
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked"
+        ],
+        "title": "SharedTickIn"
       },
       "ShoppingExtraIn": {
         "properties": {

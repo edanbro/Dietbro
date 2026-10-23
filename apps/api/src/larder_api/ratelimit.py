@@ -59,6 +59,9 @@ RULES: dict[str, Rule] = {
     # Per address. The web app renders share pages on its server, so every viewer of a share
     # page arrives from the web server's address: this is a capacity guard, not per person.
     "share_view_ip": Rule(600, MINUTE),
+    # Ticking a shared shopping list: straight from the shoppers' browsers.
+    "share_tick": Rule(240, MINUTE),  # per link
+    "share_tick_ip": Rule(240, MINUTE),
     "calendar_feed": Rule(60, HOUR),  # per feed; calendar apps refresh hourly at most
     "calendar_feed_ip": Rule(300, HOUR),
     "plan": Rule(120, HOUR),  # new plans and replans (solver time)
