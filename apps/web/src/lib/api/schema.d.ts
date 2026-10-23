@@ -165,6 +165,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/preferences/quick-nights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Quick Nights
+         * @description Busy nights: the weekdays whose dinner the planner keeps quick, and how quick.
+         */
+        put: operations["putQuickNights"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/allergies": {
         parameters: {
             query?: never;
@@ -2536,6 +2556,13 @@ export interface components {
             liked_foods?: components["schemas"]["FoodSummary"][];
             /** Disliked Foods */
             disliked_foods?: components["schemas"]["FoodSummary"][];
+            /** Quick Days */
+            quick_days?: number[];
+            /**
+             * Quick Minutes
+             * @default 30
+             */
+            quick_minutes: number;
         };
         /** PriceItemOut */
         PriceItemOut: {
@@ -2657,6 +2684,21 @@ export interface components {
         PushUnsubscribeIn: {
             /** Endpoint */
             endpoint: string;
+        };
+        /**
+         * QuickNightsIn
+         * @description Busy nights: on these weekdays (0 = Monday, 6 = Sunday) dinner takes at most
+         *     `minutes`, about (the planner picks among recipes estimated that quick).
+         */
+        QuickNightsIn: {
+            /** Days */
+            days: number[];
+            /**
+             * Minutes
+             * @default 30
+             * @enum {integer}
+             */
+            minutes: 20 | 30 | 45;
         };
         /** Readiness */
         Readiness: {
@@ -4006,6 +4048,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putQuickNights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuickNightsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description preferences not set up yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
                 };
             };
             /** @description Validation Error */

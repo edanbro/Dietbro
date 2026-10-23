@@ -34,6 +34,7 @@ export type GoalsIn = Schemas["GoalsIn"];
 export type BodyIn = Schemas["BodyIn"];
 export type BodyOut = Schemas["BodyOut"];
 export type PreferencesIn = Schemas["PreferencesIn"];
+export type QuickNightsIn = Schemas["QuickNightsIn"];
 export type AllergiesIn = Schemas["AllergiesIn"];
 export type FoodSummary = Schemas["FoodSummary"];
 export type FoodDetail = Schemas["FoodDetail"];
@@ -270,6 +271,16 @@ export function useSavePreferences() {
   const api = useApi();
   return useSave(
     async (body: PreferencesIn) => unwrap(await api.PUT("/me/preferences", { body })),
+    keys.preferences,
+  );
+}
+
+/** Busy nights: the weekdays whose dinner the planner keeps quick. */
+export function useSaveQuickNights() {
+  const api = useApi();
+  return useSave(
+    async (body: QuickNightsIn) =>
+      unwrap(await api.PUT("/me/preferences/quick-nights", { body })),
     keys.preferences,
   );
 }

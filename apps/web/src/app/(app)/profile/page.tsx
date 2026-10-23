@@ -7,6 +7,7 @@ import { BodyForm } from "@/components/profile/body-form";
 import { CalendarForm } from "@/components/profile/calendar-form";
 import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
+import { QuickNightsForm } from "@/components/profile/quick-nights-form";
 import { RegionForm } from "@/components/profile/region-form";
 import { RemindersForm } from "@/components/profile/reminders-form";
 import { TemplatesForm } from "@/components/profile/templates-form";
@@ -19,6 +20,7 @@ const SECTIONS = [
   { id: "goals", title: "Goals", body: <GoalsForm /> },
   { id: "allergies", title: "Allergies", body: <AllergiesForm /> },
   { id: "preferences", title: "Preferences", body: <PreferencesForm /> },
+  { id: "busy-nights", title: "Busy nights", body: <QuickNightsForm /> },
   { id: "body", title: "Body stats", body: <BodyForm /> },
   { id: "region", title: "Region", body: <RegionForm /> },
   { id: "reminders", title: "Reminders", body: <RemindersForm /> },

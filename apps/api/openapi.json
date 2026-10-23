@@ -461,6 +461,63 @@
         ]
       }
     },
+    "/me/preferences/quick-nights": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Quick Nights",
+        "description": "Busy nights: the weekdays whose dinner the planner keeps quick, and how quick.",
+        "operationId": "putQuickNights",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuickNightsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "preferences not set up yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/allergies": {
       "get": {
         "tags": [
@@ -7495,6 +7552,18 @@
             },
             "type": "array",
             "title": "Disliked Foods"
+          },
+          "quick_days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Quick Days"
+          },
+          "quick_minutes": {
+            "type": "integer",
+            "title": "Quick Minutes",
+            "default": 30
           }
         },
         "type": "object",
@@ -7751,6 +7820,36 @@
           "endpoint"
         ],
         "title": "PushUnsubscribeIn"
+      },
+      "QuickNightsIn": {
+        "properties": {
+          "days": {
+            "items": {
+              "type": "integer",
+              "maximum": 6.0,
+              "minimum": 0.0
+            },
+            "type": "array",
+            "maxItems": 7,
+            "title": "Days"
+          },
+          "minutes": {
+            "type": "integer",
+            "enum": [
+              20,
+              30,
+              45
+            ],
+            "title": "Minutes",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "days"
+        ],
+        "title": "QuickNightsIn",
+        "description": "Busy nights: on these weekdays (0 = Monday, 6 = Sunday) dinner takes at most\n`minutes`, about (the planner picks among recipes estimated that quick)."
       },
       "Readiness": {
         "properties": {
