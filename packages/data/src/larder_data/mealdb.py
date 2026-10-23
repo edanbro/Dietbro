@@ -4,6 +4,7 @@ The free test key "1" is for development/education; production use needs a suppo
 (MEALDB_API_KEY). Raw API responses are cached under the cache dir so imports are repeatable.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -25,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 SOURCE = "mealdb"
 MAX_INGREDIENTS = 20
+ATTEMPTS = 3
+RETRY_DELAY = 2.0  # seconds; times the attempt number
 
 
 def api_url() -> str:
@@ -52,6 +55,25 @@ class RecipeDraft:
     servings: int | None = None  # explicit count (curated); None = estimate from energy
 
 
+async def _get_letter(client: httpx.AsyncClient, letter: str) -> str:
+    """One search-by-letter page; a timeout, dropped connection or 5xx is retried twice (the
+    free API is sometimes slow), anything else raises at once."""
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            response = await client.get(api_url() + "search.php", params={"f": letter})
+        except httpx.TransportError as exc:
+            if attempt == ATTEMPTS:
+                raise
+            logger.warning("mealdb %r: %r; retrying", letter, exc)
+        else:
+            if response.status_code < 500 or attempt == ATTEMPTS:
+                response.raise_for_status()
+                return response.text
+            logger.warning("mealdb %r: HTTP %d; retrying", letter, response.status_code)
+        await asyncio.sleep(RETRY_DELAY * attempt)
+    raise AssertionError("unreachable")
+
+
 async def fetch_meals(
     client: httpx.AsyncClient, cache_dir: Path, *, refresh: bool = False
 ) -> list[dict[str, Any]]:
@@ -61,9 +83,7 @@ async def fetch_meals(
     for letter in string.ascii_lowercase:
         path = cache_dir / f"search_{letter}.json"
         if refresh or not path.exists():
-            response = await client.get(api_url() + "search.php", params={"f": letter})
-            response.raise_for_status()
-            path.write_text(response.text)
+            path.write_text(await _get_letter(client, letter))
         payload: dict[str, Any] = json.loads(path.read_text())
         found: list[dict[str, Any]] = payload.get("meals") or []
         for meal in found:
