@@ -3171,6 +3171,10 @@ export interface components {
             /** Servings Estimated */
             servings_estimated: boolean;
             per_serving: components["schemas"]["MacrosOut"] | null;
+            /** Cost Per Serving */
+            cost_per_serving?: number | null;
+            /** Currency */
+            currency?: ("GBP" | "EUR" | "USD") | null;
             /** Grade */
             grade?: ("A" | "B" | "C" | "D" | "E") | null;
             /** Meal Types */
@@ -3264,6 +3268,11 @@ export interface components {
              * @description ?pantry=true: the foods it needs that the pantry hasn't got
              */
             missing?: string[] | null;
+            /**
+             * Cost Per Serving
+             * @description estimated cost of a serving, in RecipeListOut.currency minor units
+             */
+            cost_per_serving?: number | null;
         };
         /** RecipeListOut */
         RecipeListOut: {
@@ -3271,6 +3280,8 @@ export interface components {
             items: components["schemas"]["RecipeListItem"][];
             /** Total */
             total: number;
+            /** Currency */
+            currency?: ("GBP" | "EUR" | "USD") | null;
         };
         /** RecipeNoteIn */
         RecipeNoteIn: {

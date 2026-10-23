@@ -163,6 +163,22 @@ describe("RecipeBrowser", () => {
     );
   });
 
+  it("shows what a serving costs on each recipe", async () => {
+    mockApi({
+      "GET /recipes": json({
+        items: [item(1, "Coddle", { cost_per_serving: 182 }), item(2, "Boxty")],
+        total: 2,
+        currency: "GBP",
+      }),
+    });
+    renderWithClient(<RecipeBrowser />);
+
+    expect(await screen.findByRole("link", { name: /Coddle/ })).toHaveTextContent(
+      "about £1.82 a serving",
+    );
+    expect(screen.getByRole("link", { name: /Boxty/ })).not.toHaveTextContent("a serving");
+  });
+
   it("asks to finish setup first", async () => {
     mockApi({ "GET /recipes": json({ detail: ["Tell us first"] }, 409) });
     renderWithClient(<RecipeBrowser />);

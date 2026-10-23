@@ -120,6 +120,7 @@ class RecipeHit:
     minutes: int | None = None
     # Cooking from the pantry: the foods it needs that the pantry hasn't got (else None).
     missing: tuple[str, ...] | None = None
+    cost_per_serving: int | None = None  # in the pricer's minor units, when one was given
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,13 +210,14 @@ def rank_recipes(
     favourites_only: bool = False,
     max_minutes: int | None = None,
     from_pantry: bool = False,
+    pricer: planning.Pricer | None = None,
 ) -> list[RecipeHit]:
     """Recipes safe for the viewer (never ones they blocked), best first: by how well they
     match `words` (all of them when there are no words), then preference (favourites rank
     up), then pantry use, then id. `max_minutes` keeps those known to take at most that long.
     `from_pantry` keeps those using something in the pantry, fewest foods still to get first
     (store-cupboard staples and tap water never count), then most pantry foods used.
-    Shared by the chat's search and recipe browsing."""
+    `pricer` adds each one's cost a serving. Shared by the chat's search and recipe browsing."""
     words = list(words)
     taste = viewer.taste
     ranked: list[tuple[tuple[int, ...], RecipeHit]] = []
@@ -269,6 +271,9 @@ def rank_recipes(
             favourite=favourite,
             minutes=minutes,
             missing=missing,
+            cost_per_serving=(
+                planning.recipe_cost(recipe, pool.catalog.foods, pricer) if pricer else None
+            ),
         )
         key = (
             (-points, len(missing), -len(uses), -preference(recipe, taste), recipe.id)

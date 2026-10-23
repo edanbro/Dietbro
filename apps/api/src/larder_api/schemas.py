@@ -823,6 +823,9 @@ class RecipeDetail(RecipeCard):
     servings: int | None
     servings_estimated: bool
     per_serving: MacrosOut | None
+    # What a serving costs the viewer (their prices, `currency` minor units); None signed out.
+    cost_per_serving: int | None = None
+    currency: Currency | None = None
     grade: NutritionGrade | None = None  # Nutri-Score method, per 100 g of the dish
     meal_types: list[Slot]
     allergens: list[Allergen]
@@ -852,11 +855,16 @@ class RecipeListItem(RecipeCard):
     missing: list[str] | None = Field(
         default=None, description="?pantry=true: the foods it needs that the pantry hasn't got"
     )
+    cost_per_serving: int | None = Field(
+        default=None,
+        description="estimated cost of a serving, in RecipeListOut.currency minor units",
+    )
 
 
 class RecipeListOut(BaseModel):
     items: list[RecipeListItem]
     total: int  # how many match, for paging
+    currency: Currency | None = None  # of the items' costs
 
 
 # --- chat (M4) --------------------------------------------------------------------------------

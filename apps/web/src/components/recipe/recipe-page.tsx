@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps } from "@/lib/cooking";
-import { allergenLabel, formatMinutes, formatNumber, humanize } from "@/lib/format";
+import { allergenLabel, formatMinutes, formatMoney, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { AddToList } from "@/components/recipe/add-to-list";
@@ -255,6 +255,9 @@ export function RecipePage({ id }: { id: number }) {
     recipe.cuisine,
     recipe.servings
       ? `Serves ${recipe.servings}${recipe.servings_estimated ? " (estimated)" : ""}`
+      : null,
+    recipe.cost_per_serving && recipe.currency
+      ? `About ${formatMoney(recipe.cost_per_serving, recipe.currency)} a serving`
       : null,
   ].filter(Boolean);
 

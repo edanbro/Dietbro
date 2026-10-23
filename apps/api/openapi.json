@@ -9156,6 +9156,33 @@
               }
             ]
           },
+          "cost_per_serving": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Serving"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "GBP",
+                  "EUR",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
           "grade": {
             "anyOf": [
               {
@@ -9452,6 +9479,18 @@
             ],
             "title": "Missing",
             "description": "?pantry=true: the foods it needs that the pantry hasn't got"
+          },
+          "cost_per_serving": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Serving",
+            "description": "estimated cost of a serving, in RecipeListOut.currency minor units"
           }
         },
         "type": "object",
@@ -9479,6 +9518,22 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "GBP",
+                  "EUR",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
           }
         },
         "type": "object",

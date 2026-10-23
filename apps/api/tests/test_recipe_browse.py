@@ -189,3 +189,19 @@ async def test_cook_from_the_pantry_puts_fewest_foods_to_get_first(
     assert not next(i for i in usual["items"] if i["name"] == "Porridge")["uses_pantry"]
     missing = [len(i["missing"]) for i in page["items"]]
     assert missing == sorted(missing)
+
+
+async def test_recipes_say_what_a_serving_costs(
+    api: httpx.AsyncClient, auth: Auth, new_user: NewUser, menu: dict[str, int]
+) -> None:
+    await new_user("user_a")
+    page = await browse(api, auth, limit=60)
+    curry = next(i for i in page["items"] if i["name"] == "Chicken curry")
+    detail = (await api.get(f"/recipes/{menu['Chicken curry']}", headers=auth())).json()
+    signed_out = (await api.get(f"/recipes/{menu['Chicken curry']}")).json()
+
+    assert page["currency"] == "GBP"
+    assert all(i["cost_per_serving"] > 0 for i in page["items"])
+    # The recipe page and the list price it the same way (the planner's grams and prices).
+    assert (detail["cost_per_serving"], detail["currency"]) == (curry["cost_per_serving"], "GBP")
+    assert (signed_out["cost_per_serving"], signed_out["currency"]) == (None, None)
