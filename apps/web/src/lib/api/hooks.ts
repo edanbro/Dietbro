@@ -121,6 +121,8 @@ export const keys = {
   templates: ["me", "templates"] as const,
   /** Under `plans`: what a plan change makes stale. */
   mealsOn: (date: string) => ["plans", "meals", date] as const,
+  /** Under `plans`: tomorrow's prep follows plan changes (and refetches on the plan page). */
+  prepAhead: ["plans", "ahead"] as const,
   chatThread: ["chat", "thread"] as const,
   /** Mutations that change the current plan from the plan screen (one at a time). */
   planChange: ["plan-change"] as const,
@@ -283,6 +285,17 @@ export function useSaveQuickNights() {
       unwrap(await api.PUT("/me/preferences/quick-nights", { body })),
     keys.preferences,
   );
+}
+
+export type AheadItem = Schemas["AheadItemOut"];
+
+/** What tomorrow's meals need doing tonight: food to defrost, steps to start. */
+export function usePrepAhead() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.prepAhead,
+    queryFn: async () => unwrap(await api.GET("/plans/ahead")),
+  });
 }
 
 export function useRegions() {

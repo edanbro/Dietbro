@@ -35,6 +35,8 @@ _TIME = re.compile(
 _UNIT_SECONDS = {"second": 1, "sec": 1, "minute": 60, "min": 60, "hour": 3600, "hr": 3600}
 _HALF_HOUR = re.compile(r"\bhalf an hour\b", re.IGNORECASE)
 _OVERNIGHT = re.compile(r"\bovernight\b", re.IGNORECASE)
+# "Chill for at least an hour, or overnight": overnight is allowed, not needed.
+_OPTIONAL_OVERNIGHT = re.compile(r"\bor overnight\b", re.IGNORECASE)
 # "Alternatively, soak them overnight": another way of doing a step, not another step.
 _ALTERNATIVE = re.compile(r"^\s*(?:alternatively|or)\b", re.IGNORECASE)
 _NEGATED = re.compile(r"\b(?:do not|don't|never|not)\b", re.IGNORECASE)
@@ -111,11 +113,20 @@ def _heading(text: str) -> bool:
     return text.rstrip().endswith(":")
 
 
+def _overnight(sentence: str) -> bool:
+    """The sentence needs overnight: it says so, not as an option, and not as a warning."""
+    return (
+        bool(_OVERNIGHT.search(sentence))
+        and not _NEGATED.search(sentence)
+        and not _OPTIONAL_OVERNIGHT.search(sentence)
+    )
+
+
 def _sentence_seconds(sentence: str) -> int:
     if _heading(sentence) or _ALTERNATIVE.search(sentence):
         return 0  # a heading is timed by the steps under it
     times = timer_seconds(sentence)
-    if _OVERNIGHT.search(sentence) and not _NEGATED.search(sentence):
+    if _overnight(sentence):
         times.append(OVERNIGHT_SECONDS)
     if times:
         return max(times)
@@ -158,3 +169,34 @@ def _step_seconds(step: str) -> int:
     if not seconds and _heading(step):
         return 0
     return max(MIN_STEP_SECONDS, seconds)
+
+
+# Waits that start well before cooking: marinating, soaking, chilling, proving and the like
+# ("rest" and "leave" are left out: "the rest of the stock", "leave to simmer").
+_AHEAD = re.compile(
+    r"\b(?:marinat|soak|chill|refrigerat|prove|proof|strain|steep|brine|cure|freez)",
+    re.IGNORECASE,
+)
+AHEAD_SECONDS = 2 * 3600
+MAX_AHEAD_CHARS = 200
+
+
+def ahead_steps(instructions: str) -> list[str]:
+    """The sentences of the method that need starting well before the meal: a wait of at least
+    two hours, or overnight, for marinating, soaking, chilling, proving and the like. Tips
+    for another situation, alternatives and headings don't count."""
+    out: list[str] = []
+    for step in steps(instructions):
+        conditional = False
+        for sentence in _SENTENCE.split(step):
+            conditional = conditional or bool(_CONDITIONAL.search(sentence))
+            if conditional or _heading(sentence) or _ALTERNATIVE.search(sentence):
+                continue
+            if not _AHEAD.search(sentence):
+                continue
+            if _overnight(sentence) or max(timer_seconds(sentence), default=0) >= AHEAD_SECONDS:
+                text = sentence.strip()
+                out.append(
+                    text if len(text) <= MAX_AHEAD_CHARS else text[: MAX_AHEAD_CHARS - 1] + "…"
+                )
+    return out

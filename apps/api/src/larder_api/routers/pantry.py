@@ -22,9 +22,9 @@ from larder_api.schemas import (
     PantryItemPatch,
     Problems,
 )
+from larder_api.storage import kept_in
 from larder_core.quantities import grams_for
 from larder_core.regions import local_today
-from larder_core.shelf_life import storage_for
 from larder_core.units import parse_measure
 from larder_db.models import Food, PantryItem, User
 
@@ -55,7 +55,7 @@ def out(item: PantryItem) -> PantryItemOut:
         expires_on=item.expires_on,
         source=item.source,
         created_at=item.created_at,
-        storage=storage_for(item.food.description, item.food.category),
+        storage=kept_in(item),
     )
 
 
@@ -169,6 +169,8 @@ async def update_item(
         item.approx = body.approx
     if "expires_on" in changes:
         item.expires_on = body.expires_on
+    if "storage" in changes:
+        item.storage = body.storage
     await session.commit()
     return out(await owned(session, user, item_id))
 

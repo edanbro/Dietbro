@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:admin@localhost"  # who push services contact about abuse
     reminder_hour: int = 9  # local time
     recap_hour: int = 18  # the weekly recap, Sundays, local time
+    ahead_hour: int = 19  # the evening heads-up for tomorrow's meals, local time
 
     # Hosting without a separate worker (free tiers, larder_api.inline): pasted receipts are read
     # in the API process and periodic jobs run on a minute ticker; receipt photos are refused.

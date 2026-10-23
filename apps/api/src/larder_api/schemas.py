@@ -189,11 +189,16 @@ class PantryItemIn(BaseModel):
     expires_on: date | None = None
 
 
+Storage = Literal["fridge", "freezer", "cupboard"]
+
+
 class PantryItemPatch(BaseModel):
     quantity: float | None = Field(default=None, gt=0, le=100_000)
     unit: str | None = Field(default=None, min_length=1, max_length=32)
     approx: bool | None = None
     expires_on: date | None = None
+    # Where it's kept; null goes back to where that food usually is.
+    storage: Storage | None = None
 
 
 class PantryItemOut(BaseModel):
@@ -206,7 +211,7 @@ class PantryItemOut(BaseModel):
     expires_on: date | None
     source: str
     created_at: datetime
-    storage: Literal["fridge", "freezer", "cupboard"] = "cupboard"  # where it's usually kept
+    storage: Storage = "cupboard"  # where it's kept (the user's choice, else the usual place)
 
 
 class ExpiringItem(PantryItemOut):
@@ -398,6 +403,24 @@ class MealOut(BaseModel):
     )
 
 
+class AheadItemOut(BaseModel):
+    """Something to do the evening before a meal (larder_api.prep_ahead)."""
+
+    kind: Literal["defrost", "start"] = Field(
+        description="defrost: take `text` (a pantry food) out of the freezer; start: do `text` "
+        "(a step of the method) ahead"
+    )
+    slot: Slot
+    recipe_id: int
+    recipe_name: str
+    text: str
+
+
+class AheadOut(BaseModel):
+    date: date  # the meals' day; the work is for the evening before
+    items: list[AheadItemOut]
+
+
 class MealLogOut(Logged):
     """Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten
     that this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =
@@ -580,9 +603,14 @@ class PushConfigOut(BaseModel):
     public_key: str | None = None
     subscribed: int = 0  # browsers this user turned reminders on in
     weekly_recap: bool = True  # also the Sunday-evening recap
+    prep_reminders: bool = True  # also the evening heads-up for tomorrow's meals
 
 
 class RecapSettingIn(BaseModel):
+    enabled: bool
+
+
+class AheadSettingIn(BaseModel):
     enabled: bool
 
 

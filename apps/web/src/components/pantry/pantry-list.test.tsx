@@ -104,6 +104,37 @@ describe("PantryList", () => {
     );
   });
 
+  it("moves an item to the freezer, and a near use-by out to three months", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(TODAY);
+    const milk = item(1, "Milk, whole", "fridge", { expires_on: "2026-10-10" });
+    const calls = mockApi({
+      "GET /pantry": json([milk]),
+      "GET /foods/101": json({ units: [{ unit: "g" }] }),
+      "PATCH /pantry/1": json(milk),
+    });
+    renderWithClient(<PantryList />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Milk, whole" }));
+    fireEvent.change(screen.getByLabelText("Kept in"), { target: { value: "freezer" } });
+    expect(screen.getByLabelText("Use by")).toHaveValue("2027-01-06");
+    expect(screen.getByRole("status")).toHaveTextContent("Frozen, it keeps for months");
+    // Changing your mind puts the date back.
+    fireEvent.change(screen.getByLabelText("Kept in"), { target: { value: "fridge" } });
+    expect(screen.getByLabelText("Use by")).toHaveValue("2026-10-10");
+    fireEvent.change(screen.getByLabelText("Kept in"), { target: { value: "freezer" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+        quantity: 500,
+        unit: "g",
+        expires_on: "2027-01-06",
+        storage: "freezer",
+      }),
+    );
+  });
+
   it("waits before deleting so it can be undone", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const calls = mockApi({ "GET /pantry": json(ITEMS), "DELETE /pantry/3": json(null) });

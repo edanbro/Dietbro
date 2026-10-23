@@ -1,6 +1,6 @@
 import pytest
 
-from larder_core.cook_time import cook_minutes, steps, timer_seconds
+from larder_core.cook_time import ahead_steps, cook_minutes, steps, timer_seconds
 
 
 @pytest.mark.parametrize(
@@ -84,3 +84,24 @@ def test_a_tip_for_another_situation_is_only_read() -> None:
 def test_bringing_to_the_boil_is_quicker_than_boiling() -> None:
     assert cook_minutes("Bring the stock to the boil.") == 5
     assert cook_minutes("Boil the potatoes.") == 10
+
+
+def test_steps_that_need_a_head_start() -> None:
+    method = (
+        "Mix the spices into the yoghurt. Marinate the chicken overnight in the fridge.\n"
+        "Soak the beans for 8 hours. Chill the dough for 30 minutes.\n"
+        "Add the rest of the stock and simmer for 2 hours.\n"
+        "Do not marinate overnight. If you don't have time, soak them for 2 hours.\n"
+        "Alternatively, refrigerate overnight."
+    )
+    assert ahead_steps(method) == [
+        "Marinate the chicken overnight in the fridge.",
+        "Soak the beans for 8 hours.",
+    ]
+    assert ahead_steps("Fry the onion for 5 minutes.") == []
+    # Overnight as an option needs only the time named.
+    assert ahead_steps("Chill for at least 30 minutes, or overnight.") == []
+    assert ahead_steps("Chill for at least 3 hours or overnight.") == [
+        "Chill for at least 3 hours or overnight."
+    ]
+    assert cook_minutes("Chill for at least 30 minutes, or overnight.") == 30

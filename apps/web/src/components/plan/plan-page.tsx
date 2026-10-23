@@ -16,6 +16,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { TodaySummary } from "@/components/diary/today-summary";
+import { PrepAhead } from "@/components/plan/prep-ahead";
 import { ErrorAlert } from "@/components/form-bits";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -450,6 +451,7 @@ function PlanView({
         />
       ) : null}
       {plan === current ? <TodaySummary /> : null}
+      {plan === current ? <PrepAhead /> : null}
       {canPlanNext ? (
         <Button
           variant="outline"

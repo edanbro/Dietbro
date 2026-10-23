@@ -9,6 +9,7 @@ from sqlalchemy import delete, func, select
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
 from larder_api.schemas import (
+    AheadSettingIn,
     PushConfigOut,
     PushSubscriptionIn,
     PushUnsubscribeIn,
@@ -35,6 +36,7 @@ async def get_push(
         public_key=settings.vapid_public_key if enabled else None,
         subscribed=count or 0,
         weekly_recap=user.weekly_recap,
+        prep_reminders=user.prep_reminders,
     )
 
 
@@ -42,6 +44,14 @@ async def get_push(
 async def put_recap(body: RecapSettingIn, user: CurrentUser, session: Session) -> Response:
     """The Sunday-evening recap on or off (in every browser with reminders on)."""
     user.weekly_recap = body.enabled
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/ahead", status_code=status.HTTP_204_NO_CONTENT, operation_id="putAheadSetting")
+async def put_ahead(body: AheadSettingIn, user: CurrentUser, session: Session) -> Response:
+    """The evening heads-up for tomorrow's meals (defrost, marinate) on or off."""
+    user.prep_reminders = body.enabled
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

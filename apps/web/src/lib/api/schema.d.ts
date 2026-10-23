@@ -607,6 +607,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plans/ahead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prep Ahead
+         * @description What the meals planned on `on` (default: tomorrow, the user's date) need doing the
+         *     evening before: food to take out of the freezer, and steps to start (larder_api.prep_ahead).
+         */
+        get: operations["getPrepAhead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/{plan_id}/alternatives": {
         parameters: {
             query?: never;
@@ -1179,6 +1200,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/push/ahead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Ahead
+         * @description The evening heads-up for tomorrow's meals (defrost, marinate) on or off.
+         */
+        put: operations["putAheadSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/push/unsubscribe": {
         parameters: {
             query?: never;
@@ -1360,6 +1401,40 @@ export interface components {
          * @enum {string}
          */
         Activity: "sedentary" | "light" | "moderate" | "active" | "very_active";
+        /**
+         * AheadItemOut
+         * @description Something to do the evening before a meal (larder_api.prep_ahead).
+         */
+        AheadItemOut: {
+            /**
+             * Kind
+             * @description defrost: take `text` (a pantry food) out of the freezer; start: do `text` (a step of the method) ahead
+             * @enum {string}
+             */
+            kind: "defrost" | "start";
+            slot: components["schemas"]["Slot"];
+            /** Recipe Id */
+            recipe_id: number;
+            /** Recipe Name */
+            recipe_name: string;
+            /** Text */
+            text: string;
+        };
+        /** AheadOut */
+        AheadOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Items */
+            items: components["schemas"]["AheadItemOut"][];
+        };
+        /** AheadSettingIn */
+        AheadSettingIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /**
          * Allergen
          * @enum {string}
@@ -2443,6 +2518,8 @@ export interface components {
             approx?: boolean | null;
             /** Expires On */
             expires_on?: string | null;
+            /** Storage */
+            storage?: ("fridge" | "freezer" | "cupboard") | null;
         };
         /** PendingTurn */
         PendingTurn: {
@@ -2663,6 +2740,11 @@ export interface components {
              * @default true
              */
             weekly_recap: boolean;
+            /**
+             * Prep Reminders
+             * @default true
+             */
+            prep_reminders: boolean;
         };
         /** PushKeys */
         PushKeys: {
@@ -4989,6 +5071,37 @@ export interface operations {
             };
         };
     };
+    getPrepAhead: {
+        parameters: {
+            query?: {
+                on?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AheadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getMealAlternatives: {
         parameters: {
             query: {
@@ -6322,6 +6435,37 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RecapSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putAheadSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AheadSettingIn"];
             };
         };
         responses: {
