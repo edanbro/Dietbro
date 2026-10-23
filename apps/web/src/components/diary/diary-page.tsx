@@ -14,6 +14,7 @@ import { localISODate, shortDate } from "@/lib/dates";
 import { formatNumber, humanize } from "@/lib/format";
 
 import { QuickAdd } from "./quick-add";
+import { PriceWatch } from "./price-watch";
 import { SpendingSection } from "./spending";
 import { WeightChart } from "./weight-chart";
 
@@ -248,6 +249,7 @@ export function DiaryPage() {
       )}
       <Weights />
       <SpendingSection />
+      <PriceWatch />
     </div>
   );
 }

@@ -1063,6 +1063,19 @@ export function useSpending(weeks = 12) {
   });
 }
 
+export type Prices = Schemas["PricesOut"];
+export type PriceItem = Prices["items"][number];
+
+/** Per-kg prices from the user's receipts: rises and cheaper products (price watch). */
+export function usePrices(months = 6) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["prices", months] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/prices", { params: { query: { months } } })),
+  });
+}
+
 export function useDiary(days = 7) {
   const api = useApi();
   return useQuery({

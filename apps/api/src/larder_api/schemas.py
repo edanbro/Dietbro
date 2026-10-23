@@ -439,6 +439,33 @@ class SpendingCategoryOut(BaseModel):
     spent_minor: int
 
 
+class PricePointOut(BaseModel):
+    on: date
+    per_kg_minor: int
+
+
+class CheaperOut(BaseModel):
+    label: str = Field(description="the product, as named on the user's receipt or its pack")
+    per_kg_minor: int
+    last_bought: date
+
+
+class PriceItemOut(BaseModel):
+    food_id: int
+    name: str
+    history: list[PricePointOut] = Field(description="oldest first, at most 12")
+    latest_minor: int = Field(description="per kg")
+    usual_minor: int = Field(description="per kg: the median of the earlier prices")
+    change_pct: int
+    rise: bool = Field(description="the latest is at least 15% over the usual (2+ earlier)")
+    cheaper: CheaperOut | None = None
+
+
+class PricesOut(BaseModel):
+    currency: Currency
+    items: list[PriceItemOut] = Field(description="rises first, biggest first; then by name")
+
+
 class SpendingOut(BaseModel):
     """Grocery spending from the user's own confirmed receipts, week by week, beside what the
     plans estimated. Lines without a price, or rejected, don't count."""

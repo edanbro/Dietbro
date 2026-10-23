@@ -20,15 +20,20 @@ from larder_api.chat import offplan
 from larder_api.chat.context import short_name
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
+from larder_api.price_watch import load_lines, watch
 from larder_api.ratelimit import per_user
 from larder_api.routers.plans import REPLAN_ERRORS, get_catalog_cache, get_replan_planner
 from larder_api.schemas import (
+    CheaperOut,
     Currency,
     DiaryDayOut,
     DiaryOut,
     FoodLogRequest,
     MacrosOut,
     OutcomeOut,
+    PriceItemOut,
+    PricePointOut,
+    PricesOut,
     ReplanRequest,
     SpendingCategoryOut,
     SpendingOut,
@@ -365,4 +370,40 @@ async def spending(
             for c, v in sorted(by_category.items(), key=lambda kv: -kv[1])
         ],
         unmatched_minor=unmatched,
+    )
+
+
+@router.get("/insights/prices", operation_id="getPrices")
+async def prices(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    months: Annotated[int, Query(ge=1, le=24)] = 6,
+) -> PricesOut:
+    """What the user pays per kg for the foods they buy again and again, from their confirmed
+    receipts: rises, and a cheaper product they've bought for the same food (price_watch)."""
+    today = local_today(user.timezone, clock())
+    items = watch(await load_lines(session, user.id, today, months))
+    goals = await session.get(Goals, user.id)
+    return PricesOut(
+        currency=cast(Currency, goals.currency) if goals is not None else "GBP",
+        items=[
+            PriceItemOut(
+                food_id=i.food_id,
+                name=i.name,
+                history=[PricePointOut(on=on, per_kg_minor=p) for on, p in i.history],
+                latest_minor=i.latest,
+                usual_minor=i.usual,
+                change_pct=i.change_pct,
+                rise=i.rise,
+                cheaper=CheaperOut(
+                    label=i.cheaper.label,
+                    per_kg_minor=i.cheaper.per_kg,
+                    last_bought=i.cheaper.last_bought,
+                )
+                if i.cheaper
+                else None,
+            )
+            for i in items
+        ],
     )

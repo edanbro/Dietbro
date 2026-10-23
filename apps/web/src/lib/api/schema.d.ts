@@ -1076,6 +1076,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/insights/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prices
+         * @description What the user pays per kg for the foods they buy again and again, from their confirmed
+         *     receipts: rises, and a cheaper product they've bought for the same food (price_watch).
+         */
+        get: operations["getPrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/push": {
         parameters: {
             query?: never;
@@ -1512,6 +1533,21 @@ export interface components {
             retry_at?: string | null;
             /** Message Id */
             message_id?: number | null;
+        };
+        /** CheaperOut */
+        CheaperOut: {
+            /**
+             * Label
+             * @description the product, as named on the user's receipt or its pack
+             */
+            label: string;
+            /** Per Kg Minor */
+            per_kg_minor: number;
+            /**
+             * Last Bought
+             * Format: date
+             */
+            last_bought: string;
         };
         /**
          * Craving
@@ -2459,6 +2495,59 @@ export interface components {
             liked_foods?: components["schemas"]["FoodSummary"][];
             /** Disliked Foods */
             disliked_foods?: components["schemas"]["FoodSummary"][];
+        };
+        /** PriceItemOut */
+        PriceItemOut: {
+            /** Food Id */
+            food_id: number;
+            /** Name */
+            name: string;
+            /**
+             * History
+             * @description oldest first, at most 12
+             */
+            history: components["schemas"]["PricePointOut"][];
+            /**
+             * Latest Minor
+             * @description per kg
+             */
+            latest_minor: number;
+            /**
+             * Usual Minor
+             * @description per kg: the median of the earlier prices
+             */
+            usual_minor: number;
+            /** Change Pct */
+            change_pct: number;
+            /**
+             * Rise
+             * @description the latest is at least 15% over the usual (2+ earlier)
+             */
+            rise: boolean;
+            cheaper?: components["schemas"]["CheaperOut"] | null;
+        };
+        /** PricePointOut */
+        PricePointOut: {
+            /**
+             * On
+             * Format: date
+             */
+            on: string;
+            /** Per Kg Minor */
+            per_kg_minor: number;
+        };
+        /** PricesOut */
+        PricesOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "GBP" | "EUR" | "USD";
+            /**
+             * Items
+             * @description rises first, biggest first; then by name
+             */
+            items: components["schemas"]["PriceItemOut"][];
         };
         /**
          * Problems
@@ -5851,6 +5940,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SpendingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPrices: {
+        parameters: {
+            query?: {
+                months?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricesOut"];
                 };
             };
             /** @description Validation Error */

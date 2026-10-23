@@ -3588,6 +3588,57 @@
         }
       }
     },
+    "/insights/prices": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Prices",
+        "description": "What the user pays per kg for the foods they buy again and again, from their confirmed\nreceipts: rises, and a cheaper product they've bought for the same food (price_watch).",
+        "operationId": "getPrices",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 24,
+              "minimum": 1,
+              "default": 6,
+              "title": "Months"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/push": {
       "get": {
         "tags": [
@@ -4811,6 +4862,31 @@
         ],
         "title": "ChatProblem",
         "description": "Body of the chat gate's 400/404/409/429 answers."
+      },
+      "CheaperOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "the product, as named on the user's receipt or its pack"
+          },
+          "per_kg_minor": {
+            "type": "integer",
+            "title": "Per Kg Minor"
+          },
+          "last_bought": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Bought"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "per_kg_minor",
+          "last_bought"
+        ],
+        "title": "CheaperOut"
       },
       "Craving": {
         "properties": {
@@ -7307,6 +7383,112 @@
         },
         "type": "object",
         "title": "PreferencesOut"
+      },
+      "PriceItemOut": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/PricePointOut"
+            },
+            "type": "array",
+            "title": "History",
+            "description": "oldest first, at most 12"
+          },
+          "latest_minor": {
+            "type": "integer",
+            "title": "Latest Minor",
+            "description": "per kg"
+          },
+          "usual_minor": {
+            "type": "integer",
+            "title": "Usual Minor",
+            "description": "per kg: the median of the earlier prices"
+          },
+          "change_pct": {
+            "type": "integer",
+            "title": "Change Pct"
+          },
+          "rise": {
+            "type": "boolean",
+            "title": "Rise",
+            "description": "the latest is at least 15% over the usual (2+ earlier)"
+          },
+          "cheaper": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheaperOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "name",
+          "history",
+          "latest_minor",
+          "usual_minor",
+          "change_pct",
+          "rise"
+        ],
+        "title": "PriceItemOut"
+      },
+      "PricePointOut": {
+        "properties": {
+          "on": {
+            "type": "string",
+            "format": "date",
+            "title": "On"
+          },
+          "per_kg_minor": {
+            "type": "integer",
+            "title": "Per Kg Minor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "on",
+          "per_kg_minor"
+        ],
+        "title": "PricePointOut"
+      },
+      "PricesOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PriceItemOut"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "rises first, biggest first; then by name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "items"
+        ],
+        "title": "PricesOut"
       },
       "Problems": {
         "properties": {
