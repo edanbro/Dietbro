@@ -2519,6 +2519,60 @@
         ]
       }
     },
+    "/shopping/extras/batch": {
+      "post": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Add Extras",
+        "description": "Add several items (a recipe's ingredients), all or none. One already on the list and not\nticked off (the same name, any case) isn't added twice; the items added come back.",
+        "operationId": "addShoppingExtras",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingExtrasIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShoppingExtraOut"
+                  },
+                  "type": "array",
+                  "title": "Response Addshoppingextras"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "the list would be over MAX_EXTRAS items"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/shopping/extras/{extra_id}": {
       "patch": {
         "tags": [
@@ -9767,6 +9821,27 @@
           "checked"
         ],
         "title": "ShoppingExtraPatch"
+      },
+      "ShoppingExtrasIn": {
+        "properties": {
+          "names": {
+            "items": {
+              "type": "string",
+              "maxLength": 120,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "names"
+        ],
+        "title": "ShoppingExtrasIn",
+        "description": "Several items at once (a recipe's ingredients): one request, all or none."
       },
       "ShoppingItemOut": {
         "properties": {

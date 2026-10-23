@@ -6,7 +6,12 @@ from sqlalchemy import delete, select
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
-from larder_api.schemas import ShoppingExtraIn, ShoppingExtraOut, ShoppingExtraPatch
+from larder_api.schemas import (
+    ShoppingExtraIn,
+    ShoppingExtraOut,
+    ShoppingExtraPatch,
+    ShoppingExtrasIn,
+)
 from larder_db.models import ShoppingExtra
 
 router = APIRouter(prefix="/shopping/extras", tags=["shopping"])
@@ -44,6 +49,34 @@ async def add_extra(body: ShoppingExtraIn, user: CurrentUser, session: Session) 
     session.add(extra)
     await session.commit()
     return ShoppingExtraOut.model_validate(extra)
+
+
+@router.post(
+    "/batch",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="addShoppingExtras",
+    responses={400: {"description": "the list would be over MAX_EXTRAS items"}},
+)
+async def add_extras(
+    body: ShoppingExtrasIn, user: CurrentUser, session: Session
+) -> list[ShoppingExtraOut]:
+    """Add several items (a recipe's ingredients), all or none. One already on the list and not
+    ticked off (the same name, any case) isn't added twice; the items added come back."""
+    rows = (
+        await session.scalars(select(ShoppingExtra).where(ShoppingExtra.user_id == user.id))
+    ).all()
+    have = {r.name.casefold() for r in rows if not r.checked}
+    names = list(dict.fromkeys(n.strip() for n in body.names if n.strip()))
+    new = [n for n in names if n.casefold() not in have]
+    if len(rows) + len(new) > MAX_EXTRAS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            [f"That would put more than {MAX_EXTRAS} items on your list: clear some first."],
+        )
+    extras = [ShoppingExtra(user_id=user.id, name=n, checked=False) for n in new]
+    session.add_all(extras)
+    await session.commit()
+    return [ShoppingExtraOut.model_validate(e) for e in extras]
 
 
 @router.patch("/{extra_id}", operation_id="patchShoppingExtra")
