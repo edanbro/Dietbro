@@ -43,7 +43,20 @@ PROXIMATES: dict[str, tuple[str, ...]] = {
     "sugars_g": ("TOTSUG",),
     "sat_fat_g": ("SATFOD",),
 }
-INORGANICS: dict[str, tuple[str, ...]] = {"sodium_mg": ("NA",)}
+INORGANICS: dict[str, tuple[str, ...]] = {
+    "sodium_mg": ("NA",),
+    "iron_mg": ("FE",),
+    "calcium_mg": ("CA",),
+    "potassium_mg": ("K",),
+}
+# CoFID's folate is total folate (USDA gives dietary folate equivalents where it can; they
+# differ only for fortified foods).
+VITAMINS: dict[str, tuple[str, ...]] = {
+    "vitamin_c_mg": ("VITC",),
+    "vitamin_d_ug": ("VITD",),
+    "folate_ug": ("FOLT",),
+    "vitamin_b12_ug": ("VITB12",),
+}
 
 
 async def download(cache_dir: Path, client: httpx.AsyncClient) -> Path:
@@ -67,6 +80,7 @@ def read_cofid(path: Path) -> list[LocalFood]:
     try:
         proximates = _sheet(wb, "Proximates")
         inorganics = _sheet(wb, "Inorganics")
+        vitamins = _sheet(wb, "Vitamins")
     finally:
         wb.close()
     foods: list[LocalFood] = []
@@ -75,6 +89,7 @@ def read_cofid(path: Path) -> list[LocalFood]:
         nutrients |= {
             col: _first(inorganics.get(code, {}), codes) for col, codes in INORGANICS.items()
         }
+        nutrients |= {col: _first(vitamins.get(code, {}), codes) for col, codes in VITAMINS.items()}
         name, group = str(row["Food Name"]).strip(), str(row["Group"]).strip()
         foods.append(
             LocalFood(

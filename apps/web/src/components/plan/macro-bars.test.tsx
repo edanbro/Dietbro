@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DayMacros, MacroBar, MoreNutrients } from "./macro-bars";
+import { LABEL_RI } from "@/components/nutrients/micronutrients";
 
 describe("MacroBar", () => {
   it("shows an in-band value as on target", () => {
@@ -63,7 +64,7 @@ describe("DayMacros", () => {
 });
 
 describe("MoreNutrients", () => {
-  const reference = { fiber_g: 30, sugars_g: 90, sat_fat_g: 20, salt_g: 6 };
+  const reference = { fiber_g: 30, sugars_g: 90, sat_fat_g: 20, salt_g: 6, ...LABEL_RI };
 
   it("shows each against its daily guide and marks misses", () => {
     render(

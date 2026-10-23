@@ -539,6 +539,13 @@ async def test_fibre_sugars_sat_fat_and_salt_are_reported(
         "sugars_g": 90,
         "sat_fat_g": 20,
         "salt_g": 6,
+        "iron_mg": 14,
+        "calcium_mg": 800,
+        "potassium_mg": 2000,
+        "vitamin_c_mg": 80,
+        "vitamin_d_ug": 5,
+        "folate_ug": 200,
+        "vitamin_b12_ug": 2.5,
     }
     day = plan["days"][0]
     for meal in day["meals"]:

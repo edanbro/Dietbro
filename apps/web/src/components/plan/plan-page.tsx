@@ -59,6 +59,7 @@ import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
 import { APP_NAME } from "@/lib/brand";
 import { EmptyState } from "@/components/empty-state";
+import { WeekMicronutrients } from "@/components/nutrients/micronutrients";
 import { ShareLinkButton } from "@/components/share-link-button";
 import { cookExtraFor, leftoverNotes, noteFor } from "@/lib/leftovers";
 
@@ -636,6 +637,7 @@ function PlanView({
       </Tabs>
 
       <WeekSummary plan={plan} />
+      <WeekMicronutrients plan={plan} />
       <PlanNotes plan={plan} />
     </div>
   );

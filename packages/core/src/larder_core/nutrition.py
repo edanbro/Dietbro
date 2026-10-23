@@ -1,6 +1,6 @@
 """Nutrition math. Food values are per 100 g; recipes sum ingredient grams."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, fields
 from typing import ClassVar, Self
 
@@ -40,6 +40,44 @@ class Nutrients:
 
 
 assert tuple(f.name for f in fields(Nutrients)) == Nutrients.FIELDS
+
+
+# Vitamins and minerals, kept apart from Nutrients: there a missing value counts as 0, which
+# is fine for energy and macros (foods without them are rare and small) but would understate
+# these, which many foods have no value for.
+MICROS: tuple[str, ...] = (
+    "iron_mg",
+    "calcium_mg",
+    "potassium_mg",
+    "vitamin_c_mg",
+    "vitamin_d_ug",
+    "folate_ug",
+    "vitamin_b12_ug",
+)
+# An ingredient this heavy without a value makes the recipe's value unknown; lighter ones
+# (spices, a squeeze of lemon) count as 0.
+MICRO_MATTERS_G = 10.0
+
+
+def micro_totals(
+    lines: Iterable[tuple[Mapping[str, float | None], float]], servings: float
+) -> dict[str, float | None]:
+    """Per-serving vitamins and minerals from (per-100 g values, grams) lines; None for a
+    nutrient when a line of MICRO_MATTERS_G or more has no value for it."""
+    lines = list(lines)
+    out: dict[str, float | None] = {}
+    for name in MICROS:
+        amount = 0.0
+        for values, grams in lines:
+            value = values.get(name)
+            if value is None:
+                if grams >= MICRO_MATTERS_G:
+                    amount = None
+                    break
+                continue
+            amount += value * grams / 100
+        out[name] = None if amount is None or servings <= 0 else amount / servings
+    return out
 
 
 def for_grams(per_100g: Nutrients, grams: float) -> Nutrients:

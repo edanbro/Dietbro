@@ -54,7 +54,9 @@ class Base(DeclarativeBase):
 
 
 class NutrientColumns:
-    """Macro columns shared by foods (per 100 g) and recipes (per serving)."""
+    """Nutrient columns shared by foods (per 100 g) and recipes (per serving). Vitamins and
+    minerals (iron down): a recipe's is null when an ingredient that matters (10 g or more)
+    has no value for it (larder_core.nutrition.micro_totals), never a silent zero."""
 
     kcal: Mapped[float | None] = mapped_column(Float)
     protein_g: Mapped[float | None] = mapped_column(Float)
@@ -64,6 +66,13 @@ class NutrientColumns:
     sugars_g: Mapped[float | None] = mapped_column(Float)
     sat_fat_g: Mapped[float | None] = mapped_column(Float)
     sodium_mg: Mapped[float | None] = mapped_column(Float)
+    iron_mg: Mapped[float | None] = mapped_column(Float)
+    calcium_mg: Mapped[float | None] = mapped_column(Float)
+    potassium_mg: Mapped[float | None] = mapped_column(Float)
+    vitamin_c_mg: Mapped[float | None] = mapped_column(Float)
+    vitamin_d_ug: Mapped[float | None] = mapped_column(Float)
+    folate_ug: Mapped[float | None] = mapped_column(Float)
+    vitamin_b12_ug: Mapped[float | None] = mapped_column(Float)
 
 
 # Ids of non-USDA foods start here (foods_local_id_seq); USDA FDC ids are far below.

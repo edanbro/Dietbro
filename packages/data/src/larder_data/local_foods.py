@@ -18,6 +18,11 @@ from larder_db.models import Food, FoodPortion
 __all__ = ["LocalFood", "load_local_foods"]
 
 _BATCH = 1000
+# Postgres takes at most 32,767 parameters per statement; a food row has ~20 columns plus one
+# per nutrient, so the upsert's batch is sized from that (load_local_foods).
+MAX_PARAMS = 32_767
+ROW_COLUMNS = 20 + len(NUTRIENT_IDS)
+UPSERT_BATCH = min(_BATCH, MAX_PARAMS // ROW_COLUMNS)
 
 
 @dataclass(slots=True)
@@ -48,7 +53,7 @@ async def load_local_foods(session: AsyncSession, records: Sequence[LocalFood]) 
     A barcode already used by another row is dropped from the newcomer (OFF has duplicates
     like 036000291452 / 0036000291452). Seen rows are un-retired."""
     ids: list[int] = []
-    for batch in _chunks(list(records), _BATCH):
+    for batch in _chunks(list(records), UPSERT_BATCH):
         ids += await _load_batch(session, batch)
     await session.commit()
     return ids
@@ -110,6 +115,7 @@ async def _load_batch(session: AsyncSession, batch: list[LocalFood]) -> list[int
                 **{k: r.nutrients.get(k) for k in NUTRIENT_IDS},
             }
         )
+    assert len(rows) * len(rows[0]) <= MAX_PARAMS, "batch too big for one statement"
     stmt = insert(Food).values(rows)
     keep_link = Food.generic_food_id.is_not(None) & stmt.excluded.generic_food_id.is_(None)
     update_cols: dict[str, Any] = {

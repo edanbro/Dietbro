@@ -30,7 +30,7 @@ from larder_api.chat.scope import ChatScope
 from larder_core.aliases import load_alias_rows
 from larder_core.allergens import Allergen
 from larder_core.meals import MAX_KCAL_PER_SERVING, MAX_OIL_SHARE, Slot
-from larder_core.nutrition import Nutrients
+from larder_core.nutrition import MICROS, Nutrients, micro_totals
 from larder_core.quantities import grams_for
 from larder_core.tagging import line_tags, make_line, tag_text
 from larder_core.units import parse_measure
@@ -173,6 +173,10 @@ def _row(
         )
 
     per = {f: total(f) / draft.servings for f in Nutrients.FIELDS}
+    per |= micro_totals(
+        (({m: getattr(food_rows[x.match.food_id], m) for m in MICROS}, x.grams) for x in lines),
+        draft.servings,
+    )
     return db.Recipe(
         source="generated",
         source_id=uuid.uuid4().hex,
@@ -206,7 +210,7 @@ def _replace(target: db.Recipe, checked: db.Recipe) -> None:
     target.instructions = checked.instructions
     target.servings, target.servings_estimated = checked.servings, checked.servings_estimated
     target.nutrition_complete = checked.nutrition_complete
-    for field in Nutrients.FIELDS:
+    for field in (*Nutrients.FIELDS, *MICROS):
         setattr(target, field, getattr(checked, field))
 
 

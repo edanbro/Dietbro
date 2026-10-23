@@ -308,16 +308,33 @@ class MacrosOut(BaseModel):
     sugars_g: float | None = None
     sat_fat_g: float | None = None
     salt_g: float | None = None
+    # Vitamins and minerals, from recipes; null when unknown (an ingredient without data), and
+    # a day or week total is null if any of its meals is.
+    iron_mg: float | None = None
+    calcium_mg: float | None = None
+    potassium_mg: float | None = None
+    vitamin_c_mg: float | None = None
+    vitamin_d_ug: float | None = None
+    folate_ug: float | None = None
+    vitamin_b12_ug: float | None = None
 
 
 class ReferenceIntakes(BaseModel):
-    """Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned
-    for: fibre at least, the rest at most."""
+    """Daily guides, shown for context, never planned for. Fibre (at least: UK advice), sugars,
+    saturated fat and salt (at most) are the UK/EU reference intakes; the vitamins and minerals
+    are the EU labelling reference intakes for adults, the % on food labels."""
 
     fiber_g: float = 30
     sugars_g: float = 90
     sat_fat_g: float = 20
     salt_g: float = 6
+    iron_mg: float = 14
+    calcium_mg: float = 800
+    potassium_mg: float = 2000
+    vitamin_c_mg: float = 80
+    vitamin_d_ug: float = 5
+    folate_ug: float = 200
+    vitamin_b12_ug: float = 2.5
 
 
 class BandOut(BaseModel):

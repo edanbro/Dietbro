@@ -84,3 +84,15 @@ def test_estimate_servings_uses_the_portion_size() -> None:
 def test_estimate_servings_is_monotonic_and_bounded(a: float, b: float) -> None:
     lo, hi = sorted((a, b))
     assert 1 <= estimate_servings(lo) <= estimate_servings(hi) <= 12
+
+
+def test_micro_totals_per_serving_and_unknown_when_an_ingredient_that_matters_lacks_one() -> None:
+    from larder_core.nutrition import micro_totals
+
+    chicken = {"iron_mg": 1.0, "vitamin_d_ug": None}
+    rice = {"iron_mg": 0.5, "vitamin_d_ug": 0.0}
+    pepper = {"iron_mg": None, "vitamin_d_ug": None}  # a pinch: counts as nothing
+    out = micro_totals([(chicken, 300), (rice, 200), (pepper, 2)], servings=2)
+    assert out["iron_mg"] == pytest.approx((3.0 + 1.0) / 2)
+    assert out["vitamin_d_ug"] is None  # 300 g of chicken without a value: unknown, not 0
+    assert out["calcium_mg"] is None  # no value anywhere

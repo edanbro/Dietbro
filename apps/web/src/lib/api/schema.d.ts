@@ -2092,6 +2092,20 @@ export interface components {
             sat_fat_g?: number | null;
             /** Salt G */
             salt_g?: number | null;
+            /** Iron Mg */
+            iron_mg?: number | null;
+            /** Calcium Mg */
+            calcium_mg?: number | null;
+            /** Potassium Mg */
+            potassium_mg?: number | null;
+            /** Vitamin C Mg */
+            vitamin_c_mg?: number | null;
+            /** Vitamin D Ug */
+            vitamin_d_ug?: number | null;
+            /** Folate Ug */
+            folate_ug?: number | null;
+            /** Vitamin B12 Ug */
+            vitamin_b12_ug?: number | null;
         };
         /** Me */
         Me: {
@@ -2820,8 +2834,9 @@ export interface components {
         };
         /**
          * ReferenceIntakes
-         * @description Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned
-         *     for: fibre at least, the rest at most.
+         * @description Daily guides, shown for context, never planned for. Fibre (at least: UK advice), sugars,
+         *     saturated fat and salt (at most) are the UK/EU reference intakes; the vitamins and minerals
+         *     are the EU labelling reference intakes for adults, the % on food labels.
          */
         ReferenceIntakes: {
             /**
@@ -2844,6 +2859,41 @@ export interface components {
              * @default 6
              */
             salt_g: number;
+            /**
+             * Iron Mg
+             * @default 14
+             */
+            iron_mg: number;
+            /**
+             * Calcium Mg
+             * @default 800
+             */
+            calcium_mg: number;
+            /**
+             * Potassium Mg
+             * @default 2000
+             */
+            potassium_mg: number;
+            /**
+             * Vitamin C Mg
+             * @default 80
+             */
+            vitamin_c_mg: number;
+            /**
+             * Vitamin D Ug
+             * @default 5
+             */
+            vitamin_d_ug: number;
+            /**
+             * Folate Ug
+             * @default 200
+             */
+            folate_ug: number;
+            /**
+             * Vitamin B12 Ug
+             * @default 2.5
+             */
+            vitamin_b12_ug: number;
         };
         /** RegionIn */
         RegionIn: {

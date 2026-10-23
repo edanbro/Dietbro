@@ -6283,6 +6283,83 @@
               }
             ],
             "title": "Salt G"
+          },
+          "iron_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iron Mg"
+          },
+          "calcium_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calcium Mg"
+          },
+          "potassium_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Potassium Mg"
+          },
+          "vitamin_c_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin C Mg"
+          },
+          "vitamin_d_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin D Ug"
+          },
+          "folate_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folate Ug"
+          },
+          "vitamin_b12_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin B12 Ug"
           }
         },
         "type": "object",
@@ -8392,11 +8469,46 @@
             "type": "number",
             "title": "Salt G",
             "default": 6
+          },
+          "iron_mg": {
+            "type": "number",
+            "title": "Iron Mg",
+            "default": 14
+          },
+          "calcium_mg": {
+            "type": "number",
+            "title": "Calcium Mg",
+            "default": 800
+          },
+          "potassium_mg": {
+            "type": "number",
+            "title": "Potassium Mg",
+            "default": 2000
+          },
+          "vitamin_c_mg": {
+            "type": "number",
+            "title": "Vitamin C Mg",
+            "default": 80
+          },
+          "vitamin_d_ug": {
+            "type": "number",
+            "title": "Vitamin D Ug",
+            "default": 5
+          },
+          "folate_ug": {
+            "type": "number",
+            "title": "Folate Ug",
+            "default": 200
+          },
+          "vitamin_b12_ug": {
+            "type": "number",
+            "title": "Vitamin B12 Ug",
+            "default": 2.5
           }
         },
         "type": "object",
         "title": "ReferenceIntakes",
-        "description": "Daily guides (UK/EU reference intakes; fibre: UK advice), shown for context, not planned\nfor: fibre at least, the rest at most."
+        "description": "Daily guides, shown for context, never planned for. Fibre (at least: UK advice), sugars,\nsaturated fat and salt (at most) are the UK/EU reference intakes; the vitamins and minerals\nare the EU labelling reference intakes for adults, the % on food labels."
       },
       "RegionIn": {
         "properties": {

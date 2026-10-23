@@ -58,6 +58,9 @@ flowchart LR
   again", foods you love or hate.
 - **Tracks what you ate**: a food diary against your goals, a weight trend, and quick-add for
   anything off the plan (search or scan, exact amounts; the rest of the day rebalances).
+- **Vitamins and minerals**: iron, calcium, potassium, vitamins C and D, folate and B12 per
+  recipe and for an average day of the plan, against the reference intakes on food labels
+  (USDA and UK CoFID data; "no data" rather than a guess when a food has no value).
 - **Imports recipes from a link**: reads the recipe data most recipe sites publish, splits the
   ingredients, lets you check them, then runs the same allergy and nutrition checks as every
   other recipe. The fetch is SSRF-guarded (public addresses only, re-checked on redirects).
@@ -114,6 +117,10 @@ make foods           # optional: Irish + UK packaged products from Open Food Fac
 ```
 
 Without `make`, run the same `uv run larder-data ...` steps listed in the Makefile.
+
+Updating an existing database: migrations run by themselves, but new food data (such as the
+vitamins and minerals) arrives only when the importers run again: `make seed`, then
+`make foods` if you used it before. They update foods and recipes in place.
 
 Barcode scanning finds imported products offline. To also look up products that aren't imported
 yet, set `OFF_USER_AGENT` in `.env` (Open Food Facts asks for `AppName/Version (contact email)`;

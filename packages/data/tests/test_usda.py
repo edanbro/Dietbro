@@ -86,3 +86,11 @@ async def test_load_foods_upserts(db_session: AsyncSession, fdc_zip: Path) -> No
     assert [f.description for f in foods] == ["Onions, raw", "Oil, olive, salad or cooking"]
     assert len(foods[0].portions) == 3
     assert await usda.count_foods(db_session) == 2
+
+
+def test_folate_prefers_dietary_folate_equivalents() -> None:
+    from larder_data.usda import pick_nutrients
+
+    assert pick_nutrients({1190: 120.0, 1177: 90.0})["folate_ug"] == 120.0
+    assert pick_nutrients({1177: 90.0})["folate_ug"] == 90.0
+    assert pick_nutrients({1089: 2.1, 1114: 0.5})["iron_mg"] == 2.1

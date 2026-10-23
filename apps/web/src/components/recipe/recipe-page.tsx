@@ -26,6 +26,7 @@ import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { RecipeArt } from "@/components/recipe/recipe-art";
+import { Micronutrients } from "@/components/nutrients/micronutrients";
 import { RecipeNotes } from "@/components/recipe/recipe-notes";
 import { ShareLinkButton } from "@/components/share-link-button";
 
@@ -286,6 +287,15 @@ export function RecipePage({ id }: { id: number }) {
         </h2>
         <Nutrition recipe={recipe} />
       </section>
+
+      {recipe.per_serving ? (
+        <section aria-labelledby="recipe-micros" className="flex flex-col gap-2">
+          <h2 id="recipe-micros" className="text-base font-semibold">
+            Vitamins and minerals
+          </h2>
+          <Micronutrients values={recipe.per_serving} mode="serving" />
+        </section>
+      ) : null}
 
       <Allergens recipe={recipe} />
 

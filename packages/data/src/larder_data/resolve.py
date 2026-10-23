@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from larder_core.aliases import load_aliases
 from larder_core.names import normalise_name
-from larder_core.nutrition import Nutrients, estimate_servings, total
+from larder_core.nutrition import MICROS, Nutrients, estimate_servings, micro_totals, total
 from larder_core.quantities import Portion, grams_for
 from larder_core.units import parse_measure
 from larder_data import matching
@@ -201,17 +201,26 @@ def recipe_nutrition(
     """Per-serving nutrition, or nulls when any line lacks a food, grams or energy data.
     `servings` is an explicit count; without one it is estimated from the recipe's energy."""
     resolved: list[tuple[Nutrients, float]] = []
+    micros: list[tuple[dict[str, float | None], float]] = []
     out: dict[str, object] = {"servings_estimated": False, "nutrition_complete": False}
     for food_id, grams in items:
         n = food_nutrients(foods[food_id]) if food_id is not None else None
         if n is None or grams is None:
-            return out | dict.fromkeys(Nutrients.FIELDS) | {"servings": servings}
+            return (
+                out
+                | dict.fromkeys(Nutrients.FIELDS)
+                | dict.fromkeys(MICROS)
+                | {"servings": servings}
+            )
         resolved.append((n, grams))
+        assert food_id is not None
+        micros.append(({m: getattr(foods[food_id], m) for m in MICROS}, grams))
     totals = total(resolved)
     estimated = servings is None
     if servings is None:
         servings = estimate_servings(totals.kcal, KCAL_PER_SERVING.get(category or "", 650.0))
     per = totals.per_serving(servings)
     out |= {f: getattr(per, f) for f in Nutrients.FIELDS}
+    out |= micro_totals(micros, servings)
     out |= {"servings": servings, "servings_estimated": estimated, "nutrition_complete": True}
     return out

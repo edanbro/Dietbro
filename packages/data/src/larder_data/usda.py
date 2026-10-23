@@ -43,6 +43,13 @@ NUTRIENT_IDS: dict[str, tuple[int, ...]] = {
     "sugars_g": (2000, 1063),
     "sat_fat_g": (1258,),
     "sodium_mg": (1093,),
+    "iron_mg": (1089,),
+    "calcium_mg": (1087,),
+    "potassium_mg": (1092,),
+    "vitamin_c_mg": (1162,),
+    "vitamin_d_ug": (1114,),  # D2 + D3, micrograms
+    "folate_ug": (1190, 1177),  # dietary folate equivalents, else total folate
+    "vitamin_b12_ug": (1178,),
 }
 _WANTED = {nid for ids in NUTRIENT_IDS.values() for nid in ids}
 _UNDETERMINED_UNIT = "undetermined"

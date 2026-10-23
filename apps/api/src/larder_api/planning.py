@@ -42,6 +42,7 @@ from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
 from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
+from larder_core.nutrition import MICROS
 from larder_core.prices import PER_GBP, Currency, Price, price
 from larder_core.regions import local_price
 from larder_core.tagging import (
@@ -1155,33 +1156,40 @@ def save_plan(
     return row
 
 
-EXTRA_NUTRIENTS = ("fiber_g", "sugars_g", "sat_fat_g", "salt_g")
+EXTRA_NUTRIENTS = ("fiber_g", "sugars_g", "sat_fat_g", "salt_g", *MICROS)
 
 
 def extra_nutrients(recipe: db.Recipe, servings: float) -> dict[str, float | None]:
-    """Fibre, sugars, saturated fat and salt for `servings` of a recipe (its columns are per
-    serving); all None unless the recipe's nutrition is complete."""
+    """Fibre, sugars, saturated fat, salt, and vitamins and minerals for `servings` of a recipe
+    (its columns are per serving); all None unless the recipe's nutrition is complete."""
     if not recipe.nutrition_complete:
         return dict.fromkeys(EXTRA_NUTRIENTS)
 
-    def scaled(value: float | None, factor: float = 1.0) -> float | None:
-        return None if value is None else round(value * factor * servings, 1)
+    def scaled(value: float | None, factor: float = 1.0, digits: int = 1) -> float | None:
+        return None if value is None else round(value * factor * servings, digits)
 
     return {
         "fiber_g": scaled(recipe.fiber_g),
         "sugars_g": scaled(recipe.sugars_g),
         "sat_fat_g": scaled(recipe.sat_fat_g),
         "salt_g": scaled(recipe.sodium_mg, 2.5 / 1000),
+        **{m: scaled(getattr(recipe, m), digits=2) for m in MICROS},
     }
 
 
 def add_extras(total: MacrosOut, parts: Iterable[MacrosOut]) -> MacrosOut:
-    """`total` with the extra nutrients summed over `parts` (unknown parts are skipped)."""
+    """`total` with the extra nutrients summed over `parts`. Fibre, sugars, saturated fat and
+    salt skip unknown parts; a vitamin or mineral is unknown if any part's is (a sum of the
+    known ones would read as a shortfall that isn't there)."""
     parts = list(parts)
     sums: dict[str, float | None] = {}
     for name in EXTRA_NUTRIENTS:
-        known = [v for p in parts if (v := getattr(p, name)) is not None]
-        sums[name] = round(sum(known), 1) if known else None
+        values = [getattr(p, name) for p in parts]
+        known = [v for v in values if v is not None]
+        if name in MICROS and len(known) < len(values):
+            sums[name] = None
+        else:
+            sums[name] = round(sum(known), 2 if name in MICROS else 1) if known else None
     return total.model_copy(update=sums)
 
 

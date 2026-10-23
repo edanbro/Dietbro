@@ -120,11 +120,36 @@ def _workbook(path: Path, groups: tuple[str, ...] = ("OA", "MAA")) -> Path:
     )
     inorg = wb.create_sheet("1.4 Inorganics")
     inorg.append(
-        [" ", "Food Name", "Description", "Group", "Previous", "Refs", "Footnote", "Sodium (mg)"]
+        [
+            " ",
+            "Food Name",
+            "Description",
+            "Group",
+            "Previous",
+            "Refs",
+            "Footnote",
+            "Sodium (mg)",
+            "Potassium (mg)",
+            "Calcium (mg)",
+            "Iron (mg)",
+        ]
     )
-    inorg.append([None] * 7 + ["NA"])
-    inorg.append([None] * 8)
-    inorg.append(["17-001", "Butter, salted", "", groups[0], 1, "", None, "750"])
+    inorg.append([None] * 7 + ["NA", "K", "CA", "FE"])
+    inorg.append([None] * 11)
+    inorg.append(["17-001", "Butter, salted", "", groups[0], 1, "", None, "750", "27", "18", "Tr"])
+    vit = wb.create_sheet("1.5 Vitamins")
+    vit.append(
+        [
+            *info,
+            "Vitamin D (µg)",
+            "Vitamin B12 (µg)",
+            "Folate (µg)",
+            "Vitamin C (mg)",
+        ]
+    )
+    vit.append([None] * 7 + ["VITD", "VITB12", "FOLT", "VITC"])
+    vit.append([None] * 11)
+    vit.append(["17-001", "Butter, salted", "", groups[0], 1, "", None, "0.9", "0.3", "N", "Tr"])
     out = path / "cofid.xlsx"
     wb.save(out)
     return out
@@ -141,8 +166,13 @@ def test_cofid_reader(tmp_path: Path) -> None:
     assert butter.nutrients["kcal"] == 744
     assert butter.nutrients["fiber_g"] == 0  # AOAC unknown ("N"), NSP a trace ("Tr")
     assert butter.nutrients["sodium_mg"] == 750
+    assert (butter.nutrients["potassium_mg"], butter.nutrients["calcium_mg"]) == (27, 18)
+    assert butter.nutrients["iron_mg"] == 0  # a trace
+    assert (butter.nutrients["vitamin_d_ug"], butter.nutrients["vitamin_b12_ug"]) == (0.9, 0.3)
+    assert butter.nutrients["folate_ug"] is None  # "N": not measured, not zero
     assert bacon.category == "Pork Products"  # MAA before M (meat dishes)
     assert bacon.nutrients["sodium_mg"] is None  # not on the inorganics sheet
+    assert bacon.nutrients["vitamin_c_mg"] is None
 
 
 def test_cofid_unknown_group_stops_the_import(tmp_path: Path) -> None:
@@ -339,3 +369,17 @@ async def test_import_loads_the_category_generics(db_session: AsyncSession, tmp_
         )
     ).one()
     assert tuple(row) == (BUTTER, "category")
+
+
+def test_a_full_upsert_batch_fits_in_one_statement() -> None:
+    from larder_data import local_foods
+    from larder_data.usda import NUTRIENT_IDS
+
+    record = local_foods.LocalFood(
+        source="cofid", source_id="1", description="x", data_type="cofid", category=None
+    )
+    # The row the loader writes for a food, every column filled.
+    columns = {f for f in record.__dataclass_fields__ if f not in ("nutrients", "portions")}
+    columns |= {"id", "retired_at", *NUTRIENT_IDS}
+    assert len(columns) <= local_foods.ROW_COLUMNS
+    assert local_foods.UPSERT_BATCH * local_foods.ROW_COLUMNS <= local_foods.MAX_PARAMS
