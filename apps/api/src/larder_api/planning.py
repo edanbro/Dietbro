@@ -44,7 +44,7 @@ from larder_core.energy import tdee, validate_targets
 from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
 from larder_core.nutrition import MICROS
 from larder_core.prices import PER_GBP, Currency, Price, price
-from larder_core.regions import local_price
+from larder_core.regions import local_price, region_for
 from larder_core.tagging import (
     FORBIDDEN,
     Diet,
@@ -524,6 +524,54 @@ def pantry_key(item: db.PantryItem, known: Mapping[int, object]) -> int:
     planning catalogue), else itself. `item.food` must be loaded."""
     generic = item.food.generic_food_id
     return generic if generic is not None and generic in known else item.food_id
+
+
+@dataclass(frozen=True, slots=True)
+class Pricer:
+    """What food costs this user, as the planner prices it: the catalogue's UK estimate (GBP
+    pence/kg) for their region and currency, or what their receipts say they paid."""
+
+    currency: Currency
+    country: str | None = None
+    paid: Mapping[int, Sequence[int]] = field(default_factory=dict[int, Sequence[int]])
+
+    def per_kg(self, food_id: int, gbp_per_kg: int, category: str | None) -> int:
+        estimate = local_price(gbp_per_kg, category, self.country, self.currency)
+        return price_with_receipts(estimate, food_id, self.paid)
+
+
+async def pricer_for(session: AsyncSession, user_id: int) -> Pricer:
+    user = await session.get(db.User, user_id)
+    country = user.country if user is not None else None
+    goals = await session.get(db.Goals, user_id)
+    currency: Currency = (
+        goals.currency  # pyright: ignore[reportAssignmentType]
+        if goals is not None
+        else region_for(country).currency
+    )
+    return Pricer(currency, country, await receipt_prices(session, user_id, date.today()))
+
+
+type CostLine = tuple[int, int, int, str | None]  # food id, grams a serving, GBP pence/kg, category
+
+
+def serving_cost(lines: Iterable[CostLine], pricer: Pricer) -> int | None:
+    """One serving's cost in the pricer's minor units, rounded up (an estimate never
+    undercounts); None when nothing in it is costed. Store-cupboard staples aren't lines."""
+    millis = sum(grams * pricer.per_kg(fid, gbp, category) for fid, grams, gbp, category in lines)
+    return -(-millis // 1000) if millis > 0 else None
+
+
+def recipe_cost(recipe: Recipe, foods: Mapping[int, Food], pricer: Pricer) -> int | None:
+    """A planning recipe's cost a serving (two portions, the planner's grams)."""
+    return serving_cost(
+        (
+            (i.food_id, i.grams * 2, foods[i.food_id].price_per_kg, foods[i.food_id].category)
+            for i in recipe.ingredients
+            if i.grams > 0 and i.food_id in foods
+        ),
+        pricer,
+    )
 
 
 def _priced(f: Food, inputs: UserInputs) -> Food:

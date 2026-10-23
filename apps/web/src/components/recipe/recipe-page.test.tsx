@@ -44,6 +44,18 @@ describe("helpers", () => {
 });
 
 describe("RecipePage", () => {
+  it("says about what a serving costs", async () => {
+    mockApi({
+      "GET /recipes/101": json(makeRecipe({ cost_per_serving: 135, currency: "EUR" })),
+      "GET /allergens": json(ALLERGENS),
+    });
+    renderWithClient(<RecipePage id={101} />);
+
+    expect(
+      await screen.findByText("Egyptian · Serves 4 (estimated) · About €1.35 a serving"),
+    ).toBeInTheDocument();
+  });
+
   it("shows the recipe: photo, numbers, allergens, diets, ingredients, method and credit", async () => {
     mockApi({ "GET /recipes/101": json(makeRecipe()), "GET /allergens": json(ALLERGENS) });
     renderWithClient(<RecipePage id={101} />);

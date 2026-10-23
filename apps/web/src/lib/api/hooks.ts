@@ -79,6 +79,7 @@ export type Diary = Schemas["DiaryOut"];
 export type DiaryDay = Schemas["DiaryDayOut"];
 export type Weight = Schemas["WeightOut"];
 export type RecipeListItem = Schemas["RecipeListItem"];
+export type RecipeList = Schemas["RecipeListOut"];
 export type RecipeVerdict = Schemas["RecipeFeedbackIn"]["verdict"];
 export type RecipeQuery = {
   q: string;

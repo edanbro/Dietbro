@@ -111,6 +111,7 @@ async def list_recipes(
     pool = (await cache.get(sessionmaker)).merged(
         await planning.load_private_recipes(session, user.id)
     )
+    pricer = await planning.pricer_for(session, user.id)
     hits = rank_recipes(
         pool,
         viewer,
@@ -119,6 +120,7 @@ async def list_recipes(
         favourites_only=favourites,
         max_minutes=max_minutes,
         from_pantry=pantry,
+        pricer=pricer,
     )
     return RecipeListOut(
         items=[
@@ -135,10 +137,12 @@ async def list_recipes(
                 favourite=h.favourite,
                 minutes=h.minutes,
                 missing=None if h.missing is None else list(h.missing),
+                cost_per_serving=h.cost_per_serving,
             )
             for h in hits[offset : offset + limit]
         ],
         total=len(hits),
+        currency=pricer.currency,
     )
 
 
@@ -271,13 +275,31 @@ async def get_recipe(recipe_id: int, session: Session, viewer: Viewer) -> Recipe
 
 
 async def recipe_detail(session: AsyncSession, recipe: Recipe, viewer: int | None) -> RecipeDetail:
-    """A loaded recipe (with its ingredients) as the API shows it; `viewer` adds their pantry
-    and verdict, None (a share link) shows the recipe alone."""
+    """A loaded recipe (with its ingredients) as the API shows it; `viewer` adds their pantry,
+    verdict and what a serving costs them, None (a share link) shows the recipe alone."""
     food_ids = {i.food_id for i in recipe.ingredients if i.food_id is not None}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(food_ids)))}
     stocked = await _stocked(session, viewer, food_ids) if viewer else set[int]()
     info = {fid: planning.food_info(f) for fid, f in foods.items()}
     facts = planning.recipe_facts(recipe, foods, info)
+    pricer = await planning.pricer_for(session, viewer) if viewer else None
+    cost = (
+        planning.serving_cost(
+            (
+                (
+                    fid,
+                    planning.portion_grams(line.grams, recipe.servings, info[fid].staple) * 2,
+                    info[fid].price.pence_per_kg,
+                    foods[fid].category,
+                )
+                for line in recipe.ingredients
+                if (fid := line.food_id) is not None and fid in info
+            ),
+            pricer,
+        )
+        if pricer is not None and recipe.servings
+        else None
+    )
     per_serving = (
         MacrosOut(
             kcal=facts.per_portion.kcal * 2,
@@ -303,6 +325,8 @@ async def recipe_detail(session: AsyncSession, recipe: Recipe, viewer: int | Non
         servings=recipe.servings,
         servings_estimated=recipe.servings_estimated,
         per_serving=per_serving,
+        cost_per_serving=cost,
+        currency=pricer.currency if pricer is not None else None,
         grade=recipe_grade(recipe, foods),
         feedback=verdict_of(await session.get(Preferences, viewer), recipe.id) if viewer else None,
         note=note_out(await session.get(RecipeNote, (viewer, recipe.id))) if viewer else None,

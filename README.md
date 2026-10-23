@@ -56,8 +56,8 @@ flowchart LR
 - **Shops and cooks**: an aisle-sorted shopping list that works offline in the shop (or prints,
   with the week's meals as a table for the fridge) and moves ticked items into the pantry; cook mode with scaled amounts, timers read from the method and
   the screen kept awake.
-- **Learns your prices and tastes**: prices from your own receipts; favourite recipes, "never
-  again", foods you love or hate.
+- **Learns your prices and tastes**: prices from your own receipts, and what each recipe costs
+  you a serving; favourite recipes, "never again", foods you love or hate.
 - **Tracks what you ate**: a food diary against your goals, a weight trend, and quick-add for
   anything off the plan (search or scan, exact amounts; the rest of the day rebalances).
 - **Vitamins and minerals**: iron, calcium, potassium, vitamins C and D, folate and B12 per

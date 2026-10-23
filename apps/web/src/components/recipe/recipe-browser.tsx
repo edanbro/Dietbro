@@ -12,9 +12,14 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
-import { type RecipeListItem, type Slot, useRecipeList } from "@/lib/api/hooks";
+import {
+  type RecipeList,
+  type RecipeListItem,
+  type Slot,
+  useRecipeList,
+} from "@/lib/api/hooks";
 import { pantryUse, stillNeeded } from "@/lib/food-name";
-import { formatMinutes, formatNumber } from "@/lib/format";
+import { formatMinutes, formatMoney, formatNumber } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { RecipeArt } from "@/components/recipe/recipe-art";
 
@@ -53,7 +58,13 @@ function Chip({
   );
 }
 
-function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
+function RecipeTile({
+  recipe,
+  currency,
+}: {
+  recipe: RecipeListItem;
+  currency: RecipeList["currency"];
+}) {
   return (
     <li>
       <Link
@@ -72,6 +83,13 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
               <ClockIcon aria-hidden className="size-3" />
               <span className="sr-only">about </span>
               {formatMinutes(recipe.minutes)}
+            </span>
+          ) : null}
+          {recipe.cost_per_serving && currency ? (
+            <span className="absolute right-2 bottom-2 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium tabular-nums">
+              <span className="sr-only">about </span>
+              {formatMoney(recipe.cost_per_serving, currency)}
+              <span className="sr-only"> a serving</span>
             </span>
           ) : null}
         </div>
@@ -191,7 +209,7 @@ export function RecipeBrowser() {
           </p>
           <ul className="grid grid-cols-2 gap-3">
             {items.map((r) => (
-              <RecipeTile key={r.id} recipe={r} />
+              <RecipeTile key={r.id} recipe={r} currency={list.data?.pages[0]?.currency ?? null} />
             ))}
           </ul>
           {list.hasNextPage ? (
