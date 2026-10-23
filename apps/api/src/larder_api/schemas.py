@@ -116,6 +116,20 @@ class PreferencesOut(PreferencesIn):
     # The liked and disliked foods, named (the ids include the generics they count as).
     liked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
     disliked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
+    # Busy nights (PUT /me/preferences/quick-nights): set on their own, not by PUT preferences.
+    quick_days: list[int] = Field(default_factory=list[int])
+    quick_minutes: int = 30
+
+
+QuickMinutes = Literal[20, 30, 45]
+
+
+class QuickNightsIn(BaseModel):
+    """Busy nights: on these weekdays (0 = Monday, 6 = Sunday) dinner takes at most
+    `minutes`, about (the planner picks among recipes estimated that quick)."""
+
+    days: list[Annotated[int, Field(ge=0, le=6)]] = Field(max_length=7)
+    minutes: QuickMinutes = 30
 
 
 class AllergiesIn(BaseModel):

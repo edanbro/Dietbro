@@ -28,6 +28,7 @@ from larder_api.schemas import (
     PreferencesOut,
     Problems,
     ProfileStatus,
+    QuickNightsIn,
     RegionIn,
     RegionOption,
     RegionOut,
@@ -403,6 +404,24 @@ async def put_preferences(
     return await _preferences_out(session, row)
 
 
+@router.put(
+    "/preferences/quick-nights",
+    operation_id="putQuickNights",
+    responses={409: {"model": Problems, "description": "preferences not set up yet"}},
+)
+async def put_quick_nights(
+    body: QuickNightsIn, user: CurrentUser, session: Session
+) -> PreferencesOut:
+    """Busy nights: the weekdays whose dinner the planner keeps quick, and how quick."""
+    row = await session.get(Preferences, user.id)
+    if row is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, ["Set your preferences first."])
+    row.quick_days = sorted(set(body.days))
+    row.quick_minutes = body.minutes
+    await session.commit()
+    return await _preferences_out(session, row)
+
+
 async def _preferences_out(session: AsyncSession, row: Preferences) -> PreferencesOut:
     ids = {*row.liked_food_ids, *row.disliked_food_ids}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
@@ -414,6 +433,8 @@ async def _preferences_out(session: AsyncSession, row: Preferences) -> Preferenc
         disliked_food_ids=row.disliked_food_ids,
         liked_foods=[summary(foods[i]) for i in row.liked_food_ids if i in foods],
         disliked_foods=[summary(foods[i]) for i in row.disliked_food_ids if i in foods],
+        quick_days=row.quick_days,
+        quick_minutes=row.quick_minutes,
     )
 
 

@@ -403,6 +403,11 @@ class Preferences(Base):
     blocked_recipe_ids: Mapped[list[int]] = mapped_column(
         ARRAY(Integer), default=list, server_default=text("'{}'")
     )
+    # Busy nights: on these weekdays (0 = Monday) dinner takes at most `quick_minutes`.
+    quick_days: Mapped[list[int]] = mapped_column(
+        ARRAY(SmallInteger), default=list, server_default=text("'{}'")
+    )
+    quick_minutes: Mapped[int] = mapped_column(SmallInteger, default=30, server_default="30")
     updated_at: Mapped[datetime] = _now()
 
 

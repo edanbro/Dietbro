@@ -212,6 +212,12 @@ async def _load_plan(session: AsyncSession, user: User, plan_id: int) -> MealPla
     return row
 
 
+_FRESH_NOTE = (
+    "Those meals don't all fit your goals as they are now, so this week was planned fresh."
+)
+_QUICK_NOTE = "Not every busy night could have a quick dinner that fits your goals this week."
+
+
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
@@ -268,16 +274,16 @@ async def create_plan(
         private=private,
     )
     pool = catalog.merged(private)
-    notes: list[str] = []
-    problem = fresh
+    repeat: dict[planning.Cell, tuple[int, ...]] = {}
+    repeat_notes: list[str] = []
     if cells:
-        choices, dropped = planning.repeat_choices(fresh, inputs, pool, cells)
-        problem = planning.constrain(fresh, inputs, pool, choices=choices, extra={})
+        repeat, dropped = planning.repeat_choices(fresh, inputs, pool, cells)
         if dropped:
-            notes.append(await planning.left_out_note(session, dropped))
+            repeat_notes.append(await planning.left_out_note(session, dropped))
+    # Busy nights: quick dinners on the user's chosen weekdays (a repeated meal wins its cell).
+    quick = planning.quick_choices(fresh, inputs, pool)
     # Food already logged in these dates (chat) keeps its meal empty and counts on its day.
-    logs = await planning.active_logs(session, user.id, start, problem.days)
-    problem = planning.with_logs(problem, inputs, pool, logs)
+    logs = await planning.active_logs(session, user.id, start, fresh.days)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
     await session.commit()
@@ -287,20 +293,36 @@ async def create_plan(
         plan, violations = planning.check_outcome(p, result)
         return result, plan, violations
 
-    try:
-        result, plan, violations = await solve(problem)
-    except planning.PlanningError as e:
-        if not problem.choices:
-            raise HTTPException(e.status_code, e.detail) from e
-        # The same meals can't all fit the user's goals as they are now: plan it fresh.
-        problem = planning.with_logs(fresh, inputs, pool, logs)
-        notes = [
-            "Those meals don't all fit your goals as they are now, so this week was planned fresh."
-        ]
+    # What the user asked for first; when it can't fit their goals as they are now, without
+    # the quick dinners, then without the repeated meals, then fresh.
+    attempts: list[tuple[dict[planning.Cell, tuple[int, ...]], list[str]]] = []
+    for keep_repeat in (True, False) if repeat else (False,):
+        for keep_quick in (True, False) if quick else (False,):
+            attempts.append(
+                (
+                    {**(quick if keep_quick else {}), **(repeat if keep_repeat else {})},
+                    [
+                        *(repeat_notes if keep_repeat else [_FRESH_NOTE] if repeat else []),
+                        *([] if keep_quick or not quick else [_QUICK_NOTE]),
+                    ],
+                )
+            )
+    *earlier, (last_choices, last_notes) = attempts
+    for choices, attempt_notes in earlier:
+        problem = _with_choices(fresh, inputs, pool, choices, logs)
         try:
             result, plan, violations = await solve(problem)
-        except planning.PlanningError as e2:
-            raise HTTPException(e2.status_code, e2.detail) from e2
+            notes = attempt_notes
+            break
+        except planning.PlanningError:
+            continue
+    else:
+        problem = _with_choices(fresh, inputs, pool, last_choices, logs)
+        try:
+            result, plan, violations = await solve(problem)
+        except planning.PlanningError as e:
+            raise HTTPException(e.status_code, e.detail) from e
+        notes = last_notes
     prepared = planning.Prepared(problem, version, seed, None, novelty)
     stats = planning.plan_stats(
         problem, result, plan, violations, seed=seed, time_limit_ms=settings.plan_time_limit_ms
@@ -319,6 +341,20 @@ async def create_plan(
     row = planning.save_plan(session, user.id, prepared, result, plan, stats, currency, unshoppable)
     await session.commit()
     return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, row.id)))
+
+
+def _with_choices(
+    fresh: Problem,
+    inputs: planning.UserInputs,
+    pool: planning.PlanningCatalog,
+    choices: dict[planning.Cell, tuple[int, ...]],
+    logs: list[MealLog],
+) -> Problem:
+    """The fresh problem with these per-cell choices and the food already logged."""
+    constrained = (
+        planning.constrain(fresh, inputs, pool, choices=choices, extra={}) if choices else fresh
+    )
+    return planning.with_logs(constrained, inputs, pool, logs)
 
 
 async def _repeat_cells(

@@ -685,6 +685,52 @@ def repeat_choices(
     return choices, dropped
 
 
+QUICK_CHOICES = 12  # quick dinners offered per busy night: enough variety for repeat caps
+
+
+def quick_choices(
+    problem: Problem, inputs: UserInputs, pool: PlanningCatalog
+) -> dict[Cell, tuple[int, ...]]:
+    """Busy nights (`Preferences.quick_days`): each such day's dinner becomes a choice among
+    recipes known to take at most `quick_minutes`, safe for the user (`candidates.allowed`),
+    not blocked and of the dinner type. The prefilter's own candidates come first, topped up
+    from the whole catalogue by preference, up to QUICK_CHOICES. {} when no day is busy, the
+    plan has no dinner slot, or no quick dinner suits the user."""
+    prefs = inputs.preferences
+    busy = set(prefs.quick_days or ())
+    if not busy or Slot.DINNER not in {s.slot for s in problem.slots}:
+        return {}
+    limit = prefs.quick_minutes
+    profile = profile_of(inputs.allergies, prefs)
+    blocked = set(prefs.blocked_recipe_ids or ())
+    taste = taste_of(prefs)
+
+    def quick(rid: int) -> bool:
+        recipe = pool.catalog.recipes.get(rid)
+        text = pool.text.get(rid)
+        return (
+            recipe is not None
+            and text is not None
+            and text.minutes is not None
+            and text.minutes <= limit
+            and rid not in blocked
+            and Slot.DINNER in recipe.meal_types
+            and allowed(recipe, pool.catalog.foods, profile)
+        )
+
+    def rank(rid: int) -> tuple[bool, float, int]:
+        return (rid not in problem.recipes, -preference(pool.catalog.recipes[rid], taste), rid)
+
+    ids = tuple(sorted(filter(quick, pool.catalog.recipes), key=rank)[:QUICK_CHOICES])
+    if not ids:
+        return {}
+    return {
+        (d, Slot.DINNER): ids
+        for d in range(problem.days)
+        if (problem.start + timedelta(days=d)).weekday() in busy
+    }
+
+
 def with_logs(
     problem: Problem, inputs: UserInputs, pool: PlanningCatalog, logs: Iterable[db.MealLog]
 ) -> Problem:
