@@ -51,10 +51,15 @@ def food_text(description: str) -> str:
 
 
 async def embed_foods(session: AsyncSession, embedder: Embedder) -> int:
-    """(Re)embed every food that has no embedding from the current model."""
+    """(Re)embed every generic USDA food (what recipes resolve to) that has no embedding from
+    the current model. Other sources are linked to these, never embedded."""
     have = select(FoodEmbedding.food_id).where(FoodEmbedding.model == embedder.model)
     foods = (
-        await session.execute(select(Food.id, Food.description).where(Food.id.not_in(have)))
+        await session.execute(
+            select(Food.id, Food.description).where(
+                Food.id.not_in(have), Food.data_type.in_(("foundation", "sr_legacy"))
+            )
+        )
     ).all()
     await session.execute(delete(FoodEmbedding).where(FoodEmbedding.model != embedder.model))
     for i in range(0, len(foods), _BATCH):

@@ -11,20 +11,35 @@ import { formatNumber, formatServings, servingsLabel } from "@/lib/format";
 
 import { MealActions, type MealActionsProps } from "./meal-actions";
 import { SLOT_ICON, SLOT_LABEL } from "./slots";
+import { RecipeArt } from "@/components/recipe/recipe-art";
 
 /**
  * A planned meal: photo (or the slot's icon), name, servings and the numbers that matter; a
  * check when it was marked eaten. With `actions`, an options button opens the meal's actions
  * under the card.
  */
-export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsProps }) {
+export function MealCard({
+  meal,
+  actions,
+  note,
+}: {
+  meal: Meal;
+  actions?: MealActionsProps;
+  /** e.g. "Leftovers from last night's dinner" */
+  note?: string;
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const eaten = meal.status === "eaten";
   return (
-    <div className={cn("rounded-xl border", eaten && "bg-muted/40")}>
+    <div
+      className={cn(
+        "rounded-xl border bg-card shadow-xs motion-safe:transition-shadow hover:shadow-sm",
+        eaten && "bg-muted/40",
+      )}
+    >
       <div className="flex items-center">
-        <MealLink meal={meal} chevron={!actions} />
+        <MealLink meal={meal} chevron={!actions} note={note} />
         {actions ? (
           <Button
             variant="ghost"
@@ -45,34 +60,14 @@ export function MealCard({ meal, actions }: { meal: Meal; actions?: MealActionsP
   );
 }
 
-function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
+function MealLink({ meal, chevron, note }: { meal: Meal; chevron: boolean; note?: string }) {
   const Icon = SLOT_ICON[meal.slot];
   return (
     <Link
-      href={`/recipes/${meal.recipe.id}`}
+      href={`/recipes/${meal.recipe.id}?servings=${meal.servings}`}
       className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      {meal.recipe.image_url ? (
-        // Recipe photos come from many hosts at arbitrary sizes; a plain lazy <img> avoids
-        // routing every one through the image optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={meal.recipe.image_url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          width={64}
-          height={64}
-          className="size-16 shrink-0 rounded-lg bg-muted object-cover"
-        />
-      ) : (
-        <div
-          data-testid="meal-placeholder"
-          className="grid size-16 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground"
-        >
-          <Icon aria-hidden className="size-6" />
-        </div>
-      )}
+      <RecipeArt recipe={meal.recipe} className="size-16 shrink-0 rounded-lg" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Icon aria-hidden className="size-3.5" />
@@ -98,6 +93,19 @@ function MealLink({ meal, chevron }: { meal: Meal; chevron: boolean }) {
           {formatNumber(meal.nutrition.kcal)} kcal · {formatNumber(meal.nutrition.protein_g)} g
           protein
         </span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {formatNumber(meal.nutrition.carbs_g)} g carbs · {formatNumber(meal.nutrition.fat_g)} g
+          fat
+        </span>
+        {note ? (
+          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{note}</span>
+        ) : null}
+        {meal.uses_pantry.length ? (
+          <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
+            Uses your {meal.uses_pantry.slice(0, 2).join(", ").toLowerCase()}
+            {meal.uses_pantry.length > 2 ? ` +${meal.uses_pantry.length - 2}` : ""}
+          </span>
+        ) : null}
       </div>
       {chevron ? (
         <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />

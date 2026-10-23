@@ -1,0 +1,46 @@
+# Render blueprint for the API on the free plan (docs/deploy.md). The web app goes on Vercel,
+# Postgres on Neon, Redis on Upstash. Secrets are entered in Render's dashboard (sync: false),
+# never here.
+services:
+  - type: web
+    name: mealwright-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    # No separate worker on the free plan: migrate, then serve with background work in-process.
+    dockerCommand: >-
+      sh -c "alembic -c /app/alembic.ini upgrade head &&
+      uvicorn larder_api.main:app --host 0.0.0.0 --port $PORT --proxy-headers"
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: WORKER_IN_API
+        value: "true"
+      - key: PLAN_WORKERS
+        value: "1"
+      - key: PLAN_CONCURRENCY
+        value: "1"
+      - key: TRUSTED_PROXY_HOPS # Render's proxy adds the client's address to X-Forwarded-For
+        value: "1"
+      - key: DATABASE_URL # Neon, asyncpg form: postgresql+asyncpg://...?ssl=require
+        sync: false
+      - key: REDIS_URL # Upstash, TLS form: rediss://default:...@...upstash.io:6379
+        sync: false
+      - key: CORS_ORIGINS # JSON list, e.g. ["https://mealwright.vercel.app"]
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY # optional: without it the chat runs offline
+        sync: false
+      - key: VAPID_PUBLIC_KEY # optional: expiry reminders (uv run larder-vapid)
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: DEMO_AUTH_SUBJECT # optional: the demo user's Clerk id
+        sync: false
+      - key: OFF_USER_AGENT # optional: barcode lookups on Open Food Facts
+        sync: false

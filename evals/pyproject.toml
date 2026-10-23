@@ -1,0 +1,27 @@
+[project]
+name = "larder-evals"
+version = "0.0.0"
+description = "Seeded scenarios scoring the hybrid planner (and an LLM-only baseline) with one validator."
+requires-python = ">=3.12"
+dependencies = [
+    "larder-api",
+    "larder-core",
+    "larder-llm",
+    "larder-solver",
+]
+
+[project.scripts]
+larder-evals = "larder_evals.cli:main"
+
+[tool.uv.sources]
+larder-api = { workspace = true }
+larder-core = { workspace = true }
+larder-llm = { workspace = true }
+larder-solver = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/larder_evals"]

@@ -3,12 +3,13 @@ import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/api";
-import { makePlan, makeShoppingList } from "@/test/fixtures";
+import { aisle } from "@/lib/aisles";
+import { item, makePlan, makeShoppingList } from "@/test/fixtures";
 
-import { aisle, groupByAisle, ShoppingPage } from "./shopping-page";
+import { groupByAisle, listText, ShoppingPage } from "./shopping-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -81,19 +82,19 @@ describe("ShoppingPage", () => {
         .getAllByRole("checkbox")
         .map((c) => c.getAttribute("aria-checked")),
     ).toEqual(["false", "false"]);
-    const onions = within(veg).getByRole("checkbox", { name: "Onions, raw" });
+    const onions = within(veg).getByRole("checkbox", { name: "Onions" });
     expect(onions).toHaveAccessibleDescription("450 g · ≈ 3 medium");
     expect(veg).toHaveTextContent("£0.60");
 
     const dairy = screen.getByRole("region", { name: "Dairy & eggs" });
-    expect(within(dairy).getByRole("checkbox", { name: "Milk, whole" })).toHaveAttribute(
+    expect(within(dairy).getByRole("checkbox", { name: "Milk" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
     expect(dairy).toHaveTextContent("1.3 kg");
 
     const staples = screen.getByRole("region", { name: "Check you have" });
-    expect(within(staples).getByRole("checkbox", { name: "Salt, table" })).toBeInTheDocument();
+    expect(within(staples).getByRole("checkbox", { name: "Salt" })).toBeInTheDocument();
     expect(staples).not.toHaveTextContent("£");
 
     expect(screen.getByText("≈ £12.34")).toBeInTheDocument();
@@ -113,10 +114,10 @@ describe("ShoppingPage", () => {
     const server = shoppingServer({ gate: { 11: gate.promise } });
     const calls = setup(server.routes);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions, raw" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions" }));
 
     // Checked before the server answers.
-    await waitFor(() => expect(box("Onions, raw")).toHaveAttribute("aria-checked", "true"));
+    await waitFor(() => expect(box("Onions")).toHaveAttribute("aria-checked", "true"));
     expect(screen.getByText("2 of 3 ticked")).toBeInTheDocument();
     expect(calls.find((c) => c.method === "PATCH")).toMatchObject({
       path: "/plans/7/shopping/11",
@@ -131,7 +132,7 @@ describe("ShoppingPage", () => {
         2,
       ),
     );
-    expect(box("Onions, raw")).toHaveAttribute("aria-checked", "true");
+    expect(box("Onions")).toHaveAttribute("aria-checked", "true");
     expect(toast.error).not.toHaveBeenCalled();
   });
 
@@ -141,15 +142,15 @@ describe("ShoppingPage", () => {
     const server = shoppingServer({ fail: [13], gate: { 13: gate.promise }, refetch: "hang" });
     setup(server.routes);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Milk, whole" }));
-    await waitFor(() => expect(box("Milk, whole")).toHaveAttribute("aria-checked", "false"));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Milk" }));
+    await waitFor(() => expect(box("Milk")).toHaveAttribute("aria-checked", "false"));
 
     gate.resolve();
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("Milk, whole")),
     );
-    expect(box("Milk, whole")).toHaveAttribute("aria-checked", "true");
+    expect(box("Milk")).toHaveAttribute("aria-checked", "true");
   });
 
   it("sends ticks one at a time, in order", async () => {
@@ -158,12 +159,12 @@ describe("ShoppingPage", () => {
     const calls = setup(server.routes);
     const patches = () => calls.filter((c) => c.method === "PATCH").map((c) => c.path);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions, raw" }));
-    fireEvent.click(box("Spinach, raw"));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions" }));
+    fireEvent.click(box("Spinach"));
 
     // Both boxes flip at once…
-    await waitFor(() => expect(box("Spinach, raw")).toHaveAttribute("aria-checked", "true"));
-    expect(box("Onions, raw")).toHaveAttribute("aria-checked", "true");
+    await waitFor(() => expect(box("Spinach")).toHaveAttribute("aria-checked", "true"));
+    expect(box("Onions")).toHaveAttribute("aria-checked", "true");
     // …but the second request waits for the first.
     await new Promise((r) => setTimeout(r, 30));
     expect(patches()).toEqual(["/plans/7/shopping/11"]);
@@ -174,8 +175,8 @@ describe("ShoppingPage", () => {
       expect(patches()).toEqual(["/plans/7/shopping/11", "/plans/7/shopping/12"]),
     );
     await waitFor(() => expect(server.list.items[1].checked).toBe(true));
-    expect(box("Onions, raw")).toHaveAttribute("aria-checked", "true");
-    expect(box("Spinach, raw")).toHaveAttribute("aria-checked", "true");
+    expect(box("Onions")).toHaveAttribute("aria-checked", "true");
+    expect(box("Spinach")).toHaveAttribute("aria-checked", "true");
   });
 
   it("keeps a later tick when an earlier one fails", async () => {
@@ -183,22 +184,97 @@ describe("ShoppingPage", () => {
     const server = shoppingServer({ gate: { 11: gate.promise }, fail: [11] });
     setup(server.routes);
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions, raw" }));
-    fireEvent.click(box("Spinach, raw"));
-    await waitFor(() => expect(box("Spinach, raw")).toHaveAttribute("aria-checked", "true"));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Onions" }));
+    fireEvent.click(box("Spinach"));
+    await waitFor(() => expect(box("Spinach")).toHaveAttribute("aria-checked", "true"));
 
     gate.resolve();
 
-    await waitFor(() => expect(box("Onions, raw")).toHaveAttribute("aria-checked", "false"));
+    await waitFor(() => expect(box("Onions")).toHaveAttribute("aria-checked", "false"));
     await waitFor(() => expect(server.list.items[1].checked).toBe(true));
-    expect(box("Spinach, raw")).toHaveAttribute("aria-checked", "true");
+    expect(box("Spinach")).toHaveAttribute("aria-checked", "true");
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
 
   it("points to the plan when there isn't one", async () => {
     setup({ "GET /plans/current": json(null) });
 
-    expect(await screen.findByText(/No plan yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing to buy yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Plan my week" })).toHaveAttribute("href", "/plan");
+  });
+});
+
+
+describe("Shopping to pantry and your own items", () => {
+  const ticked = makeShoppingList({
+    items: [
+      item({ food_id: 11, name: "Onions, raw", checked: true }),
+      item({ food_id: 12, name: "Spinach, raw", checked: true, stocked: true }),
+      item({ food_id: 13, name: "Rice, white" }),
+    ],
+  });
+
+  it("moves ticked lines not moved yet into the pantry", async () => {
+    const calls = setup({
+      "GET /plans/7/shopping": json(ticked),
+      "GET /shopping/extras": json([]),
+      "POST /plans/7/shopping/stock": json([{ id: 1 }], 201),
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Move 1 ticked to pantry" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/plans/7/shopping/stock")).toBe(true));
+    expect(calls.find((c) => c.path === "/plans/7/shopping/stock")?.body).toEqual({
+      food_ids: null,
+    });
+    expect(screen.getByText(/· in your pantry/)).toBeInTheDocument();
+  });
+
+  it("hides ticked lines on request", async () => {
+    setup({ "GET /plans/7/shopping": json(ticked), "GET /shopping/extras": json([]) });
+
+    fireEvent.click(await screen.findByRole("switch", { name: "Hide ticked" }));
+
+    expect(screen.queryByText("Onions, raw")).not.toBeInTheDocument();
+    expect(screen.getByText("White rice")).toBeInTheDocument();
+  });
+
+  it("adds your own items", async () => {
+    const calls = setup({
+      "GET /shopping/extras": json([{ id: 1, name: "foil", checked: false }]),
+      "POST /shopping/extras": json({ id: 2, name: "bin bags", checked: false }, 201),
+    });
+
+    expect(await screen.findByText("foil")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Add your own item"), { target: { value: "bin bags" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "POST" && c.path === "/shopping/extras")?.body).toEqual(
+        { name: "bin bags" },
+      ),
+    );
+  });
+
+  it("writes the list as text by aisle, without ticked or staple lines", () => {
+    const list = makeShoppingList({
+      items: [
+        item({ food_id: 1, name: "Onions, raw", category: "Vegetables and Vegetable Products", approx_units: "≈ 3 medium" }),
+        item({ food_id: 2, name: "Rice, white", category: "Cereal Grains and Pasta", grams: 1000 }),
+        item({ food_id: 3, name: "Spinach, raw", checked: true }),
+        item({ food_id: 4, name: "Salt", staple: true }),
+      ],
+    });
+
+    expect(listText(list, [{ id: 1, name: "foil", checked: false }])).toBe(
+      [
+        "Vegetables:",
+        "- Onions, raw (≈ 3 medium)",
+        "Grains & pasta:",
+        "- Rice, white (1 kg)",
+        "Also:",
+        "- foil",
+      ].join("\n"),
+    );
   });
 });

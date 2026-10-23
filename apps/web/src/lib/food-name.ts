@@ -1,0 +1,95 @@
+/**
+ * Shopping-list names from USDA-style descriptions, which are written for a database index:
+ * "Peppers, sweet, red, raw" becomes "Sweet red peppers", "Spices, turmeric, ground" becomes
+ * "Ground turmeric" and "Beef, chuck, arm pot roast, separable lean only, ..." becomes "Beef"
+ * with "chuck, arm pot roast" as a detail. Product names (no commas) come back unchanged.
+ */
+
+/** Parts that say nothing a shopper needs. */
+const NOISE = [
+  /^raw$/,
+  /^commercially prepared$/,
+  /^(un)?enriched$/,
+  /^unbleached$/,
+  /^year round average$/,
+  /^includes skin$/,
+  /^(meat|flesh) only$/,
+  /^flesh and skin$/,
+  /^separable lean( and fat)?( only)?$/,
+  /^trimmed to /,
+  /^(choice|select|all grades)$/,
+  /^regular$/,
+  /^salad or cooking$/,
+  /^nfs$/,
+  /^includes foods for usda/,
+  /^broilers? or fryers$/,
+  /^center cut$/,
+  /^ripe$/,
+  /^table$/,
+  /^solids and liquids$/,
+  /^without salt$/,
+];
+
+/** Words that read naturally in front of the food: "red onions", "ground ginger". */
+const ADJECTIVES = new Set([
+  "red",
+  "white",
+  "yellow",
+  "green",
+  "brown",
+  "black",
+  "sweet",
+  "hot",
+  "whole-wheat",
+  "wholemeal",
+  "rye",
+  "salted",
+  "unsalted",
+  "granulated",
+  "smoked",
+  "ground",
+  "dried",
+  "fresh",
+  "frozen",
+  "canned",
+  "light",
+  "dark",
+]);
+
+/** Leading words that only file the food under a heading: "Spices, paprika" is paprika. */
+const HEADINGS = new Set(["spices", "fish", "salad dressing", "beverages", "cereals", "sugars"]);
+/** Headings that belong after the food: "Oil, olive" is olive oil. */
+const TRAILING = new Set(["oil", "nuts", "seeds", "cheese", "vinegar"]);
+
+export type FoodName = { name: string; detail: string | null };
+
+function capitalise(s: string): string {
+  return s ? s[0]!.toUpperCase() + s.slice(1) : s;
+}
+
+export function foodName(description: string): FoodName {
+  const parts = description
+    .replace(/\s*\(includes foods for usda[^)]*\)/gi, "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length < 2) return { name: description.trim(), detail: null };
+
+  let [head, ...rest] = parts;
+  rest = rest.filter((p) => !NOISE.some((re) => re.test(p.toLowerCase())));
+  const lower = head!.toLowerCase();
+  if (HEADINGS.has(lower) && rest.length) {
+    head = rest.shift()!;
+    // "Sugars, granulated" keeps its noun.
+    if (lower === "sugars" && ADJECTIVES.has(head.toLowerCase())) head = `${head} sugar`;
+  } else if (TRAILING.has(lower) && rest.length) {
+    head = `${rest.shift()!} ${lower}`;
+  }
+
+  const adjectives: string[] = [];
+  while (rest.length && ADJECTIVES.has(rest[0]!.toLowerCase())) {
+    adjectives.push(rest.shift()!.toLowerCase());
+  }
+  const name = capitalise([...adjectives, head!.toLowerCase()].join(" "));
+  return { name, detail: rest.length ? rest.join(", ").toLowerCase() : null };
+}

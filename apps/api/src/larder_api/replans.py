@@ -19,7 +19,8 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from datetime import time as wall_time
 
 from fastapi import status
 from sqlalchemy import select
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from larder_api import planning
 from larder_api.chat import limits, replan
 from larder_api.chat.gate import BAD_TODAY, BUSY, ChatRefused, Code
+from larder_api.chat.offplan import Estimate
 from larder_api.chat.scope import ChatScope, Models
 from larder_api.schemas import ChatProblem, ReplanRequest
 from larder_api.settings import Settings
@@ -84,30 +86,30 @@ async def _gate(
         raise
 
 
-async def run(
-    session: AsyncSession,
+def app_scope(
     user_id: int,
-    body: ReplanRequest,
     *,
+    today: date,
+    local_time: wall_time | None,
+    now: datetime,
     sessionmaker: async_sessionmaker[AsyncSession],
     catalog: planning.CatalogCache,
     planner: planning.Planner,
     settings: Settings,
-    now: datetime,
-) -> Timed:
-    token = await _gate(session, user_id, body, settings, now)
-    started = time.perf_counter()
+    client_id: uuid.UUID | None = None,
+) -> ChatScope:
+    """A scope for work started from the app's own screens: no thread, message or models."""
 
     async def nothing(_: object) -> None:
         return None
 
     async def no_calls(_: ModelCall) -> None:
-        raise AssertionError("a plan-screen replan never calls a model")
+        raise AssertionError("app screens never call a model")
 
-    scope = ChatScope(
+    return ChatScope(
         user_id=user_id,
-        today=body.today,
-        local_time=body.local_time,
+        today=today,
+        local_time=local_time,
         now=now,
         thread_id=None,
         message_id=None,
@@ -119,10 +121,38 @@ async def run(
         models=Models(offline_reason="no_key"),
         emit=nothing,
         log_call=no_calls,
+        client_id=client_id,
+    )
+
+
+async def run(
+    session: AsyncSession,
+    user_id: int,
+    body: ReplanRequest,
+    *,
+    sessionmaker: async_sessionmaker[AsyncSession],
+    catalog: planning.CatalogCache,
+    planner: planning.Planner,
+    settings: Settings,
+    now: datetime,
+    estimates: dict[int, Estimate] | None = None,
+) -> Timed:
+    token = await _gate(session, user_id, body, settings, now)
+    started = time.perf_counter()
+
+    scope = app_scope(
+        user_id,
+        today=body.today,
+        local_time=body.local_time,
+        now=now,
+        sessionmaker=sessionmaker,
+        catalog=catalog,
+        planner=planner,
+        settings=settings,
         client_id=body.client_id,
     )
     try:
-        outcome = await replan.apply_changes(scope, body.changes, source="app")
+        outcome = await replan.apply_changes(scope, body.changes, source="app", estimates=estimates)
     finally:
         await limits.release_turn(sessionmaker, user_id, token)
     timed = Timed(

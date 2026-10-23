@@ -17,6 +17,8 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
+    Computed,
     Date,
     DateTime,
     Float,
@@ -31,8 +33,9 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     text,
+    true,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, deferred, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -52,7 +55,9 @@ class Base(DeclarativeBase):
 
 
 class NutrientColumns:
-    """Macro columns shared by foods (per 100 g) and recipes (per serving)."""
+    """Nutrient columns shared by foods (per 100 g) and recipes (per serving). Vitamins and
+    minerals (iron down): a recipe's is null when an ingredient that matters (10 g or more)
+    has no value for it (larder_core.nutrition.micro_totals), never a silent zero."""
 
     kcal: Mapped[float | None] = mapped_column(Float)
     protein_g: Mapped[float | None] = mapped_column(Float)
@@ -62,10 +67,29 @@ class NutrientColumns:
     sugars_g: Mapped[float | None] = mapped_column(Float)
     sat_fat_g: Mapped[float | None] = mapped_column(Float)
     sodium_mg: Mapped[float | None] = mapped_column(Float)
+    iron_mg: Mapped[float | None] = mapped_column(Float)
+    calcium_mg: Mapped[float | None] = mapped_column(Float)
+    potassium_mg: Mapped[float | None] = mapped_column(Float)
+    vitamin_c_mg: Mapped[float | None] = mapped_column(Float)
+    vitamin_d_ug: Mapped[float | None] = mapped_column(Float)
+    folate_ug: Mapped[float | None] = mapped_column(Float)
+    vitamin_b12_ug: Mapped[float | None] = mapped_column(Float)
+
+
+# Ids of non-USDA foods start here (foods_local_id_seq); USDA FDC ids are far below.
+LOCAL_ID_START = 1_000_000_000
 
 
 class Food(NutrientColumns, Base):
-    """A USDA FoodData Central food. `id` is the FDC id; nutrients are per 100 g."""
+    """A food; nutrients are per 100 g.
+
+    `source` usda: a USDA FoodData Central food, `id` = FDC id (data_type foundation, sr_legacy
+    or survey_fndds). cofid: UK McCance & Widdowson (`source_id` = food code). off: an Open Food
+    Facts product (`source_id` = barcode). `category` is always a USDA category name (other
+    sources are mapped, their own label kept in `source_category`), so allergen tags, prices,
+    shelf life and aisles work for every food. `generic_food_id` is the generic food a regional
+    or branded one counts as (pantry matching, prices); recipes only use generic foods.
+    """
 
     __tablename__ = "foods"
     __table_args__ = (
@@ -76,12 +100,53 @@ class Food(NutrientColumns, Base):
             postgresql_using="gin",
             postgresql_ops={"description": "gin_trgm_ops"},
         ),
+        Index("ix_foods_search_tsv", "search_tsv", postgresql_using="gin"),
+        Index("ix_foods_countries", "countries", postgresql_using="gin"),
+        Index(
+            "uq_foods_barcode",
+            "barcode",
+            unique=True,
+            postgresql_where=text("barcode IS NOT NULL"),
+        ),
+        UniqueConstraint("source", "source_id"),
+        CheckConstraint(f"(source = 'usda') = (id < {LOCAL_ID_START})", name="usda_ids"),
+        CheckConstraint(
+            "generic_food_id IS NULL OR generic_food_id <> id", name="generic_not_self"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     description: Mapped[str] = mapped_column(Text)
-    data_type: Mapped[str] = mapped_column(String(32))  # foundation | sr_legacy
+    # foundation | sr_legacy | survey_fndds | cofid | branded
+    data_type: Mapped[str] = mapped_column(String(32))
     category: Mapped[str | None] = mapped_column(String(128))
+    source: Mapped[str] = mapped_column(String(16), server_default="usda", default="usda")
+    source_id: Mapped[str | None] = mapped_column(String(32))  # NULL for USDA (the id is)
+    source_category: Mapped[str | None] = mapped_column(Text)
+    brand: Mapped[str | None] = mapped_column(Text)
+    barcode: Mapped[str | None] = mapped_column(String(14))  # GTIN, normalised
+    countries: Mapped[list[str] | None] = mapped_column(ARRAY(String(2)))  # NULL: anywhere
+    generic_food_id: Mapped[int | None] = mapped_column(
+        ForeignKey("foods.id", ondelete="SET NULL"), index=True
+    )
+    generic_method: Mapped[str | None] = mapped_column(String(16))  # how the link was made
+    allergens_declared: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
+    traces_declared: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
+    ingredients_text: Mapped[str | None] = deferred(mapped_column(Text))
+    origin: Mapped[str | None] = mapped_column(String(8))  # off: bulk | lookup
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Products: a link to Open Food Facts' photo (CC BY-SA, not stored) and its Nutri-Score.
+    image_url: Mapped[str | None] = mapped_column(Text)
+    off_grade: Mapped[str | None] = mapped_column(String(1))  # a-e
+    search_tsv: Mapped[Any] = deferred(
+        mapped_column(
+            TSVECTOR,
+            Computed(
+                "to_tsvector('english'::regconfig, coalesce(brand, '') || ' ' || description)",
+                persisted=True,
+            ),
+        )
+    )
 
     portions: Mapped[list["FoodPortion"]] = relationship(
         back_populates="food", cascade="all, delete-orphan", passive_deletes=True
@@ -240,11 +305,25 @@ class User(Base):
     auth_subject: Mapped[str] = mapped_column(String(255), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = _now()
+    # Region (larder_core.regions): ISO country, IANA time zone, BCP 47 locale. NULL until the
+    # client saves the region it guessed from the browser (treated as GB meanwhile).
+    country: Mapped[str | None] = mapped_column(String(2))
+    timezone: Mapped[str | None] = mapped_column(String(64))
+    locale: Mapped[str | None] = mapped_column(String(35))
     # The chat turn in progress (one per user): taken with a conditional UPDATE, released by
     # token; a lock older than the turn deadline is stale and may be taken over.
     chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     chat_turn_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     chat_turn_message_id: Mapped[int | None] = mapped_column(Integer)  # the user's message
+    # The private calendar feed (/calendar/<token>.ics): NULL when off. Meal times for it as
+    # {"breakfast": "08:00", ...}; NULL means the defaults.
+    calendar_token: Mapped[str | None] = mapped_column(
+        String(32), unique=True, info={"constraint": "uq_users_calendar_token"}
+    )
+    calendar_times: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    # The Sunday-evening recap by push (larder_api.reminders.send_recaps), in browsers that
+    # have reminders on.
+    weekly_recap: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
 
 class Goals(Base):
@@ -287,6 +366,20 @@ class BodyProfile(Base):
     updated_at: Mapped[datetime] = _now()
 
 
+class BodyWeight(Base):
+    """A weigh-in (one per day; a second the same day replaces it). The newest is copied to
+    the body profile, so energy targets follow the user's weight."""
+
+    __tablename__ = "body_weights"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    measured_on: Mapped[date] = mapped_column(Date, primary_key=True)  # the user's local date
+    weight_kg: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Preferences(Base):
     """Soft preferences: the solver rewards likes and penalises dislikes, never forbids."""
 
@@ -300,6 +393,13 @@ class Preferences(Base):
     disliked_cuisines: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
     liked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
     disliked_food_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    # Recipe feedback: favourites are planned more often; blocked ones never again.
+    favourite_recipe_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer), default=list, server_default=text("'{}'")
+    )
+    blocked_recipe_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer), default=list, server_default=text("'{}'")
+    )
     updated_at: Mapped[datetime] = _now()
 
 
@@ -415,9 +515,97 @@ class ShoppingItem(Base):
     cost_minor: Mapped[int] = mapped_column(Integer)
     staple: Mapped[bool] = mapped_column(Boolean, default=False)
     checked: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Bought and moved into the pantry (POST /plans/{id}/shopping/stock); kept across replans.
+    stocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     plan: Mapped[MealPlan] = relationship(back_populates="shopping")
     food: Mapped[Food] = relationship()
+
+
+class PushSubscription(Base):
+    """A browser that gets expiry reminders (Web Push): its push service endpoint and keys.
+    `last_sent_on` (the user's local date) keeps it to one reminder a day."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(100))
+    last_sent_on: Mapped[date | None] = mapped_column(Date)
+    recap_sent_on: Mapped[date | None] = mapped_column(Date)  # the Sunday it last went out
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShareLink(Base):
+    """A read-only public link (/s/<token>) to one recipe or to a week's plan (the newest version
+    starting on `plan_start`). Shows only the recipe or the meals: never pantry, goals, weight
+    or allergies. Revoking it stops the link working."""
+
+    __tablename__ = "share_links"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'recipe' AND recipe_id IS NOT NULL AND plan_start IS NULL)"
+            " OR (kind = 'week' AND plan_start IS NOT NULL AND recipe_id IS NULL)",
+            name="target",  # ck_share_links_target by the naming convention
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token: Mapped[str] = mapped_column(String(32), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(8))  # recipe | week
+    recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
+    plan_start: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RecipeNote(Base):
+    """The user's own note on a recipe ("more chilli") and a 1-5 star rating. Private: shown on
+    their recipe page and in cook mode, never on a share link. Ratings don't steer the planner;
+    favourites and "never again" do."""
+
+    __tablename__ = "recipe_notes"
+    __table_args__ = (CheckConstraint("rating BETWEEN 1 AND 5", name="rating"),)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    recipe_id: Mapped[int] = mapped_column(
+        ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    rating: Mapped[int | None] = mapped_column(SmallInteger)
+    updated_at: Mapped[datetime] = _now()
+
+
+class PlanTemplate(Base):
+    """A week of meals saved by name ("busy weeknights") to plan from again. `cells` are
+    [{"day": 0-6, "slot", "recipe_id"}], day counted from the template's first day. Planning from
+    it checks every recipe again against the user's current allergies, diet and blocks."""
+
+    __tablename__ = "plan_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    cells: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShoppingExtra(Base):
+    """Something the user wants on their shopping list that no plan needs ("bin bags"). Per
+    user, not per plan, so it survives replans until bought and cleared."""
+
+    __tablename__ = "shopping_extras"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    checked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 # --- chat and LLM layer (M4) ------------------------------------------------------------------

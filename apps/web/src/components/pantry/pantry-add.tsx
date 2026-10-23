@@ -6,14 +6,33 @@ import { toast } from "sonner";
 
 import { FoodPicker } from "@/components/food-picker";
 import { ErrorAlert, LabeledInput, NativeSelect } from "@/components/form-bits";
+import { GradeBadge, ProductThumb } from "@/components/food-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { type FoodSummary, useAddPantryItem, useFood } from "@/lib/api/hooks";
+import {
+  type FoodDetail,
+  type FoodSummary,
+  useAddPantryItem,
+  useAllergens,
+  useFood,
+} from "@/lib/api/hooks";
+import { allergenLabel } from "@/lib/format";
 
-/** Pick a food, then how much (in any unit USDA can weigh for it) and when it expires. */
-export function PantryAdd({ onAdded }: { onAdded?: () => void }) {
-  const [food, setFood] = useState<FoodSummary | null>(null);
+/**
+ * Pick a food (or start from one, e.g. a scanned product), then how much (in any unit we can
+ * weigh for it) and when it expires.
+ */
+export function PantryAdd({
+  onAdded,
+  onCleared,
+  initialFood = null,
+}: {
+  onAdded?: () => void;
+  onCleared?: () => void; // the chosen food was dropped ("choose another")
+  initialFood?: FoodSummary | null;
+}) {
+  const [food, setFood] = useState<FoodSummary | null>(initialFood);
   const [quantity, setQuantity] = useState("1");
   const [unit, setUnit] = useState("");
   const [expires, setExpires] = useState("");
@@ -58,11 +77,29 @@ export function PantryAdd({ onAdded }: { onAdded?: () => void }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Add to pantry">
-      <div className="flex items-start justify-between gap-2 rounded-lg bg-muted p-3">
-        <span className="text-sm font-medium">{food.description}</span>
-        <button type="button" aria-label="Choose another food" onClick={reset}>
-          <XIcon className="size-4" />
-        </button>
+      <div className="flex flex-col gap-1.5 rounded-lg bg-muted p-3">
+        <div className="flex items-start justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-3">
+            <ProductThumb url={food.image_url} size={48} />
+            <span className="text-sm font-medium">
+              {food.brand ? `${food.brand} ` : ""}
+              {food.description}
+            </span>
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Choose another food"
+            onClick={() => {
+              reset();
+              onCleared?.();
+            }}
+          >
+            <XIcon />
+          </Button>
+        </div>
+        {detail ? <FoodFacts detail={detail} /> : null}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <LabeledInput
@@ -106,5 +143,28 @@ export function PantryAdd({ onAdded }: { onAdded?: () => void }) {
         Add to pantry
       </Button>
     </form>
+  );
+}
+
+/** What a food counts as for planning, what it contains and where the data comes from. */
+function FoodFacts({ detail }: { detail: FoodDetail }) {
+  const { data: options } = useAllergens();
+  const label = (codes: readonly string[]) => codes.map((a) => allergenLabel(a, options)).join(", ");
+  return (
+    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <GradeBadge grade={detail.grade} />
+      {detail.counts_as ? (
+        <p>
+          Counts as <span className="text-foreground">{detail.counts_as.description}</span> when
+          planning.
+        </p>
+      ) : null}
+      {detail.allergens.length ? <p>Contains: {label(detail.allergens)}</p> : null}
+      {detail.may_contain.length ? <p>May contain: {label(detail.may_contain)}</p> : null}
+      {detail.kind === "product" ? (
+        <p>Product data is crowdsourced: always check the label for allergens.</p>
+      ) : null}
+      <p>Data: {detail.attribution}</p>
+    </div>
   );
 }

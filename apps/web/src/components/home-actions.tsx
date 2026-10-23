@@ -2,15 +2,25 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { useEffect } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { APP_NAME } from "@/lib/brand";
+import { clearOfflineData } from "@/lib/offline";
+
+// Set at build time where the demo account exists (DEMO_CLERK_USER_ID on the server).
+const DEMO = process.env.NEXT_PUBLIC_DEMO === "1";
 
 export function HomeActions() {
   const { isLoaded, isSignedIn } = useAuth();
+  // Signed out (sign-out lands here): no offline copies of anyone's plan stay on the device.
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) clearOfflineData();
+  }, [isLoaded, isSignedIn]);
   if (isLoaded && isSignedIn) {
     return (
       <Link href="/plan" className={buttonVariants({ size: "lg" })}>
-        Open Larder
+        Open {APP_NAME}
       </Link>
     );
   }
@@ -22,6 +32,11 @@ export function HomeActions() {
       <Link href="/sign-in" className={buttonVariants({ size: "lg", variant: "ghost" })}>
         I have an account
       </Link>
+      {DEMO ? (
+        <Link href="/demo" className={buttonVariants({ size: "lg", variant: "outline" })}>
+          Try the demo, no sign-up
+        </Link>
+      ) : null}
     </div>
   );
 }

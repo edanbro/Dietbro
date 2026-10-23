@@ -7,6 +7,7 @@ import { MILK, TOMATOES } from "@/test/fixtures";
 
 import { ExpiryAlerts, expiryText } from "./expiry-alerts";
 
+vi.mock("next/navigation", () => import("@/test/navigation"));
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 
 afterEach(() => vi.unstubAllGlobals());

@@ -1,22 +1,58 @@
-from fastapi import FastAPI
+from collections.abc import Awaitable, Callable
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from larder_api import __version__, health
 from larder_api.chat.gate import ChatRefused, problem_response
 from larder_api.resources import lifespan
-from larder_api.routers import chat, foods, pantry, plans, profile, receipts, recipes
+from larder_api.routers import (
+    calendar,
+    chat,
+    diary,
+    foods,
+    pantry,
+    plans,
+    profile,
+    push,
+    receipts,
+    recipes,
+    share,
+    shopping,
+    templates,
+)
 from larder_api.settings import get_settings
+from larder_core.brand import APP_NAME
+
+# On every response: JSON is never sniffed as something else or framed, and the API's own
+# addresses (share and calendar tokens) aren't sent on as referrers.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="Larder API", version=__version__, lifespan=lifespan)
+    app = FastAPI(title=f"{APP_NAME} API", version=__version__, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Retry-After"],  # so the web app can say when to try again
     )
+
+    @app.middleware("http")
+    async def security_headers(  # pyright: ignore[reportUnusedFunction]
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        for key, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(key, value)
+        return response
+
     app.add_exception_handler(ChatRefused, problem_response)  # the chat gate's JSON 4xx
     app.include_router(health.router)
     app.include_router(profile.router)
@@ -25,8 +61,14 @@ def create_app() -> FastAPI:
     app.include_router(receipts.router)
     app.include_router(pantry.router)
     app.include_router(plans.router)
+    app.include_router(shopping.router)
     app.include_router(recipes.router)
     app.include_router(chat.router)
+    app.include_router(diary.router)
+    app.include_router(push.router)
+    app.include_router(share.router)
+    app.include_router(calendar.router)
+    app.include_router(templates.router)
     return app
 
 

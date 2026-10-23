@@ -1,13 +1,47 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
+import { Figtree, Fraunces } from "next/font/google";
 
 import "./globals.css";
+import { ServiceWorker } from "@/components/offline-banner";
+import { APP_NAME } from "@/lib/brand";
+import { THEME_SCRIPT } from "@/lib/theme";
+
+/** Body text: Figtree, a friendly geometric sans. Headings: Fraunces, a soft "old style"
+ * serif that gives the app a warm, cookbook feel. Both self-hosted by next/font at build. */
+const sans = Figtree({ subsets: ["latin"], variable: "--font-figtree", display: "swap" });
+const serif = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["SOFT", "opsz"],
+});
+
+/** Clerk's sign-in and account screens in the app's colours, light or dark (CSS variables). */
+const CLERK_APPEARANCE = {
+  variables: {
+    colorPrimary: "var(--primary)",
+    colorPrimaryForeground: "var(--primary-foreground)",
+    colorBackground: "var(--card)",
+    colorForeground: "var(--card-foreground)",
+    colorMuted: "var(--muted)",
+    colorMutedForeground: "var(--muted-foreground)",
+    colorInput: "var(--background)",
+    colorInputForeground: "var(--foreground)",
+    colorBorder: "var(--border)",
+    colorRing: "var(--ring)",
+    colorDanger: "var(--destructive)",
+    borderRadius: "0.75rem",
+    fontFamily: "var(--font-figtree), system-ui, sans-serif",
+  },
+};
 
 export const metadata: Metadata = {
-  title: "Larder",
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: "Plans your week around what's already in your kitchen.",
-  applicationName: "Larder",
-  appleWebApp: { capable: true, title: "Larder", statusBarStyle: "default" },
+  applicationName: APP_NAME,
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -15,16 +49,26 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#fcfcf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#121a16" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    // The theme script sets the html class before hydration, hence suppressHydrationWarning.
+    <html
+      lang="en"
+      className={`h-full antialiased ${sans.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ClerkProvider
+          appearance={CLERK_APPEARANCE}
+          proxyUrl="/__clerk"
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
           signInFallbackRedirectUrl="/plan"
@@ -33,6 +77,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           {children}
         </ClerkProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

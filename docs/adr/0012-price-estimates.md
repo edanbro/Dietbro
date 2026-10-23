@@ -31,3 +31,12 @@ shopping list as "check you have".
 - Plans can't price in pack waste. That is a later improvement (pack sizes per food). Live
   prices would need a new paid service, which needs Eduard's sign-off.
 - Prices are code-reviewed data: changing them changes plans, and tests bound them.
+
+## Addendum (2026-10-13): regions
+
+Users now have a region (`users.country`, see `larder_core.regions`). The UK table stays the
+single source; other regions apply a food price-level factor per USDA category from
+`data/price_regions.csv` (Ireland: CSO "Price Levels of Food, Beverages and Tobacco 2024",
+relative to the EU27 average, with the UK taken as roughly that average since it left Eurostat's
+comparison), then the fixed GBP rate. Planner objective weights are converted to the user's
+currency so a repeat or a snack is worth about the same everywhere (`planning.weights_for`).

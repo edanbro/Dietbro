@@ -88,11 +88,11 @@ test("user adds food from a pasted receipt and sees what expires soon", async ({
     await page.getByRole("button", { name: "Add 2 items to pantry" }).click();
     await expect(page.getByText("Added 2 items to your pantry")).toBeVisible();
     await expect(page).toHaveURL(/\/pantry$/);
-    const pantry = page.getByRole("list", { name: "Pantry items" });
-    await expect(pantry.getByRole("listitem")).toHaveCount(2);
-    await expect(pantry).toContainText(/milk/i);
-    await expect(pantry).toContainText(/tomatoes/i);
-    await expect(pantry).not.toContainText(/banana/i);
+    const items = page.getByRole("main").getByRole("button", { name: /^Edit / });
+    await expect(items).toHaveCount(2);
+    await expect(page.getByRole("region", { name: "Fridge" })).toContainText(/milk/i);
+    await expect(page.getByRole("region", { name: "Cupboard" })).toContainText(/tomatoes/i);
+    await expect(items.filter({ hasText: /banana/i })).toHaveCount(0);
     const alerts = page.getByRole("region", { name: "Use soon" });
     await expect(alerts).toContainText(/milk/i);
     await expect(alerts).toContainText("expires tomorrow");

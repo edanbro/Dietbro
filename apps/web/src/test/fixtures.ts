@@ -28,6 +28,14 @@ export const ME: Me = {
     expiring_soon: 0,
   },
   setup_complete: true,
+  region: {
+    country: "GB",
+    name: "United Kingdom",
+    currency: "GBP",
+    locale: "en-GB",
+    timezone: "Europe/London",
+    saved: true,
+  },
 };
 
 export function meal(
@@ -44,6 +52,7 @@ export function meal(
     nutrition: { kcal: 600, protein_g: 30, fat_g: 20, carbs_g: 70 },
     locked: false,
     status: "planned",
+    uses_pantry: [],
   };
 }
 
@@ -107,6 +116,7 @@ export function item(
     grams: 500,
     cost_minor: 100,
     checked: false,
+    stocked: false,
     staple: false,
     approx_units: null,
     ...overrides,
@@ -175,9 +185,30 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     allergens_complete: false,
     suitable_for: ["vegetarian"],
     ingredients: [
-      { name: "Onion", measure: "1 large", food_id: 1, food_name: "Onions, raw", grams: 150 },
-      { name: "Eggs", measure: "4", food_id: 2, food_name: "Egg, whole, raw", grams: 200 },
-      { name: "Feta", measure: "", food_id: null, food_name: null, grams: null },
+      {
+        name: "Onion",
+        measure: "1 large",
+        food_id: 1,
+        food_name: "Onions, raw",
+        grams: 150,
+        in_pantry: true,
+      },
+      {
+        name: "Eggs",
+        measure: "4",
+        food_id: 2,
+        food_name: "Egg, whole, raw",
+        grams: 200,
+        in_pantry: false,
+      },
+      {
+        name: "Feta",
+        measure: "",
+        food_id: null,
+        food_name: null,
+        grams: null,
+        in_pantry: false,
+      },
     ],
     ...overrides,
   };
@@ -296,14 +327,28 @@ export function receiptLine(
   };
 }
 
-export const MILK = { id: 31, description: "Milk, reduced fat, 2%", category: "Dairy", kcal: 50 };
+const GENERIC = { kind: "food", source: "usda" } as const;
+export const MILK = {
+  id: 31,
+  description: "Milk, reduced fat, 2%",
+  category: "Dairy",
+  kcal: 50,
+  ...GENERIC,
+};
 export const TOMATOES = {
   id: 32,
   description: "Tomatoes, canned",
   category: "Vegetables",
   kcal: 20,
+  ...GENERIC,
 };
-export const BANANA = { id: 33, description: "Bananas, raw", category: "Fruits", kcal: 89 };
+export const BANANA = {
+  id: 33,
+  description: "Bananas, raw",
+  category: "Fruits",
+  kcal: 89,
+  ...GENERIC,
+};
 
 /** A ready pasted receipt bought 2026-10-09: milk and chopped tomatoes matched, one line not. */
 export function makeReceipt(overrides: Partial<Receipt> = {}): Receipt {

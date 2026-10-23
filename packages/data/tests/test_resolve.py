@@ -145,3 +145,13 @@ def test_recipe_nutrition_estimates_snack_servings() -> None:
     out = resolve.recipe_nutrition([(1, 100)], {1: food}, "Snack")
     assert out["servings"] == 2  # 400 kcal at ~200 kcal per snack
     assert out["servings_estimated"] is True
+
+
+def test_recipe_nutrition_adds_up_vitamins_and_minerals() -> None:
+    oats = Food(
+        id=1, description="oats", data_type="sr_legacy", kcal=380, iron_mg=4.0, calcium_mg=50
+    )
+    milk = Food(id=2, description="milk", data_type="sr_legacy", kcal=60, iron_mg=0.0)
+    out = resolve.recipe_nutrition([(1, 100), (2, 200)], {1: oats, 2: milk}, servings=2)
+    assert out["iron_mg"] == pytest.approx(2.0)
+    assert out["calcium_mg"] is None  # 200 g of milk without a calcium value

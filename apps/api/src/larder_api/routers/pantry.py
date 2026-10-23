@@ -1,7 +1,7 @@
 """Pantry CRUD and expiry alerts. Every query is filtered by the signed-in user; other users'
 items are 404s. Receipt intake (adding many items from a receipt) is routers/receipts.py."""
 
-from datetime import UTC, date, timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -12,7 +12,8 @@ from sqlalchemy.orm import joinedload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
-from larder_api.routers.foods import load_portions, summary
+from larder_api.generic_link import ensure_generic
+from larder_api.routers.foods import food_portions, summary
 from larder_api.schemas import (
     ExpiringItem,
     ExpiringPantry,
@@ -22,6 +23,8 @@ from larder_api.schemas import (
     Problems,
 )
 from larder_core.quantities import grams_for
+from larder_core.regions import local_today
+from larder_core.shelf_life import storage_for
 from larder_core.units import parse_measure
 from larder_db.models import Food, PantryItem, User
 
@@ -32,7 +35,7 @@ _BAD_UNIT: dict[int | str, dict[str, Any]] = {status.HTTP_400_BAD_REQUEST: {"mod
 
 async def to_grams(session: AsyncSession, food: Food, quantity: float, unit: str) -> float:
     measure = parse_measure(f"{quantity:g} {unit}")
-    portions = await load_portions(session, food.id)
+    portions = await food_portions(session, food)
     grams = grams_for(measure, portions, food.description.lower(), food.category)
     if grams is None or measure.vague:
         raise HTTPException(
@@ -52,6 +55,7 @@ def out(item: PantryItem) -> PantryItemOut:
         expires_on=item.expires_on,
         source=item.source,
         created_at=item.created_at,
+        storage=storage_for(item.food.description, item.food.category),
     )
 
 
@@ -68,10 +72,11 @@ async def owned(session: AsyncSession, user: User, item_id: int) -> PantryItem:
 
 @router.get("", operation_id="listPantry")
 async def list_items(user: CurrentUser, session: Session) -> list[PantryItemOut]:
-    """Soonest-expiring first; items without a date last."""
+    """Soonest-expiring first; items without a date last. Used-up items (0 g left after meals
+    were marked eaten) are kept for undo but not listed."""
     rows = await session.scalars(
         select(PantryItem)
-        .where(PantryItem.user_id == user.id)
+        .where(PantryItem.user_id == user.id, PantryItem.grams > 0)
         .options(joinedload(PantryItem.food))
         .order_by(PantryItem.expires_on.asc().nulls_last(), PantryItem.id)
     )
@@ -99,12 +104,14 @@ async def list_expiring(
     session: Session,
     clock: Annotated[Clock, Depends(get_clock)],
     days: Annotated[int, Query(ge=0, le=60)] = EXPIRING_DAYS,
-    today: Annotated[date | None, Query(description="The user's local date (default UTC)")] = None,
+    today: Annotated[
+        date | None, Query(description="The user's local date (default: today in their time zone)")
+    ] = None,
 ) -> ExpiringPantry:
     """Expiry alerts: items with something left whose use-by date is before `today` + `days`
     (so days=3 means today, tomorrow and the day after), expired ones included, soonest
     first."""
-    today = today or clock().astimezone(UTC).date()
+    today = today or local_today(user.timezone, clock())
     rows = await session.scalars(
         select(PantryItem)
         .where(
@@ -132,6 +139,7 @@ async def add_item(body: PantryItemIn, user: CurrentUser, session: Session) -> P
     food = await session.get(Food, body.food_id)
     if food is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "food not found")
+    await ensure_generic(session, food)  # a product counts as its generic food when planning
     item = PantryItem(
         user_id=user.id,
         food_id=food.id,

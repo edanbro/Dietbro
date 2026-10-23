@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DayMacros, MacroBar } from "./macro-bars";
+import { DayMacros, MacroBar, MoreNutrients } from "./macro-bars";
+import { LABEL_RI } from "@/components/nutrients/micronutrients";
 
 describe("MacroBar", () => {
   it("shows an in-band value as on target", () => {
@@ -55,6 +56,36 @@ describe("DayMacros", () => {
     expect(within(section).getAllByRole("meter")).toHaveLength(2);
     expect(within(section).getByText("50 kcal under")).toHaveClass("text-destructive");
     expect(within(section).getByText("12 g under")).not.toHaveClass("text-destructive");
-    expect(within(section).getAllByText("No target set")).toHaveLength(2);
+    const plain = within(section).getByLabelText("Macros without a target");
+    expect(within(plain).getByText("Fat")).toBeInTheDocument();
+    expect(within(plain).getByText("Carbs")).toBeInTheDocument();
+    expect(within(plain).getByText("230 g")).toBeInTheDocument();
+  });
+});
+
+describe("MoreNutrients", () => {
+  const reference = { fiber_g: 30, sugars_g: 90, sat_fat_g: 20, salt_g: 6, ...LABEL_RI };
+
+  it("shows each against its daily guide and marks misses", () => {
+    render(
+      <MoreNutrients
+        values={{ fiber_g: 21.5, sugars_g: 40, sat_fat_g: 24.2, salt_g: null }}
+        reference={reference}
+      />,
+    );
+
+    const fibre = screen.getByText("21.5 g");
+    expect(fibre.className).toMatch(/amber/); // below the fibre guide
+    expect(screen.getByText("40.0 g").className).not.toMatch(/amber/);
+    expect(screen.getByText("24.2 g").className).toMatch(/amber/); // above the sat fat guide
+    expect(screen.getByText("–")).toBeInTheDocument(); // salt unknown
+    expect(screen.getByText("aim ≥ 30 g")).toBeInTheDocument();
+  });
+
+  it("is hidden when nothing is known", () => {
+    const { container } = render(
+      <MoreNutrients values={{ fiber_g: null, sugars_g: null, sat_fat_g: null, salt_g: null }} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

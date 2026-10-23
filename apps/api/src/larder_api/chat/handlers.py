@@ -13,11 +13,11 @@ Unknown or invisible ids get the same answer as a missing one ("I can't use that
 """
 
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,9 +25,10 @@ from larder_api import planning
 from larder_api.chat import create, replan, search
 from larder_api.chat.context import day_lines, latest_plan, money, plan_stats, short_name
 from larder_api.chat.scope import ChatScope
+from larder_api.prices import price_with_receipts, receipt_prices
 from larder_api.schemas import Currency, OutcomeEvent, RecipeEvent
 from larder_core.meals import SLOT_ORDER, Slot
-from larder_core.prices import convert
+from larder_core.regions import local_price, region_for
 from larder_db import models as db
 from larder_llm.agent import Handler, ToolOutcome
 from larder_llm.schemas import (
@@ -130,7 +131,7 @@ def make_handlers(scope: ChatScope) -> dict[str, Handler]:
 
 async def _get_plan(scope: ChatScope) -> ToolOutcome:
     async with scope.sessionmaker() as session:
-        plan = await latest_plan(session, scope.user_id)
+        plan = await latest_plan(session, scope.user_id, scope.today)
         goals = await session.get(db.Goals, scope.user_id)
     if plan is None:
         return _ok({"plan": None, "note": NO_PLAN})
@@ -234,7 +235,7 @@ async def _search(scope: ChatScope, query: SearchRecipesInput) -> ToolOutcome:
 
 async def _explain_meal(scope: ChatScope, query: ExplainMealInput) -> ToolOutcome:
     async with scope.sessionmaker() as session:
-        plan = await latest_plan(session, scope.user_id)
+        plan = await latest_plan(session, scope.user_id, query.when.date)
         if plan is None:
             return _error(NO_PLAN)
         day = (query.when.date - plan.start_date).days
@@ -269,19 +270,31 @@ async def _meal_facts(
     foods, info = await planning.load_foods(session, food_ids)
     pantry = (
         await session.scalars(
-            select(db.PantryItem).where(
-                db.PantryItem.user_id == user_id, db.PantryItem.food_id.in_(food_ids)
+            select(db.PantryItem)
+            .join(db.Food, db.Food.id == db.PantryItem.food_id)
+            .where(
+                db.PantryItem.user_id == user_id,
+                func.coalesce(db.Food.generic_food_id, db.PantryItem.food_id).in_(food_ids),
             )
+            .options(selectinload(db.PantryItem.food))
         )
     ).all()
     prefs = await session.get(db.Preferences, user_id)
-    currency = CURRENCIES.get(plan.currency, "GBP")
+    user = await session.get(db.User, user_id)
+    country = user.country if user is not None else None
+    currency = CURRENCIES.get(plan.currency, region_for(country).currency)
+    paid = await receipt_prices(session, user_id, date.today())
     cost = 0.0
     for line in recipe.ingredients:
         if line.food_id is None or line.food_id not in info or recipe.servings is None:
             continue
         grams = planning.portion_grams(line.grams, recipe.servings, info[line.food_id].staple)
-        cost += grams * meal.portions * convert(info[line.food_id].price.pence_per_kg, currency)
+        food = foods[line.food_id]
+        estimate = local_price(
+            info[line.food_id].price.pence_per_kg, food.category, country, currency
+        )
+        per_kg = price_with_receipts(estimate, line.food_id, paid)
+        cost += grams * meal.portions * per_kg
     facts: dict[str, Any] = {
         "slot": meal.slot,
         "recipe_id": recipe.id,
@@ -297,10 +310,9 @@ async def _meal_facts(
         if prefs is not None and recipe.cuisine in prefs.liked_cuisines:
             facts["liked_cuisine"] = True
     used = [
-        f"{short_name(foods[p.food_id].description)}"
+        f"{short_name(p.food.description)}"
         + (f" (expires {p.expires_on.isoformat()})" if p.expires_on else "")
         for p in pantry
-        if p.food_id in foods
     ]
     if used:
         facts["uses_pantry"] = used
@@ -310,7 +322,7 @@ async def _meal_facts(
 async def _explain_diff(scope: ChatScope, plan_id: int | None) -> ToolOutcome:
     async with scope.sessionmaker() as session:
         if plan_id is None:
-            plan = await latest_plan(session, scope.user_id)
+            plan = await latest_plan(session, scope.user_id, scope.today)
         else:
             plan = await _user_plan(session, scope.user_id, plan_id)
         if plan is None:

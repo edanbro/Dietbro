@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Larder API",
+    "title": "Mealwright API",
     "version": "0.0.0"
   },
   "paths": {
@@ -89,11 +89,68 @@
           "profile"
         ],
         "summary": "Delete Me",
-        "description": "Delete the account and all its data (GDPR). The identity-provider account is deleted\nby the client with its own SDK.",
+        "description": "Delete the account and all its data (GDPR). The identity-provider account is deleted\nby the client with its own SDK. The shared demo account can't be deleted.",
         "operationId": "deleteMe",
         "responses": {
           "204": {
             "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/region": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Region",
+        "description": "Where the user lives: currency, price estimates, dates. Moving to a region with another\ncurrency also switches the goals' currency (the budget amount is kept).",
+        "operationId": "putRegion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -509,6 +566,32 @@
         }
       }
     },
+    "/regions": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Regions",
+        "description": "Supported countries, by name.",
+        "operationId": "listRegions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegionOption"
+                  },
+                  "type": "array",
+                  "title": "Response Listregions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/allergens": {
       "get": {
         "tags": [
@@ -540,7 +623,7 @@
           "foods"
         ],
         "summary": "Search",
-        "description": "Curated ingredient names first (\"onion\" -> \"Onions, raw\"), then trigram matches.",
+        "description": "A page of foods for `q`; a full page means there may be more (next `offset`).",
         "operationId": "searchFoods",
         "security": [
           {
@@ -565,11 +648,39 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 25,
+              "maximum": 50,
               "minimum": 1,
-              "default": 10,
+              "default": 20,
               "title": "Limit"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "generic"
+              ],
+              "type": "string",
+              "description": "generic: foods only, no packaged products (allergies, preferences)",
+              "default": "all",
+              "title": "Scope"
+            },
+            "description": "generic: foods only, no packaged products (allergies, preferences)"
           }
         ],
         "responses": {
@@ -596,6 +707,84 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/foods/barcode/{code}": {
+      "get": {
+        "tags": [
+          "foods"
+        ],
+        "summary": "Lookup Barcode",
+        "description": "A product by its barcode (EAN-13, EAN-8, UPC-A): from the catalogue, else from Open Food\nFacts (stored, so the next scan is local). Only the barcode leaves the app.",
+        "operationId": "lookupBarcode",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoodDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         }
       }
@@ -1023,7 +1212,7 @@
           "pantry"
         ],
         "summary": "List Items",
-        "description": "Soonest-expiring first; items without a date last.",
+        "description": "Soonest-expiring first; items without a date last. Used-up items (0 g left after meals\nwere marked eaten) are kept for undo but not listed.",
         "operationId": "listPantry",
         "responses": {
           "200": {
@@ -1142,10 +1331,10 @@
                   "type": "null"
                 }
               ],
-              "description": "The user's local date (default UTC)",
+              "description": "The user's local date (default: today in their time zone)",
               "title": "Today"
             },
-            "description": "The user's local date (default UTC)"
+            "description": "The user's local date (default: today in their time zone)"
           }
         ],
         "responses": {
@@ -1426,8 +1615,34 @@
           "plans"
         ],
         "summary": "Current Plan",
-        "description": "The most recently created plan, or null if there is none.",
+        "description": "The plan in force on `date` (the newest version covering it, else the newest plan), or\nnull if there is none. Next week's plan doesn't replace this week's for this week's dates.",
         "operationId": "getCurrentPlan",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "default: today",
+              "title": "Date"
+            },
+            "description": "default: today"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1446,6 +1661,46 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/upcoming": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Upcoming Plan",
+        "description": "The plan for the days after the current one ends (\"next week\"), or null.",
+        "operationId": "getUpcomingPlan",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getupcomingplan"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1453,6 +1708,208 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/plans/meals": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Meals On",
+        "description": "The meals planned on a date (the newest plan covering it), to copy to another day.",
+        "operationId": "getMealsOn",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "on",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DayMealOut"
+                  },
+                  "title": "Response Getmealson"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/alternatives": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Meal Alternatives",
+        "description": "A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and\nits recipe_id): ranked like recipe search, not already planned that day, close to the\nmeal's energy first.",
+        "operationId": "getMealAlternatives",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 6,
+              "minimum": 1,
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeListItem"
+                  },
+                  "title": "Response Getmealalternatives"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/undo": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Undo Plan Change",
+        "description": "Bring back the version before the last change (as a new version: history is kept).\nOnly the newest version of a week can be undone, only when it came from a change to that\nweek, and not once food has been logged or meals marked eaten since that change.",
+        "operationId": "undoPlanChange",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "409": {
+            "description": "nothing to undo, or too late",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/plans/{plan_id}": {
@@ -1792,6 +2249,571 @@
         }
       }
     },
+    "/plans/{plan_id}/shopping/stock": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Stock Shopping Items",
+        "description": "Move bought lines into the pantry (default: every ticked line not moved yet), in grams,\nwith a suggested use-by date. Each line moves once; staples are never moved.",
+        "operationId": "stockShoppingItems",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PantryItemOut"
+                  },
+                  "title": "Response Stockshoppingitems"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such plan (or not yours)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shopping/extras": {
+      "get": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "List Extras",
+        "operationId": "listShoppingExtras",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShoppingExtraOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listshoppingextras"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Add Extra",
+        "operationId": "addShoppingExtra",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingExtraIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingExtraOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Clear Ticked",
+        "description": "Remove the items ticked off (bought).",
+        "operationId": "clearTickedShoppingExtras",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/shopping/extras/{extra_id}": {
+      "patch": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Patch Extra",
+        "operationId": "patchShoppingExtra",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Extra Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingExtraPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingExtraOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Delete Extra",
+        "operationId": "deleteShoppingExtra",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extra_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Extra Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes": {
+      "get": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "List Recipes",
+        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use.",
+        "operationId": "listRecipes",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Slot"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Slot"
+            }
+          },
+          {
+            "name": "favourites",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Favourites"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 24,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeListOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/feedback": {
+      "put": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Put Feedback",
+        "description": "Favourite a recipe (planned more often) or never plan it again; replaces any earlier\nverdict. Plans already made keep it until the next plan or replan.",
+        "operationId": "putRecipeFeedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeFeedbackIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Delete Feedback",
+        "operationId": "deleteRecipeFeedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "409": {
+            "description": "setup incomplete"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/note": {
+      "put": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Put Note",
+        "description": "The user's own note and 1-5 rating on a recipe; both empty removes it (null). Private:\nnever on a share link, and it doesn't steer the planner.",
+        "operationId": "putRecipeNote",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeNoteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipeNoteOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Putrecipenote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Delete Note",
+        "operationId": "deleteRecipeNote",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{recipe_id}": {
       "get": {
         "tags": [
@@ -1841,6 +2863,152 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Edit Recipe",
+        "description": "Change a recipe, checked exactly like a new one. The user's own recipe changes in place\n(its id stays, so favourites, plans and links keep pointing at it; meals already planned\nkeep the numbers they were planned with). A catalogue recipe is saved as the user's own\ncopy (\"custom\", with the original's photo), the original untouched for everyone else.",
+        "operationId": "editRecipe",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResultOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recipes/import/read": {
+      "post": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Read Recipe Page",
+        "description": "Read the recipe a web page publishes for search engines (schema.org JSON-LD) into a\ndraft to check and save. Nothing is saved yet.",
+        "operationId": "readRecipePage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportReadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDraft"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "no recipe found, or the address can't be used"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/recipes/import": {
+      "post": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Import Recipe",
+        "description": "Check and save a draft as the user's own recipe: the same path as recipes the chat\ndrafts (ingredients matched to foods, amounts weighed, nutrition from food data, the\nplanner's allergy and diet checks). Problems come back to fix instead of a recipe.",
+        "operationId": "importRecipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/chat/thread": {
@@ -2083,6 +3251,1065 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/diary": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Get Diary",
+        "description": "`days` days up to `end`, oldest first.",
+        "operationId": "getDiary",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 92,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "last day shown (default: today)",
+              "title": "End"
+            },
+            "description": "last day shown (default: today)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/weights": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "List Weights",
+        "description": "Weigh-ins of the last `days` days, oldest first.",
+        "operationId": "listWeights",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 730,
+              "minimum": 1,
+              "default": 90,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeightOut"
+                  },
+                  "title": "Response Listweights"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Put Weight",
+        "description": "Record (or replace) the weigh-in of a day, at most a day ahead of the user's today.",
+        "operationId": "putWeight",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeightIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeightOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/weights/{measured_on}": {
+      "delete": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Delete Weight",
+        "operationId": "deleteWeight",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "measured_on",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Measured On"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no weigh-in that day"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diary/log": {
+      "post": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Log Food",
+        "description": "Log food the user picked (search or barcode) with exact grams. It goes through the same\nexecutor as \"I had X\" in the chat, so it counts toward the day and the rest of that day's\nplan rebalances around it; nutrition comes from the food data, never a guess.",
+        "operationId": "logFood",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FoodLogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutcomeOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "bad_today",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "a food doesn't exist"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/insights/spending": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Spending",
+        "description": "What the user spent on groceries (their confirmed receipts) per week, beside the plans'\nestimated food cost, and where the money went by food group.",
+        "operationId": "getSpending",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 52,
+              "minimum": 1,
+              "default": 12,
+              "title": "Weeks"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/insights/recap": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Recap",
+        "description": "A week looked back on: meals, energy and protein, spending, weight, favourites and price\nrises. Weeks after this one have nothing to show.",
+        "operationId": "getRecap",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "any day of the week (default: the last full week)",
+              "title": "Week"
+            },
+            "description": "any day of the week (default: the last full week)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecapOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/insights/prices": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Prices",
+        "description": "What the user pays per kg for the foods they buy again and again, from their confirmed\nreceipts: rises, and a cheaper product they've bought for the same food (price_watch).",
+        "operationId": "getPrices",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 24,
+              "minimum": 1,
+              "default": 6,
+              "title": "Months"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricesOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/push": {
+      "get": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Get Push",
+        "operationId": "getPush",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushConfigOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Subscribe",
+        "description": "Send reminders to this browser (an endpoint moves to the user who subscribed last).",
+        "operationId": "putPush",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscriptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/push/recap": {
+      "put": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Put Recap",
+        "description": "The Sunday-evening recap on or off (in every browser with reminders on).",
+        "operationId": "putRecapSetting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecapSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/push/unsubscribe": {
+      "post": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Unsubscribe",
+        "operationId": "deletePush",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushUnsubscribeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/share": {
+      "post": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Create Share Link",
+        "description": "A link to one of the user's recipes (or a catalogue one), or to a week of their plan.",
+        "operationId": "createShareLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/share/{token}": {
+      "delete": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Revoke Share Link",
+        "operationId": "revokeShareLink",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/share/{token}": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Get Shared",
+        "description": "What a share link shows. No sign-in: the token is the permission.",
+        "operationId": "getShared",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such link, or it was revoked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/calendar": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Get Calendar",
+        "operationId": "getCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Reset Calendar",
+        "description": "Turn the feed on with a new private address (the old one, if any, stops working).",
+        "operationId": "resetCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Disable Calendar",
+        "operationId": "disableCalendar",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/calendar/times": {
+      "put": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Put Calendar Times",
+        "operationId": "putCalendarTimes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarTimes"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/calendar/{token}.ics": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "Calendar Feed",
+        "description": "The feed itself. No sign-in: the token in the address is the permission.",
+        "operationId": "getCalendarFeed",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/calendar": {}
+            }
+          },
+          "404": {
+            "description": "no such feed (turned off or reset)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/templates": {
+      "get": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "List Templates",
+        "operationId": "listTemplates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listtemplates"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Save Template",
+        "description": "Save the meals of the user's plan starting on `start` (its newest version).",
+        "operationId": "saveTemplate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/templates/{template_id}": {
+      "patch": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Rename Template",
+        "operationId": "renameTemplate",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplatePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Delete Template",
+        "operationId": "deleteTemplate",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -2365,6 +4592,66 @@
           "file"
         ],
         "title": "Body_uploadReceiptImage"
+      },
+      "CalendarOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "times": {
+            "$ref": "#/components/schemas/CalendarTimes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "path",
+          "times"
+        ],
+        "title": "CalendarOut"
+      },
+      "CalendarTimes": {
+        "properties": {
+          "breakfast": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Breakfast",
+            "default": "08:00"
+          },
+          "lunch": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Lunch",
+            "default": "13:00"
+          },
+          "dinner": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Dinner",
+            "default": "19:00"
+          },
+          "snack": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Snack",
+            "default": "16:00"
+          }
+        },
+        "type": "object",
+        "title": "CalendarTimes",
+        "description": "When each meal shows on the calendar (24-hour HH:MM, the user's local time)."
       },
       "ChangeReason": {
         "type": "string",
@@ -2674,6 +4961,31 @@
         "title": "ChatProblem",
         "description": "Body of the chat gate's 400/404/409/429 answers."
       },
+      "CheaperOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "the product, as named on the user's receipt or its pack"
+          },
+          "per_kg_minor": {
+            "type": "integer",
+            "title": "Per Kg Minor"
+          },
+          "last_bought": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Bought"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "per_kg_minor",
+          "last_bought"
+        ],
+        "title": "CheaperOut"
+      },
       "Craving": {
         "properties": {
           "intent": {
@@ -2784,6 +5096,23 @@
         "title": "DayKcal",
         "description": "A changed day's new total against the band it was planned to."
       },
+      "DayMealOut": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "recipe"
+        ],
+        "title": "DayMealOut",
+        "description": "A meal planned on a date (GET /plans/meals): to copy a day's meals to another."
+      },
       "DayOut": {
         "properties": {
           "day": {
@@ -2822,6 +5151,126 @@
           "logged"
         ],
         "title": "DayOut"
+      },
+      "DiaryDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "eaten": {
+            "$ref": "#/components/schemas/MacrosOut"
+          },
+          "logged": {
+            "items": {
+              "$ref": "#/components/schemas/MealLogOut"
+            },
+            "type": "array",
+            "title": "Logged"
+          },
+          "planned_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Kcal"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "under",
+                  "on",
+                  "over"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "against the daily kcal goal; null when nothing is logged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "eaten",
+          "logged"
+        ],
+        "title": "DiaryDayOut",
+        "description": "What the user logged on a day: meals marked eaten, food logged off-plan and meals\nskipped (a skip eaten elsewhere carries that meal's energy). `eaten` adds them up;\n`planned_kcal` is the newest plan's total for the day (null: no plan covers it)."
+      },
+      "DiaryOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DiaryDayOut"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "kcal_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Max"
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "logged_days": {
+            "type": "integer",
+            "title": "Logged Days",
+            "default": 0
+          },
+          "on_target_days": {
+            "type": "integer",
+            "title": "On Target Days",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "today"
+        ],
+        "title": "DiaryOut"
       },
       "Diet": {
         "type": "string",
@@ -3014,6 +5463,16 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "fridge",
+              "freezer",
+              "cupboard"
+            ],
+            "title": "Storage",
+            "default": "cupboard"
+          },
           "days_left": {
             "type": "integer",
             "title": "Days Left"
@@ -3099,12 +5558,107 @@
             ],
             "title": "Kcal"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "food",
+              "product"
+            ],
+            "title": "Kind",
+            "default": "food"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "usda"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "units": {
             "items": {
               "$ref": "#/components/schemas/FoodUnit"
             },
             "type": "array",
             "title": "Units"
+          },
+          "barcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barcode"
+          },
+          "allergens": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "Allergens",
+            "default": []
+          },
+          "may_contain": {
+            "items": {
+              "$ref": "#/components/schemas/Allergen"
+            },
+            "type": "array",
+            "title": "May Contain",
+            "default": []
+          },
+          "counts_as": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FoodSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
           }
         },
         "type": "object",
@@ -3113,9 +5667,93 @@
           "description",
           "category",
           "kcal",
-          "units"
+          "units",
+          "attribution"
         ],
         "title": "FoodDetail"
+      },
+      "FoodLogItem": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "grams": {
+            "type": "number",
+            "maximum": 5000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Grams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "grams"
+        ],
+        "title": "FoodLogItem"
+      },
+      "FoodLogRequest": {
+        "properties": {
+          "eaten_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Eaten On",
+            "description": "the day it was eaten (the user's local date)"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Slot"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "default: the next meal by local time"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FoodLogItem"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Client Id",
+            "description": "the client's id for this request: resending is safe"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "eaten_on",
+          "items",
+          "client_id",
+          "today"
+        ],
+        "title": "FoodLogRequest",
+        "description": "Food the user picked themselves (diary quick-add). Logged like food told to the chat,\nwith exact amounts, so the rest of that day's plan rebalances around it."
       },
       "FoodSummary": {
         "properties": {
@@ -3148,6 +5786,42 @@
               }
             ],
             "title": "Kcal"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "food",
+              "product"
+            ],
+            "title": "Kind",
+            "default": "food"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "usda"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           }
         },
         "type": "object",
@@ -3518,6 +6192,159 @@
         "type": "object",
         "title": "Health"
       },
+      "ImportDraft": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "servings": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Servings"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/ImportIngredient"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "minItems": 2,
+            "title": "Ingredients"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Instructions"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "slot",
+          "servings",
+          "ingredients",
+          "instructions"
+        ],
+        "title": "ImportDraft",
+        "description": "A recipe read from a page (or typed in), before it is checked and saved. The user can\nchange anything first."
+      },
+      "ImportIngredient": {
+        "properties": {
+          "line": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Line",
+            "description": "as written on the page",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name"
+          },
+          "quantity": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Quantity",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ImportIngredient"
+      },
+      "ImportReadIn": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ImportReadIn"
+      },
+      "ImportResultOut": {
+        "properties": {
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "copied": {
+            "type": "boolean",
+            "title": "Copied",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "problems"
+        ],
+        "title": "ImportResultOut"
+      },
       "Logged": {
         "properties": {
           "date": {
@@ -3586,6 +6413,127 @@
           "carbs_g": {
             "type": "integer",
             "title": "Carbs G"
+          },
+          "fiber_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fiber G"
+          },
+          "sugars_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sugars G"
+          },
+          "sat_fat_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sat Fat G"
+          },
+          "salt_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salt G"
+          },
+          "iron_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iron Mg"
+          },
+          "calcium_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calcium Mg"
+          },
+          "potassium_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Potassium Mg"
+          },
+          "vitamin_c_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin C Mg"
+          },
+          "vitamin_d_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin D Ug"
+          },
+          "folate_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folate Ug"
+          },
+          "vitamin_b12_ug": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vitamin B12 Ug"
           }
         },
         "type": "object",
@@ -3596,7 +6544,7 @@
           "carbs_g"
         ],
         "title": "MacrosOut",
-        "description": "Energy and macros as whole numbers (kcal, grams)."
+        "description": "Energy and macros as whole numbers (kcal, grams). Fibre, sugars, saturated fat and salt\n(sodium x 2.5) come from recipes, one decimal; null when unknown. Day and week totals add\nplanned meals only (food logged off-plan has energy and macros, not these)."
       },
       "Me": {
         "properties": {
@@ -3615,6 +6563,9 @@
           "setup_complete": {
             "type": "boolean",
             "title": "Setup Complete"
+          },
+          "region": {
+            "$ref": "#/components/schemas/RegionOut"
           }
         },
         "type": "object",
@@ -3622,7 +6573,8 @@
           "id",
           "created_at",
           "profile",
-          "setup_complete"
+          "setup_complete",
+          "region"
         ],
         "title": "Me"
       },
@@ -3724,6 +6676,15 @@
             "title": "Status",
             "description": "eaten: marked eaten (POST /plans/{id}/meals/eaten)",
             "default": "planned"
+          },
+          "uses_pantry": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses Pantry",
+            "description": "foods in the user's pantry now that the recipe uses",
+            "default": []
           }
         },
         "type": "object",
@@ -4115,6 +7076,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "fridge",
+              "freezer",
+              "cupboard"
+            ],
+            "title": "Storage",
+            "default": "cupboard"
           }
         },
         "type": "object",
@@ -4371,6 +7342,31 @@
             ],
             "title": "Start",
             "description": "first day (the user's local date, from yesterday to a week ahead); defaults to today (UTC)"
+          },
+          "repeat_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeat From",
+            "description": "plan the same meals as the 7 days from this date (an earlier week), where they still suit the user's allergies, diet and blocks"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id",
+            "description": "plan the meals of this saved template (GET /me/templates)"
           }
         },
         "type": "object",
@@ -4467,10 +7463,130 @@
             "type": "array",
             "maxItems": 200,
             "title": "Disliked Food Ids"
+          },
+          "liked_foods": {
+            "items": {
+              "$ref": "#/components/schemas/FoodSummary"
+            },
+            "type": "array",
+            "title": "Liked Foods"
+          },
+          "disliked_foods": {
+            "items": {
+              "$ref": "#/components/schemas/FoodSummary"
+            },
+            "type": "array",
+            "title": "Disliked Foods"
           }
         },
         "type": "object",
         "title": "PreferencesOut"
+      },
+      "PriceItemOut": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/PricePointOut"
+            },
+            "type": "array",
+            "title": "History",
+            "description": "oldest first, at most 12"
+          },
+          "latest_minor": {
+            "type": "integer",
+            "title": "Latest Minor",
+            "description": "per kg"
+          },
+          "usual_minor": {
+            "type": "integer",
+            "title": "Usual Minor",
+            "description": "per kg: the median of the earlier prices"
+          },
+          "change_pct": {
+            "type": "integer",
+            "title": "Change Pct"
+          },
+          "rise": {
+            "type": "boolean",
+            "title": "Rise",
+            "description": "the latest is at least 15% over the usual (2+ earlier)"
+          },
+          "cheaper": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheaperOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "name",
+          "history",
+          "latest_minor",
+          "usual_minor",
+          "change_pct",
+          "rise"
+        ],
+        "title": "PriceItemOut"
+      },
+      "PricePointOut": {
+        "properties": {
+          "on": {
+            "type": "string",
+            "format": "date",
+            "title": "On"
+          },
+          "per_kg_minor": {
+            "type": "integer",
+            "title": "Per Kg Minor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "on",
+          "per_kg_minor"
+        ],
+        "title": "PricePointOut"
+      },
+      "PricesOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PriceItemOut"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "rises first, biggest first; then by name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "items"
+        ],
+        "title": "PricesOut"
       },
       "Problems": {
         "properties": {
@@ -4527,6 +7643,97 @@
         ],
         "title": "ProfileStatus"
       },
+      "PushConfigOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "public_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Key"
+          },
+          "subscribed": {
+            "type": "integer",
+            "title": "Subscribed",
+            "default": 0
+          },
+          "weekly_recap": {
+            "type": "boolean",
+            "title": "Weekly Recap",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "PushConfigOut",
+        "description": "Whether this server sends reminders, the key browsers subscribe with, and whether this\nuser has any browser subscribed."
+      },
+      "PushKeys": {
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "P256Dh"
+          },
+          "auth": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Auth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p256dh",
+          "auth"
+        ],
+        "title": "PushKeys"
+      },
+      "PushSubscriptionIn": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2000,
+            "pattern": "^https://",
+            "title": "Endpoint"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "PushSubscriptionIn",
+        "description": "A browser's PushSubscription.toJSON()."
+      },
+      "PushUnsubscribeIn": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Endpoint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint"
+        ],
+        "title": "PushUnsubscribeIn"
+      },
       "Readiness": {
         "properties": {
           "status": {
@@ -4555,6 +7762,256 @@
           "checks"
         ],
         "title": "Readiness"
+      },
+      "RecapOut": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "planned_meals": {
+            "type": "integer",
+            "title": "Planned Meals"
+          },
+          "eaten_meals": {
+            "type": "integer",
+            "title": "Eaten Meals",
+            "description": "planned meals marked eaten"
+          },
+          "skipped_meals": {
+            "type": "integer",
+            "title": "Skipped Meals"
+          },
+          "off_plan": {
+            "type": "integer",
+            "title": "Off Plan",
+            "description": "food logged that wasn't on the plan"
+          },
+          "logged_days": {
+            "type": "integer",
+            "title": "Logged Days"
+          },
+          "avg_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Kcal",
+            "description": "a logged day's average"
+          },
+          "kcal_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Max"
+          },
+          "on_target_days": {
+            "type": "integer",
+            "title": "On Target Days",
+            "description": "logged days within the calorie band"
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "protein_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Days",
+            "description": "logged days reaching the protein goal"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor"
+          },
+          "budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Minor"
+          },
+          "planned_cost_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Cost Minor"
+          },
+          "weight_change_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Change Kg",
+            "description": "first to last weigh-in that week"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "top_recipes": {
+            "items": {
+              "$ref": "#/components/schemas/RecapTopOut"
+            },
+            "type": "array",
+            "title": "Top Recipes"
+          },
+          "price_rises": {
+            "items": {
+              "$ref": "#/components/schemas/RecapRiseOut"
+            },
+            "type": "array",
+            "title": "Price Rises"
+          },
+          "empty": {
+            "type": "boolean",
+            "title": "Empty",
+            "description": "nothing logged, bought or weighed that week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start",
+          "week_end",
+          "currency",
+          "planned_meals",
+          "eaten_meals",
+          "skipped_meals",
+          "off_plan",
+          "logged_days",
+          "avg_kcal",
+          "kcal_min",
+          "kcal_max",
+          "on_target_days",
+          "protein_g_min",
+          "protein_days",
+          "spent_minor",
+          "budget_minor",
+          "planned_cost_minor",
+          "weight_change_kg",
+          "weight_kg",
+          "top_recipes",
+          "price_rises",
+          "empty"
+        ],
+        "title": "RecapOut",
+        "description": "A week looked back on (Monday to Sunday): only what happened, from the meal logs,\nconfirmed receipts, weigh-ins and price watch."
+      },
+      "RecapRiseOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "change_pct": {
+            "type": "integer",
+            "title": "Change Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "change_pct"
+        ],
+        "title": "RecapRiseOut"
+      },
+      "RecapSettingIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "RecapSettingIn"
+      },
+      "RecapTopOut": {
+        "properties": {
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          },
+          "times": {
+            "type": "integer",
+            "title": "Times"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe",
+          "times"
+        ],
+        "title": "RecapTopOut"
       },
       "ReceiptConfirmOut": {
         "properties": {
@@ -5152,6 +8609,24 @@
               }
             ]
           },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
           "meal_types": {
             "items": {
               "$ref": "#/components/schemas/Slot"
@@ -5183,6 +8658,31 @@
             },
             "type": "array",
             "title": "Ingredients"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "favourite",
+                  "never"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeNoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5231,6 +8731,23 @@
         ],
         "title": "RecipeEvent"
       },
+      "RecipeFeedbackIn": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "favourite",
+              "never"
+            ],
+            "title": "Verdict"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "RecipeFeedbackIn"
+      },
       "RecipeIngredientOut": {
         "properties": {
           "name": {
@@ -5273,6 +8790,11 @@
               }
             ],
             "title": "Grams"
+          },
+          "in_pantry": {
+            "type": "boolean",
+            "title": "In Pantry",
+            "default": false
           }
         },
         "type": "object",
@@ -5284,6 +8806,353 @@
           "grams"
         ],
         "title": "RecipeIngredientOut"
+      },
+      "RecipeListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cuisine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "kcal_per_serving": {
+            "type": "integer",
+            "title": "Kcal Per Serving"
+          },
+          "protein_g_per_serving": {
+            "type": "integer",
+            "title": "Protein G Per Serving"
+          },
+          "uses_pantry": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses Pantry",
+            "description": "pantry foods it uses",
+            "default": []
+          },
+          "favourite": {
+            "type": "boolean",
+            "title": "Favourite",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "cuisine",
+          "image_url",
+          "slots",
+          "kcal_per_serving",
+          "protein_g_per_serving"
+        ],
+        "title": "RecipeListItem"
+      },
+      "RecipeListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RecipeListOut"
+      },
+      "RecipeNoteIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          }
+        },
+        "type": "object",
+        "title": "RecipeNoteIn"
+      },
+      "RecipeNoteOut": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note",
+          "rating",
+          "updated_at"
+        ],
+        "title": "RecipeNoteOut"
+      },
+      "ReferenceIntakes": {
+        "properties": {
+          "fiber_g": {
+            "type": "number",
+            "title": "Fiber G",
+            "default": 30
+          },
+          "sugars_g": {
+            "type": "number",
+            "title": "Sugars G",
+            "default": 90
+          },
+          "sat_fat_g": {
+            "type": "number",
+            "title": "Sat Fat G",
+            "default": 20
+          },
+          "salt_g": {
+            "type": "number",
+            "title": "Salt G",
+            "default": 6
+          },
+          "iron_mg": {
+            "type": "number",
+            "title": "Iron Mg",
+            "default": 14
+          },
+          "calcium_mg": {
+            "type": "number",
+            "title": "Calcium Mg",
+            "default": 800
+          },
+          "potassium_mg": {
+            "type": "number",
+            "title": "Potassium Mg",
+            "default": 2000
+          },
+          "vitamin_c_mg": {
+            "type": "number",
+            "title": "Vitamin C Mg",
+            "default": 80
+          },
+          "vitamin_d_ug": {
+            "type": "number",
+            "title": "Vitamin D Ug",
+            "default": 5
+          },
+          "folate_ug": {
+            "type": "number",
+            "title": "Folate Ug",
+            "default": 200
+          },
+          "vitamin_b12_ug": {
+            "type": "number",
+            "title": "Vitamin B12 Ug",
+            "default": 2.5
+          }
+        },
+        "type": "object",
+        "title": "ReferenceIntakes",
+        "description": "Daily guides, shown for context, never planned for. Fibre (at least: UK advice), sugars,\nsaturated fat and salt (at most) are the UK/EU reference intakes; the vitamins and minerals\nare the EU labelling reference intakes for adults, the % on food labels."
+      },
+      "RegionIn": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country"
+        ],
+        "title": "RegionIn"
+      },
+      "RegionOption": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "name",
+          "currency"
+        ],
+        "title": "RegionOption"
+      },
+      "RegionOut": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "saved": {
+            "type": "boolean",
+            "title": "Saved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "name",
+          "currency",
+          "locale",
+          "timezone",
+          "saved"
+        ],
+        "title": "RegionOut"
       },
       "ReplanRequest": {
         "properties": {
@@ -5361,6 +9230,201 @@
         ],
         "title": "Sex"
       },
+      "ShareIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recipe",
+              "week"
+            ],
+            "title": "Kind"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "for a week: the plan's start date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "ShareIn"
+      },
+      "ShareOut": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "path"
+        ],
+        "title": "ShareOut"
+      },
+      "SharedDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/SharedMealOut"
+            },
+            "type": "array",
+            "title": "Meals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "meals"
+        ],
+        "title": "SharedDayOut"
+      },
+      "SharedMealOut": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "recipe",
+          "kcal"
+        ],
+        "title": "SharedMealOut"
+      },
+      "SharedOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recipe",
+              "week"
+            ],
+            "title": "Kind"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SharedDayOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "SharedOut",
+        "description": "What a share link shows: one recipe, or a week's meals. Nothing about the person."
+      },
+      "ShoppingExtraIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ShoppingExtraIn"
+      },
+      "ShoppingExtraOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "checked"
+        ],
+        "title": "ShoppingExtraOut"
+      },
+      "ShoppingExtraPatch": {
+        "properties": {
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked"
+        ],
+        "title": "ShoppingExtraPatch"
+      },
       "ShoppingItemOut": {
         "properties": {
           "food_id": {
@@ -5394,6 +9458,12 @@
           "checked": {
             "type": "boolean",
             "title": "Checked"
+          },
+          "stocked": {
+            "type": "boolean",
+            "title": "Stocked",
+            "description": "bought and moved into the pantry",
+            "default": false
           },
           "staple": {
             "type": "boolean",
@@ -5614,6 +9684,105 @@
         "title": "SlotChange",
         "description": "One meal that differs between the parent and the new plan version (recipe or size)."
       },
+      "SpendingCategoryOut": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "spent_minor"
+        ],
+        "title": "SpendingCategoryOut"
+      },
+      "SpendingOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/SpendingWeekOut"
+            },
+            "type": "array",
+            "title": "Weeks"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/SpendingCategoryOut"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "unmatched_minor": {
+            "type": "integer",
+            "title": "Unmatched Minor",
+            "description": "spent on lines not matched to a food"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "weeks",
+          "categories",
+          "unmatched_minor"
+        ],
+        "title": "SpendingOut",
+        "description": "Grocery spending from the user's own confirmed receipts, week by week, beside what the\nplans estimated. Lines without a price, or rejected, don't count."
+      },
+      "SpendingWeekOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor",
+            "description": "confirmed receipt lines bought that week"
+          },
+          "planned_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Minor",
+            "description": "estimated food cost of the plans starting that week (latest versions)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "spent_minor",
+          "planned_minor"
+        ],
+        "title": "SpendingWeekOut"
+      },
       "StatusEvent": {
         "properties": {
           "type": {
@@ -5632,6 +9801,28 @@
           "text"
         ],
         "title": "StatusEvent"
+      },
+      "StockIn": {
+        "properties": {
+          "food_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Ids"
+          }
+        },
+        "type": "object",
+        "title": "StockIn",
+        "description": "Lines to move into the pantry; default: every ticked line not moved yet."
       },
       "SuggestedTargets": {
         "properties": {
@@ -5726,6 +9917,9 @@
           "calorie_floor": {
             "type": "integer",
             "title": "Calorie Floor"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/ReferenceIntakes"
           }
         },
         "type": "object",
@@ -5736,6 +9930,81 @@
         ],
         "title": "TargetsOut",
         "description": "What the planner aimed for: per-day bands, whole-plan bands, and the calorie floor."
+      },
+      "TemplateIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start",
+            "description": "save the week of the user's plan starting on this date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "start"
+        ],
+        "title": "TemplateIn"
+      },
+      "TemplateOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "meals": {
+            "type": "integer",
+            "title": "Meals"
+          },
+          "recipes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recipes",
+            "description": "a few of its recipes' names, for a preview"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "meals",
+          "recipes"
+        ],
+        "title": "TemplateOut"
+      },
+      "TemplatePatch": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TemplatePatch"
       },
       "TextEvent": {
         "properties": {
@@ -6008,6 +10277,46 @@
         ],
         "title": "ViolationOut",
         "description": "A rule the plan misses. `hard` ones (kcal band, budget, repeats) come only from the\nbaseline planner; soft ones (protein/fat/carbs bands) are trade-offs any planner may make.\nSafety rules (allergens, diet, calorie floor) are never broken in a saved plan."
+      },
+      "WeightIn": {
+        "properties": {
+          "measured_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 20.0,
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "measured_on",
+          "weight_kg"
+        ],
+        "title": "WeightIn"
+      },
+      "WeightOut": {
+        "properties": {
+          "measured_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "measured_on",
+          "weight_kg"
+        ],
+        "title": "WeightOut"
       },
       "When": {
         "properties": {

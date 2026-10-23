@@ -17,6 +17,7 @@ import {
   useAllergies,
   useSaveAllergies,
 } from "@/lib/api/hooks";
+import { APP_NAME } from "@/lib/brand";
 
 type Allergen = NonNullable<AllergiesIn["allergens"]>[number];
 
@@ -53,7 +54,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" aria-label="Allergies">
       <p className="text-sm text-muted-foreground">
-        These are strict: Larder will never plan a meal containing them.
+        These are strict: {APP_NAME} will never plan a meal containing them.
       </p>
       <fieldset className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <legend className="sr-only">Allergens</legend>
@@ -74,6 +75,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
         <Label htmlFor="avoid-search">Other foods to always avoid</Label>
         <FoodPicker
           id="avoid-search"
+          scope="generic"
           placeholder="Search a food to avoid"
           onPick={(f) =>
             setAvoid(avoided.some((x) => x.id === f.id) ? avoided : [...avoided, f])
@@ -85,6 +87,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
               {f.description}
               <button
                 type="button"
+                className="relative after:absolute after:-inset-3 after:content-['']"
                 aria-label={`Remove ${f.description}`}
                 onClick={() => setAvoid(avoided.filter((x) => x.id !== f.id))}
               >

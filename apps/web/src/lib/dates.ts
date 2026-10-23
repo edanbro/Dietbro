@@ -5,6 +5,8 @@
  * never from `toISOString()` (UTC), which is a day off for part of the day east or west of UTC.
  */
 
+import { dateFormat } from "@/lib/locale";
+
 const DAY_MS = 86_400_000;
 
 function pad(n: number): string {
@@ -35,18 +37,14 @@ export function addDays(iso: string, days: number): string {
   return localISODate(d);
 }
 
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
-const DAY_MONTH = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-const LONG = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
-const MONTH = new Intl.DateTimeFormat("en-GB", { month: "long" });
+const WEEKDAY: Intl.DateTimeFormatOptions = { weekday: "short" };
+const DAY_MONTH: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" };
+const LONG: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+const MONTH: Intl.DateTimeFormatOptions = { month: "long" };
 
 /** "Fri" */
 export function weekday(iso: string): string {
-  return WEEKDAY.format(parseISODate(iso));
+  return dateFormat(WEEKDAY).format(parseISODate(iso));
 }
 
 /** "9" */
@@ -56,17 +54,17 @@ export function dayOfMonth(iso: string): number {
 
 /** "October" */
 export function monthName(iso: string): string {
-  return MONTH.format(parseISODate(iso));
+  return dateFormat(MONTH).format(parseISODate(iso));
 }
 
 /** "Fri 9 Oct" */
 export function shortDate(iso: string): string {
-  return DAY_MONTH.format(parseISODate(iso));
+  return dateFormat(DAY_MONTH).format(parseISODate(iso));
 }
 
 /** "Friday 9 October" */
 export function longDate(iso: string): string {
-  return LONG.format(parseISODate(iso));
+  return dateFormat(LONG).format(parseISODate(iso));
 }
 
 /** "Fri 9 Oct – Thu 15 Oct" */
@@ -79,7 +77,8 @@ export function localTime(d: Date = new Date()): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-const CLOCK = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+// 24-hour whatever the OS prefers (Windows can make en-GB print "02:05" for 14:05).
+const CLOCK: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
 
 /**
  * When something comes back, relative to `now` in local time: "14:05" today, "tomorrow at
@@ -88,7 +87,7 @@ const CLOCK = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-dig
 export function formatWhen(iso: string, now: Date = new Date()): string {
   const at = new Date(iso);
   const days = daysBetween(localISODate(now), localISODate(at));
-  const clock = CLOCK.format(at);
+  const clock = dateFormat(CLOCK).format(at);
   if (days === 0) return clock;
   if (days === 1) return `tomorrow at ${clock}`;
   return `${shortDate(localISODate(at))} at ${clock}`;

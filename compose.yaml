@@ -56,6 +56,12 @@ services:
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY in .env (see README)}
       # Optional: without it the chat runs offline (rule parser, templated replies).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Optional: barcode lookups of products not imported yet (Open Food Facts).
+      OFF_USER_AGENT: ${OFF_USER_AGENT:-}
+      # Optional: expiry reminders by Web Push (`uv run larder-vapid` makes the keys).
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
     ports:
       - "8000:8000"
     depends_on:
@@ -64,7 +70,8 @@ services:
       redis:
         condition: service_healthy
 
-  # Background jobs (arq on redis): reads receipt photos (OCR) and pasted receipts.
+  # Background jobs (arq on redis): reads receipt photos (OCR) and pasted receipts; sends
+  # expiry reminders hourly.
   worker:
     build:
       context: .
@@ -74,6 +81,9 @@ services:
     environment:
       DATABASE_URL: *database_url
       REDIS_URL: redis://redis:6379/0
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -87,6 +97,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY in .env}
     environment:
       API_URL: http://api:8000
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY in .env}

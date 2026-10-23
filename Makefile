@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed data bench bench-replan receipt-eval worker llm-smoke up down
+.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker llm-smoke up down visual visual-update
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -27,12 +27,23 @@ migrate: ## Apply DB migrations to $$DATABASE_URL (default: compose db)
 
 seed: migrate ## Load foods + recipes and resolve via curated aliases (no embeddings, ~1 min)
 	uv run larder-data import-usda
+	uv run larder-data import-fndds
+	uv run larder-data import-cofid
 	uv run larder-data import-mealdb
 	uv run larder-data import-curated
 	uv run larder-data resolve --aliases-only
 
+foods: ## Match every recipe ingredient (~700 plannable recipes), link UK/Irish foods, import Irish + UK products (1.3 GB, ~20 min)
+	uv run larder-data embed-foods
+	uv run larder-data resolve
+	uv run larder-data link-generics --sources cofid
+	uv run larder-data import-off --countries ie,gb
+
 data: migrate ## Import USDA + TheMealDB, resolve ingredients, write the report (~5 min)
 	uv run larder-data pipeline --evaluate --min-coverage 0.95 --out data/reports/resolution.md
+
+evals: ## Evals on the seeded catalog -> evals/REPORT.md (LLM baseline: add ARGS="--llm --yes", paid)
+	uv run larder-evals --catalog db --n 50 $(ARGS)
 
 PLANNER ?= auto
 bench: ## Planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
@@ -56,3 +67,9 @@ up: ## Build and start the full stack (web :3000, api :8000)
 
 down:
 	docker compose down
+
+visual: ## Compare every page with its committed screenshot (Playwright Linux container; web on :3000)
+	cd apps/web && sh scripts/visual.sh
+
+visual-update: ## Rewrite the page screenshots after a deliberate UI change
+	cd apps/web && sh scripts/visual.sh --update-snapshots

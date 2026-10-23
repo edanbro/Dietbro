@@ -22,7 +22,7 @@ afterEach(() => vi.unstubAllGlobals());
 const render = renderWithClient;
 
 describe("AppShell", () => {
-  it("puts Plan first and Chat next in the bottom nav, and the logo opens the plan", () => {
+  it("puts Plan and Shopping first in the bottom nav, and the logo opens the plan", () => {
     render(<AppShell>content</AppShell>);
 
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -32,16 +32,21 @@ describe("AppShell", () => {
         .map((a) => [a.textContent, a.getAttribute("href")]),
     ).toEqual([
       ["Plan", "/plan"],
+      ["Shopping", "/plan/shopping"],
+      ["Recipes", "/recipes"],
       ["Chat", "/chat"],
       ["Pantry", "/pantry"],
       ["Profile", "/profile"],
     ]);
-    expect(screen.getByRole("link", { name: "Larder" })).toHaveAttribute("href", "/plan");
+    for (const logo of screen.getAllByRole("link", { name: "Mealwright" })) {
+      expect(logo).toHaveAttribute("href", "/plan"); // header (phone) and rail (desktop)
+    }
   });
 
   it.each([
     ["/plan", "Plan"],
-    ["/plan/shopping", "Plan"],
+    ["/plan/shopping", "Shopping"],
+    ["/recipes/12", "Recipes"],
     ["/chat", "Chat"],
     ["/pantry", "Pantry"],
     ["/profile", "Profile"],
@@ -49,15 +54,27 @@ describe("AppShell", () => {
     resetNavigation(path);
     render(<AppShell>content</AppShell>);
 
-    const current = screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current"));
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    const current = within(nav)
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current"));
     expect(current.map((a) => a.textContent)).toEqual([label]);
   });
 
-  it("marks nothing on a recipe page", () => {
-    resetNavigation("/recipes/5");
+  it("marks nothing on a page outside the nav", () => {
+    resetNavigation("/diary");
     render(<AppShell>content</AppShell>);
 
-    expect(screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual([]);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(within(nav).getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual(
+      [],
+    );
+    // The desktop rail has the diary.
+    const rail = screen.getByRole("navigation", { name: "Sidebar" });
+    expect(within(rail).getByRole("link", { name: "Diary" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("badges the Pantry tab with how much food expires soon", async () => {

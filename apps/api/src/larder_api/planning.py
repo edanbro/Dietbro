@@ -21,10 +21,11 @@ from typing import Literal
 
 import anyio
 from pydantic import BaseModel, Field
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
+from larder_api.prices import price_with_receipts, receipt_prices
 from larder_api.routers.profile import body_from_row
 from larder_api.schemas import (
     BandOut,
@@ -41,7 +42,9 @@ from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
 from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
-from larder_core.prices import Currency, Price, convert, price
+from larder_core.nutrition import MICROS
+from larder_core.prices import PER_GBP, Currency, Price, price
+from larder_core.regions import local_price
 from larder_core.tagging import (
     FORBIDDEN,
     Diet,
@@ -73,6 +76,7 @@ from larder_solver import (
     Status,
     Targets,
     Violation,
+    Weights,
     check_problem,
     diagnose,
     greedy,
@@ -82,7 +86,7 @@ from larder_solver import (
     solve,
     validate,
 )
-from larder_solver.candidates import TastePrefs, preference
+from larder_solver.candidates import TastePrefs, allowed, preference
 from larder_solver.candidates import select as select_candidates
 from larder_solver.metrics import allocate, cost_millipence, day_totals, to_minor, waste_millipence
 
@@ -137,6 +141,7 @@ class RecipeText:
     category: str | None
     tags: tuple[str, ...]  # TheMealDB tags
     ingredients: tuple[str, ...]  # ingredient lines as written
+    image_url: str | None = None  # for recipe browsing
 
 
 @dataclass(frozen=True, slots=True)
@@ -330,6 +335,7 @@ async def _load(session: AsyncSession, owner: ColumnElement[bool]) -> PlanningCa
             r.category,
             tuple(sorted(t.tag for t in r.tags)),
             tuple(line.raw_name for line in r.ingredients),
+            r.image_url,
         )
     used = {i.food_id for r in recipes.values() for i in r.ingredients}
     return PlanningCatalog(
@@ -385,6 +391,9 @@ class UserInputs:
     preferences: db.Preferences
     body: db.BodyProfile | None = None
     pantry: Sequence[db.PantryItem] = ()  # with .food loaded
+    country: str | None = None  # prices are estimated for this region (larder_core.regions)
+    # what the user paid per kg, newest first (larder_api.prices), in their currency
+    paid: Mapping[int, Sequence[int]] = field(default_factory=dict[int, Sequence[int]])
 
 
 async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
@@ -415,6 +424,8 @@ async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
         preferences=preferences,
         body=await session.get(db.BodyProfile, user.id),
         pantry=pantry,
+        country=user.country,
+        paid=await receipt_prices(session, user.id, date.today()),
     )
 
 
@@ -478,11 +489,32 @@ def taste_of(preferences: db.Preferences) -> TastePrefs:
         disliked_cuisines=frozenset(preferences.disliked_cuisines),
         liked_food_ids=frozenset(preferences.liked_food_ids),
         disliked_food_ids=frozenset(preferences.disliked_food_ids),
+        favourite_recipe_ids=frozenset(preferences.favourite_recipe_ids or ()),
+        blocked_recipe_ids=frozenset(preferences.blocked_recipe_ids or ()),
     )
 
 
-def _priced(f: Food, currency: Currency) -> Food:
-    return replace(f, price_per_kg=convert(f.price_per_kg, currency))
+def pantry_key(item: db.PantryItem, known: Mapping[int, object]) -> int:
+    """The food a pantry item counts as: its generic food when that is in `known` (the
+    planning catalogue), else itself. `item.food` must be loaded."""
+    generic = item.food.generic_food_id
+    return generic if generic is not None and generic in known else item.food_id
+
+
+def _priced(f: Food, inputs: UserInputs) -> Food:
+    """A catalogue food (GBP pence/kg, UK estimate) priced for the user's region and currency,
+    or at what they paid when their receipts say (larder_api.prices)."""
+    currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
+    estimate = local_price(f.price_per_kg, f.category, inputs.country, currency)
+    return replace(f, price_per_kg=price_with_receipts(estimate, f.id, inputs.paid))
+
+
+def weights_for(currency: Currency) -> Weights:
+    """The objective weights with their money terms in `currency` minor units, so a repeat or a
+    snack is worth about the same to a user whatever they pay in (GBP: the defaults)."""
+    w, rate = Weights(), PER_GBP[currency]
+    money = ("preference", "pantry", "repeat", "optional_meal", "macro", "churn")
+    return replace(w, **{name: round(getattr(w, name) * rate) for name in money})
 
 
 type Cell = tuple[int, Slot]
@@ -506,15 +538,18 @@ def make_problem(
     with the user's `private` recipes, then (replans) `constrain` with the fixed state."""
     pool = catalog.merged(private)
     currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
-    foods = {fid: _priced(f, currency) for fid, f in pool.catalog.foods.items()}
+    foods = {fid: _priced(f, inputs) for fid, f in pool.catalog.foods.items()}
     lots: list[Lot] = []
     for item in inputs.pantry:
         expires = (item.expires_on - start).days if item.expires_on else None
         if expires is not None and expires < 0:
             continue
-        if item.food_id not in foods:
-            foods[item.food_id] = _priced(solver_food(item.food, food_info(item.food)), currency)
-        lots.append(Lot(item.food_id, math.floor(item.grams), expires))
+        # A product or regional food counts as its generic when recipes use the generic.
+        fid = pantry_key(item, foods)
+        if fid not in foods:
+            basis = solver_food(item.food, food_info(item.food))
+            foods[fid] = _priced(basis, inputs)
+        lots.append(Lot(fid, math.floor(item.grams), expires))
 
     targets = targets_from(inputs.goals, days)
     budget = (
@@ -554,6 +589,7 @@ def make_problem(
         profile=profile,
         pantry=tuple(lots),
         budget=budget,
+        weights=weights_for(currency),
     )
     return constrain(problem, inputs, pool, choices=choices or {}, empty=empty, extra=extra or {})
 
@@ -571,7 +607,6 @@ def constrain(
     `choices` (from `pool`, with their foods priced in the user's currency and their preference
     set), cells kept `empty` (locked to None), intake already fixed per day (`extra`), and the
     per-day kcal bands that follow (`day_bands`). Raises if the result breaks check_problem."""
-    currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
     prefs = taste_of(inputs.preferences)
     recipes = dict(problem.recipes)
     foods = dict(problem.foods)
@@ -582,7 +617,7 @@ def constrain(
         recipes[rid] = replace(recipe, preference=preference(recipe, prefs))
         for i in recipe.ingredients:
             if i.food_id not in foods and i.food_id in pool.catalog.foods:
-                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], currency)
+                foods[i.food_id] = _priced(pool.catalog.foods[i.food_id], inputs)
     out = replace(
         problem,
         recipes=recipes,
@@ -615,11 +650,45 @@ async def active_logs(
     )
 
 
+def repeat_choices(
+    problem: Problem,
+    inputs: UserInputs,
+    pool: PlanningCatalog,
+    cells: Iterable[tuple[int, Slot, int]],
+) -> tuple[dict[Cell, tuple[int, ...]], list[int]]:
+    """Planning a week again (an earlier week, or a saved template): each (day, slot, recipe)
+    becomes that cell's only choice when the recipe can still be planned for this user: in
+    their catalogue (shared or theirs, nutrition complete), of that meal type, not blocked
+    ("never again"), and safe under their allergies, diet and avoided foods as they are now
+    (`candidates.allowed`, the planner's own rule). The planner still picks the portions and
+    the validator checks the result. Returns the choices and the recipe ids left out."""
+    profile = profile_of(inputs.allergies, inputs.preferences)
+    blocked = set(inputs.preferences.blocked_recipe_ids or ())
+    slots = {s.slot for s in problem.slots}
+    choices: dict[Cell, tuple[int, ...]] = {}
+    dropped: list[int] = []
+    for day, slot, recipe_id in cells:
+        if not 0 <= day < problem.days or slot not in slots:
+            continue
+        recipe = pool.catalog.recipes.get(recipe_id)
+        if (
+            recipe is None
+            or recipe_id in blocked
+            or slot not in recipe.meal_types
+            or not allowed(recipe, pool.catalog.foods, profile)
+        ):
+            dropped.append(recipe_id)
+            continue
+        choices[(day, slot)] = (recipe_id,)
+    return choices, dropped
+
+
 def with_logs(
     problem: Problem, inputs: UserInputs, pool: PlanningCatalog, logs: Iterable[db.MealLog]
 ) -> Problem:
     """A new plan around food already logged in its dates: a logged meal's slot stays empty
-    and every log's macros count on its day (`constrain`, so its day band follows)."""
+    and every log's macros count on its day (`constrain`, so its day band follows). Choices
+    already on the problem (a repeated week) are kept, except in the slots now empty."""
     extra: dict[int, Macros] = {}
     empty: set[Cell] = set()
     for log in logs:
@@ -629,7 +698,8 @@ def with_logs(
             empty.add((d, Slot(log.slot)))
     if not extra and not empty:
         return problem
-    return constrain(problem, inputs, pool, choices={}, empty=empty, extra=extra)
+    choices = {cell: ids for cell, ids in problem.choices.items() if cell not in empty}
+    return constrain(problem, inputs, pool, choices=choices, empty=empty, extra=extra)
 
 
 def log_kind(log: db.MealLog) -> Literal["off_plan", "skipped", "eaten"]:
@@ -910,6 +980,89 @@ async def latest_plan(session: AsyncSession, user_id: int) -> db.MealPlan | None
     )
 
 
+def covering(on: date) -> ColumnElement[bool]:
+    """Plan versions whose days include `on`."""
+    return (db.MealPlan.start_date <= on) & (
+        db.MealPlan.start_date + db.MealPlan.days * text("interval '1 day'") > on
+    )
+
+
+async def plan_id_for(session: AsyncSession, user_id: int, on: date) -> int | None:
+    """The plan in force on `on`: the newest version covering it, else the newest of all (an
+    ended plan, or before the first one starts). A plan for next week leaves this week's in
+    force for this week's dates."""
+    newest = (db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
+    found = await session.scalar(
+        select(db.MealPlan.id)
+        .where(db.MealPlan.user_id == user_id, covering(on))
+        .order_by(*newest)
+        .limit(1)
+    )
+    if found is not None:
+        return found
+    return await session.scalar(
+        select(db.MealPlan.id).where(db.MealPlan.user_id == user_id).order_by(*newest).limit(1)
+    )
+
+
+async def week_cells(
+    session: AsyncSession, user_id: int, first: date, days: int = DAYS
+) -> list[tuple[int, Slot, int]]:
+    """The meals planned on the `days` dates from `first`, each date from the newest plan
+    version covering it, as (day counted from `first`, slot, recipe id)."""
+    cells: list[tuple[int, Slot, int]] = []
+    plans: dict[int, db.MealPlan] = {}
+    for i in range(days):
+        on = first + timedelta(days=i)
+        plan_id = await session.scalar(
+            select(db.MealPlan.id)
+            .where(db.MealPlan.user_id == user_id, covering(on))
+            .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
+            .limit(1)
+        )
+        if plan_id is None:
+            continue
+        if plan_id not in plans:
+            plan = await session.scalar(
+                select(db.MealPlan)
+                .where(db.MealPlan.id == plan_id)
+                .options(selectinload(db.MealPlan.meals))
+            )
+            assert plan is not None
+            plans[plan_id] = plan
+        plan = plans[plan_id]
+        day = (on - plan.start_date).days
+        cells += [(i, Slot(m.slot), m.recipe_id) for m in plan.meals if m.day == day]
+    return cells
+
+
+def template_cells(template: db.PlanTemplate) -> list[tuple[int, Slot, int]]:
+    return [(int(c["day"]), Slot(c["slot"]), int(c["recipe_id"])) for c in template.cells]
+
+
+async def left_out_note(session: AsyncSession, recipe_ids: Iterable[int]) -> str:
+    """The plan note for recipes a repeated week couldn't use (repeat_choices)."""
+    ids = set(recipe_ids)
+    names = sorted(await session.scalars(select(db.Recipe.name).where(db.Recipe.id.in_(ids))))
+    shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+    return (
+        f"Left out {shown or 'some meals'}: no longer right for your allergies, diet or "
+        "blocked recipes, so other meals took their place."
+    )
+
+
+async def plan_for(session: AsyncSession, user_id: int, on: date) -> db.MealPlan | None:
+    """`plan_id_for` with the plan's meals and shopping loaded."""
+    plan_id = await plan_id_for(session, user_id, on)
+    if plan_id is None:
+        return None
+    return await session.scalar(
+        select(db.MealPlan)
+        .where(db.MealPlan.id == plan_id)
+        .options(selectinload(db.MealPlan.meals), selectinload(db.MealPlan.shopping))
+    )
+
+
 async def lock_user_plans(session: AsyncSession, user_id: int) -> None:
     """Serialise plan saves per user until the transaction ends (POST /plans, chat replans)."""
     await session.execute(select(func.pg_advisory_xact_lock(user_id)))
@@ -996,10 +1149,48 @@ def save_plan(
                 cost_minor=line.cost_minor,
                 staple=line.staple,
                 checked=old is not None and old.checked and line.grams <= old.grams,
+                stocked_at=old.stocked_at if old is not None and line.grams <= old.grams else None,
             )
         )
     session.add(row)
     return row
+
+
+EXTRA_NUTRIENTS = ("fiber_g", "sugars_g", "sat_fat_g", "salt_g", *MICROS)
+
+
+def extra_nutrients(recipe: db.Recipe, servings: float) -> dict[str, float | None]:
+    """Fibre, sugars, saturated fat, salt, and vitamins and minerals for `servings` of a recipe
+    (its columns are per serving); all None unless the recipe's nutrition is complete."""
+    if not recipe.nutrition_complete:
+        return dict.fromkeys(EXTRA_NUTRIENTS)
+
+    def scaled(value: float | None, factor: float = 1.0, digits: int = 1) -> float | None:
+        return None if value is None else round(value * factor * servings, digits)
+
+    return {
+        "fiber_g": scaled(recipe.fiber_g),
+        "sugars_g": scaled(recipe.sugars_g),
+        "sat_fat_g": scaled(recipe.sat_fat_g),
+        "salt_g": scaled(recipe.sodium_mg, 2.5 / 1000),
+        **{m: scaled(getattr(recipe, m), digits=2) for m in MICROS},
+    }
+
+
+def add_extras(total: MacrosOut, parts: Iterable[MacrosOut]) -> MacrosOut:
+    """`total` with the extra nutrients summed over `parts`. Fibre, sugars, saturated fat and
+    salt skip unknown parts; a vitamin or mineral is unknown if any part's is (a sum of the
+    known ones would read as a shortfall that isn't there)."""
+    parts = list(parts)
+    sums: dict[str, float | None] = {}
+    for name in EXTRA_NUTRIENTS:
+        values = [getattr(p, name) for p in parts]
+        known = [v for v in values if v is not None]
+        if name in MICROS and len(known) < len(values):
+            sums[name] = None
+        else:
+            sums[name] = round(sum(known), 2 if name in MICROS else 1) if known else None
+    return total.model_copy(update=sums)
 
 
 def meal_out(m: db.PlanMeal) -> MealOut:
@@ -1012,7 +1203,13 @@ def meal_out(m: db.PlanMeal) -> MealOut:
         ),
         portions=m.portions,
         servings=m.portions / 2,
-        nutrition=MacrosOut(kcal=m.kcal, protein_g=m.protein_g, fat_g=m.fat_g, carbs_g=m.carbs_g),
+        nutrition=MacrosOut(
+            kcal=m.kcal,
+            protein_g=m.protein_g,
+            fat_g=m.fat_g,
+            carbs_g=m.carbs_g,
+            **extra_nutrients(r, m.portions / 2),
+        ),
         locked=m.locked,
         status="eaten" if m.status == "eaten" else "planned",
     )

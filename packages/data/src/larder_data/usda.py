@@ -1,4 +1,5 @@
-"""USDA FoodData Central importer (Foundation Foods + SR Legacy, CSV releases).
+"""USDA FoodData Central importer (Foundation Foods + SR Legacy, CSV releases; the survey
+foods (FNDDS) reader is larder_data.fndds).
 
 Public domain data: https://fdc.nal.usda.gov/download-datasets
 """
@@ -27,6 +28,7 @@ BASE_URL = "https://fdc.nal.usda.gov/fdc-datasets/"
 DATASETS: dict[str, str] = {
     "foundation": "FoodData_Central_foundation_food_csv_2026-04-30.zip",
     "sr_legacy": "FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+    "survey_fndds": "FoodData_Central_survey_food_csv_2024-10-31.zip",
 }
 _FDC_DATA_TYPE = {"foundation": "foundation_food", "sr_legacy": "sr_legacy_food"}
 
@@ -41,6 +43,13 @@ NUTRIENT_IDS: dict[str, tuple[int, ...]] = {
     "sugars_g": (2000, 1063),
     "sat_fat_g": (1258,),
     "sodium_mg": (1093,),
+    "iron_mg": (1089,),
+    "calcium_mg": (1087,),
+    "potassium_mg": (1092,),
+    "vitamin_c_mg": (1162,),
+    "vitamin_d_ug": (1114,),  # D2 + D3, micrograms
+    "folate_ug": (1190, 1177),  # dietary folate equivalents, else total folate
+    "vitamin_b12_ug": (1178,),
 }
 _WANTED = {nid for ids in NUTRIENT_IDS.values() for nid in ids}
 _UNDETERMINED_UNIT = "undetermined"
@@ -63,6 +72,9 @@ class FoodRecord:
     category: str | None
     nutrients: dict[str, float | None] = field(default_factory=dict[str, float | None])
     portions: list[PortionRecord] = field(default_factory=list[PortionRecord])
+    source_category: str | None = None  # the dataset's own category label
+    generic_food_id: int | None = None  # the generic food this one counts as
+    generic_method: str | None = None
 
 
 # --- download ---------------------------------------------------------------------------------
@@ -195,6 +207,9 @@ async def load_foods(session: AsyncSession, records: Iterable[FoodRecord]) -> in
                     "description": r.description,
                     "data_type": r.data_type,
                     "category": r.category,
+                    "source_category": r.source_category,
+                    "generic_food_id": r.generic_food_id,
+                    "generic_method": r.generic_method,
                     **r.nutrients,
                 }
                 for r in batch
@@ -206,7 +221,15 @@ async def load_foods(session: AsyncSession, records: Iterable[FoodRecord]) -> in
                 index_elements=[Food.id],
                 set_={
                     c: getattr(excluded, c)
-                    for c in ("description", "data_type", "category", *NUTRIENT_IDS)
+                    for c in (
+                        "description",
+                        "data_type",
+                        "category",
+                        "source_category",
+                        "generic_food_id",
+                        "generic_method",
+                        *NUTRIENT_IDS,
+                    )
                 },
             )
         )

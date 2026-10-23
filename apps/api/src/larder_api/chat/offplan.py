@@ -69,6 +69,26 @@ async def estimate(scope: ChatScope, change: AteOffPlan) -> Estimate:
     )
 
 
+def exact(picks: list[tuple[db.Food, float]]) -> Estimate:
+    """Food the user picked themselves (diary quick-add): exact foods and grams, no guessing."""
+    kcal = protein = fat = carbs = 0.0
+    for food, grams in picks:
+        kcal += (food.kcal or 0) * grams / 100
+        protein += (food.protein_g or 0) * grams / 100
+        fat += (food.fat_g or 0) * grams / 100
+        carbs += (food.carbs_g or 0) * grams / 100
+    return Estimate(
+        macros=Macros(round(kcal), round(protein), round(fat), round(carbs)),
+        items=[
+            {"name": f.description, "food_id": f.id, "food": f.description, "grams": round(g)}
+            for f, g in picks
+        ],
+        unmatched=[],
+        note=None,
+        estimated=False,
+    )
+
+
 async def _fallback(scope: ChatScope, change: AteOffPlan, unmatched: list[str]) -> Estimate:
     slot = change.when.slot or Slot.DINNER
     planned = await planned_meal(scope, change.when.date, slot)
@@ -82,9 +102,9 @@ async def _fallback(scope: ChatScope, change: AteOffPlan, unmatched: list[str]) 
 
 
 async def planned_meal(scope: ChatScope, on: date, slot: Slot) -> tuple[str, Macros] | None:
-    """The latest plan's meal at (date, slot), if that plan covers the date."""
+    """The planned meal at (date, slot) in the plan in force that day, if it covers the date."""
     async with scope.sessionmaker() as session:
-        plan = await planning.latest_plan(session, scope.user_id)
+        plan = await planning.plan_for(session, scope.user_id, on)
         if plan is None:
             return None
         day = (on - plan.start_date).days

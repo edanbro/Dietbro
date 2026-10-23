@@ -2,7 +2,7 @@ import base64
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,21 @@ class Settings(BaseSettings):
     # turns included (they run the planner). Model budget: $1 per calendar month (UTC), paced -
     # the model is used while today's spend is under what's left of the month divided by the
     # days left - and at most $0.10 per turn; otherwise the turn runs offline.
+    # Expiry reminders (Web Push, larder_api.reminders). Off unless both VAPID keys are set:
+    # generate them with `uv run larder-vapid` and keep them in .env only.
+    vapid_public_key: str | None = None  # base64url, uncompressed P-256 point (for browsers)
+    vapid_private_key: SecretStr | None = None  # base64url raw private key
+    vapid_subject: str = "mailto:admin@localhost"  # who push services contact about abuse
+    reminder_hour: int = 9  # local time
+    recap_hour: int = 18  # the weekly recap, Sundays, local time
+
+    # Hosting without a separate worker (free tiers, larder_api.inline): pasted receipts are read
+    # in the API process and periodic jobs run on a minute ticker; receipt photos are refused.
+    worker_in_api: bool = False
+    # The public demo account (larder_api.demo): its Clerk user id. Reset nightly, chat offline,
+    # can't be deleted. The web app needs the same id (DEMO_CLERK_USER_ID) to sign visitors in.
+    demo_auth_subject: str | None = None
+
     llm_monthly_cap_usd: float = 1.0
     llm_turn_cap_usd: float = 0.10
     llm_daily_messages: int = 60
@@ -64,6 +79,35 @@ class Settings(BaseSettings):
     receipt_job_timeout_s: int = 120
     receipt_stale_after_min: int = 15  # queued/processing longer than this is marked failed
     ocr_max_side_px: int = 2_000  # photos are scaled down to this before OCR
+
+    # Barcode lookups for products not imported yet (Open Food Facts product API). Off unless a
+    # User-Agent is set: OFF asks for "AppName/Version (contact email)". Only the barcode is sent.
+    off_user_agent: str | None = None
+    off_base_url: str = "https://world.openfoodfacts.org"
+    off_rate_per_min: int = 12  # all users together (OFF allows 15 product reads per minute)
+    barcode_lookups_per_hour: int = 30  # per user, lookups that reach OFF
+
+    # Rate limits (larder_api.ratelimit): on by default; a rule's limit can be changed by name,
+    # e.g. RATE_LIMIT_OVERRIDES='{"import_read": 100}'. Behind our own proxies (Render, Fly...)
+    # set TRUSTED_PROXY_HOPS to how many there are, so client addresses come from
+    # X-Forwarded-For; otherwise the socket peer is used and the header ignored.
+    rate_limits: bool = True
+    rate_limit_overrides: dict[str, int] = {}
+    trusted_proxy_hops: int = 0
+
+    @field_validator(
+        "anthropic_api_key",
+        "clerk_issuer",
+        "clerk_publishable_key",
+        "clerk_jwks_url",
+        "off_user_agent",
+        mode="before",
+    )
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        """Compose passes optional variables as "" when they aren't set (`${VAR:-}`): treat that
+        as unset, not as an empty key (the chat would try Claude without one)."""
+        return None if isinstance(value, str) and not value.strip() else value
 
     @property
     def llm_enabled(self) -> bool:

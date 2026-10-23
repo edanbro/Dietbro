@@ -19,6 +19,10 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 coverage/
+apps/web/e2e-shots/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/test-results-visual/
 
 # Env / secrets
 .env
@@ -34,3 +38,6 @@ coverage/
 # Data pipeline downloads (USDA zips, TheMealDB responses, embedding models)
 /data/cache/
 /data/reports/
+
+# Copied from node_modules by apps/web/scripts/copy-zxing.mjs
+apps/web/public/zxing/

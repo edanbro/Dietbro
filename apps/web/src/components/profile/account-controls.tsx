@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ErrorAlert, LabeledInput } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
 import { useDeleteAccount, useExport } from "@/lib/api/hooks";
+import { APP_NAME } from "@/lib/brand";
 
 /** GDPR basics: download everything we store; delete it all (and the sign-in account). */
 export function AccountControls() {
@@ -23,7 +24,7 @@ export function AccountControls() {
   function save(data: unknown) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement("a"), { href: url, download: "larder-export.json" });
+    const a = Object.assign(document.createElement("a"), { href: url, download: `${APP_NAME.toLowerCase()}-export.json` });
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -37,7 +38,7 @@ export function AccountControls() {
           // Our data is already gone. Clerk can refuse to delete the sign-in itself (e.g. it
           // wants a recent sign-in); sign out anyway rather than strand the user here.
           toast.error(
-            "Your Larder data is deleted, but your sign-in couldn't be removed. Sign in again and delete it from your account settings.",
+            `Your ${APP_NAME} data is deleted, but your sign-in couldn't be removed. Sign in again and delete it from your account settings.`,
           );
           await signOut({ redirectUrl: "/" });
           return;
@@ -57,7 +58,7 @@ export function AccountControls() {
       <ErrorAlert error={exporter.error} />
       <div className="flex flex-col gap-3 rounded-lg border border-destructive/40 p-3">
         <p className="text-sm">
-          Delete your account and everything Larder stores about you. This can&apos;t be undone.
+          Delete your account and everything {APP_NAME} stores about you. This can&apos;t be undone.
         </p>
         <LabeledInput
           id="confirm-delete"

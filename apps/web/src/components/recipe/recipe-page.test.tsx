@@ -5,9 +5,11 @@ import { json, mockApi, renderWithClient } from "@/test/api";
 import { makeRecipe } from "@/test/fixtures";
 import { calls as nav, resetNavigation } from "@/test/navigation";
 
-import { RecipePage, safeUrl, steps } from "./recipe-page";
+import { steps } from "@/lib/cooking";
 
-vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => null }) }));
+import { RecipePage, safeUrl } from "./recipe-page";
+
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "test-token" }) }));
 vi.mock("next/navigation", () => import("@/test/navigation"));
 
 const ALLERGENS = [
@@ -28,6 +30,16 @@ describe("helpers", () => {
 
   it("splits instructions into steps", () => {
     expect(steps("One.\r\n\r\nTwo.\nThree. ")).toEqual(["One.", "Two.", "Three."]);
+  });
+
+  it("drops step headings and the numbers a source wrote", () => {
+    expect(steps("STEP 1\r\nHeat the oven.\r\nstep 2:\r\n2. Bake.\n3) Rest.\nStep 4 - Serve.")).toEqual(
+      ["Heat the oven.", "Bake.", "Rest.", "Serve."],
+    );
+    expect(steps("2 eggs go in first.\n1.5 kg is plenty.")).toEqual([
+      "2 eggs go in first.",
+      "1.5 kg is plenty.",
+    ]);
   });
 });
 
@@ -62,7 +74,11 @@ describe("RecipePage", () => {
     const ingredients = within(screen.getByRole("region", { name: "Ingredients" })).getAllByRole(
       "listitem",
     );
-    expect(ingredients.map((li) => li.textContent)).toEqual(["1 largeOnion", "4Eggs", "Feta"]);
+    expect(ingredients.map((li) => li.textContent)).toEqual([
+      "1 largeOnionIn your pantry",
+      "4Eggs",
+      "Feta",
+    ]);
 
     const method = screen.getByRole("region", { name: "Method" });
     expect([...method.querySelectorAll("p")].map((p) => p.textContent)).toEqual([
@@ -106,7 +122,7 @@ describe("RecipePage", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByText("Egyptian · Serves 2")).toBeInTheDocument();
     expect(screen.getByText(/Nutrition isn't available/)).toBeInTheDocument();
-    expect(screen.getByText("A Larder recipe.")).toBeInTheDocument();
+    expect(screen.getByText("A Mealwright recipe.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /alert/ })).not.toBeInTheDocument();
   });
 

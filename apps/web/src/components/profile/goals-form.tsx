@@ -13,7 +13,7 @@ import {
 } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { type GoalsIn, useBody, useGoals, useSaveGoals } from "@/lib/api/hooks";
+import { type GoalsIn, useBody, useGoals, useMe, useSaveGoals } from "@/lib/api/hooks";
 
 type Goal = NonNullable<GoalsIn["goal"]>;
 type FormState = {
@@ -21,6 +21,11 @@ type FormState = {
   kcal_min: string;
   kcal_max: string;
   protein_g_min: string;
+  protein_g_max: string;
+  fat_g_min: string;
+  fat_g_max: string;
+  carbs_g_min: string;
+  carbs_g_max: string;
   weekly_budget: string;
   currency: GoalsIn["currency"];
   calorie_floor: string;
@@ -36,6 +41,7 @@ const GOALS: { value: Goal; label: string }[] = [
 export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
   const { data: saved } = useGoals();
   const { data: body } = useBody();
+  const { data: me } = useMe();
   const save = useSaveGoals();
   const [form, setForm] = useState<FormState | null>(null);
 
@@ -44,11 +50,16 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
     kcal_min: fromNumber(saved?.kcal_min),
     kcal_max: fromNumber(saved?.kcal_max),
     protein_g_min: fromNumber(saved?.protein_g_min),
+    protein_g_max: fromNumber(saved?.protein_g_max),
+    fat_g_min: fromNumber(saved?.fat_g_min),
+    fat_g_max: fromNumber(saved?.fat_g_max),
+    carbs_g_min: fromNumber(saved?.carbs_g_min),
+    carbs_g_max: fromNumber(saved?.carbs_g_max),
     weekly_budget:
       saved?.weekly_budget_minor === null || saved?.weekly_budget_minor === undefined
         ? ""
         : String(saved.weekly_budget_minor / 100),
-    currency: saved?.currency ?? "GBP",
+    currency: saved?.currency ?? me?.region.currency ?? "GBP",
     calorie_floor: fromNumber(saved?.calorie_floor ?? 1200),
   };
   const set = (patch: Partial<FormState>) => setForm({ ...current, ...patch });
@@ -63,6 +74,11 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
       kcal_min: Number(current.kcal_min),
       kcal_max: Number(current.kcal_max),
       protein_g_min: toNumber(current.protein_g_min),
+      protein_g_max: toNumber(current.protein_g_max),
+      fat_g_min: toNumber(current.fat_g_min),
+      fat_g_max: toNumber(current.fat_g_max),
+      carbs_g_min: toNumber(current.carbs_g_min),
+      carbs_g_max: toNumber(current.carbs_g_max),
       weekly_budget_minor: budget === null ? null : Math.round(budget * 100),
       currency: current.currency,
       calorie_floor: toNumber(current.calorie_floor) ?? 1200,
@@ -169,6 +185,45 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
           </NativeSelect>
         </div>
       </div>
+      <details
+        className="rounded-lg border px-3 py-2"
+        open={Boolean(
+          current.protein_g_max ||
+            current.fat_g_min ||
+            current.fat_g_max ||
+            current.carbs_g_min ||
+            current.carbs_g_max,
+        )}
+      >
+        <summary className="cursor-pointer py-1 text-sm font-medium">
+          Advanced: fat, carbs and a protein cap
+        </summary>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Grams a day; leave blank for no limit. These are aims the planner trades off, never
+          safety rules.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 pb-1">
+          {(
+            [
+              ["fat_g_min", "Min fat (g)"],
+              ["fat_g_max", "Max fat (g)"],
+              ["carbs_g_min", "Min carbs (g)"],
+              ["carbs_g_max", "Max carbs (g)"],
+              ["protein_g_max", "Max protein (g)"],
+            ] as const
+          ).map(([key, label]) => (
+            <LabeledInput
+              key={key}
+              id={key.replaceAll("_", "-")}
+              label={label}
+              type="number"
+              inputMode="numeric"
+              value={current[key]}
+              onChange={(e) => set({ [key]: e.target.value })}
+            />
+          ))}
+        </div>
+      </details>
       <LabeledInput
         id="floor"
         label="Calorie floor"

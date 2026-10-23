@@ -7,3 +7,8 @@ id = "clerk-secret-key"
 description = "Clerk secret key"
 regex = '''\bsk_(?:test|live)_[A-Za-z0-9]{20,}\b'''
 keywords = ["sk_test_", "sk_live_"]
+
+# Nutrient field names such as "vitamin_b12_ug" look like generic API keys.
+[[allowlists]]
+description = "Nutrient field names"
+regexes = ['''^vitamin_[a-z0-9]+_(?:mg|ug)$''']

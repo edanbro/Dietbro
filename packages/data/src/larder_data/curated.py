@@ -1,5 +1,5 @@
-"""Curated breakfasts and snacks (curated.toml): simple recipes built from USDA foods that fill
-the gaps in TheMealDB (docs/adr/0010-meal-slots-and-curated-recipes.md).
+"""Curated recipes (curated.toml): breakfasts and snacks that fill the gaps in TheMealDB, and
+Irish and everyday mains and lunches (docs/adr/0010-meal-slots-and-curated-recipes.md).
 
 Every ingredient name is a curated alias, so these resolve without the embedding model, and
 serving counts are explicit rather than estimated.
@@ -9,10 +9,12 @@ import tomllib
 from importlib import resources
 from typing import Any
 
+from larder_core.meals import CATEGORY_SLOTS
 from larder_data.mealdb import IngredientLine, RecipeDraft
 
 SOURCE = "curated"
-CATEGORIES = frozenset({"Breakfast", "Snack"})
+# Any category that fills a meal slot (larder_core.meals.CATEGORY_SLOTS; not "Side").
+CATEGORIES = frozenset(c for c, slots in CATEGORY_SLOTS.items() if slots)
 
 
 def parse(data: dict[str, Any]) -> list[RecipeDraft]:

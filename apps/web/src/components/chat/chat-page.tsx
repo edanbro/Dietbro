@@ -1,12 +1,13 @@
 "use client";
 
 import { InfoIcon, LoaderCircleIcon, SquarePenIcon, TimerIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { EmptyIllustration } from "@/components/empty-state";
 import { ErrorAlert } from "@/components/form-bits";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ChatThread } from "@/lib/api/hooks";
 import { formatWhen, localISODate } from "@/lib/dates";
@@ -14,6 +15,7 @@ import { formatWhen, localISODate } from "@/lib/dates";
 import { Composer } from "./composer";
 import { LiveReply, PendingReply, StoredMessage } from "./messages";
 import { type Chat, useChat } from "./use-chat";
+import { APP_NAME } from "@/lib/brand";
 
 /** The offline parser's examples (larder_llm.reply.HELP_TEXT): every one of them parses. */
 export const EXAMPLES = [
@@ -35,34 +37,37 @@ export function OfflineBanner({ thread }: { thread: ChatThread }) {
       : reason === "model_error"
         ? "Simple replies: the AI isn't responding"
         : "Simple replies: no AI key";
+  // A quiet note, not a warning: the chat still changes the plan, just with simpler words.
   return (
-    <Alert role="note">
-      <InfoIcon aria-hidden />
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription>
+    <p
+      role="note"
+      className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground"
+    >
+      <InfoIcon aria-hidden className="mt-px size-3.5 shrink-0" />
+      <span>
+        <span className="font-medium text-foreground">{title}.</span>{" "}
         {reason === "budget" ? "You've used your AI chat allowance for now. " : null}
-        Larder follows short, plain requests like &ldquo;skip dinner tonight&rdquo; or &ldquo;had
+        {APP_NAME} follows short, plain requests like &ldquo;skip dinner tonight&rdquo; or &ldquo;had
         pizza for lunch&rdquo;.
-      </AlertDescription>
-    </Alert>
+      </span>
+    </p>
   );
 }
 
 function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tell Larder what changed</CardTitle>
-        <CardDescription>
-          A craving, food you ate, a meal you&apos;ll skip: Larder re-plans the rest of your week
-          around it, still within your goals and allergies.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p id="chat-examples" className="mb-2 text-xs text-muted-foreground">
+    <section className="flex flex-col items-center gap-3 px-2 py-8 text-center">
+      <EmptyIllustration art="chat" />
+      <h2 className="text-xl font-semibold">Tell {APP_NAME} what changed</h2>
+      <p className="max-w-sm text-sm text-pretty text-muted-foreground">
+        A craving, food you ate, a meal you&apos;ll skip: {APP_NAME} re-plans the rest of your week
+        around it, still within your goals and allergies.
+      </p>
+      <div className="mt-2 flex flex-col items-center gap-2">
+        <p id="chat-examples" className="text-xs text-muted-foreground">
           Try:
         </p>
-        <ul aria-labelledby="chat-examples" className="flex flex-wrap gap-2">
+        <ul aria-labelledby="chat-examples" className="flex flex-wrap justify-center gap-2">
           {EXAMPLES.map((e) => (
             <li key={e}>
               <Button
@@ -76,8 +81,8 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
             </li>
           ))}
         </ul>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -139,6 +144,15 @@ function ChatSkeleton() {
 export function ChatPage() {
   const chat = useChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const params = useSearchParams();
+  const router = useRouter();
+  const prompt = params.get("prompt");
+  const { setDraft } = chat;
+  useEffect(() => {
+    if (!prompt) return;
+    setDraft((d) => d || prompt.slice(0, 500));
+    router.replace("/chat");
+  }, [prompt, router, setDraft]);
   const endRef = useRef<HTMLDivElement>(null);
   const { thread, live, messages } = chat;
 
@@ -148,7 +162,13 @@ export function ChatPage() {
 
   // A failed poll keeps the conversation on screen; only a first load that fails shows it.
   const data = thread.data;
-  if (!data) return thread.error ? <ErrorAlert error={thread.error} /> : <ChatSkeleton />;
+  if (!data) {
+    return thread.error ? (
+      <ErrorAlert error={thread.error} onRetry={() => void thread.refetch()} />
+    ) : (
+      <ChatSkeleton />
+    );
+  }
 
   const today = localISODate();
   const last = messages.at(-1);

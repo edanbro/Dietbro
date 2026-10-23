@@ -79,3 +79,29 @@ describe("GoalsForm", () => {
     expect(body).toMatchObject({ kcal_min: 1800, kcal_max: 2200, weekly_budget_minor: 6050 });
   });
 });
+
+describe("GoalsForm advanced targets", () => {
+  it("sends fat and carbs bands, and keeps saved ones", async () => {
+    const saved = {
+      kcal_min: 1800,
+      kcal_max: 2200,
+      carbs_g_max: 250,
+      currency: "GBP",
+      updated_at: "x",
+    };
+    const calls = mockApi((req) =>
+      req.method === "PUT"
+        ? Response.json(saved)
+        : Response.json(new URL(req.url).pathname === "/me/goals" ? saved : null),
+    );
+    const onSaved = renderForm();
+
+    await waitFor(() => expect(screen.getByLabelText("Max carbs (g)")).toHaveValue(250));
+    fill("Min fat (g)", "50");
+    fireEvent.click(screen.getByRole("button", { name: "Save goals" }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const body = await calls.find((c) => c.method === "PUT")?.json();
+    expect(body).toMatchObject({ fat_g_min: 50, carbs_g_max: 250, fat_g_max: null });
+  });
+});

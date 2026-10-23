@@ -1,17 +1,34 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, ExternalLinkIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  BanIcon,
+  ChefHatIcon,
+  ExternalLinkIcon,
+  HeartIcon,
+  PencilIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
+import { GradeBadge } from "@/components/food-bits";
 import { ErrorAlert } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
-import { type Recipe, useAllergens, useRecipe } from "@/lib/api/hooks";
+import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
+import { parseServings, steps } from "@/lib/cooking";
 import { allergenLabel, formatNumber, humanize } from "@/lib/format";
+import { APP_NAME } from "@/lib/brand";
+import { MoreNutrients } from "@/components/plan/macro-bars";
+import { RecipeArt } from "@/components/recipe/recipe-art";
+import { Micronutrients } from "@/components/nutrients/micronutrients";
+import { RecipeNotes } from "@/components/recipe/recipe-notes";
+import { ShareLinkButton } from "@/components/share-link-button";
 
 /** http(s) URLs only: recipe data comes from third parties. */
 export function safeUrl(url: string | null): URL | null {
@@ -22,14 +39,6 @@ export function safeUrl(url: string | null): URL | null {
   } catch {
     return null;
   }
-}
-
-/** Recipe text as paragraphs (TheMealDB separates steps with line breaks). */
-export function steps(instructions: string): string[] {
-  return instructions
-    .split(/\r?\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function BackButton() {
@@ -63,14 +72,17 @@ function Nutrition({ recipe }: { recipe: Recipe }) {
     { label: "Fat", value: `${formatNumber(n.fat_g)} g` },
   ];
   return (
-    <dl className="grid grid-cols-4 gap-2">
-      {cells.map((c) => (
-        <div key={c.label} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
-          <dt className="text-xs text-muted-foreground">{c.label}</dt>
-          <dd className="text-sm font-semibold tabular-nums">{c.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-2">
+      <dl className="grid grid-cols-4 gap-2">
+        {cells.map((c) => (
+          <div key={c.label} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
+            <dt className="text-xs text-muted-foreground">{c.label}</dt>
+            <dd className="text-sm font-semibold tabular-nums">{c.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <MoreNutrients values={n} />
+    </div>
   );
 }
 
@@ -112,6 +124,61 @@ function Allergens({ recipe }: { recipe: Recipe }) {
   );
 }
 
+/** Favourite (planned more often) or never again; pressing the active one clears it. */
+function Feedback({ recipe }: { recipe: Recipe }) {
+  const save = useRecipeFeedback(recipe.id);
+  const verdict = recipe.feedback ?? null;
+  const set = (next: "favourite" | "never") =>
+    save.mutate(verdict === next ? null : next, {
+      onSuccess: () =>
+        toast.success(
+          verdict === next
+            ? "Cleared"
+            : next === "favourite"
+              ? "Saved to favourites: planned more often"
+              : "We won't plan this again",
+        ),
+      onError: (e) =>
+        toast.error(e instanceof ApiError && e.messages[0] ? e.messages[0] : "Couldn't save that"),
+    });
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        aria-pressed={verdict === "favourite"}
+        disabled={save.isPending}
+        onClick={() => set("favourite")}
+      >
+        <HeartIcon
+          aria-hidden
+          className={cn(verdict === "favourite" && "fill-red-500 text-red-500")}
+        />
+        {verdict === "favourite" ? "Favourite" : "Add to favourites"}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-pressed={verdict === "never"}
+        disabled={save.isPending}
+        onClick={() => set("never")}
+      >
+        <BanIcon aria-hidden className={cn(verdict === "never" && "text-destructive")} />
+        {verdict === "never" ? "Never planned" : "Never again"}
+      </Button>
+      <ShareLinkButton target={{ kind: "recipe", recipe_id: recipe.id }} title={recipe.name} />
+      {/* Your own recipe changes in place; a catalogue one is saved as your copy. */}
+      <Link
+        href={`/recipes/${recipe.id}/edit`}
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+      >
+        <PencilIcon aria-hidden />
+        {recipe.generated ? "Edit" : "Edit a copy"}
+      </Link>
+    </div>
+  );
+}
+
 function Credit({ recipe }: { recipe: Recipe }) {
   const original = safeUrl(recipe.source_url);
   const link = original ? (
@@ -141,7 +208,7 @@ function Credit({ recipe }: { recipe: Recipe }) {
           .
         </p>
       ) : recipe.source === "curated" ? (
-        <p>A Larder recipe.</p>
+        <p>A {APP_NAME} recipe.</p>
       ) : (
         <p>Source: {recipe.source}</p>
       )}
@@ -152,7 +219,8 @@ function Credit({ recipe }: { recipe: Recipe }) {
 
 /** A recipe: photo, numbers per serving, allergens and diets, ingredients and method. */
 export function RecipePage({ id }: { id: number }) {
-  const { data: recipe, isPending, error } = useRecipe(id);
+  const { data: recipe, isPending, error, refetch } = useRecipe(id);
+  const servings = parseServings(useSearchParams().get("servings"));
 
   if (isPending) {
     return (
@@ -171,7 +239,7 @@ export function RecipePage({ id }: { id: number }) {
         {error instanceof ApiError && error.status === 404 ? (
           <p className="text-sm text-muted-foreground">We couldn&apos;t find that recipe.</p>
         ) : (
-          <ErrorAlert error={error} />
+          <ErrorAlert error={error} onRetry={() => void refetch()} />
         )}
         <Link href="/plan" className={cn(buttonVariants({ variant: "outline" }))}>
           Go to your plan
@@ -190,21 +258,28 @@ export function RecipePage({ id }: { id: number }) {
   return (
     <article className="flex flex-col gap-5">
       <BackButton />
-      {recipe.image_url ? (
-        // Third-party photo of unknown size; see MealCard.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={recipe.image_url}
-          alt={recipe.name}
-          className="aspect-video w-full rounded-xl bg-muted object-cover"
-        />
-      ) : null}
+      <RecipeArt
+        recipe={recipe}
+        alt={recipe.image_url ? recipe.name : ""}
+        eager
+        className={cn("w-full rounded-xl", recipe.image_url ? "aspect-video" : "aspect-[3/1]")}
+      />
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">{recipe.name}</h1>
         {details.length ? (
           <p className="text-sm text-muted-foreground">{details.join(" · ")}</p>
         ) : null}
+        <GradeBadge grade={recipe.grade} className="mt-1" />
       </header>
+      <Link
+        href={`/recipes/${recipe.id}/cook${servings ? `?servings=${servings}` : ""}`}
+        className={cn(buttonVariants({ size: "lg" }), "w-full")}
+      >
+        <ChefHatIcon aria-hidden />
+        Start cooking{servings ? ` (${servings} ${servings === 1 ? "serving" : "servings"})` : ""}
+      </Link>
+      <Feedback recipe={recipe} />
+      <RecipeNotes key={recipe.note?.updated_at ?? "none"} recipe={recipe} />
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">
         <h2 id="recipe-nutrition" className="text-base font-semibold">
@@ -212,6 +287,15 @@ export function RecipePage({ id }: { id: number }) {
         </h2>
         <Nutrition recipe={recipe} />
       </section>
+
+      {recipe.per_serving ? (
+        <section aria-labelledby="recipe-micros" className="flex flex-col gap-2">
+          <h2 id="recipe-micros" className="text-base font-semibold">
+            Vitamins and minerals
+          </h2>
+          <Micronutrients values={recipe.per_serving} mode="serving" />
+        </section>
+      ) : null}
 
       <Allergens recipe={recipe} />
 
@@ -224,6 +308,11 @@ export function RecipePage({ id }: { id: number }) {
             <li key={`${ing.name}-${i}`} className="flex gap-3 px-3 py-2">
               <span className="w-24 shrink-0 text-muted-foreground">{ing.measure}</span>
               <span className="min-w-0 flex-1">{ing.name}</span>
+              {ing.in_pantry ? (
+                <span className="shrink-0 text-xs text-emerald-700 dark:text-emerald-400">
+                  In your pantry
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

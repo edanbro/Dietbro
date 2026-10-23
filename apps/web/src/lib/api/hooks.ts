@@ -1,9 +1,25 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { localISODate, localTime } from "@/lib/dates";
+import {
+  dropTicks,
+  isNetworkError,
+  loadSnapshot,
+  pendingTicks,
+  queueTick,
+  saveSnapshot,
+} from "@/lib/offline";
 
 import { ApiError, unwrap, useApi } from "./browser";
 import type { components } from "./schema";
@@ -11,23 +27,30 @@ import { ChatProblemError, isChatProblem } from "./sse";
 
 export type Schemas = components["schemas"];
 export type Me = Schemas["Me"];
+export type Region = Schemas["RegionOut"];
+export type RegionIn = Schemas["RegionIn"];
+export type RegionOption = Schemas["RegionOption"];
 export type GoalsIn = Schemas["GoalsIn"];
 export type BodyIn = Schemas["BodyIn"];
 export type BodyOut = Schemas["BodyOut"];
 export type PreferencesIn = Schemas["PreferencesIn"];
 export type AllergiesIn = Schemas["AllergiesIn"];
 export type FoodSummary = Schemas["FoodSummary"];
+export type FoodDetail = Schemas["FoodDetail"];
 export type PantryItem = Schemas["PantryItemOut"];
 export type PantryItemIn = Schemas["PantryItemIn"];
+export type PantryItemPatch = Schemas["PantryItemPatch"];
 export type Plan = Schemas["PlanOut"];
 export type PlanDay = Schemas["DayOut"];
 export type Meal = Schemas["MealOut"];
 export type Slot = Schemas["Slot"];
 export type Macros = Schemas["MacrosOut"];
 export type NutrientBands = Schemas["NutrientBands"];
+export type ReferenceIntakes = Schemas["ReferenceIntakes"];
 export type Violation = Schemas["ViolationOut"];
 export type ShoppingList = Schemas["ShoppingListOut"];
 export type ShoppingItem = Schemas["ShoppingItemOut"];
+export type ShoppingExtra = Schemas["ShoppingExtraOut"];
 export type Recipe = Schemas["RecipeDetail"];
 export type LoggedEntry = Schemas["MealLogOut"];
 export type ChatThread = Schemas["ThreadOut"];
@@ -40,6 +63,10 @@ export type Eaten = Schemas["EatenOut"];
 export type PantryChange = Schemas["PantryChangeOut"];
 /** A typed plan change (skip, swap, off-plan food, craving), as the chat's executor takes it. */
 export type PlanChange = Schemas["ReplanRequest"]["changes"][number];
+export type PlanTemplate = Schemas["TemplateOut"];
+export type DayMeal = Schemas["DayMealOut"];
+/** A fresh plan from `start`, or the same meals again: an earlier week's or a template's. */
+export type CreatePlanArgs = { start?: string; repeat_from?: string; template_id?: number };
 export type ExpiringPantry = Schemas["ExpiringPantry"];
 export type ExpiringItem = Schemas["ExpiringItem"];
 export type Receipt = Schemas["ReceiptOut"];
@@ -47,6 +74,12 @@ export type ReceiptLine = Schemas["ReceiptLineOut"];
 export type ReceiptLinePatch = Schemas["ReceiptLinePatch"];
 export type ReceiptSummary = Schemas["ReceiptSummary"];
 export type ReceiptStatus = Receipt["status"];
+export type Diary = Schemas["DiaryOut"];
+export type DiaryDay = Schemas["DiaryDayOut"];
+export type Weight = Schemas["WeightOut"];
+export type RecipeListItem = Schemas["RecipeListItem"];
+export type RecipeVerdict = Schemas["RecipeFeedbackIn"]["verdict"];
+export type RecipeQuery = { q: string; slot: Slot | null; favourites: boolean };
 
 export const keys = {
   me: ["me"] as const,
@@ -61,13 +94,26 @@ export const keys = {
   receipt: (id: number) => ["receipts", id] as const,
   allergens: ["allergens"] as const,
   cuisines: ["cuisines"] as const,
+  regions: ["regions"] as const,
+  shoppingExtras: ["shopping", "extras"] as const,
   food: (id: number) => ["food", id] as const,
-  search: (q: string) => ["foods", "search", q] as const,
+  search: (q: string, scope: string = "all") => ["foods", "search", q, scope] as const,
   currentPlan: ["plans", "current"] as const,
+  upcomingPlan: ["plans", "upcoming"] as const,
+  alternatives: (planId: number, date: string, slot: string) =>
+    ["plans", planId, "alternatives", date, slot] as const,
   shopping: (planId: number) => ["plans", planId, "shopping"] as const,
   recipe: (id: number) => ["recipes", id] as const,
+  /** Under `recipes`: feedback on any recipe refreshes every list and the detail. */
+  recipeList: (query: RecipeQuery) => ["recipes", "list", query] as const,
   /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
   plans: ["plans"] as const,
+  /** Under `plans`: marking meals eaten and chat logs change it. */
+  diary: (days: number) => ["plans", "diary", days] as const,
+  weights: ["me", "weights"] as const,
+  templates: ["me", "templates"] as const,
+  /** Under `plans`: what a plan change makes stale. */
+  mealsOn: (date: string) => ["plans", "meals", date] as const,
   chatThread: ["chat", "thread"] as const,
   /** Mutations that change the current plan from the plan screen (one at a time). */
   planChange: ["plan-change"] as const,
@@ -75,7 +121,17 @@ export const keys = {
 
 export function useMe() {
   const api = useApi();
-  return useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await api.GET("/me")) });
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: keys.me,
+    initialData: () => loadSnapshot<Me>(userId, "me"),
+    initialDataUpdatedAt: 0,
+    queryFn: async () => {
+      const me = unwrap(await api.GET("/me"));
+      saveSnapshot(userId, "me", me);
+      return me;
+    },
+  });
 }
 
 export function useGoals() {
@@ -140,15 +196,38 @@ export function useFood(id: number | null) {
   });
 }
 
-export function useFoodSearch(q: string) {
+/** A product by barcode (catalogue, else Open Food Facts); primes the food's detail. */
+export function useBarcodeLookup() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (code: string) =>
+      unwrap(await api.GET("/foods/barcode/{code}", { params: { path: { code } } })),
+    onSuccess: (food) => qc.setQueryData(keys.food(food.id), food),
+  });
+}
+
+export const SEARCH_PAGE = 20;
+export type FoodScope = "all" | "generic";
+
+/** Pages of food search results; a full page means there may be more. */
+export function useFoodSearch(q: string, scope: FoodScope = "all") {
   const api = useApi();
   const query = q.trim();
-  return useQuery({
-    queryKey: keys.search(query),
+  return useInfiniteQuery({
+    queryKey: keys.search(query, scope),
     enabled: query.length >= 2,
     staleTime: 60_000,
-    queryFn: async ({ signal }) =>
-      unwrap(await api.GET("/foods/search", { params: { query: { q: query } }, signal })),
+    initialPageParam: 0,
+    getNextPageParam: (last: FoodSummary[], _all, offset: number) =>
+      last.length === SEARCH_PAGE && offset + SEARCH_PAGE <= 200 ? offset + SEARCH_PAGE : undefined,
+    queryFn: async ({ signal, pageParam }) =>
+      unwrap(
+        await api.GET("/foods/search", {
+          params: { query: { q: query, scope, limit: SEARCH_PAGE, offset: pageParam } },
+          signal,
+        }),
+      ),
   });
 }
 
@@ -189,6 +268,30 @@ export function useSavePreferences() {
   );
 }
 
+export function useRegions() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.regions,
+    queryFn: async () => unwrap(await api.GET("/regions")),
+    staleTime: Infinity,
+  });
+}
+
+/** Saving a region can switch the goals' currency, and prices everywhere follow it. */
+export function useSaveRegion() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RegionIn) => unwrap(await api.PUT("/me/region", { body })),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.me }),
+        qc.invalidateQueries({ queryKey: keys.goals }),
+      ]);
+    },
+  });
+}
+
 export function useSaveAllergies() {
   const api = useApi();
   return useSave(
@@ -201,6 +304,15 @@ export function useAddPantryItem() {
   const api = useApi();
   return useSave(
     async (body: PantryItemIn) => unwrap(await api.POST("/pantry", { body })),
+    keys.pantry,
+  );
+}
+
+export function useUpdatePantryItem() {
+  const api = useApi();
+  return useSave(
+    async ({ id, ...body }: PantryItemPatch & { id: number }) =>
+      unwrap(await api.PATCH("/pantry/{item_id}", { params: { path: { item_id: id } }, body })),
     keys.pantry,
   );
 }
@@ -226,22 +338,52 @@ export function useDeleteAccount() {
 
 // --- plans (M3) -------------------------------------------------------------------------------
 
-/** The latest plan, or null before the first one. */
+/** The plan in force today, or null before the first one. Offline: the last copy seen. */
 export function useCurrentPlan() {
   const api = useApi();
+  const { userId } = useAuth();
   return useQuery({
     queryKey: keys.currentPlan,
-    queryFn: async (): Promise<Plan | null> => unwrap(await api.GET("/plans/current")) ?? null,
+    initialData: () => loadSnapshot<Plan>(userId, "plan"),
+    initialDataUpdatedAt: 0, // always refetched when online
+    queryFn: async (): Promise<Plan | null> => {
+      const plan = unwrap(await api.GET("/plans/current")) ?? null;
+      saveSnapshot(userId, "plan", plan ?? undefined);
+      return plan;
+    },
   });
 }
 
-/** Plan a week starting today (the user's local date). Replaces the current plan. */
+/** The plan for the days after the current one ("next week"), if made. */
+export function useUpcomingPlan(enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.upcomingPlan,
+    enabled,
+    queryFn: async (): Promise<Plan | null> => unwrap(await api.GET("/plans/upcoming")) ?? null,
+  });
+}
+
+/**
+ * Plan a week starting today (the user's local date), replacing the current plan; or, with a
+ * later `start`, next week's plan beside this one.
+ */
 export function useCreatePlan() {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => unwrap(await api.POST("/plans", { body: { start: localISODate() } })),
-    onSuccess: async (plan) => {
+    mutationFn: async (args?: string | CreatePlanArgs) => {
+      const { start, ...from } = typeof args === "string" ? { start: args } : (args ?? {});
+      return unwrap(
+        await api.POST("/plans", { body: { start: start ?? localISODate(), ...from } }),
+      );
+    },
+    onSuccess: async (plan, args) => {
+      const start = typeof args === "string" ? args : args?.start;
+      if (start && start > localISODate()) {
+        await qc.invalidateQueries({ queryKey: keys.upcomingPlan });
+        return;
+      }
       // A refetch that started before the POST would bring back the old plan.
       await qc.cancelQueries({ queryKey: keys.currentPlan });
       qc.setQueryData(keys.currentPlan, plan);
@@ -249,17 +391,52 @@ export function useCreatePlan() {
   });
 }
 
+/** A few safe recipes to swap a planned meal for (fetched when `enabled`). */
+export function useAlternatives(planId: number, date: string, slot: Slot, enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.alternatives(planId, date, slot),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/plans/{plan_id}/alternatives", {
+          params: { path: { plan_id: planId }, query: { date, slot } },
+        }),
+      ),
+  });
+}
+
+/** Bring back the plan as it was before its last change. */
+export function useUndoPlan() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async (planId: number) =>
+      unwrap(await api.POST("/plans/{plan_id}/undo", { params: { path: { plan_id: planId } } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.plans }),
+  });
+}
+
+/** A plan's shopping list. Offline: the last copy seen, with ticks made since. */
 export function useShoppingList(planId: number | null) {
   const api = useApi();
+  const { userId } = useAuth();
+  const what = `shopping:${planId ?? 0}`;
   return useQuery({
     queryKey: keys.shopping(planId ?? 0),
     enabled: planId !== null,
-    queryFn: async () =>
-      unwrap(
+    initialData: () => loadSnapshot<ShoppingList>(userId, what),
+    initialDataUpdatedAt: 0,
+    queryFn: async () => {
+      const list = unwrap(
         await api.GET("/plans/{plan_id}/shopping", {
           params: { path: { plan_id: planId ?? 0 } },
         }),
-      ),
+      );
+      saveSnapshot(userId, what, list);
+      return list;
+    },
   });
 }
 
@@ -282,21 +459,37 @@ function withChecked(list: ShoppingList | undefined, foodId: number, checked: bo
 export function useTickShoppingItem(planId: number) {
   const api = useApi();
   const qc = useQueryClient();
+  const { userId } = useAuth();
   const key = keys.shopping(planId);
   const mutationKey = ["shopping-tick", planId];
   return useMutation({
     mutationKey,
     scope: { id: `shopping-${planId}` },
-    mutationFn: async ({ item, checked }: Tick) =>
-      unwrap(
-        await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
-          params: { path: { plan_id: planId, food_id: item.food_id } },
-          body: { checked },
-        }),
-      ),
+    mutationFn: async ({ item, checked }: Tick) => {
+      try {
+        return unwrap(
+          await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
+            params: { path: { plan_id: planId, food_id: item.food_id } },
+            body: { checked },
+          }),
+        );
+      } catch (error) {
+        // In a shop with no signal: keep the tick and send it when back online.
+        if (!userId || !isNetworkError(error)) throw error;
+        queueTick(userId, { planId, foodId: item.food_id, checked });
+        if (pendingTicks(userId).length === 1) {
+          toast("You're offline. Ticks are saved and will sync when you're back online.");
+        }
+        return null;
+      }
+    },
     onMutate: async ({ item, checked }: Tick) => {
       await qc.cancelQueries({ queryKey: key });
-      qc.setQueryData<ShoppingList>(key, (list) => withChecked(list, item.food_id, checked));
+      qc.setQueryData<ShoppingList>(key, (list) => {
+        const next = withChecked(list, item.food_id, checked);
+        saveSnapshot(userId, `shopping:${planId}`, next);
+        return next;
+      });
     },
     onError: (_error, { item, checked }) => {
       qc.setQueryData<ShoppingList>(key, (list) => {
@@ -312,6 +505,117 @@ export function useTickShoppingItem(planId: number) {
   });
 }
 
+/**
+ * Send shopping ticks made offline once the connection is back (on load and on "online").
+ * A tick the server refuses (the plan changed meanwhile) is dropped; the list is refetched.
+ */
+export function useOfflineSync() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const { userId } = useAuth();
+  useEffect(() => {
+    if (!userId) return;
+    let running = false;
+    const flush = async () => {
+      const ticks = pendingTicks(userId);
+      if (running || !ticks.length || !navigator.onLine) return;
+      running = true;
+      const done: typeof ticks = [];
+      try {
+        for (const t of ticks) {
+          try {
+            unwrap(
+              await api.PATCH("/plans/{plan_id}/shopping/{food_id}", {
+                params: { path: { plan_id: t.planId, food_id: t.foodId } },
+                body: { checked: t.checked },
+              }),
+            );
+          } catch (error) {
+            if (isNetworkError(error)) break; // still offline: try again later
+          }
+          done.push(t);
+        }
+      } finally {
+        dropTicks(userId, done);
+        running = false;
+      }
+      if (done.length) {
+        await qc.invalidateQueries({ queryKey: keys.plans });
+        toast.success("Shopping list synced");
+      }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [api, qc, userId]);
+}
+
+/** Move bought lines into the pantry (default: every ticked line not moved yet). */
+export function useStockShopping(planId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (foodIds?: number[]) =>
+      unwrap(
+        await api.POST("/plans/{plan_id}/shopping/stock", {
+          params: { path: { plan_id: planId } },
+          body: { food_ids: foodIds ?? null },
+        }),
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: keys.shopping(planId) }),
+        qc.invalidateQueries({ queryKey: keys.pantry }),
+        qc.invalidateQueries({ queryKey: keys.me }),
+      ]);
+    },
+  });
+}
+
+export function useShoppingExtras() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.shoppingExtras,
+    queryFn: async () => unwrap(await api.GET("/shopping/extras")),
+  });
+}
+
+/** Add, tick, delete or clear the user's own shopping items (one hook, `action` picks). */
+export function useShoppingExtra() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      action:
+        | { kind: "add"; name: string }
+        | { kind: "tick"; id: number; checked: boolean }
+        | { kind: "delete"; id: number }
+        | { kind: "clear" },
+    ) => {
+      switch (action.kind) {
+        case "add":
+          return unwrap(await api.POST("/shopping/extras", { body: { name: action.name } }));
+        case "tick":
+          return unwrap(
+            await api.PATCH("/shopping/extras/{extra_id}", {
+              params: { path: { extra_id: action.id } },
+              body: { checked: action.checked },
+            }),
+          );
+        case "delete":
+          return unwrap(
+            await api.DELETE("/shopping/extras/{extra_id}", {
+              params: { path: { extra_id: action.id } },
+            }),
+          );
+        case "clear":
+          return unwrap(await api.DELETE("/shopping/extras"));
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.shoppingExtras }),
+  });
+}
+
 export function useRecipe(id: number) {
   const api = useApi();
   return useQuery({
@@ -319,6 +623,19 @@ export function useRecipe(id: number) {
     staleTime: 5 * 60_000,
     queryFn: async () =>
       unwrap(await api.GET("/recipes/{recipe_id}", { params: { path: { recipe_id: id } } })),
+  });
+}
+
+/** Several recipes at once (meal prep), each cached like useRecipe's. */
+export function useRecipes(ids: number[]) {
+  const api = useApi();
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: keys.recipe(id),
+      staleTime: 5 * 60_000,
+      queryFn: async () =>
+        unwrap(await api.GET("/recipes/{recipe_id}", { params: { path: { recipe_id: id } } })),
+    })),
   });
 }
 
@@ -407,6 +724,44 @@ export function useReplan() {
         },
       });
       // busy / duplicate / bad_today come as the chat's problems, with a code.
+      if (isChatProblem(result.error)) {
+        throw new ChatProblemError(result.response.status, result.error);
+      }
+      return unwrap(result);
+    },
+    ...usePlanChangeHandlers(),
+  });
+}
+
+export type FoodLogItem = { food_id: number; grams: number };
+
+/**
+ * Log food picked from search or a barcode, with exact grams (diary quick-add). The API runs it
+ * through the same executor as the chat, so the rest of that day's plan rebalances.
+ */
+export function useLogFood() {
+  const api = useApi();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async ({
+      items,
+      slot,
+      date = localISODate(),
+    }: {
+      items: FoodLogItem[];
+      slot: Slot | null;
+      date?: string;
+    }): Promise<ChatOutcome> => {
+      const result = await api.POST("/diary/log", {
+        body: {
+          eaten_on: date,
+          slot,
+          items,
+          client_id: crypto.randomUUID(),
+          today: localISODate(),
+          local_time: localTime(),
+        },
+      });
       if (isChatProblem(result.error)) {
         throw new ChatProblemError(result.response.status, result.error);
       }
@@ -565,5 +920,280 @@ export function useDeleteReceipt() {
       qc.removeQueries({ queryKey: keys.receipt(id) });
       await qc.invalidateQueries({ queryKey: keys.receipts, exact: true });
     },
+  });
+}
+
+/** The last `days` days of what was eaten, against the goals (today last). */
+export type ShareTarget = { kind: "recipe"; recipe_id: number } | { kind: "week"; start: string };
+
+/** A read-only public link to a recipe or a week (the same link when asked again). */
+export function useShareLink() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (target: ShareTarget) =>
+      unwrap(await api.POST("/share", { body: target })),
+  });
+}
+
+/** Saved weeks of meals to plan from again. */
+export function useTemplates(enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.templates,
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/me/templates")),
+  });
+}
+
+/** Save the week starting on `start` as a template. */
+export function useSaveTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { name: string; start: string }) =>
+      unwrap(await api.POST("/me/templates", { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+export function useRenameTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) =>
+      unwrap(
+        await api.PATCH("/me/templates/{template_id}", {
+          params: { path: { template_id: id } },
+          body: { name },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+export function useDeleteTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const result = await api.DELETE("/me/templates/{template_id}", {
+        params: { path: { template_id: id } },
+      });
+      if (!result.response.ok) unwrap(result);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+/** The meals planned on `date` (to copy them to another day), fetched when `enabled`. */
+export function useMealsOn(date: string, enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.mealsOn(date),
+    enabled: enabled && Boolean(date),
+    queryFn: async () =>
+      unwrap(await api.GET("/plans/meals", { params: { query: { on: date } } })),
+  });
+}
+
+/** Stop a share link working. */
+export function useRevokeShareLink() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const result = await api.DELETE("/share/{token}", { params: { path: { token } } });
+      if (!result.response.ok) unwrap(result);
+    },
+  });
+}
+
+export type ImportDraft = Schemas["ImportDraft"];
+export type ImportResult = Schemas["ImportResultOut"];
+
+/** Read the recipe a web page publishes into an editable draft (nothing saved yet). */
+export function useReadRecipePage() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (url: string): Promise<ImportDraft> =>
+      unwrap(await api.POST("/recipes/import/read", { body: { url } })),
+  });
+}
+
+/** Check and save a draft as the user's own recipe, or get back what to fix. */
+export function useImportRecipe() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: ImportDraft): Promise<ImportResult> =>
+      unwrap(await api.POST("/recipes/import", { body: draft })),
+    onSuccess: (result) => {
+      if (result.recipe_id !== null) void qc.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+}
+
+/** Save changes to a recipe: the user's own in place, a catalogue one as their copy. */
+export function useEditRecipe(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: ImportDraft): Promise<ImportResult> =>
+      unwrap(
+        await api.PUT("/recipes/{recipe_id}", {
+          params: { path: { recipe_id: recipeId } },
+          body: draft,
+        }),
+      ),
+    onSuccess: (result) => {
+      if (result.recipe_id !== null) void qc.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+}
+
+export type RecipeNoteIn = Schemas["RecipeNoteIn"];
+
+/** The user's private note and rating on a recipe; both empty removes it. */
+export function useRecipeNote(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RecipeNoteIn) =>
+      unwrap(
+        await api.PUT("/recipes/{recipe_id}/note", {
+          params: { path: { recipe_id: recipeId } },
+          body,
+        }),
+      ),
+    onSuccess: (note) => {
+      qc.setQueryData<Recipe>(keys.recipe(recipeId), (r) => (r ? { ...r, note } : r));
+    },
+  });
+}
+
+export type Spending = Schemas["SpendingOut"];
+
+/** Grocery spending from confirmed receipts per week, beside the plans' estimates. */
+export function useSpending(weeks = 12) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["spending", weeks] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/spending", { params: { query: { weeks } } })),
+  });
+}
+
+export type Recap = Schemas["RecapOut"];
+
+/** A week looked back on: `week` is any of its days; the last full week without one. */
+export function useRecap(week?: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["recap", week ?? "last"] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/recap", { params: { query: week ? { week } : {} } })),
+  });
+}
+
+export type Prices = Schemas["PricesOut"];
+export type PriceItem = Prices["items"][number];
+
+/** Per-kg prices from the user's receipts: rises and cheaper products (price watch). */
+export function usePrices(months = 6) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["prices", months] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/prices", { params: { query: { months } } })),
+  });
+}
+
+export function useDiary(days = 7) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.diary(days),
+    queryFn: async () => unwrap(await api.GET("/diary", { params: { query: { days } } })),
+  });
+}
+
+export function useWeights(days = 90) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.weights,
+    queryFn: async () => unwrap(await api.GET("/me/weights", { params: { query: { days } } })),
+  });
+}
+
+/** Record or delete a weigh-in; the newest also becomes the body profile's weight. */
+export function useWeight() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      action:
+        | { kind: "save"; measured_on: string; weight_kg: number }
+        | { kind: "delete"; measured_on: string },
+    ) =>
+      action.kind === "save"
+        ? unwrap(
+            await api.PUT("/me/weights", {
+              body: { measured_on: action.measured_on, weight_kg: action.weight_kg },
+            }),
+          )
+        : unwrap(
+            await api.DELETE("/me/weights/{measured_on}", {
+              params: { path: { measured_on: action.measured_on } },
+            }),
+          ),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: keys.weights }),
+        qc.invalidateQueries({ queryKey: keys.body }),
+      ]),
+  });
+}
+
+const RECIPE_PAGE = 24;
+
+/** Safe recipes for the user, best first, paged ("More" loads the next page). */
+export function useRecipeList(query: RecipeQuery) {
+  const api = useApi();
+  return useInfiniteQuery({
+    queryKey: keys.recipeList(query),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/recipes", {
+          params: {
+            query: {
+              q: query.q,
+              slot: query.slot ?? undefined,
+              favourites: query.favourites,
+              limit: RECIPE_PAGE,
+              offset: pageParam,
+            },
+          },
+        }),
+      ),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0);
+      return loaded < last.total ? loaded : undefined;
+    },
+  });
+}
+
+/** Favourite a recipe, never plan it again, or clear the verdict (null). */
+export function useRecipeFeedback(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (verdict: RecipeVerdict | null) => {
+      const path = { recipe_id: recipeId };
+      return verdict
+        ? unwrap(
+            await api.PUT("/recipes/{recipe_id}/feedback", { params: { path }, body: { verdict } }),
+          )
+        : unwrap(await api.DELETE("/recipes/{recipe_id}/feedback", { params: { path } }));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["recipes"] }),
   });
 }

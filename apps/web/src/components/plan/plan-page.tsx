@@ -2,6 +2,7 @@
 
 import { cn } from "cn";
 import {
+  CalendarPlusIcon,
   InfoIcon,
   LoaderCircleIcon,
   RefreshCwIcon,
@@ -14,15 +15,17 @@ import { useIsMutating } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TodaySummary } from "@/components/diary/today-summary";
 import { ErrorAlert } from "@/components/form-bits";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonMealCard } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api/browser";
 import {
+  useUndoPlan,
+  useUpcomingPlan,
   type ChatOutcome,
   keys,
   type Plan,
@@ -35,6 +38,7 @@ import {
   type Violation,
 } from "@/lib/api/hooks";
 import {
+  addDays,
   dateRange,
   dayOfMonth,
   daysBetween,
@@ -49,9 +53,16 @@ import { dayRows, LoggedCard, LoggedNote } from "./logged";
 import { DayMacros } from "./macro-bars";
 import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
+import { CopyDay, RepeatChoices, SaveTemplate } from "./plan-templates";
+import { PrepPicker } from "./prep-picker";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
+import { APP_NAME } from "@/lib/brand";
+import { EmptyState } from "@/components/empty-state";
+import { WeekMicronutrients } from "@/components/nutrients/micronutrients";
+import { ShareLinkButton } from "@/components/share-link-button";
+import { cookExtraFor, leftoverNotes, noteFor } from "@/lib/leftovers";
 
 type View = "day" | "week";
 type CreatePlan = ReturnType<typeof useCreatePlan>;
@@ -71,6 +82,7 @@ function useViewState() {
   };
   return {
     view: (params.get("view") === "week" ? "week" : "day") as View,
+    next: params.get("week") === "next",
     day: params.get("day"),
     set,
   };
@@ -86,9 +98,9 @@ function PlanSkeleton() {
     <div className="flex flex-col gap-4" aria-busy>
       <Skeleton className="h-8 w-40" />
       <Skeleton className="h-12" />
-      <Skeleton className="h-20" />
-      <Skeleton className="h-20" />
-      <Skeleton className="h-20" />
+      <SkeletonMealCard />
+      <SkeletonMealCard />
+      <SkeletonMealCard />
     </div>
   );
 }
@@ -145,6 +157,7 @@ function PlanningStatus({ pending }: { pending: boolean }) {
 export function PlanPage() {
   const me = useMe();
   const plan = useCurrentPlan();
+  const upcoming = useUpcomingPlan(Boolean(plan.data));
   const create = useCreatePlan();
   const { set } = useViewState();
 
@@ -154,7 +167,9 @@ export function PlanPage() {
   };
 
   if (me.isPending || (me.data?.setup_complete && plan.isPending)) return <PlanSkeleton />;
-  if (me.error) return <ErrorAlert error={me.error} />;
+  if (me.error && !me.data) {
+    return <ErrorAlert error={me.error} onRetry={() => void me.refetch()} />;
+  }
 
   if (!me.data.setup_complete) {
     return (
@@ -162,7 +177,7 @@ export function PlanPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
         <Alert>
           <AlertDescription className="flex items-center justify-between gap-2">
-            Finish setting up so Larder can plan for you.
+            Finish setting up so {APP_NAME} can plan for you.
             <Link href="/setup" className={buttonVariants({ size: "sm" })}>
               Set up
             </Link>
@@ -172,33 +187,42 @@ export function PlanPage() {
     );
   }
 
-  if (plan.error) return <ErrorAlert error={plan.error} />;
+  if (plan.error && !plan.data) {
+    return <ErrorAlert error={plan.error} onRetry={() => void plan.refetch()} />;
+  }
 
   if (!plan.data) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
-        <Card>
-          <CardHeader>
-            <CardTitle>No plan yet</CardTitle>
-            <CardDescription>
-              Larder plans breakfast, lunch and dinner for seven days around your goals, your
-              allergies and what&apos;s already in your kitchen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <PlanButton create={create} onCreated={onCreated} size="lg">
-              Plan my week
-            </PlanButton>
-            <PlanningStatus pending={create.isPending} />
-            <CreateError error={create.error} />
-          </CardContent>
-        </Card>
+        <EmptyState
+          art="plan"
+          title="No plan yet"
+          action={
+            <div className="flex flex-col items-center gap-3">
+              <PlanButton create={create} onCreated={onCreated} size="lg">
+                Plan my week
+              </PlanButton>
+              <PlanningStatus pending={create.isPending} />
+              <CreateError error={create.error} />
+            </div>
+          }
+        >
+          {APP_NAME} plans breakfast, lunch and dinner for seven days around your goals, your
+          allergies and what&apos;s already in your kitchen.
+        </EmptyState>
       </div>
     );
   }
 
-  return <PlanView plan={plan.data} create={create} onCreated={onCreated} />;
+  return (
+    <PlanView
+      plan={plan.data}
+      upcoming={upcoming.data ?? null}
+      create={create}
+      onCreated={onCreated}
+    />
+  );
 }
 
 function Exclusions({ plan }: { plan: Plan }) {
@@ -271,9 +295,12 @@ function PlanNotes({ plan }: { plan: Plan }) {
           {greedy ? (
             <p>Made by the quick planner: fast, but it can miss a target now and then.</p>
           ) : null}
-          {plan.notes.map((n) => (
-            <p key={n}>{n}</p>
-          ))}
+          {plan.notes
+            // The API notes the quick planner too; say it once.
+            .filter((n) => !(greedy && n.startsWith("Made by the quick planner")))
+            .map((n) => (
+              <p key={n}>{n}</p>
+            ))}
         </div>
       ) : null}
     </>
@@ -287,9 +314,22 @@ function PlanNotes({ plan }: { plan: Plan }) {
 function useMealActions(plan: Plan, today: string, creating: boolean) {
   const eaten = useMarkEaten(plan.id);
   const replan = useReplan();
+  const undo = useUndoPlan();
   const busy = useIsMutating({ mutationKey: keys.planChange }) > 0 || creating;
   const [outcome, setOutcome] = useState<ChatOutcome | null>(null);
+  const undoLast = () => {
+    if (outcome?.plan_id == null) return;
+    undo.mutate(outcome.plan_id, {
+      onSuccess: () => {
+        setOutcome(null);
+        toast.success("Change undone");
+      },
+      onError: (e) =>
+        toast.error(e instanceof ApiError && e.messages[0] ? e.messages[0] : "Couldn't undo that"),
+    });
+  };
   const actions = (date: string): MealActionsProps => ({
+    planId: plan.id,
     date,
     today,
     busy,
@@ -302,22 +342,55 @@ function useMealActions(plan: Plan, today: string, creating: boolean) {
       setOutcome(await replan.mutateAsync(changes));
     },
   });
-  return { actions, outcome, setOutcome };
+  return { actions, outcome, setOutcome, undoLast, undoing: undo.isPending };
+}
+
+/** "This week | Next week" when next week's plan is made. */
+function WeekToggle({ next, onChange }: { next: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <div
+      role="group"
+      aria-label="Which week"
+      className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+    >
+      {[false, true].map((n) => (
+        <button
+          key={String(n)}
+          type="button"
+          aria-pressed={next === n}
+          onClick={() => onChange(n)}
+          className={cn(
+            "h-9 rounded-md text-sm font-medium transition-colors",
+            next === n ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {n ? "Next week" : "This week"}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function PlanView({
-  plan,
+  plan: current,
+  upcoming,
   create,
   onCreated: created,
 }: {
   plan: Plan;
+  upcoming: Plan | null;
   create: CreatePlan;
   onCreated: () => void;
 }) {
-  const { view, day, set } = useViewState();
+  const { view, day, set, next } = useViewState();
+  const plan = next && upcoming ? upcoming : current;
   const [confirming, setConfirming] = useState(false);
   const today = localISODate();
-  const { actions, outcome, setOutcome } = useMealActions(plan, today, create.isPending);
+  const { actions, outcome, setOutcome, undoLast, undoing } = useMealActions(
+    plan,
+    today,
+    create.isPending,
+  );
   const onCreated = () => {
     setOutcome(null);
     created();
@@ -325,38 +398,75 @@ function PlanView({
   const ended = planEnded(plan, today);
   const first = plan.days[0]?.date ?? plan.start;
   const last = plan.days.at(-1)?.date ?? plan.start;
+  // Next week can be planned in the last 3 days of this one.
+  const canPlanNext = !upcoming && plan === current && !ended && daysBetween(today, last) <= 2;
   const dates = plan.days.map((d) => d.date);
+  const leftovers = leftoverNotes(plan.days);
   const selected =
     day && dates.includes(day) ? day : dates.includes(today) ? today : (dates[0] ?? "");
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight">Your week</h1>
-        <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-semibold">
+            {plan === current ? "Your week" : "Next week"}
+          </h1>
+          <p className="text-sm text-muted-foreground">{dateRange(first, last)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/plan/shopping" className={buttonVariants({ variant: "outline" })}>
+            <ShoppingBasketIcon aria-hidden />
+            Shopping list
+          </Link>
+          <ShareLinkButton
+            target={{ kind: "week", start: plan.start }}
+            title={`Meals for ${dateRange(first, last)}`}
+            label="Share week"
+            size="default"
+            compact
+          />
+          <SaveTemplate plan={plan} />
+          <PrepPicker plan={plan} today={today} />
+          {ended || plan !== current ? null : (
+            <Button
+              variant="ghost"
+              aria-expanded={confirming}
+              aria-controls="new-plan-confirm"
+              disabled={create.isPending}
+              onClick={() => setConfirming(!confirming)}
+            >
+              <RefreshCwIcon aria-hidden />
+              New plan
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="flex gap-2">
-        <Link
-          href="/plan/shopping"
-          className={cn(buttonVariants({ variant: "outline" }), "flex-1")}
+      <Exclusions plan={plan} />
+      {upcoming ? (
+        <WeekToggle
+          next={plan !== current}
+          onChange={(n) => set({ week: n ? "next" : null, day: null })}
+        />
+      ) : null}
+      {plan === current ? <TodaySummary /> : null}
+      {canPlanNext ? (
+        <Button
+          variant="outline"
+          disabled={create.isPending}
+          onClick={() =>
+            create.mutate(addDays(last, 1), {
+              onSuccess: () => {
+                set({ week: "next", day: null });
+                toast.success("Next week is planned");
+              },
+            })
+          }
         >
-          <ShoppingBasketIcon aria-hidden />
-          Shopping list
-        </Link>
-        {ended ? null : (
-          <Button
-            variant="outline"
-            className="flex-1"
-            aria-expanded={confirming}
-            aria-controls="new-plan-confirm"
-            disabled={create.isPending}
-            onClick={() => setConfirming(!confirming)}
-          >
-            <RefreshCwIcon aria-hidden />
-            New plan
-          </Button>
-        )}
-      </div>
+          <CalendarPlusIcon aria-hidden />
+          {create.isPending ? "Planning…" : "Plan next week"}
+        </Button>
+      ) : null}
 
       {confirming && !ended ? (
         <div
@@ -386,6 +496,14 @@ function PlanView({
               Cancel
             </Button>
           </div>
+          <RepeatChoices
+            today={today}
+            create={create}
+            onCreated={() => {
+              setConfirming(false);
+              onCreated();
+            }}
+          />
         </div>
       ) : null}
 
@@ -404,10 +522,14 @@ function PlanView({
 
       <PlanningStatus pending={create.isPending} />
       <CreateError error={create.error} />
-      <Exclusions plan={plan} />
-      <PlanNotes plan={plan} />
       {outcome ? (
-        <WhatChanged outcome={outcome} today={today} onDismiss={() => setOutcome(null)} />
+        <WhatChanged
+          outcome={outcome}
+          today={today}
+          onDismiss={() => setOutcome(null)}
+          onUndo={undoLast}
+          undoing={undoing}
+        />
       ) : null}
 
       <Tabs value={view} onValueChange={(v: View) => set({ view: v === "week" ? "week" : null })}>
@@ -441,18 +563,69 @@ function PlanView({
             {plan.days.map((d) => (
               <TabsContent key={d.date} value={d.date} className="flex flex-col gap-4 pt-2">
                 <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
-                  {dayRows(d).map((row) => (
-                    <li key={row.key}>
+                  {dayRows(d).map((row, i) => (
+                    <li
+                      key={row.key}
+                      className="motion-safe:animate-rise"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    >
                       {row.meal ? (
-                        <MealCard meal={row.meal} actions={actions(d.date)} />
+                        // Keyed by recipe: a swapped meal is a new card and rises in.
+                        <MealCard
+                          key={row.meal.recipe.id}
+                          meal={row.meal}
+                          note={noteFor(leftovers, d.date, row.meal.slot)}
+                          actions={{
+                            ...actions(d.date),
+                            cookExtraFor: cookExtraFor(plan.days, d.date, today),
+                          }}
+                        />
                       ) : (
                         <LoggedCard entry={row.entry} />
                       )}
                     </li>
                   ))}
                 </ul>
+                {d.date >= today && d.meals.some((m) => m.status !== "eaten") ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {d.date > today ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={actions(d.date).busy}
+                    onClick={() =>
+                      void actions(d.date)
+                        .onReplan(
+                          d.meals
+                            .filter((m) => m.status !== "eaten")
+                            .map((m) => ({
+                              intent: "swap" as const,
+                              when: { date: d.date, slot: m.slot },
+                            })),
+                        )
+                        .catch(() => undefined)
+                    }
+                  >
+                    <RefreshCwIcon aria-hidden />
+                    Rebuild {weekday(d.date)}
+                  </Button>
+                      ) : null}
+                    </div>
+                    <CopyDay
+                      day={d}
+                      today={today}
+                      busy={actions(d.date).busy}
+                      onReplan={actions(d.date).onReplan}
+                    />
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-2">
-                  <DayMacros totals={d.totals} bands={plan.targets.daily} />
+                  <DayMacros
+                    totals={d.totals}
+                    bands={plan.targets.daily}
+                    reference={plan.targets.reference}
+                  />
                   <LoggedNote logged={d.logged} />
                 </div>
               </TabsContent>
@@ -466,6 +639,8 @@ function PlanView({
       </Tabs>
 
       <WeekSummary plan={plan} />
+      <WeekMicronutrients plan={plan} />
+      <PlanNotes plan={plan} />
     </div>
   );
 }

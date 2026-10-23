@@ -2,10 +2,10 @@
 domain rules (calorie floor, deficit) live in larder_core.energy."""
 
 from datetime import date, datetime, time
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from larder_core.allergens import Allergen
 from larder_core.energy import (
@@ -35,11 +35,30 @@ class ProfileStatus(BaseModel):
     expiring_soon: int = 0  # pantry items past or within 3 days of their use-by date
 
 
+class RegionOption(BaseModel):
+    country: str  # ISO 3166-1 alpha-2
+    name: str
+    currency: Currency
+
+
+class RegionOut(RegionOption):
+    locale: str  # BCP 47, for number and date formatting
+    timezone: str  # IANA
+    saved: bool  # False: nothing saved yet, these are the defaults (GB)
+
+
+class RegionIn(BaseModel):
+    country: str = Field(pattern=r"^[A-Za-z]{2}$")
+    timezone: str | None = Field(default=None, max_length=64)
+    locale: str | None = Field(default=None, pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+
+
 class Me(BaseModel):
     id: int
     created_at: datetime
     profile: ProfileStatus
     setup_complete: bool
+    region: RegionOut
 
 
 class GoalsIn(BaseModel):
@@ -94,6 +113,10 @@ class PreferencesIn(BaseModel):
 class PreferencesOut(PreferencesIn):
     model_config = ConfigDict(from_attributes=True)
 
+    # The liked and disliked foods, named (the ids include the generics they count as).
+    liked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
+    disliked_foods: list["FoodSummary"] = Field(default_factory=list["FoodSummary"])
+
 
 class AllergiesIn(BaseModel):
     allergens: list[Allergen] = Field(default_factory=list[Allergen])
@@ -109,11 +132,21 @@ class AllergenOption(BaseModel):
     label: str
 
 
+FoodKind = Literal["food", "product"]
+
+
 class FoodSummary(BaseModel):
     id: int
     description: str
     category: str | None
     kcal: float | None
+    kind: FoodKind = "food"  # product: a packaged, branded product (Open Food Facts)
+    brand: str | None = None
+    source: str = "usda"  # usda | cofid | off
+    image_url: str | None = None  # products: Open Food Facts' photo (CC BY-SA)
+
+
+NutritionGrade = Literal["A", "B", "C", "D", "E"]
 
 
 class FoodUnit(BaseModel):
@@ -125,6 +158,13 @@ class FoodUnit(BaseModel):
 
 class FoodDetail(FoodSummary):
     units: list[FoodUnit]
+    barcode: str | None = None
+    allergens: list[Allergen] = []  # what the food contains, as far as we can tell
+    may_contain: list[Allergen] = []  # declared "may contain" traces (products)
+    counts_as: "FoodSummary | None" = None  # the generic food it stands in for when planning
+    attribution: str  # where the data comes from (licences ask for credit)
+    # Nutri-Score method (larder_core.nutrigrade); a product's own grade when it has one.
+    grade: NutritionGrade | None = None
 
 
 class PantryItemIn(BaseModel):
@@ -152,6 +192,7 @@ class PantryItemOut(BaseModel):
     expires_on: date | None
     source: str
     created_at: datetime
+    storage: Literal["fridge", "freezer", "cupboard"] = "cupboard"  # where it's usually kept
 
 
 class ExpiringItem(PantryItemOut):
@@ -255,12 +296,45 @@ class Problems(BaseModel):
 
 
 class MacrosOut(BaseModel):
-    """Energy and macros as whole numbers (kcal, grams)."""
+    """Energy and macros as whole numbers (kcal, grams). Fibre, sugars, saturated fat and salt
+    (sodium x 2.5) come from recipes, one decimal; null when unknown. Day and week totals add
+    planned meals only (food logged off-plan has energy and macros, not these)."""
 
     kcal: int
     protein_g: int
     fat_g: int
     carbs_g: int
+    fiber_g: float | None = None
+    sugars_g: float | None = None
+    sat_fat_g: float | None = None
+    salt_g: float | None = None
+    # Vitamins and minerals, from recipes; null when unknown (an ingredient without data), and
+    # a day or week total is null if any of its meals is.
+    iron_mg: float | None = None
+    calcium_mg: float | None = None
+    potassium_mg: float | None = None
+    vitamin_c_mg: float | None = None
+    vitamin_d_ug: float | None = None
+    folate_ug: float | None = None
+    vitamin_b12_ug: float | None = None
+
+
+class ReferenceIntakes(BaseModel):
+    """Daily guides, shown for context, never planned for. Fibre (at least: UK advice), sugars,
+    saturated fat and salt (at most) are the UK/EU reference intakes; the vitamins and minerals
+    are the EU labelling reference intakes for adults, the % on food labels."""
+
+    fiber_g: float = 30
+    sugars_g: float = 90
+    sat_fat_g: float = 20
+    salt_g: float = 6
+    iron_mg: float = 14
+    calcium_mg: float = 800
+    potassium_mg: float = 2000
+    vitamin_c_mg: float = 80
+    vitamin_d_ug: float = 5
+    folate_ug: float = 200
+    vitamin_b12_ug: float = 2.5
 
 
 class BandOut(BaseModel):
@@ -281,6 +355,7 @@ class TargetsOut(BaseModel):
     daily: NutrientBands
     weekly: NutrientBands
     calorie_floor: int
+    reference: ReferenceIntakes = Field(default_factory=ReferenceIntakes)
 
 
 class RecipeCard(BaseModel):
@@ -301,6 +376,9 @@ class MealOut(BaseModel):
     status: Literal["planned", "eaten"] = Field(
         default="planned", description="eaten: marked eaten (POST /plans/{id}/meals/eaten)"
     )
+    uses_pantry: list[str] = Field(
+        default=[], description="foods in the user's pantry now that the recipe uses"
+    )
 
 
 class MealLogOut(Logged):
@@ -318,6 +396,205 @@ class DayOut(BaseModel):
     meals: list[MealOut]
     totals: MacrosOut
     logged: list[MealLogOut]
+
+
+# --- diary and progress -----------------------------------------------------------------------
+
+
+class DiaryDayOut(BaseModel):
+    """What the user logged on a day: meals marked eaten, food logged off-plan and meals
+    skipped (a skip eaten elsewhere carries that meal's energy). `eaten` adds them up;
+    `planned_kcal` is the newest plan's total for the day (null: no plan covers it)."""
+
+    date: date
+    eaten: MacrosOut
+    logged: list[MealLogOut]
+    planned_kcal: int | None = None
+    status: Literal["under", "on", "over"] | None = Field(
+        default=None, description="against the daily kcal goal; null when nothing is logged"
+    )
+
+
+class DiaryOut(BaseModel):
+    days: list[DiaryDayOut]  # oldest first
+    today: date  # the user's local date
+    kcal_min: float | None = None
+    kcal_max: float | None = None
+    protein_g_min: float | None = None
+    # Of the logged days before today: how many landed within the kcal goal.
+    logged_days: int = 0
+    on_target_days: int = 0
+
+
+class SpendingWeekOut(BaseModel):
+    start: date  # the Monday
+    spent_minor: int = Field(description="confirmed receipt lines bought that week")
+    planned_minor: int | None = Field(
+        description="estimated food cost of the plans starting that week (latest versions)"
+    )
+
+
+class SpendingCategoryOut(BaseModel):
+    category: str | None  # USDA food group (a product counts as its generic food's group)
+    spent_minor: int
+
+
+class PricePointOut(BaseModel):
+    on: date
+    per_kg_minor: int
+
+
+class CheaperOut(BaseModel):
+    label: str = Field(description="the product, as named on the user's receipt or its pack")
+    per_kg_minor: int
+    last_bought: date
+
+
+class PriceItemOut(BaseModel):
+    food_id: int
+    name: str
+    history: list[PricePointOut] = Field(description="oldest first, at most 12")
+    latest_minor: int = Field(description="per kg")
+    usual_minor: int = Field(description="per kg: the median of the earlier prices")
+    change_pct: int
+    rise: bool = Field(description="the latest is at least 15% over the usual (2+ earlier)")
+    cheaper: CheaperOut | None = None
+
+
+class PricesOut(BaseModel):
+    currency: Currency
+    items: list[PriceItemOut] = Field(description="rises first, biggest first; then by name")
+
+
+class RecapTopOut(BaseModel):
+    recipe: RecipeCard
+    times: int
+
+
+class RecapRiseOut(BaseModel):
+    name: str
+    change_pct: int
+
+
+class RecapOut(BaseModel):
+    """A week looked back on (Monday to Sunday): only what happened, from the meal logs,
+    confirmed receipts, weigh-ins and price watch."""
+
+    week_start: date
+    week_end: date
+    currency: Currency
+    planned_meals: int
+    eaten_meals: int = Field(description="planned meals marked eaten")
+    skipped_meals: int
+    off_plan: int = Field(description="food logged that wasn't on the plan")
+    logged_days: int
+    avg_kcal: int | None = Field(description="a logged day's average")
+    kcal_min: float | None
+    kcal_max: float | None
+    on_target_days: int = Field(description="logged days within the calorie band")
+    protein_g_min: float | None
+    protein_days: int | None = Field(description="logged days reaching the protein goal")
+    spent_minor: int
+    budget_minor: int | None
+    planned_cost_minor: int | None
+    weight_change_kg: float | None = Field(description="first to last weigh-in that week")
+    weight_kg: float | None
+    top_recipes: list[RecapTopOut]
+    price_rises: list[RecapRiseOut]
+    empty: bool = Field(description="nothing logged, bought or weighed that week")
+
+
+class SpendingOut(BaseModel):
+    """Grocery spending from the user's own confirmed receipts, week by week, beside what the
+    plans estimated. Lines without a price, or rejected, don't count."""
+
+    currency: Currency
+    weeks: list[SpendingWeekOut]  # oldest first, ending with this week
+    categories: list[SpendingCategoryOut]  # most spent first, over the whole period
+    unmatched_minor: int = Field(description="spent on lines not matched to a food")
+
+
+class ImportReadIn(BaseModel):
+    url: str = Field(max_length=2000)
+
+
+class ImportIngredient(BaseModel):
+    line: str = Field(default="", max_length=300, description="as written on the page")
+    name: str = Field(max_length=120)
+    quantity: str = Field(default="", max_length=40)
+
+
+class ImportDraft(BaseModel):
+    """A recipe read from a page (or typed in), before it is checked and saved. The user can
+    change anything first."""
+
+    name: str = Field(min_length=1, max_length=120)
+    slot: Slot
+    servings: int = Field(ge=1, le=8)
+    cuisine: str | None = Field(default=None, max_length=40)
+    ingredients: list[ImportIngredient] = Field(min_length=2, max_length=25)
+    instructions: str = Field(max_length=4000)
+    image_url: str | None = Field(default=None, max_length=2000)
+    source_url: str | None = Field(default=None, max_length=2000)
+
+
+class ImportResultOut(BaseModel):
+    recipe_id: int | None  # set when saved
+    problems: list[str]  # what to fix when not saved, e.g. "couldn't match 'X'"
+    copied: bool = False  # an edit of a catalogue recipe: saved as the user's own copy
+
+
+class RecipeNoteIn(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+    rating: int | None = Field(default=None, ge=1, le=5)
+
+
+class RecipeNoteOut(BaseModel):
+    note: str | None
+    rating: int | None
+    updated_at: datetime
+
+
+class PushConfigOut(BaseModel):
+    """Whether this server sends reminders, the key browsers subscribe with, and whether this
+    user has any browser subscribed."""
+
+    enabled: bool
+    public_key: str | None = None
+    subscribed: int = 0  # browsers this user turned reminders on in
+    weekly_recap: bool = True  # also the Sunday-evening recap
+
+
+class RecapSettingIn(BaseModel):
+    enabled: bool
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(min_length=10, max_length=200)
+    auth: str = Field(min_length=8, max_length=100)
+
+
+class PushSubscriptionIn(BaseModel):
+    """A browser's PushSubscription.toJSON()."""
+
+    endpoint: str = Field(pattern=r"^https://", max_length=2000)
+    keys: PushKeys
+
+
+class PushUnsubscribeIn(BaseModel):
+    endpoint: str = Field(max_length=2000)
+
+
+class WeightIn(BaseModel):
+    measured_on: date
+    weight_kg: float = Field(gt=20, le=500)
+
+
+class WeightOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    measured_on: date
+    weight_kg: float
 
 
 class ViolationOut(BaseModel):
@@ -339,6 +616,20 @@ class PlanRequest(BaseModel):
         description="first day (the user's local date, from yesterday to a week ahead); "
         "defaults to today (UTC)",
     )
+    repeat_from: date | None = Field(
+        default=None,
+        description="plan the same meals as the 7 days from this date (an earlier week), where "
+        "they still suit the user's allergies, diet and blocks",
+    )
+    template_id: int | None = Field(
+        default=None, description="plan the meals of this saved template (GET /me/templates)"
+    )
+
+    @model_validator(mode="after")
+    def _one_source(self) -> Self:
+        if self.repeat_from is not None and self.template_id is not None:
+            raise ValueError("give repeat_from or template_id, not both")
+        return self
 
 
 class PlanOut(BaseModel):
@@ -410,6 +701,7 @@ class ShoppingItemOut(BaseModel):
     grams: int
     cost_minor: int = Field(description="share of total_minor; lines sum exactly to the total")
     checked: bool
+    stocked: bool = Field(default=False, description="bought and moved into the pantry")
     staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
     # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
     approx_units: str | None = None
@@ -427,12 +719,36 @@ class ShoppingItemPatch(BaseModel):
     checked: bool
 
 
+class StockIn(BaseModel):
+    """Lines to move into the pantry; default: every ticked line not moved yet."""
+
+    food_ids: list[int] | None = Field(default=None, max_length=500)
+
+
+class ShoppingExtraIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class ShoppingExtraPatch(BaseModel):
+    checked: bool
+
+
+class ShoppingExtraOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    checked: bool
+
+
 class RecipeIngredientOut(BaseModel):
     name: str
     measure: str
     food_id: int | None
     food_name: str | None
     grams: float | None
+    # The signed-in viewer has this food (or a product that counts as it) in their pantry.
+    in_pantry: bool = False
 
 
 class RecipeDetail(RecipeCard):
@@ -444,12 +760,37 @@ class RecipeDetail(RecipeCard):
     servings: int | None
     servings_estimated: bool
     per_serving: MacrosOut | None
+    grade: NutritionGrade | None = None  # Nutri-Score method, per 100 g of the dish
     meal_types: list[Slot]
     allergens: list[Allergen]
     # Allergen safety can't be proven when some ingredient lines matched no food.
     allergens_complete: bool
     suitable_for: list[Diet]
     ingredients: list[RecipeIngredientOut]
+    # The signed-in viewer's verdict on it (PUT /recipes/{id}/feedback).
+    feedback: "RecipeVerdict | None" = None
+    # The viewer's own note and rating (PUT /recipes/{id}/note); never on a share link.
+    note: RecipeNoteOut | None = None
+
+
+RecipeVerdict = Literal["favourite", "never"]
+
+
+class RecipeFeedbackIn(BaseModel):
+    verdict: RecipeVerdict
+
+
+class RecipeListItem(RecipeCard):
+    slots: list[Slot]
+    kcal_per_serving: int
+    protein_g_per_serving: int
+    uses_pantry: list[str] = Field(default=[], description="pantry foods it uses")
+    favourite: bool = False
+
+
+class RecipeListOut(BaseModel):
+    items: list[RecipeListItem]
+    total: int  # how many match, for paging
 
 
 # --- chat (M4) --------------------------------------------------------------------------------
@@ -485,6 +826,23 @@ class OutcomeOut(ReplanOutcome):
     """What one plan change request did (also sent live as the `outcome` event)."""
 
     type: Literal["outcome"] = "outcome"
+
+
+class FoodLogItem(BaseModel):
+    food_id: int
+    grams: float = Field(gt=0, le=5000)
+
+
+class FoodLogRequest(BaseModel):
+    """Food the user picked themselves (diary quick-add). Logged like food told to the chat,
+    with exact amounts, so the rest of that day's plan rebalances around it."""
+
+    eaten_on: date = Field(description="the day it was eaten (the user's local date)")
+    slot: Slot | None = Field(default=None, description="default: the next meal by local time")
+    items: list[FoodLogItem] = Field(min_length=1, max_length=10)
+    client_id: UUID = Field(description="the client's id for this request: resending is safe")
+    today: date = Field(description="the user's local date")
+    local_time: time | None = None
 
 
 class ReplanRequest(BaseModel):
@@ -591,3 +949,75 @@ ChatEvent = Annotated[
     | ErrorEvent,
     Field(discriminator="type"),
 ]
+
+
+class ShareIn(BaseModel):
+    kind: Literal["recipe", "week"]
+    recipe_id: int | None = None  # for a recipe
+    start: date | None = Field(default=None, description="for a week: the plan's start date")
+
+
+class TemplateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    start: date = Field(description="save the week of the user's plan starting on this date")
+
+
+class TemplatePatch(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class TemplateOut(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    meals: int
+    recipes: list[str] = Field(description="a few of its recipes' names, for a preview")
+
+
+class DayMealOut(BaseModel):
+    """A meal planned on a date (GET /plans/meals): to copy a day's meals to another."""
+
+    slot: Slot
+    recipe: RecipeCard
+
+
+class ShareOut(BaseModel):
+    token: str
+    path: str  # the web page: /s/<token>
+
+
+class SharedMealOut(BaseModel):
+    slot: Slot
+    recipe: RecipeCard
+    kcal: int
+
+
+class SharedDayOut(BaseModel):
+    date: date
+    meals: list[SharedMealOut]
+
+
+class SharedOut(BaseModel):
+    """What a share link shows: one recipe, or a week's meals. Nothing about the person."""
+
+    kind: Literal["recipe", "week"]
+    recipe: RecipeDetail | None = None
+    days: list[SharedDayOut] | None = None
+
+
+_HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
+
+
+class CalendarTimes(BaseModel):
+    """When each meal shows on the calendar (24-hour HH:MM, the user's local time)."""
+
+    breakfast: str = Field(default="08:00", pattern=_HHMM)
+    lunch: str = Field(default="13:00", pattern=_HHMM)
+    dinner: str = Field(default="19:00", pattern=_HHMM)
+    snack: str = Field(default="16:00", pattern=_HHMM)
+
+
+class CalendarOut(BaseModel):
+    enabled: bool
+    path: str | None  # on the API: /calendar/<token>.ics
+    times: CalendarTimes

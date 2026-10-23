@@ -1,0 +1,17 @@
+country,category,factor,note
+IE,*,1.12,"CSO 'Price Levels of Food, Beverages and Tobacco 2024': food 12% above the EU27 average. The UK is no longer in Eurostat's comparison; the UK table is taken as roughly the EU27 average."
+IE,Baked Products,1.17,CSO 2024: bread and cereals 17% above EU27
+IE,Breakfast Cereals,1.17,CSO 2024: bread and cereals 17% above EU27
+IE,Cereal Grains and Pasta,1.17,CSO 2024: bread and cereals 17% above EU27
+IE,Dairy and Egg Products,1.11,"CSO 2024: milk, cheese and eggs 11% above EU27"
+IE,Fats and Oils,1.06,CSO 2024: oils and fats 6% above EU27
+IE,Finfish and Shellfish Products,1.05,CSO 2024: fish 5% above EU27
+IE,Fruits and Fruit Juices,1.09,"CSO 2024: fruit, vegetables and potatoes 9% above EU27"
+IE,Vegetables and Vegetable Products,1.09,"CSO 2024: fruit, vegetables and potatoes 9% above EU27"
+IE,Legumes and Legume Products,1.09,"CSO 2024: fruit, vegetables and potatoes 9% above EU27"
+IE,Beef Products,0.97,CSO 2024: meat was the one food group below the EU27 average (figure not given; small discount assumed)
+IE,Pork Products,0.97,CSO 2024: meat below the EU27 average (assumed)
+IE,Poultry Products,0.97,CSO 2024: meat below the EU27 average (assumed)
+IE,"Lamb, Veal, and Game Products",0.97,CSO 2024: meat below the EU27 average (assumed)
+IE,Sausages and Luncheon Meats,0.97,CSO 2024: meat below the EU27 average (assumed)
+IE,Beverages,1.40,CSO 2024: non-alcoholic beverages 40% above EU27 (most expensive in Europe)

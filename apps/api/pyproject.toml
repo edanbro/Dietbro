@@ -18,11 +18,13 @@ dependencies = [
     "redis>=8.1",
     "sqlalchemy[asyncio]>=2.1",
     "uvicorn[standard]>=0.54",
+    "pywebpush>=2.0",
 ]
 
 [project.scripts]
 larder-bench = "larder_api.bench:main"
 larder-llm-smoke = "larder_api.smoke:main"
+larder-vapid = "larder_api.reminders:vapid_main"
 
 [tool.uv.sources]
 larder-core = { workspace = true }

@@ -430,3 +430,28 @@ items = [
   { key = "Cheddar Mature 350g", food = "cheddar", grams = 350 },
   { key = "Butter Salted 250g", food = "butter_salted", grams = 250 },
 ]
+
+# Irish receipts (written after the Irish shop and brand vocabulary was added).
+[[receipt]]
+id = "r26_dunnes"
+items = [
+  { key = "KERRYGOLD BUTTER 227G", food = "butter", grams = 227 },
+  { key = "AVONMORE MILK 2L", food = "milk_whole", grams = 2060 },
+  { key = "BRENNANS WHITE BREAD 800G", food = "bread_white", grams = 800 },
+  { key = "DS IRISH RASHERS 200G", food = "bacon", grams = 200 },
+  { key = "FREE RANGE EGGS 12", food = "egg", grams = 660, tol = 0.25 },
+  { key = "ROOSTER POTATOES 2.5KG", food = "potato", grams = 2500 },
+  { key = "DS CARROTS 1KG", food = "carrot", grams = 1000 },
+]
+
+[[receipt]]
+id = "r27_supervalu"
+items = [
+  { key = "SV SEMI SKIMMED MILK 1L", food = "milk_semi", grams = 1030 },
+  { key = "GLENISK NATURAL YOGURT 500G", food = "yogurt_plain", grams = 500 },
+  { key = "SV IRISH CHEDDAR 200G", food = "cheddar", grams = 200 },
+  { key = "BROWN ONIONS 750G", food = "onion", grams = 750 },
+  { key = "SV FROZEN PEAS 907G", food = "peas_frozen", grams = 907 },
+  { key = "PORRIDGE OATS 1KG", food = "oats", grams = 1000 },
+  { key = "BANANAS LOOSE", food = "banana", grams = 910 },
+]

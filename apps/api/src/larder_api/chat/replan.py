@@ -7,7 +7,10 @@ ChangeResult, facts are always recorded, and a plan version is saved whenever an
 1. Read phase (one short session, then closed)
    - Inputs: planning.load_inputs; goal_problems(inputs) non-empty -> every change fails with
      "Please review your goals in your profile" (facts are still logged).
-   - Target plan P = the latest plan if P.start <= every change date <= P.end (P may start in
+   - Target plan P = the plan in force on the anchor date (planning.plan_id_for: the newest
+     version covering it, else the newest of all), the anchor being the earliest change date
+     from today on (else today); so with next week's plan made, this week's changes still go
+     to this week's plan. P is used if P.start <= every change date <= P.end (P may start in
      the future). Facts dated outside every plan: logged only (no version). Wishes dated outside
      P fail ("Monday isn't in your plan yet - make next week's plan first"). Only when no plan
      covers today and a wish is dated today..today+6 is a fresh plan made (POST /plans rules,
@@ -252,6 +255,7 @@ class _Read:
     private: planning.PlanningCatalog
     fresh_version: int
     names: dict[int, str] = field(default_factory=dict[int, str])
+    anchor: date | None = None  # the date P was chosen for (re-checked in the write phase)
 
 
 @dataclass(slots=True)
@@ -283,9 +287,15 @@ class _Plan:
 
 
 async def apply_changes(
-    scope: ChatScope, changes: Sequence[Change], *, source: Source
+    scope: ChatScope,
+    changes: Sequence[Change],
+    *,
+    source: Source,
+    estimates: dict[int, offplan.Estimate] | None = None,
 ) -> ReplanOutcome:
-    estimates: dict[int, offplan.Estimate] = {}
+    """`estimates` (by change index) are used as they are instead of estimating from names:
+    the diary's quick-add knows the exact foods and grams."""
+    estimates = dict(estimates or {})
     started = clock.perf_counter()
     for attempt in range(2):
         outcome = await _attempt(scope, changes, source, estimates, started, last=attempt == 1)
@@ -346,7 +356,8 @@ async def _read(scope: ChatScope, items: list[_Item]) -> _Read:
             blocked = " ".join(e.missing)
         if inputs is not None and planning.goal_problems(inputs):
             blocked = REVIEW_GOALS
-        latest = await planning.latest_plan(session, scope.user_id)
+        anchor = min((i.on for i in items if i.on >= scope.today), default=scope.today)
+        latest = await planning.plan_for(session, scope.user_id, anchor)
         dates = [i.on for i in items] + [scope.today, scope.today + timedelta(days=6)]
         if latest is not None:
             dates += [latest.start_date, latest.start_date + timedelta(days=latest.days - 1)]
@@ -391,7 +402,7 @@ async def _read(scope: ChatScope, items: list[_Item]) -> _Read:
                 )
             )
         }
-    return _Read(inputs, blocked, latest, logs, window, seen, private, fresh_version, names)
+    return _Read(inputs, blocked, latest, logs, window, seen, private, fresh_version, names, anchor)
 
 
 def _repeats(items: list[_Item], read: _Read) -> None:
@@ -812,7 +823,8 @@ async def _write(
         await planning.lock_user_plans(session, scope.user_id)
         # A meal marked eaten (or undone) meanwhile changes the plan without a new version.
         if decided.saves and (
-            await _latest_id(session, scope.user_id) != (read.latest.id if read.latest else None)
+            await _latest_id(session, scope.user_id, read.anchor or scope.today)
+            != (read.latest.id if read.latest else None)
             or await _log_ids(session, scope.user_id, read.window) != {log.id for log in read.logs}
         ):
             if not last:
@@ -884,13 +896,8 @@ async def _log_ids(session: AsyncSession, user_id: int, window: tuple[date, date
     )
 
 
-async def _latest_id(session: AsyncSession, user_id: int) -> int | None:
-    return await session.scalar(
-        select(db.MealPlan.id)
-        .where(db.MealPlan.user_id == user_id)
-        .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
-        .limit(1)
-    )
+async def _latest_id(session: AsyncSession, user_id: int, anchor: date) -> int | None:
+    return await planning.plan_id_for(session, user_id, anchor)
 
 
 def _log_plan(item: _Item, read: _Read, row: db.MealPlan | None) -> int | None:

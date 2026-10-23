@@ -46,6 +46,28 @@ async def test_list_is_soonest_expiry_first(api: httpx.AsyncClient, auth: Auth) 
     assert [i["quantity"] for i in items] == [3, 2, 1]
 
 
+async def test_used_up_items_are_not_listed(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    kept = (await add(api, auth)).json()
+    used = (await add(api, auth)).json()
+    async with make_sessionmaker(db_engine)() as session:
+        await session.execute(update(PantryItem).where(PantryItem.id == used["id"]).values(grams=0))
+        await session.commit()
+
+    items = (await api.get("/pantry", headers=auth())).json()
+
+    assert [i["id"] for i in items] == [kept["id"]]
+
+
+async def test_items_say_where_they_are_kept(api: httpx.AsyncClient, auth: Auth) -> None:
+    await add(api, auth)  # onions: a cupboard vegetable
+
+    items = (await api.get("/pantry", headers=auth())).json()
+
+    assert items[0]["storage"] == "cupboard"
+
+
 async def test_update_recomputes_grams(api: httpx.AsyncClient, auth: Auth) -> None:
     item = (await add(api, auth)).json()
 

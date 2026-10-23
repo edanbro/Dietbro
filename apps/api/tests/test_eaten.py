@@ -460,11 +460,11 @@ async def test_a_new_plan_lists_a_meal_eaten_earlier(
     await mark(api, chat, plan_id, WED, "breakfast")
 
     response = await api.post(
-        "/plans", json={"start": MON.isoformat()}, headers=chat.auth("user_a")
-    )
+        "/plans", json={"start": TUE.isoformat()}, headers=chat.auth("user_a")
+    )  # a start no earlier than yesterday (the chat clock's today is WED)
 
     assert response.status_code == 201, response.text
-    wednesday = response.json()["days"][2]
+    wednesday = response.json()["days"][1]
     assert [(e["kind"], e["slot"]) for e in wednesday["logged"]] == [("eaten", "breakfast")]
     assert "breakfast" not in {m["slot"] for m in wednesday["meals"]}
 

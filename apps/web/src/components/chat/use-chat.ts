@@ -26,6 +26,7 @@ import {
   type DoneEvent,
 } from "@/lib/api/sse";
 import { localISODate, localTime } from "@/lib/dates";
+import { APP_NAME } from "@/lib/brand";
 
 /**
  * The message being answered in this tab. `sending` until the server accepts it (`thread`),
@@ -98,7 +99,7 @@ export function settled(
   );
 }
 
-const UNREACHABLE = "Couldn't reach Larder. Check your connection and try again.";
+const UNREACHABLE = `Couldn't reach ${APP_NAME}. Check your connection and try again.`;
 
 /** The daily message limit was hit; sending works again at `until`. */
 export type Limit = { until: string } | null;

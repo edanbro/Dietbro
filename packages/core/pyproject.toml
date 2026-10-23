@@ -3,7 +3,7 @@ name = "larder-core"
 version = "0.0.0"
 description = "Domain models, units and nutrition math. Pure Python, no I/O."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["tzdata>=2024.1; sys_platform == 'win32'"]  # zoneinfo data (Linux has it)
 
 [build-system]
 requires = ["hatchling"]

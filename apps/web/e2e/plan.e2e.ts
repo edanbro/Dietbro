@@ -78,7 +78,7 @@ test("set-up user plans a week, opens a recipe and ticks the shopping list", asy
     await page.getByRole("tab", { name: "Day", exact: true }).click();
     const meals = page.getByRole("list", { name: /^Meals on / });
     await meals.getByRole("link").first().click();
-    await expect(page).toHaveURL(/\/recipes\/\d+$/);
+    await expect(page).toHaveURL(/\/recipes\/\d+(\?servings=[\d.]+)?$/);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Allergens" })).toBeVisible();
@@ -86,7 +86,7 @@ test("set-up user plans a week, opens a recipe and ticks the shopping list", asy
     // 4. Shopping list: tick an item; it stays ticked after a reload.
     await page.getByRole("button", { name: "Back" }).click();
     await expect(page).toHaveURL(/\/plan/);
-    await page.getByRole("link", { name: "Shopping" }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Shopping" }).click();
     await expect(page.getByRole("heading", { name: "Shopping list" })).toBeVisible();
     const box = page.getByRole("checkbox").first();
     await expect(box).toHaveAttribute("aria-checked", "false");

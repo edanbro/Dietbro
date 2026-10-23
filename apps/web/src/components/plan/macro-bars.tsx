@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { ArrowDownIcon, ArrowUpIcon, CheckIcon } from "lucide-react";
 
-import type { Macros, NutrientBands } from "@/lib/api/hooks";
+import type { Macros, NutrientBands, ReferenceIntakes } from "@/lib/api/hooks";
 import { type Band, bandStatus, formatBand, formatNumber } from "@/lib/format";
 
 type Props = {
@@ -68,8 +68,8 @@ export function MacroBar({ label, value, unit, band, hard = false }: Props) {
             <div
               aria-hidden
               className={cn(
-                "absolute top-1/2 left-0 h-1.5 -translate-y-1/2 rounded-full",
-                !off && "bg-foreground",
+                "absolute top-1/2 left-0 h-1.5 origin-left -translate-y-1/2 rounded-full motion-safe:animate-grow-x",
+                !off && "bg-primary",
                 off && hard && "bg-destructive",
                 off && !hard && "bg-amber-500",
               )}
@@ -96,17 +96,98 @@ export function MacroBar({ label, value, unit, band, hard = false }: Props) {
 }
 
 /** One day's totals against the daily bands: calories are hard, macros soft. */
-export function DayMacros({ totals, bands }: { totals: Macros; bands: NutrientBands }) {
+export function DayMacros({
+  totals,
+  bands,
+  reference,
+}: {
+  totals: Macros;
+  bands: NutrientBands;
+  reference?: ReferenceIntakes;
+}) {
+  // Macros with a target get a bar; the rest sit together as plain numbers.
+  const macros = [
+    { label: "Protein", value: totals.protein_g, band: bands.protein_g },
+    { label: "Carbs", value: totals.carbs_g, band: bands.carbs_g },
+    { label: "Fat", value: totals.fat_g, band: bands.fat_g },
+  ];
+  const targeted = macros.filter((m) => bandStatus(m.value, m.band) !== "none");
+  const plain = macros.filter((m) => bandStatus(m.value, m.band) === "none");
   return (
     <section aria-label="Day totals" className="flex flex-col gap-3">
       <MacroBar label="Calories" unit="kcal" value={totals.kcal} band={bands.kcal} hard />
-      <MacroBar label="Protein" unit="g" value={totals.protein_g} band={bands.protein_g} />
-      <MacroBar label="Carbs" unit="g" value={totals.carbs_g} band={bands.carbs_g} />
-      <MacroBar label="Fat" unit="g" value={totals.fat_g} band={bands.fat_g} />
+      {targeted.map((m) => (
+        <MacroBar key={m.label} label={m.label} unit="g" value={m.value} band={m.band} />
+      ))}
+      {plain.length ? (
+        <dl
+          className="grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${plain.length}, minmax(0, 1fr))` }}
+          aria-label="Macros without a target"
+        >
+          {plain.map((m) => (
+            <div key={m.label} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
+              <dt className="text-xs text-muted-foreground">{m.label}</dt>
+              <dd className="text-sm font-semibold tabular-nums">{formatNumber(m.value)} g</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <MoreNutrients values={totals} reference={reference} />
       <p className="text-xs text-muted-foreground">
         Calories are a firm range. Protein, carbs and fat are aimed for, so a day can be a little
         off while the week balances out.
       </p>
     </section>
+  );
+}
+
+const MORE = [
+  { key: "fiber_g", label: "Fibre", atLeast: true },
+  { key: "sugars_g", label: "Sugars", atLeast: false },
+  { key: "sat_fat_g", label: "Sat fat", atLeast: false },
+  { key: "salt_g", label: "Salt", atLeast: false },
+] as const;
+
+/**
+ * Fibre, sugars, saturated fat and salt. With `reference` (daily guides), each shows the guide
+ * and is marked when it misses it: fibre below, the others above. Hidden when nothing is known.
+ */
+export function MoreNutrients({
+  values,
+  reference,
+}: {
+  values: Pick<Macros, "fiber_g" | "sugars_g" | "sat_fat_g" | "salt_g">;
+  reference?: ReferenceIntakes;
+}) {
+  if (MORE.every((m) => values[m.key] === null || values[m.key] === undefined)) return null;
+  return (
+    <dl className="grid grid-cols-4 gap-2" aria-label="More nutrients">
+      {MORE.map(({ key, label, atLeast }) => {
+        const value = values[key];
+        const guide = reference?.[key];
+        const off =
+          value !== null && value !== undefined && guide !== undefined
+            ? atLeast
+              ? value < guide
+              : value > guide
+            : false;
+        return (
+          <div key={key} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
+            <dt className="text-xs text-muted-foreground">{label}</dt>
+            <dd
+              className={`text-sm font-semibold tabular-nums ${off ? "text-amber-700 dark:text-amber-400" : ""}`}
+            >
+              {value === null || value === undefined ? "–" : `${value.toFixed(1)} g`}
+            </dd>
+            {guide !== undefined ? (
+              <dd className="text-[0.7rem] text-muted-foreground">
+                {atLeast ? "aim ≥" : "max"} {guide} g
+              </dd>
+            ) : null}
+          </div>
+        );
+      })}
+    </dl>
   );
 }

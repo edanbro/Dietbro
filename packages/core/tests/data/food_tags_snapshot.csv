@@ -22,7 +22,6 @@ fdc_id,description,category,allergens,animal
 167995,"Candies, marshmallows",Sweets,-,gelatin
 168092,"Ham, turkey, sliced, extra lean, prepackaged or deli",Sausages and Luncheon Meats,sulphites,meat
 168148,"Frog legs, raw",Finfish and Shellfish Products,-,meat
-168149,"Fish, mackerel, salted",Finfish and Shellfish Products,fish,fish
 168153,"Kiwifruit, green, raw",Fruits and Fruit Juices,-,-
 168155,"Limes, raw",Fruits and Fruit Juices,-,-
 168156,"Lime juice, raw",Fruits and Fruit Juices,-,-
@@ -52,7 +51,6 @@ fdc_id,description,category,allergens,animal
 168561,"Pickle relish, sweet",Vegetables and Vegetable Products,-,-
 168567,"Tomatoes, sun-dried",Vegetables and Vegetable Products,sulphites,-
 168573,"Lemon grass (citronella), raw",Vegetables and Vegetable Products,-,-
-168575,"Grape leaves, raw",Vegetables and Vegetable Products,-,-
 168576,"Peppers, jalapeno, raw",Vegetables and Vegetable Products,-,-
 168586,"Nuts, coconut meat, dried (desiccated), sweetened, shredded",Nut and Seed Products,sulphites,-
 168588,"Nuts, almond butter, plain, without salt added",Nut and Seed Products,tree_nuts,-
@@ -104,7 +102,6 @@ fdc_id,description,category,allergens,animal
 169249,"Lettuce, green leaf, raw",Vegetables and Vegetable Products,-,-
 169251,"Mushrooms, white, raw",Vegetables and Vegetable Products,-,-
 169276,"Radishes, raw",Vegetables and Vegetable Products,-,-
-169277,"Salsify, (vegetable oyster), raw",Vegetables and Vegetable Products,-,-
 169279,"Sauerkraut, canned, solids and liquids",Vegetables and Vegetable Products,-,-
 169291,"Squash, summer, zucchini, includes skin, raw",Vegetables and Vegetable Products,-,-
 169295,"Squash, winter, butternut, raw",Vegetables and Vegetable Products,-,-
@@ -116,7 +113,6 @@ fdc_id,description,category,allergens,animal
 169393,"Grape leaves, canned",Vegetables and Vegetable Products,-,-
 169394,"Pepper, banana, raw",Vegetables and Vegetable Products,-,-
 169414,"Seeds, flaxseed",Nut and Seed Products,-,-
-169517,"Beef, round, full cut, separable lean and fat, trimmed to 1/8"" fat, select, raw",Beef Products,-,meat
 169547,"Beef, tenderloin, separable lean and fat, trimmed to 1/8"" fat, prime, raw",Beef Products,-,meat
 169586,"Candies, peanut brittle, prepared-from-recipe",Sweets,milk|peanuts,dairy
 169593,"Cocoa, dry powder, unsweetened",Sweets,-,-
@@ -238,9 +234,9 @@ fdc_id,description,category,allergens,animal
 171016,"Oil, sesame, salad or cooking",Fats and Oils,sesame,-
 171019,"Salad dressing, italian dressing, commercial, regular",Fats and Oils,-,-
 171025,"Oil, sunflower, linoleic, (approx. 65%)",Fats and Oils,-,-
+171042,"Oil, industrial, canola, high oleic",Fats and Oils,-,-
 171060,"Chicken, liver, all classes, raw",Poultry Products,-,meat
 171077,"Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",Poultry Products,-,meat
-171186,"Sauce, hot chile, sriracha","Soups, Sauces, and Gravies",sulphites,-
 171241,"Cheese, gouda",Dairy and Egg Products,milk,dairy
 171242,"Cheese, gruyere",Dairy and Egg Products,milk,dairy|rennet
 171249,"Cheese, romano",Dairy and Egg Products,milk,dairy|rennet
@@ -393,7 +389,6 @@ fdc_id,description,category,allergens,animal
 173810,"Lamb, New Zealand, imported, loin chop, separable lean only, raw","Lamb, Veal, and Game Products",-,meat
 173859,"Sausage, pork, chorizo, link or ground, raw",Sausages and Luncheon Meats,gluten|sulphites,meat
 173864,"Ham, sliced, regular (approximately 11% fat)",Sausages and Luncheon Meats,sulphites,meat
-173879,"Kielbasa, fully cooked, unheated",Sausages and Luncheon Meats,gluten|sulphites,meat
 173904,"Cereals, oats, regular and quick, not fortified, dry",Breakfast Cereals,gluten,-
 173929,"Apples, raw, without skin, cooked, microwave",Fruits and Fruit Juices,-,-
 173941,"Apricots, dried, sulfured, uncooked",Fruits and Fruit Juices,sulphites,-
@@ -412,14 +407,12 @@ fdc_id,description,category,allergens,animal
 174199,"Fish, haddock, smoked",Finfish and Shellfish Products,fish,fish
 174204,"Crustaceans, crab, blue, raw",Finfish and Shellfish Products,crustaceans,shellfish
 174208,"Crustaceans, lobster, northern, raw",Finfish and Shellfish Products,crustaceans,shellfish
-174210,"Crustaceans, shrimp, mixed species, raw (may contain additives to retain moisture)",Finfish and Shellfish Products,crustaceans,shellfish
 174214,"Mollusks, clam, mixed species, raw",Finfish and Shellfish Products,molluscs,shellfish
 174216,"Mollusks, mussel, blue, raw",Finfish and Shellfish Products,molluscs,shellfish
 174223,"Mollusks, squid, mixed species, raw",Finfish and Shellfish Products,molluscs,shellfish
 174252,"Lima beans, large, mature seeds, raw",Legumes and Legume Products,-,-
 174256,"Mung beans, mature seeds, raw",Legumes and Legume Products,-,-
 174270,"Soybeans, mature seeds, raw",Legumes and Legume Products,soy,-
-174272,Tempeh,Legumes and Legume Products,soy,-
 174277,Soy sauce made from soy and wheat (shoyu),Legumes and Legume Products,gluten|soy,-
 174284,"Lentils, pink or red, raw",Legumes and Legume Products,-,-
 174286,"Beans, pinto, canned, drained solids",Legumes and Legume Products,-,-

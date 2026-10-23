@@ -4,22 +4,33 @@ import {
   ArrowLeftIcon,
   CircleCheckIcon,
   CircleSlashIcon,
+  CookingPotIcon,
   NotebookPenIcon,
   RefreshCwIcon,
   Undo2Icon,
 } from "lucide-react";
 import { useId, useState } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Eaten, MealCell, Meal, PantryChange, PlanChange } from "@/lib/api/hooks";
-import { formatGrams } from "@/lib/format";
+import {
+  type Eaten,
+  type MealCell,
+  type Meal,
+  type PantryChange,
+  type PlanChange,
+  useAlternatives,
+} from "@/lib/api/hooks";
+import { formatGrams, formatNumber } from "@/lib/format";
 
 import { SLOT_LABEL } from "./slots";
 
 /** What a meal card's options need from the page. */
 export type MealActionsProps = {
+  planId: number;
   date: string;
   today: string;
   /** A plan change is running (any meal): every action waits. */
@@ -27,9 +38,11 @@ export type MealActionsProps = {
   /** Resolve when done; rejections are reported by the caller (toasts), not here. */
   onEaten: (cell: MealCell, undo: boolean) => Promise<unknown>;
   onReplan: (changes: PlanChange[]) => Promise<unknown>;
+  /** Tomorrow's date when this dinner can be cooked in double for tomorrow's lunch. */
+  cookExtraFor?: string | null;
 };
 
-type Mode = "menu" | "skip" | "other";
+type Mode = "menu" | "skip" | "other" | "swap";
 
 /** "200 g chickpeas", "200 g chickpeas and 1 kg rice", "a, b and c". */
 function foodList(items: PantryChange[]): string {
@@ -67,11 +80,13 @@ export function eatenMessage(out: Eaten, undo: boolean): { title: string; descri
 export function MealActions({
   id,
   meal,
+  planId,
   date,
   today,
   busy,
   onEaten,
   onReplan,
+  cookExtraFor = null,
   onDone,
 }: MealActionsProps & { id: string; meal: Meal; onDone: () => void }) {
   const [mode, setMode] = useState<Mode>("menu");
@@ -88,6 +103,7 @@ export function MealActions({
     action.then(onDone, () => undefined);
   };
   const replan = (change: PlanChange) => run(onReplan([change]));
+  const options = useAlternatives(planId, date, slot, mode === "swap");
 
   return (
     <div
@@ -125,14 +141,26 @@ export function MealActions({
                     <CircleSlashIcon aria-hidden />
                     Skip
                   </Button>
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => replan({ intent: "swap", when })}
-                  >
+                  <Button variant="outline" disabled={busy} onClick={() => setMode("swap")}>
                     <RefreshCwIcon aria-hidden />
                     Swap for something else
                   </Button>
+                  {slot === "dinner" && cookExtraFor ? (
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        replan({
+                          intent: "swap",
+                          when: { date: cookExtraFor, slot: "lunch" },
+                          recipe_id: meal.recipe.id,
+                        })
+                      }
+                    >
+                      <CookingPotIcon aria-hidden />
+                      Cook extra for tomorrow&apos;s lunch
+                    </Button>
+                  ) : null}
                 </>
               )}
               {date === today ? (
@@ -168,6 +196,39 @@ export function MealActions({
             No, I&apos;m not eating
           </Button>
           <Button variant="ghost" disabled={busy} onClick={() => setMode("menu")}>
+            <ArrowLeftIcon aria-hidden />
+            Back
+          </Button>
+        </fieldset>
+      ) : null}
+
+      {mode === "swap" ? (
+        <fieldset className="flex flex-col gap-2" disabled={busy}>
+          <legend className="mb-2 text-sm font-medium">Swap {name.toLowerCase()} for:</legend>
+          {options.isPending ? (
+            <>
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </>
+          ) : (
+            (options.data ?? []).map((o) => (
+              <Button
+                key={o.id}
+                variant="outline"
+                className="h-auto justify-between py-2 text-left"
+                onClick={() => replan({ intent: "swap", when, recipe_id: o.id })}
+              >
+                <span className="min-w-0 truncate">{o.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  {formatNumber(o.kcal_per_serving)} kcal
+                </span>
+              </Button>
+            ))
+          )}
+          <Button variant="outline" onClick={() => replan({ intent: "swap", when })}>
+            Anything else - you pick
+          </Button>
+          <Button variant="ghost" onClick={() => setMode("menu")}>
             <ArrowLeftIcon aria-hidden />
             Back
           </Button>

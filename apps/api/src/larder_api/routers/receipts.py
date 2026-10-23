@@ -5,7 +5,7 @@ Status flow: queued -> processing -> ready | failed; ready -> confirmed. Every q
 filtered by the signed-in user; other users' uploads and lines are 404s.
 """
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.inline import NO_PHOTOS
 from larder_api.jobs import Enqueue, QueueUnavailable, get_enqueue
 from larder_api.receipts import amount_for, confirm, item_of
 from larder_api.routers.foods import summary
@@ -32,6 +33,7 @@ from larder_api.schemas import (
     ReceiptTextIn,
 )
 from larder_api.settings import Settings, get_settings
+from larder_core.regions import local_today
 from larder_core.shelf_life import suggest_expiry
 from larder_db.models import Food, ReceiptLine, ReceiptUpload, User
 
@@ -153,6 +155,8 @@ async def upload_image(
     purchased_on: Annotated[date | None, Form()] = None,
 ) -> ReceiptOut:
     """Queue a receipt photo for reading. The photo is deleted as soon as it has been read."""
+    if settings.worker_in_api:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NO_PHOTOS)
     data = await file.read(settings.receipt_max_image_bytes + 1)
     if len(data) > settings.receipt_max_image_bytes:
         raise HTTPException(
@@ -174,7 +178,7 @@ async def upload_image(
         user_id=user.id,
         source="image",
         status="queued",
-        purchased_on=purchased_on or now.astimezone(UTC).date(),
+        purchased_on=purchased_on or local_today(user.timezone, now),
         image=data,
         image_type=kind,
         image_bytes=len(data),
@@ -204,7 +208,7 @@ async def submit_text(
         user_id=user.id,
         source="text",
         status="queued",
-        purchased_on=body.purchased_on or now.astimezone(UTC).date(),
+        purchased_on=body.purchased_on or local_today(user.timezone, now),
         text=body.text,
     )
     session.add(upload)

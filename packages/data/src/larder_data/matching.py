@@ -13,6 +13,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from larder_core.names import singular
+from larder_core.synonyms import SYNONYMS, rewrite
+
+__all__ = ["SYNONYMS", "rewrite"]  # re-exported (they moved to larder_core.synonyms)
 
 type Method = Literal["alias", "embedding", "unmatched"]
 
@@ -24,6 +27,8 @@ EXCLUDED_CATEGORIES = (
     "Meals, Entrees, and Side Dishes",
     "American Indian/Alaska Native Foods",
 )
+# Recipes resolve to generic USDA foods only (survey foods, CoFID and products link to these).
+RESOLVER_TYPES = ("foundation", "sr_legacy")
 ACCEPT_THRESHOLD = 0.88
 VECTOR_CANDIDATES = 30
 LEXICAL_CANDIDATES = 30
@@ -115,57 +120,7 @@ _VARIANT_WORDS = frozenset({"free", "light", "lite", "low", "nonfat", "reduced",
 # USDA's wording for "the ordinary one".
 _GENERIC_PHRASES = ("all commercial varieties", "year round average", "mixed species", "all types")
 
-# British / recipe vocabulary -> USDA vocabulary, applied before retrieval (longest first).
-SYNONYMS: dict[str, str] = {
-    "aubergine": "eggplant",
-    "egg plant": "eggplant",
-    "courgette": "zucchini",
-    "king prawn": "shrimp",
-    "prawn": "shrimp",
-    "beetroot": "beets",
-    "rocket": "arugula",
-    "swede": "rutabaga",
-    "sweetcorn": "sweet corn kernels",
-    "stock cube": "bouillon dry",
-    "stock": "soup stock",
-    "mince": "ground",
-    "minced": "ground",
-    "double cream": "heavy whipping cream",
-    "single cream": "light cream",
-    "icing sugar": "powdered sugar",
-    "caster sugar": "granulated sugar",
-    "bicarbonate of soda": "baking soda",
-    "plain flour": "wheat flour all-purpose",
-    "cornflour": "cornstarch",
-    "corn flour": "cornstarch",
-    "chilli flake": "red pepper cayenne spice",
-    "chilli powder": "chili powder spice",
-    "chilli": "hot chili pepper",
-    "filo": "phyllo dough",
-    "treacle": "molasses",
-    "passata": "tomato puree canned",
-    "tinned": "canned",
-    "yoghurt": "yogurt",
-    "rapeseed": "canola",
-    "groundnut": "peanut",
-    "ground nut": "peanut",
-    "soya": "soy",
-    "spring onion": "scallions",
-    "coriander leaf": "cilantro",
-    "sultana": "raisins",
-    "mangetout": "snow peas",
-    "gammon": "ham",
-    "black pudding": "blood sausage",
-    "kipper": "herring smoked",
-}
-_SYNONYM_RE = re.compile(
-    r"\b(" + "|".join(re.escape(k) for k in sorted(SYNONYMS, key=len, reverse=True)) + r")\b"
-)
-
-
-def rewrite(name: str) -> str:
-    """Apply SYNONYMS to a normalised name ("baby aubergine" -> "baby eggplant")."""
-    return _SYNONYM_RE.sub(lambda m: SYNONYMS[m.group(1)], name)
+# British / recipe vocabulary -> USDA vocabulary: larder_core.synonyms (shared with search).
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,7 +184,8 @@ _CANDIDATES_SQL = text(
     WITH vec AS (
         SELECT e.food_id, 1 - (e.embedding <=> CAST(:q AS vector)) AS similarity
         FROM food_embeddings e JOIN foods f ON f.id = e.food_id
-        WHERE NOT (coalesce(f.category, '') = ANY(:excluded))
+        WHERE NOT (coalesce(f.category, '') = ANY(:excluded)) AND f.data_type = ANY(:types)
+          AND f.generic_food_id IS NULL
         ORDER BY e.embedding <=> CAST(:q AS vector)
         LIMIT :k_vec
     ),
@@ -237,6 +193,7 @@ _CANDIDATES_SQL = text(
         SELECT f.id AS food_id, 1 - (e.embedding <=> CAST(:q AS vector)) AS similarity
         FROM foods f JOIN food_embeddings e ON e.food_id = f.id
         WHERE NOT (coalesce(f.category, '') = ANY(:excluded)) AND f.description ~* :pattern
+          AND f.data_type = ANY(:types) AND f.generic_food_id IS NULL
         LIMIT :k_lex
     ),
     cand AS (SELECT * FROM vec UNION SELECT * FROM lex)
@@ -259,6 +216,7 @@ async def candidates(session: AsyncSession, query: str, vector: list[float]) -> 
         {
             "q": str(vector),
             "excluded": list(EXCLUDED_CATEGORIES),
+            "types": list(RESOLVER_TYPES),
             "pattern": pattern,
             "k_vec": VECTOR_CANDIDATES,
             "k_lex": LEXICAL_CANDIDATES,

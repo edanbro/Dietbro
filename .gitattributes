@@ -1,0 +1,2 @@
+# Shell scripts run in Linux containers and Git Bash: keep LF line ends everywhere.
+*.sh text eol=lf

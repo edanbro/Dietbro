@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { ReceiptReview } from "@/components/pantry/receipt-review";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const metadata: Metadata = { title: "Review receipt · Larder" };
+export const metadata: Metadata = { title: "Review receipt" };
 
 async function Receipt({ params }: { params: PageProps<"/pantry/receipts/[id]">["params"] }) {
   const { id } = await params;

@@ -96,7 +96,7 @@ describe("meal options", () => {
     // The recipe stays a link next to the options.
     expect(within(list).getByRole("link", { name: /Lunch 1/ })).toHaveAttribute(
       "href",
-      "/recipes/200",
+      expect.stringMatching(/^\/recipes\/200(\?|$)/),
     );
 
     fireEvent.click(toggle);
@@ -114,6 +114,34 @@ describe("meal options", () => {
     expect(names(await openOptions("Meals on Sunday 11 October", "Dinner"))).toEqual([
       "Skip",
       "Swap for something else",
+      "Cook extra for tomorrow's lunch",
+    ]);
+  });
+
+  it("cooks tonight's dinner in double for tomorrow's lunch", async () => {
+    vi.setSystemTime(new Date(2026, 9, 10, 10, 0));
+    const plan = makePlan();
+    const calls = setup({
+      "GET /plans/current": json(plan),
+      "POST /plans/replan": json({ type: "outcome", results: [], changes: [] }),
+    });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Sun 11 October" }));
+    const group = await openOptions("Meals on Sunday 11 October", "Dinner");
+    fireEvent.click(within(group).getByRole("button", { name: "Cook extra for tomorrow's lunch" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/plans/replan")).toBe(true));
+    const body = calls.find((c) => c.path === "/plans/replan")!.body as {
+      changes: { intent: string; when: { date: string; slot: string }; recipe_id: number }[];
+    };
+    const sunday = plan.days.find((d) => d.date === "2026-10-11")!;
+    const dinner = sunday.meals.find((m) => m.slot === "dinner")!;
+    expect(body.changes).toEqual([
+      {
+        intent: "swap",
+        when: { date: "2026-10-12", slot: "lunch" },
+        recipe_id: dinner.recipe.id,
+      },
     ]);
   });
 
@@ -304,14 +332,29 @@ describe("replans from the plan", () => {
     expect(screen.queryByRole("region", { name: "What changed" })).not.toBeInTheDocument();
   });
 
-  it("swaps a meal and logs something else instead", async () => {
+  it("swaps a meal for a picked option and logs something else instead", async () => {
     const calls = setup({
       "GET /plans/current": json(makePlan()),
+      "GET /plans/7/alternatives": json([
+        {
+          id: 300,
+          name: "Lentil stew",
+          category: null,
+          cuisine: null,
+          image_url: null,
+          slots: ["lunch"],
+          kcal_per_serving: 520,
+          protein_g_per_serving: 30,
+          uses_pantry: [],
+          favourite: false,
+        },
+      ]),
       "POST /plans/replan": json(outcome),
     });
 
     let group = await openOptions(FRIDAY, "Lunch");
     fireEvent.click(within(group).getByRole("button", { name: "Swap for something else" }));
+    fireEvent.click(await within(group).findByRole("button", { name: /Lentil stew/ }));
     await screen.findByRole("region", { name: "What changed" });
 
     group = await openOptions(FRIDAY, "Breakfast");
@@ -329,7 +372,11 @@ describe("replans from the plan", () => {
     const [swap, other] = calls
       .filter((c) => c.path === "/plans/replan")
       .map((c) => (c.body as { changes: unknown[] }).changes);
-    expect(swap).toEqual([{ intent: "swap", when: { date: "2026-10-09", slot: "lunch" } }]);
+    expect(swap).toEqual([
+      { intent: "swap", when: { date: "2026-10-09", slot: "lunch" }, recipe_id: 300 },
+    ]);
+    const asked = calls.find((c) => c.path === "/plans/7/alternatives");
+    expect(asked).toBeDefined();
     expect(other).toEqual([
       {
         intent: "ate_off_plan",
@@ -350,6 +397,7 @@ describe("replans from the plan", () => {
 
     const group = await openOptions(FRIDAY, "Lunch");
     fireEvent.click(within(group).getByRole("button", { name: "Swap for something else" }));
+    fireEvent.click(within(group).getByRole("button", { name: "Anything else - you pick" }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith(message));
     await waitFor(() =>

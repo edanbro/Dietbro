@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.demo import is_demo
 from larder_api.routers.foods import summary
 from larder_api.routers.pantry import expiring_count
 from larder_api.schemas import (
@@ -27,9 +28,14 @@ from larder_api.schemas import (
     PreferencesOut,
     Problems,
     ProfileStatus,
+    RegionIn,
+    RegionOption,
+    RegionOut,
     SuggestedTargets,
 )
+from larder_api.settings import Settings, get_settings
 from larder_core.allergens import LABELS, Allergen
+from larder_core.brand import APP_NAME
 from larder_core.energy import (
     Activity,
     Body,
@@ -41,10 +47,12 @@ from larder_core.energy import (
     validate_body,
     validate_targets,
 )
+from larder_core.regions import REGIONS, local_today, region_for, valid_timezone
 from larder_db.models import (
     Allergies,
     Base,
     BodyProfile,
+    BodyWeight,
     ChatThread,
     Craving,
     Food,
@@ -53,9 +61,14 @@ from larder_db.models import (
     MealLog,
     MealPlan,
     PantryItem,
+    PlanTemplate,
     Preferences,
+    PushSubscription,
     ReceiptUpload,
     Recipe,
+    RecipeNote,
+    ShareLink,
+    ShoppingExtra,
     User,
 )
 
@@ -120,19 +133,58 @@ async def _status(session: AsyncSession, user: User, today: date) -> ProfileStat
 async def get_me(
     user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
 ) -> Me:
-    s = await _status(session, user, clock().astimezone(UTC).date())
+    s = await _status(session, user, local_today(user.timezone, clock()))
     return Me(
         id=user.id,
         created_at=user.created_at,
         profile=s,
         setup_complete=s.has_goals and s.has_allergies and s.has_preferences,
+        region=region_out(user),
     )
 
 
+def region_out(user: User) -> RegionOut:
+    r = region_for(user.country)
+    return RegionOut(
+        country=r.country,
+        name=r.name,
+        currency=r.currency,
+        locale=user.locale or r.locale,
+        timezone=user.timezone or r.timezone,
+        saved=user.country is not None,
+    )
+
+
+@router.put("/region", operation_id="putRegion", responses=_PROBLEMS)
+async def put_region(body: RegionIn, user: CurrentUser, session: Session) -> RegionOut:
+    """Where the user lives: currency, price estimates, dates. Moving to a region with another
+    currency also switches the goals' currency (the budget amount is kept)."""
+    country = body.country.upper()
+    if country not in REGIONS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, [f"{country} isn't supported yet."])
+    if body.timezone is not None and not valid_timezone(body.timezone):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, [f"Unknown time zone {body.timezone}."])
+    before = region_for(user.country).currency
+    user.country = country
+    user.timezone = body.timezone or user.timezone
+    user.locale = body.locale or user.locale
+    goals = await session.get(Goals, user.id)
+    after = region_for(country).currency
+    if goals is not None and after != before and goals.currency == before:
+        goals.currency = after
+    await session.commit()
+    await session.refresh(user)
+    return region_out(user)
+
+
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, operation_id="deleteMe")
-async def delete_me(user: CurrentUser, session: Session) -> Response:
+async def delete_me(
+    user: CurrentUser, session: Session, settings: Annotated[Settings, Depends(get_settings)]
+) -> Response:
     """Delete the account and all its data (GDPR). The identity-provider account is deleted
-    by the client with its own SDK."""
+    by the client with its own SDK. The shared demo account can't be deleted."""
+    if is_demo(user.auth_subject, settings.demo_auth_subject):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, ["The demo account can't be deleted."])
     await session.execute(delete(User).where(User.id == user.id))
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -186,15 +238,67 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         .options(selectinload(ReceiptUpload.lines))
     )
 
-    response.headers["Content-Disposition"] = 'attachment; filename="larder-export.json"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{APP_NAME.lower()}-export.json"'
+    )
     return {
         "exported_at": datetime.now(UTC),
         "user": row(user),
         "goals": row(await session.get(Goals, user.id), "user_id"),
         "body": row(await session.get(BodyProfile, user.id), "user_id"),
+        # Browsers reminders go to (their keys are left out: secrets of the browser).
+        "push_subscriptions": rows(
+            await session.scalars(
+                select(PushSubscription)
+                .where(PushSubscription.user_id == user.id)
+                .order_by(PushSubscription.id)
+            ),
+            "user_id",
+            "p256dh",
+            "auth",
+        ),
+        # Public links the user made (recipe or week), revoked ones included.
+        "share_links": rows(
+            await session.scalars(
+                select(ShareLink).where(ShareLink.user_id == user.id).order_by(ShareLink.id)
+            ),
+            "user_id",
+        ),
+        "recipe_notes": rows(
+            await session.scalars(
+                select(RecipeNote)
+                .where(RecipeNote.user_id == user.id)
+                .order_by(RecipeNote.recipe_id)
+            ),
+            "user_id",
+        ),
+        "plan_templates": rows(
+            await session.scalars(
+                select(PlanTemplate)
+                .where(PlanTemplate.user_id == user.id)
+                .order_by(PlanTemplate.id)
+            ),
+            "user_id",
+        ),
+        "weights": rows(
+            await session.scalars(
+                select(BodyWeight)
+                .where(BodyWeight.user_id == user.id)
+                .order_by(BodyWeight.measured_on)
+            ),
+            "user_id",
+        ),
         "preferences": row(await session.get(Preferences, user.id), "user_id"),
         "allergies": row(await session.get(Allergies, user.id), "user_id"),
         "pantry": rows(pantry, "user_id"),
+        "shopping_extras": rows(
+            await session.scalars(
+                select(ShoppingExtra)
+                .where(ShoppingExtra.user_id == user.id)
+                .order_by(ShoppingExtra.id)
+            ),
+            "user_id",
+        ),
         "plans": [
             (row(p, "user_id") or {})
             | {"meals": rows(p.meals, "plan_id"), "shopping": rows(p.shopping, "plan_id")}
@@ -281,7 +385,7 @@ async def delete_body(user: CurrentUser, session: Session) -> Response:
 @router.get("/preferences", operation_id="getPreferences")
 async def get_preferences(user: CurrentUser, session: Session) -> PreferencesOut | None:
     row = await session.get(Preferences, user.id)
-    return PreferencesOut.model_validate(row) if row else None
+    return await _preferences_out(session, row) if row else None
 
 
 @router.put("/preferences", operation_id="putPreferences")
@@ -292,11 +396,37 @@ async def put_preferences(
     row.diet = body.diet
     row.liked_cuisines = sorted(set(body.liked_cuisines))
     row.disliked_cuisines = sorted(set(body.disliked_cuisines))
-    row.liked_food_ids = sorted(set(body.liked_food_ids))
-    row.disliked_food_ids = sorted(set(body.disliked_food_ids))
+    row.liked_food_ids = await with_generics(session, body.liked_food_ids)
+    row.disliked_food_ids = await with_generics(session, body.disliked_food_ids)
     session.add(row)
     await session.commit()
-    return PreferencesOut.model_validate(row)
+    return await _preferences_out(session, row)
+
+
+async def _preferences_out(session: AsyncSession, row: Preferences) -> PreferencesOut:
+    ids = {*row.liked_food_ids, *row.disliked_food_ids}
+    foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
+    return PreferencesOut(
+        diet=row.diet,  # pyright: ignore[reportArgumentType]
+        liked_cuisines=row.liked_cuisines,
+        disliked_cuisines=row.disliked_cuisines,
+        liked_food_ids=row.liked_food_ids,
+        disliked_food_ids=row.disliked_food_ids,
+        liked_foods=[summary(foods[i]) for i in row.liked_food_ids if i in foods],
+        disliked_foods=[summary(foods[i]) for i in row.disliked_food_ids if i in foods],
+    )
+
+
+async def with_generics(session: AsyncSession, food_ids: Iterable[int]) -> list[int]:
+    """The foods plus the generic foods they count as: recipes use generic foods, so avoiding a
+    regional or branded food ("Peanuts, plain" from CoFID) must avoid its generic too."""
+    ids = set(food_ids)
+    if ids:
+        generics = await session.scalars(
+            select(Food.generic_food_id).where(Food.id.in_(ids), Food.generic_food_id.is_not(None))
+        )
+        ids |= {g for g in generics if g is not None}
+    return sorted(ids)
 
 
 async def _allergies_out(session: AsyncSession, row: Allergies) -> AllergiesOut:
@@ -319,7 +449,7 @@ async def put_allergies(body: AllergiesIn, user: CurrentUser, session: Session) 
     """Hard constraints: no planned recipe will contain these (enforced by the solver, M3)."""
     row = await session.get(Allergies, user.id) or Allergies(user_id=user.id)
     row.allergens = sorted({a.value for a in body.allergens})
-    row.avoid_food_ids = sorted(set(body.avoid_food_ids))
+    row.avoid_food_ids = await with_generics(session, body.avoid_food_ids)
     session.add(row)
     await session.commit()
     return await _allergies_out(session, row)
@@ -335,6 +465,18 @@ async def list_cuisines(session: Session) -> list[str]:
         .order_by(Recipe.cuisine)
     )
     return [c for c in rows if c]
+
+
+@allergens_router.get("/regions", operation_id="listRegions")
+async def list_regions() -> list[RegionOption]:
+    """Supported countries, by name."""
+    return sorted(
+        (
+            RegionOption(country=r.country, name=r.name, currency=r.currency)
+            for r in REGIONS.values()
+        ),
+        key=lambda o: o.name,
+    )
 
 
 @allergens_router.get("/allergens", operation_id="listAllergens")

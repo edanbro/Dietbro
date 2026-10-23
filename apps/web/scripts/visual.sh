@@ -1,0 +1,50 @@
+#!/bin/sh
+# Compare every page with its screenshot in e2e/__screenshots__/ (e2e/visual.e2e.ts), or rewrite
+# them with --update-snapshots. Runs in the Playwright Linux container so the pixels match CI on
+# any machine. Needs the web app on port 3000 (docker compose up -d) and Clerk keys, from the
+# environment or the repo's .env. The API isn't called: the test replays e2e/visual/api.har.
+#
+#   sh scripts/visual.sh                      # compare (make visual)
+#   sh scripts/visual.sh --update-snapshots   # rewrite (make visual-update)
+#
+# Differences are written to test-results-visual/ (expected, actual and diff images).
+set -eu
+cd "$(dirname "$0")/.."
+IMAGE=mcr.microsoft.com/playwright:v1.64.0-noble
+
+key() { # VALUE of KEY=VALUE in ../../.env, quotes removed
+  [ -f ../../.env ] && grep -E "^$1=" ../../.env | head -n 1 | cut -d= -f2- | tr -d "\"'" || true
+}
+CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-$(key CLERK_SECRET_KEY)}
+CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY:-$(key CLERK_PUBLISHABLE_KEY)}
+export CLERK_SECRET_KEY CLERK_PUBLISHABLE_KEY
+if [ -z "$CLERK_SECRET_KEY" ]; then
+  echo "visual.sh: needs CLERK_SECRET_KEY (environment or .env)" >&2
+  exit 1
+fi
+
+rm -rf test-results-visual
+# MSYS_NO_PATHCONV: Git Bash on Windows would otherwise rewrite the container paths.
+MSYS_NO_PATHCONV=1 docker run --rm --ipc=host --add-host=host.docker.internal:host-gateway \
+  -e CLERK_SECRET_KEY -e CLERK_PUBLISHABLE_KEY -e VISUAL=1 -e CI \
+  -v "$(pwd):/web" "$IMAGE" sh -euc '
+    mkdir -p /tmp/v && cd /tmp/v
+    cp -r /web/e2e /web/playwright.config.ts .
+    npm init -y > /dev/null
+    npm install --no-audit --no-fund --loglevel=error \
+      @playwright/test@1.64.0 @clerk/testing@2.2.44 @clerk/backend@3.23.1
+    # The browser must see the app at localhost:3000 (its origin for Clerk and the API recording),
+    # so pass that port through to the host.
+    node -e "require(\"net\").createServer((c) => {
+      const s = require(\"net\").connect(3000, \"host.docker.internal\");
+      c.pipe(s).pipe(c); c.on(\"error\", () => s.destroy()); s.on(\"error\", () => c.destroy());
+    }).listen(3000)" &
+    status=0
+    npx playwright test --project=setup --project=visual-phone --project=visual-desktop \
+      --reporter=list "$@" || status=$?
+    if [ -d test-results ]; then cp -r test-results /web/test-results-visual; fi
+    case " $* " in *" --update-snapshots "*|*" -u "*)
+      rm -rf /web/e2e/__screenshots__ && cp -r e2e/__screenshots__ /web/e2e/ ;;
+    esac
+    exit $status
+  ' visual "$@"

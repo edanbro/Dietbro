@@ -31,12 +31,12 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
-from larder_api.routers.foods import load_portions
+from larder_api.routers.foods import food_portions
 from larder_api.schemas import EatenOut, PantryChangeOut
 from larder_core.meals import Slot
 from larder_core.quantities import grams_for
@@ -174,8 +174,8 @@ def check_dates(on: date, today: date, now: datetime) -> None:
 
 
 async def _plan(session: AsyncSession, user_id: int, plan_id: int, on: date) -> db.MealPlan:
-    """The user's plan, which must be their latest version and cover `on`; read under the plan
-    lock (taken here, held until the transaction ends)."""
+    """The user's plan, which must be the version in force on `on` (planning.plan_id_for) and
+    cover it; read under the plan lock (taken here, held until the transaction ends)."""
     await planning.lock_user_plans(session, user_id)
     plan = await session.scalar(
         select(db.MealPlan)
@@ -188,13 +188,7 @@ async def _plan(session: AsyncSession, user_id: int, plan_id: int, on: date) -> 
     )
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "plan not found")
-    latest = await session.scalar(
-        select(db.MealPlan.id)
-        .where(db.MealPlan.user_id == user_id)
-        .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
-        .limit(1)
-    )
-    if latest != plan.id:
+    if await planning.plan_id_for(session, user_id, on) != plan.id:
         raise HTTPException(
             status.HTTP_409_CONFLICT, ["Your plan has changed - reload it and try again."]
         )
@@ -241,7 +235,7 @@ async def _converts(session: AsyncSession, item: db.PantryItem, quantity: float)
     measure = parse_measure(f"{quantity:g} {item.unit}")
     grams = grams_for(
         measure,
-        await load_portions(session, item.food_id),
+        await food_portions(session, item.food),
         item.food.description.lower(),
         item.food.category,
     )
@@ -378,9 +372,14 @@ async def mark(
     pantry_rows = (
         await session.scalars(
             select(db.PantryItem)
-            .where(db.PantryItem.user_id == user_id, db.PantryItem.food_id.in_(needs))
+            .join(db.Food, db.Food.id == db.PantryItem.food_id)
+            .where(
+                db.PantryItem.user_id == user_id,
+                # A product or regional food counts as the generic food the recipe uses.
+                func.coalesce(db.Food.generic_food_id, db.PantryItem.food_id).in_(needs),
+            )
             .options(selectinload(db.PantryItem.food))
-            .with_for_update()
+            .with_for_update(of=db.PantryItem)
         )
     ).all()
     items = {i.id: i for i in pantry_rows}
@@ -389,7 +388,8 @@ async def mark(
         convertible = i.grams > 0 and i.quantity > 0
         if convertible:
             convertible = await _converts(session, i, i.quantity) is not None
-        stock.append(Stock(i.id, i.food_id, i.grams, i.quantity, i.unit, i.expires_on, convertible))
+        key = planning.pantry_key(i, needs)
+        stock.append(Stock(i.id, key, i.grams, i.quantity, i.unit, i.expires_on, convertible))
     taken = take(needs, stock)
     for t in taken:
         item = items[t.item_id]

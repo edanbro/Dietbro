@@ -20,6 +20,9 @@
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from larder_api import planning
 from larder_api.chat import foods
 from larder_api.chat.foods import tokens
@@ -27,7 +30,7 @@ from larder_api.chat.scope import ChatScope
 from larder_core.aliases import load_alias_rows
 from larder_core.allergens import Allergen
 from larder_core.meals import MAX_KCAL_PER_SERVING, MAX_OIL_SHARE, Slot
-from larder_core.nutrition import Nutrients
+from larder_core.nutrition import MICROS, Nutrients, micro_totals
 from larder_core.quantities import grams_for
 from larder_core.tagging import line_tags, make_line, tag_text
 from larder_core.units import parse_measure
@@ -61,7 +64,19 @@ class _Line:
     grams: float
 
 
-async def create_recipe(scope: ChatScope, draft: CreateRecipeInput) -> Created:
+async def create_recipe(
+    scope: ChatScope,
+    draft: CreateRecipeInput,
+    *,
+    source: str = "generated",
+    source_url: str | None = None,
+    image_url: str | None = None,
+    replacing: int | None = None,
+) -> Created:
+    """`source` "imported" (with the page's address and photo) for recipes read from the web,
+    "custom" for one the user edited; they go through exactly the same checks. `replacing`: an
+    edit of the user's own recipe, which then changes in place (same id: favourites, plans and
+    links keep pointing at it; plans keep the numbers they were made with)."""
     lines, problems = await _resolve(scope, draft)
     if problems:
         return Created(None, problems)
@@ -81,6 +96,7 @@ async def create_recipe(scope: ChatScope, draft: CreateRecipeInput) -> Created:
     if missing:
         return Created(None, [f"couldn't get nutrition for {_quoted(missing)}"])
     row = _row(scope, draft, lines, food_rows)
+    row.source, row.source_url, row.image_url = source, source_url, image_url
     facts = planning.recipe_facts(row, food_rows, info)
     problems = _text_problems(draft, avoided, profile.allergens)
     if draft.slot not in facts.slots:
@@ -93,7 +109,22 @@ async def create_recipe(scope: ChatScope, draft: CreateRecipeInput) -> Created:
         return Created(None, list(dict.fromkeys(problems)))
 
     async with scope.sessionmaker() as session:
-        session.add(row)
+        if replacing is None:
+            session.add(row)
+        else:
+            target = await session.scalar(
+                select(db.Recipe)
+                .where(db.Recipe.id == replacing, db.Recipe.owner_user_id == scope.user_id)
+                .options(selectinload(db.Recipe.ingredients))
+            )
+            if target is None:
+                return Created(None, ["That recipe can't be changed."])
+            _replace(target, row)
+            # The old lines go first: (recipe, position) is unique.
+            target.ingredients.clear()
+            await session.flush()
+            target.ingredients.extend(_copy_lines(row))
+            row = target
         await session.commit()
     return Created(
         row.id,
@@ -142,6 +173,10 @@ def _row(
         )
 
     per = {f: total(f) / draft.servings for f in Nutrients.FIELDS}
+    per |= micro_totals(
+        (({m: getattr(food_rows[x.match.food_id], m) for m in MICROS}, x.grams) for x in lines),
+        draft.servings,
+    )
     return db.Recipe(
         source="generated",
         source_id=uuid.uuid4().hex,
@@ -166,6 +201,31 @@ def _row(
             for i, x in enumerate(lines)
         ],
     )
+
+
+def _replace(target: db.Recipe, checked: db.Recipe) -> None:
+    """An edit's content onto the user's recipe; where it came from (source, link, photo) and
+    its id stay."""
+    target.name, target.category, target.cuisine = checked.name, checked.category, checked.cuisine
+    target.instructions = checked.instructions
+    target.servings, target.servings_estimated = checked.servings, checked.servings_estimated
+    target.nutrition_complete = checked.nutrition_complete
+    for field in (*Nutrients.FIELDS, *MICROS):
+        setattr(target, field, getattr(checked, field))
+
+
+def _copy_lines(checked: db.Recipe) -> list[db.RecipeIngredient]:
+    return [
+        db.RecipeIngredient(
+            position=i.position,
+            raw_name=i.raw_name,
+            raw_measure=i.raw_measure,
+            food_id=i.food_id,
+            grams=i.grams,
+            match_method=i.match_method,
+        )
+        for i in checked.ingredients
+    ]
 
 
 def _quoted(names: list[str]) -> str:
