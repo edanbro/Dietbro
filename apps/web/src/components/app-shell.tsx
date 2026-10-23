@@ -108,7 +108,7 @@ function CountBadge({ n }: { n: number }) {
   );
 }
 
-const IMMERSIVE = /^\/recipes\/\d+\/cook/;
+const IMMERSIVE = /^\/(recipes\/\d+\/cook|prep)/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

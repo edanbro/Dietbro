@@ -197,7 +197,23 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       await expect(page.getByRole("group", { name: "Confirm new plan" })).toHaveCount(0);
     });
 
+    await test.step("meal prep from the plan", async () => {
+      await page.goto("/plan");
+      await page.getByRole("button", { name: "Meal prep" }).click();
+      const boxes = page.getByRole("group", { name: /Cook ahead/ }).getByRole("checkbox");
+      await boxes.nth(0).check();
+      await boxes.nth(1).check();
+      await page.getByRole("button", { name: "Start meal prep" }).click();
+      await expect(page).toHaveURL(/\/prep\?r=\d+x[\d.]+,\d+x[\d.]+/);
+      await expect(page.getByRole("heading", { name: "Meal prep" })).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Steps" }).getByRole("listitem").first(),
+      ).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "Main" })).toHaveCount(0); // no tab bar
+    });
+
     await test.step("copy another day's meals", async () => {
+      await page.goto("/plan");
       await page.getByRole("tablist", { name: "Day" }).getByRole("tab").nth(2).click();
       await page.getByRole("button", { name: "Copy another day" }).first().click();
       const from = page.getByLabel("Use the meals from");

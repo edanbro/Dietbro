@@ -1,7 +1,13 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -617,6 +623,19 @@ export function useRecipe(id: number) {
     staleTime: 5 * 60_000,
     queryFn: async () =>
       unwrap(await api.GET("/recipes/{recipe_id}", { params: { path: { recipe_id: id } } })),
+  });
+}
+
+/** Several recipes at once (meal prep), each cached like useRecipe's. */
+export function useRecipes(ids: number[]) {
+  const api = useApi();
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: keys.recipe(id),
+      staleTime: 5 * 60_000,
+      queryFn: async () =>
+        unwrap(await api.GET("/recipes/{recipe_id}", { params: { path: { recipe_id: id } } })),
+    })),
   });
 }
 

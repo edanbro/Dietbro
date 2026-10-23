@@ -54,6 +54,7 @@ import { DayMacros } from "./macro-bars";
 import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
 import { CopyDay, RepeatChoices, SaveTemplate } from "./plan-templates";
+import { PrepPicker } from "./prep-picker";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
@@ -426,6 +427,7 @@ function PlanView({
             compact
           />
           <SaveTemplate plan={plan} />
+          <PrepPicker plan={plan} today={today} />
           {ended || plan !== current ? null : (
             <Button
               variant="ghost"
