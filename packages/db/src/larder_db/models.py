@@ -561,15 +561,16 @@ class PushSubscription(Base):
 
 
 class ShareLink(Base):
-    """A read-only public link (/s/<token>) to one recipe or to a week's plan (the newest version
-    starting on `plan_start`). Shows only the recipe or the meals: never pantry, goals, weight
-    or allergies. Revoking it stops the link working."""
+    """A public link (/s/<token>) to one recipe, a week's plan, or a week's shopping list (the
+    newest version starting on `plan_start`). Recipes and weeks are read-only; a list can be
+    ticked off by anyone with the link (shopping together). Shows only the recipe, the meals or
+    the list: never pantry, goals, weight or allergies. Revoking it stops the link working."""
 
     __tablename__ = "share_links"
     __table_args__ = (
         CheckConstraint(
             "(kind = 'recipe' AND recipe_id IS NOT NULL AND plan_start IS NULL)"
-            " OR (kind = 'week' AND plan_start IS NOT NULL AND recipe_id IS NULL)",
+            " OR (kind IN ('week', 'list') AND plan_start IS NOT NULL AND recipe_id IS NULL)",
             name="target",  # ck_share_links_target by the naming convention
         ),
     )
@@ -577,7 +578,7 @@ class ShareLink(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     token: Mapped[str] = mapped_column(String(32), unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    kind: Mapped[str] = mapped_column(String(8))  # recipe | week
+    kind: Mapped[str] = mapped_column(String(8))  # recipe | week | list
     recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
     plan_start: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -69,7 +69,8 @@ flowchart LR
 - **Spending insights**: weekly grocery spend from your receipts beside what the plan expected,
   and the aisles the money went on.
 - **Shares and syncs**: a read-only link to a recipe or a week (revocable, nothing personal in
-  it), and a private calendar feed so meals show up in Google, Apple or Outlook Calendar.
+  it), a shopping list to tick off together in the shop (no account needed), and a private
+  calendar feed so meals show up in Google, Apple or Outlook Calendar.
 - **Cook once, eat twice**: cook extra tonight and tomorrow's lunch becomes the leftovers.
 - **Cooks for the household**: say how many you cook for; the shopping list, cost, budget,
   pantry use and recipe amounts cover everyone, while calories and nutrition stay yours.

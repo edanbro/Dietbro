@@ -6,6 +6,7 @@ import {
   PackageCheckIcon,
   ShareIcon,
   TriangleAlertIcon,
+  UsersIcon,
   XIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 
 import { ErrorAlert } from "@/components/form-bits";
 import { PriceNote } from "@/components/price-note";
+import { ShareLinkButton } from "@/components/share-link-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -185,6 +187,13 @@ function ListView({ plan }: { plan: Plan }) {
                 Move {toStock} ticked to pantry
               </Button>
             ) : null}
+            <ShareLinkButton
+              target={{ kind: "list", start: plan.start }}
+              title="Shopping list"
+              label="Shop together"
+              icon={UsersIcon}
+              reach="can tick things off"
+            />
             <ShareButton list={list} extras={extras ?? []} />
           </div>
           <ErrorAlert error={stock.error} />
@@ -262,7 +271,7 @@ function ShareButton({ list, extras }: { list: ShoppingList; extras: ShoppingExt
   return (
     <Button size="sm" variant="outline" onClick={() => void share()}>
       <ShareIcon aria-hidden />
-      Share
+      Send as text
     </Button>
   );
 }

@@ -39,3 +39,30 @@ describe("ShareLinkButton", () => {
     );
   });
 });
+
+describe("ShareLinkButton for a shopping list", () => {
+  it("shares the week's list to tick off together", async () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { ...navigator, share: undefined, clipboard: { writeText } });
+    const calls = mockApi({ "POST /share": json({ token: "list1", path: "/s/list1" }) });
+    renderWithClient(
+      <ShareLinkButton
+        target={{ kind: "list", start: "2026-10-09" }}
+        title="Shopping list"
+        label="Shop together"
+        reach="can tick things off"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Shop together" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${location.origin}/s/list1`));
+    expect(calls.find((c) => c.path === "/share")?.body).toEqual({
+      kind: "list",
+      start: "2026-10-09",
+    });
+    expect(vi.mocked(toast.success).mock.calls[0]![0]).toBe(
+      "Link copied: anyone with it can tick things off",
+    );
+  });
+});

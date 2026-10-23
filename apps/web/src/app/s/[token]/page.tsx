@@ -6,6 +6,7 @@ import { cache, Suspense } from "react";
 import { Logo } from "@/components/logo";
 import { SLOT_LABEL } from "@/components/plan/slots";
 import { RecipeArt } from "@/components/recipe/recipe-art";
+import { SharedShoppingList } from "@/components/shopping/shared-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createApiClient } from "@/lib/api/client";
@@ -31,10 +32,16 @@ const load = cache(async (token: string): Promise<Shared | null> => {
 export async function generateMetadata({ params }: PageProps<"/s/[token]">): Promise<Metadata> {
   const shared = await load((await params).token);
   if (!shared) return { title: "Link not found", robots: { index: false } };
-  const title = shared.recipe ? shared.recipe.name : "A week of meals";
+  const title = shared.recipe
+    ? shared.recipe.name
+    : shared.shopping
+      ? "Shopping list"
+      : "A week of meals";
   const description = shared.recipe
     ? `A recipe shared from ${APP_NAME}.`
-    : `Seven days of breakfasts, lunches and dinners, planned with ${APP_NAME}.`;
+    : shared.shopping
+      ? `A shopping list shared from ${APP_NAME}: tick things off as you shop.`
+      : `Seven days of breakfasts, lunches and dinners, planned with ${APP_NAME}.`;
   const image = shared.recipe?.image_url;
   return {
     title,
@@ -137,17 +144,20 @@ function SharedWeek({ days }: { days: Day[] }) {
 }
 
 async function Shared({ params }: { params: PageProps<"/s/[token]">["params"] }) {
-  const shared = await load((await params).token);
+  const { token } = await params;
+  const shared = await load(token);
   if (!shared) notFound();
   return (
     <>
       {shared.recipe ? <SharedRecipe recipe={shared.recipe} /> : null}
       {shared.days ? <SharedWeek days={shared.days} /> : null}
+      {shared.shopping ? <SharedShoppingList token={token} initial={shared.shopping} /> : null}
     </>
   );
 }
 
-/** A read-only page for a share link: anyone with the link, no sign-in. */
+/** The page for a share link: anyone with the link, no sign-in. Recipes and weeks are to read;
+ * a shopping list is to tick off together. */
 export default function SharedPage({ params }: PageProps<"/s/[token]">) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-8 px-4 py-8">

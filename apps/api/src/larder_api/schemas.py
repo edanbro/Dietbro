@@ -1018,9 +1018,11 @@ ChatEvent = Annotated[
 
 
 class ShareIn(BaseModel):
-    kind: Literal["recipe", "week"]
+    kind: Literal["recipe", "week", "list"]
     recipe_id: int | None = None  # for a recipe
-    start: date | None = Field(default=None, description="for a week: the plan's start date")
+    start: date | None = Field(
+        default=None, description="for a week or its shopping list: the plan's start date"
+    )
 
 
 class TemplateIn(BaseModel):
@@ -1063,12 +1065,43 @@ class SharedDayOut(BaseModel):
     meals: list[SharedMealOut]
 
 
-class SharedOut(BaseModel):
-    """What a share link shows: one recipe, or a week's meals. Nothing about the person."""
+class SharedItemOut(BaseModel):
+    """A line of a shared shopping list: what to buy (no prices), ticked or not."""
 
-    kind: Literal["recipe", "week"]
+    food_id: int
+    name: str
+    category: str | None
+    grams: int
+    approx_units: str | None = None
+    checked: bool
+    staple: bool
+
+
+class SharedExtraOut(BaseModel):
+    id: int
+    name: str
+    checked: bool
+
+
+class SharedListOut(BaseModel):
+    start: date
+    household: int
+    items: list[SharedItemOut]
+    extras: list[SharedExtraOut] = Field(description="the owner's own items (bin bags)")
+
+
+class SharedTickIn(BaseModel):
+    checked: bool
+
+
+class SharedOut(BaseModel):
+    """What a share link shows: one recipe, a week's meals, or a week's shopping list. Nothing
+    about the person."""
+
+    kind: Literal["recipe", "week", "list"]
     recipe: RecipeDetail | None = None
     days: list[SharedDayOut] | None = None
+    shopping: SharedListOut | None = None
 
 
 _HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
