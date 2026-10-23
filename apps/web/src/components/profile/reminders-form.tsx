@@ -134,6 +134,19 @@ export function RemindersForm() {
     }
   };
 
+  const setAhead = async (enabled: boolean) => {
+    setBusy(true);
+    try {
+      const result = await api.PUT("/me/push/ahead", { body: { enabled } });
+      if (!result.response.ok) unwrap(result);
+    } catch {
+      toast.error("Couldn't save that. Try again.");
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  };
+
   const on = here.data === true;
   return (
     <div className="flex flex-col gap-3">
@@ -159,6 +172,18 @@ export function RemindersForm() {
             onChange={(e) => void setRecap(e.target.checked)}
           />
           Also a week in review on Sunday evenings
+        </label>
+      ) : null}
+      {config.data?.enabled ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            checked={config.data.prep_reminders ?? true}
+            disabled={busy}
+            onChange={(e) => void setAhead(e.target.checked)}
+          />
+          Also at 19:00 what tomorrow&apos;s meals need doing tonight (defrosting, marinating)
         </label>
       ) : null}
       {config.data && config.data.subscribed > (on ? 1 : 0) ? (

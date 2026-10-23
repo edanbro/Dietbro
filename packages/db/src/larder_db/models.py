@@ -327,6 +327,8 @@ class User(Base):
     # The Sunday-evening recap by push (larder_api.reminders.send_recaps), in browsers that
     # have reminders on.
     weekly_recap: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    # The evening heads-up for tomorrow's meals (defrost, marinate; larder_api.prep_ahead).
+    prep_reminders: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
 
 class Goals(Base):
@@ -428,6 +430,11 @@ class PantryItem(Base):
     """Food on hand. `grams` is canonical; `quantity` + `unit` are kept as the user typed them."""
 
     __tablename__ = "pantry_items"
+    __table_args__ = (
+        CheckConstraint(
+            "storage IS NULL OR storage IN ('fridge', 'freezer', 'cupboard')", name="storage"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -438,6 +445,9 @@ class PantryItem(Base):
     approx: Mapped[bool] = mapped_column(Boolean, default=False)
     expires_on: Mapped[date | None] = mapped_column(Date)
     source: Mapped[str] = mapped_column(String(16), default="manual")  # manual | receipt
+    # Where the user keeps it (fridge | freezer | cupboard); NULL: where that food usually is
+    # (larder_core.shelf_life.storage_for). Frozen food is defrosted ahead (larder_api.prep_ahead).
+    storage: Mapped[str | None] = mapped_column(String(8))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = _now()
 
@@ -543,6 +553,7 @@ class PushSubscription(Base):
     auth: Mapped[str] = mapped_column(String(100))
     last_sent_on: Mapped[date | None] = mapped_column(Date)
     recap_sent_on: Mapped[date | None] = mapped_column(Date)  # the Sunday it last went out
+    ahead_sent_on: Mapped[date | None] = mapped_column(Date)  # the last evening heads-up
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

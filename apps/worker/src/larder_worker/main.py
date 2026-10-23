@@ -27,7 +27,7 @@ from arq.typing import WorkerCoroutine
 from larder_api.demo import reset_demo
 from larder_api.jobs import READ_RECEIPT, RESET_DEMO, SEND_REMINDERS, SWEEP_RECEIPTS
 from larder_api.receipts import ReceiptUnreadable, process_upload, sweep_stale
-from larder_api.reminders import send_due, send_recaps
+from larder_api.reminders import send_ahead, send_due, send_recaps
 from larder_api.settings import get_settings
 from larder_db.engine import make_engine, make_sessionmaker
 from larder_worker.ocr import Ocr, UnreadableImage
@@ -89,7 +89,10 @@ async def send_reminders(ctx: dict[str, Any]) -> int:
     recaps = await send_recaps(ctx["maker"], now, settings)
     if recaps:
         logger.info("sent %d weekly recaps", recaps)
-    return sent + recaps
+    ahead = await send_ahead(ctx["maker"], now, settings)
+    if ahead:
+        logger.info("sent %d prep-ahead reminders", ahead)
+    return sent + recaps + ahead
 
 
 class WorkerSettings:

@@ -19,7 +19,7 @@ import {
   usePantry,
   useUpdatePantryItem,
 } from "@/lib/api/hooks";
-import { daysBetween, localISODate, shortDate } from "@/lib/dates";
+import { addDays, daysBetween, localISODate, shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/empty-state";
 import { foodName } from "@/lib/food-name";
 
@@ -183,20 +183,47 @@ export function PantryList({ searchFrom = 0 }: { searchFrom?: number } = {}) {
   );
 }
 
-/** Change how much is left, the unit or the use-by date. */
+type Storage = PantryItem["storage"];
+const FROZEN_DAYS = 90; // a cautious freezer life for most food (quality, not safety)
+
+/** Change how much is left, the unit, where it's kept or the use-by date. */
 function PantryEdit({ item, onDone }: { item: PantryItem; onDone: () => void }) {
   const update = useUpdatePantryItem();
   const { data: food } = useFood(item.food.id);
   const [quantity, setQuantity] = useState(String(item.quantity));
   const [unit, setUnit] = useState(item.unit);
   const [expires, setExpires] = useState(item.expires_on ?? "");
+  const [storage, setStorage] = useState<Storage>(item.storage);
+  const [extended, setExtended] = useState(false);
   const units = food?.units.map((u) => u.unit) ?? [];
   const options = units.includes(item.unit) ? units : [item.unit, ...units];
+
+  // Into the freezer: a use-by within a month moves out to about three months (shown, and
+  // editable, before saving).
+  function keep(next: Storage) {
+    setStorage(next);
+    const today = localISODate();
+    if (next === "freezer" && item.storage !== "freezer" && expires) {
+      if (daysBetween(today, expires) < 30) {
+        setExpires(addDays(today, FROZEN_DAYS));
+        setExtended(true);
+      }
+    } else if (extended) {
+      setExpires(item.expires_on ?? "");
+      setExtended(false);
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     update.mutate(
-      { id: item.id, quantity: Number(quantity), unit, expires_on: expires || null },
+      {
+        id: item.id,
+        quantity: Number(quantity),
+        unit,
+        expires_on: expires || null,
+        ...(storage !== item.storage ? { storage } : {}),
+      },
       {
         onSuccess: () => {
           toast.success(`Updated ${item.food.description}`);
@@ -240,13 +267,33 @@ function PantryEdit({ item, onDone }: { item: PantryItem; onDone: () => void }) 
           </NativeSelect>
         </div>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`storage-${item.id}`}>Kept in</Label>
+        <NativeSelect
+          id={`storage-${item.id}`}
+          value={storage}
+          onChange={(e) => keep(e.target.value as Storage)}
+        >
+          <option value="fridge">Fridge</option>
+          <option value="freezer">Freezer</option>
+          <option value="cupboard">Cupboard</option>
+        </NativeSelect>
+      </div>
       <LabeledInput
         id={`expires-${item.id}`}
         label="Use by"
         type="date"
         value={expires}
-        onChange={(e) => setExpires(e.target.value)}
+        onChange={(e) => {
+          setExpires(e.target.value);
+          setExtended(false);
+        }}
       />
+      {extended ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          Frozen, it keeps for months: use by moved to {shortDate(expires)}.
+        </p>
+      ) : null}
       <ErrorAlert error={update.error} />
       <div className="flex gap-2">
         <Button type="submit" disabled={update.isPending}>

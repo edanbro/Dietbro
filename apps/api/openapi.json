@@ -1820,6 +1820,62 @@
         }
       }
     },
+    "/plans/ahead": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Prep Ahead",
+        "description": "What the meals planned on `on` (default: tomorrow, the user's date) need doing the\nevening before: food to take out of the freezer, and steps to start (larder_api.prep_ahead).",
+        "operationId": "getPrepAhead",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "on",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AheadOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/plans/{plan_id}/alternatives": {
       "get": {
         "tags": [
@@ -3876,6 +3932,46 @@
         ]
       }
     },
+    "/me/push/ahead": {
+      "put": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Put Ahead",
+        "description": "The evening heads-up for tomorrow's meals (defrost, marinate) on or off.",
+        "operationId": "putAheadSetting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AheadSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/push/unsubscribe": {
       "post": {
         "tags": [
@@ -4400,6 +4496,79 @@
           "very_active"
         ],
         "title": "Activity"
+      },
+      "AheadItemOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "defrost",
+              "start"
+            ],
+            "title": "Kind",
+            "description": "defrost: take `text` (a pantry food) out of the freezer; start: do `text` (a step of the method) ahead"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "recipe_id": {
+            "type": "integer",
+            "title": "Recipe Id"
+          },
+          "recipe_name": {
+            "type": "string",
+            "title": "Recipe Name"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "slot",
+          "recipe_id",
+          "recipe_name",
+          "text"
+        ],
+        "title": "AheadItemOut",
+        "description": "Something to do the evening before a meal (larder_api.prep_ahead)."
+      },
+      "AheadOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AheadItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "items"
+        ],
+        "title": "AheadOut"
+      },
+      "AheadSettingIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "AheadSettingIn"
       },
       "Allergen": {
         "type": "string",
@@ -7227,6 +7396,22 @@
               }
             ],
             "title": "Expires On"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fridge",
+                  "freezer",
+                  "cupboard"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage"
           }
         },
         "type": "object",
@@ -7755,6 +7940,11 @@
           "weekly_recap": {
             "type": "boolean",
             "title": "Weekly Recap",
+            "default": true
+          },
+          "prep_reminders": {
+            "type": "boolean",
+            "title": "Prep Reminders",
             "default": true
           }
         },

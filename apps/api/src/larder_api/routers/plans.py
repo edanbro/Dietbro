@@ -28,9 +28,11 @@ from larder_api.chat import search
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
+from larder_api.prep_ahead import ahead_for
 from larder_api.ratelimit import per_user
 from larder_api.routers.pantry import out as pantry_out
 from larder_api.schemas import (
+    AheadOut,
     ChatProblem,
     DayMealOut,
     DayOut,
@@ -465,6 +467,19 @@ async def meals_on(on: date, user: CurrentUser, session: Session) -> list[DayMea
         for _, slot, rid in sorted(cells, key=lambda c: SLOT_ORDER.index(c[1]))
         if rid in recipes
     ]
+
+
+@router.get("/ahead", operation_id="getPrepAhead")
+async def prep_ahead(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    on: date | None = None,
+) -> AheadOut:
+    """What the meals planned on `on` (default: tomorrow, the user's date) need doing the
+    evening before: food to take out of the freezer, and steps to start (larder_api.prep_ahead)."""
+    day = on or local_today(user.timezone, clock()) + timedelta(days=1)
+    return AheadOut(date=day, items=await ahead_for(session, user.id, day))
 
 
 @router.get(
