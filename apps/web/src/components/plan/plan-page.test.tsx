@@ -231,6 +231,17 @@ describe("loaded plan", () => {
     expect(await screen.findByText("Breakfast 5")).toBeInTheDocument();
   });
 
+  it("prints the week from the week view", async () => {
+    const print = vi.fn();
+    vi.stubGlobal("print", print);
+    setup({ "GET /plans/current": json(makePlan()) });
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Week" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Print week" }));
+
+    expect(print).toHaveBeenCalledOnce();
+  });
+
   it("toggles between the day and a compact week grid", async () => {
     const plan = makePlan();
     plan.days[2].meals.push(meal("snack", 400, "Hummus and carrots", { portions: 1 }));

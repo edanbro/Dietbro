@@ -53,7 +53,7 @@ function Rail({ pathname, expiring }: { pathname: string; expiring: number }) {
   const current = activeTab(pathname);
   const links = [...NAV, ...MORE];
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r bg-sidebar px-4 py-5 text-sidebar-foreground lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r bg-sidebar px-4 py-5 text-sidebar-foreground lg:flex print:hidden">
       <Brand />
       <nav aria-label="Sidebar" className="mt-8 flex-1">
         <ul className="flex flex-col gap-1">
@@ -119,16 +119,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Cooking: the whole phone screen is the recipe, no tab bar to tap by accident.
   const immersive = IMMERSIVE.test(pathname);
   return (
-    <div className="flex min-h-dvh flex-col lg:pl-64">
+    // Printed: the page's content only, full width, no navigation.
+    <div className="flex min-h-dvh flex-col lg:pl-64 print:min-h-0 print:pl-0">
       <Rail pathname={pathname} expiring={expiring} />
-      <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden print:hidden">
         <Brand />
         <UserButton />
       </header>
-      <OfflineBanner />
+      <div className="print:hidden">
+        <OfflineBanner />
+      </div>
       <main
         className={cn(
-          "mx-auto w-full max-w-md flex-1 px-4 pt-4 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12",
+          "mx-auto w-full max-w-md flex-1 px-4 pt-4 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12 print:max-w-none print:p-0",
           immersive ? "pb-8 md:max-w-3xl" : "pb-24",
         )}
       >
@@ -137,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {immersive ? null : (
         <nav
           aria-label="Main"
-          className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden"
         >
           <ul className="mx-auto flex max-w-md">
             {NAV.map(({ href, label, icon: Icon }) => {

@@ -215,6 +215,19 @@ test("pages match their screenshots", async ({ page, context }) => {
       await page.goto(path);
       await shot(name);
     }
+    // Printed: no navigation or controls, light even in dark mode, the week as a table.
+    await page.emulateMedia({ media: "print", colorScheme: "dark" });
+    for (const [name, path] of [
+      ["plan", "/plan"],
+      ["shopping", "/plan/shopping"],
+    ] as const) {
+      await page.goto(path);
+      await settle(page);
+      await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+      await expect.soft(page, `${name} (print)`).toHaveScreenshot(`${name}-print.png`, {
+        fullPage: true,
+      });
+    }
   } finally {
     await done();
   }
