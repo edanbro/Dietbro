@@ -193,6 +193,7 @@ def plan_out(row: MealPlan) -> PlanOut:
         pantry_used_g=stats.pantry_used_g,
         waste_g=stats.waste_g,
         shopping_items=sum(1 for s in row.shopping if not s.staple),
+        household=stats.household,
         excluded_allergens=stats.excluded_allergens,
         diet=stats.diet,
         violations=stats.violations,
@@ -327,7 +328,13 @@ async def create_plan(
         notes = last_notes
     prepared = planning.Prepared(problem, version, seed, None, novelty)
     stats = planning.plan_stats(
-        problem, result, plan, violations, seed=seed, time_limit_ms=settings.plan_time_limit_ms
+        problem,
+        result,
+        plan,
+        violations,
+        seed=seed,
+        time_limit_ms=settings.plan_time_limit_ms,
+        household=planning.household_of(inputs, problem.days),
     )
     stats.notes = [*notes, *stats.notes]
     stats.total_ms = round((time.perf_counter() - started) * 1000)
@@ -725,6 +732,7 @@ async def _shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOu
         currency=plan.currency,  # pyright: ignore[reportArgumentType]
         total_minor=stats.cost_minor,
         budget_minor=stats.budget_minor,
+        household=stats.household,
         items=items,
     )
 

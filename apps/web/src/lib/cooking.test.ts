@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clock, parseServings, scaleFactor, stepTimers } from "./cooking";
+import { clock, cookServings, parseServings, scaleFactor, stepTimers } from "./cooking";
 
 describe("stepTimers", () => {
   it.each([
@@ -37,5 +37,12 @@ describe("scaling", () => {
     expect(parseServings("0")).toBeNull();
     expect(parseServings("abc")).toBeNull();
     expect(parseServings(null)).toBeNull();
+  });
+
+  it("cooks a planned meal for everyone, in halves, up to 20 servings", () => {
+    expect(cookServings(1.5)).toBe(1.5);
+    expect(cookServings(1.5, 3)).toBe(4.5);
+    expect(cookServings(2.5, 8)).toBe(20);
+    expect(cookServings(2.5, 7)).toBe(17.5);
   });
 });

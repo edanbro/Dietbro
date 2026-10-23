@@ -75,6 +75,12 @@ class GoalsIn(BaseModel):
     carbs_g_max: float | None = _grams
     weekly_budget_minor: int | None = Field(default=None, ge=0, le=10_000_00)
     currency: Currency = "GBP"
+    household: int = Field(
+        default=1,
+        ge=1,
+        le=8,
+        description="people the user cooks for: shopping, cost and amounts cover them all",
+    )
 
 
 class GoalsOut(GoalsIn):
@@ -695,6 +701,9 @@ class PlanOut(BaseModel):
     pantry_used_g: int
     waste_g: int = Field(description="pantry food that will expire unused within the plan")
     shopping_items: int
+    household: int = Field(
+        default=1, description="people the plan is cooked for (its shopping, cost, pantry use)"
+    )
     # The hard exclusions this plan was made under (shown prominently, PLAN §8).
     excluded_allergens: list[Allergen]
     diet: Diet | None
@@ -757,6 +766,7 @@ class ShoppingListOut(BaseModel):
     currency: Currency
     total_minor: int = Field(description="estimated cost of every non-staple line (= plan cost)")
     budget_minor: int | None
+    household: int = Field(default=1, description="people the amounts are for")
     items: list[ShoppingItemOut]
 
 

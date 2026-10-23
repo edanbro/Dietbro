@@ -100,6 +100,7 @@ export function makePlan(overrides: Partial<Plan> = {}): Plan {
     pantry_used_g: 1200,
     waste_g: 0,
     shopping_items: 4,
+    household: 1,
     excluded_allergens: ["peanuts"],
     diet: "vegetarian",
     violations: [],
@@ -129,6 +130,7 @@ export function makeShoppingList(overrides: Partial<ShoppingList> = {}): Shoppin
     currency: "GBP",
     total_minor: 1234,
     budget_minor: 5000,
+    household: 1,
     items: [
       item({
         food_id: 11,

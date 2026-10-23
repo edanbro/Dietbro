@@ -2122,6 +2122,12 @@ export interface components {
              * @enum {string}
              */
             currency: "GBP" | "EUR" | "USD";
+            /**
+             * Household
+             * @description people the user cooks for: shopping, cost and amounts cover them all
+             * @default 1
+             */
+            household: number;
         };
         /** GoalsOut */
         GoalsOut: {
@@ -2160,6 +2166,12 @@ export interface components {
              * @enum {string}
              */
             currency: "GBP" | "EUR" | "USD";
+            /**
+             * Household
+             * @description people the user cooks for: shopping, cost and amounts cover them all
+             * @default 1
+             */
+            household: number;
             /**
              * Updated At
              * Format: date-time
@@ -2601,6 +2613,12 @@ export interface components {
             waste_g: number;
             /** Shopping Items */
             shopping_items: number;
+            /**
+             * Household
+             * @description people the plan is cooked for (its shopping, cost, pantry use)
+             * @default 1
+             */
+            household: number;
             /** Excluded Allergens */
             excluded_allergens: components["schemas"]["Allergen"][];
             diet: components["schemas"]["Diet"] | null;
@@ -3491,6 +3509,12 @@ export interface components {
             total_minor: number;
             /** Budget Minor */
             budget_minor: number | null;
+            /**
+             * Household
+             * @description people the amounts are for
+             * @default 1
+             */
+            household: number;
             /** Items */
             items: components["schemas"]["ShoppingItemOut"][];
         };

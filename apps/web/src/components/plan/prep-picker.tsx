@@ -11,23 +11,25 @@ const MAX = 4;
 
 export type PrepChoice = { id: number; name: string; servings: number; meals: number };
 
-/** This week's recipes still to eat (today on), with their servings added up across days:
- * cooking a recipe once for every meal it's planned for is the point of batch cooking. */
+/** This week's recipes still to eat (today on), with their servings added up across days
+ * (everyone's, when the plan is for a household): cooking a recipe once for every meal it's
+ * planned for is the point of batch cooking. */
 export function prepChoices(plan: Plan, today: string): PrepChoice[] {
   const byRecipe = new Map<number, PrepChoice>();
   for (const day of plan.days) {
     if (day.date < today) continue;
     for (const meal of day.meals) {
       if (meal.status === "eaten") continue;
+      const servings = meal.servings * plan.household;
       const seen = byRecipe.get(meal.recipe.id);
       if (seen) {
-        seen.servings += meal.servings;
+        seen.servings += servings;
         seen.meals += 1;
       } else {
         byRecipe.set(meal.recipe.id, {
           id: meal.recipe.id,
           name: meal.recipe.name,
-          servings: meal.servings,
+          servings,
           meals: 1,
         });
       }

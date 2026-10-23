@@ -1079,6 +1079,7 @@ async def _save(
 
     offset = decided.offset
     rows = [m for m in parent.meals if kept(m, offset)] if parent is not None else []
+    household = planning.household_of(read.inputs, solved.problem.days)
     stats = planning.plan_stats(
         solved.problem,
         solved.result,
@@ -1087,12 +1088,16 @@ async def _save(
         seed=target.seed,
         time_limit_ms=scope.settings.replan_time_limit_ms,
         previous=solved.previous,
+        household=household,
     )
     stats.targets = planning.targets_out(planning.targets_from(read.inputs.goals, target.days))
     before = planning.PlanStats.model_validate(parent.stats) if parent is not None else None
     stats.violations = [
         v for v in (before.violations if before else []) if v.day is not None and v.day < offset
-    ] + [planning.violation_out(v, offset) for v in solved.violations]
+    ] + [
+        planning.violation_out(v, offset, household=household, cost_minor=stats.cost_minor)
+        for v in solved.violations
+    ]
     stats.day_totals = _copied_totals(rows, by_day, offset, target.days)[:offset] + stats.day_totals
     stats.logged = snapshot
     pinned = {(target.day(on) - offset, slot) for (on, slot) in solved.pins} | {

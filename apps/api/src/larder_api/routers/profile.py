@@ -338,7 +338,7 @@ async def put_goals(body: GoalsIn, user: CurrentUser, session: Session) -> Goals
     """Refuses unsafe or impossible targets (calorie floor, max deficit vs estimated needs)."""
     stats = await session.get(BodyProfile, user.id)
     targets = Targets(
-        **body.model_dump(exclude={"goal", "weekly_budget_minor", "currency"}),
+        **body.model_dump(exclude={"goal", "weekly_budget_minor", "currency", "household"}),
     )
     problems = validate_targets(targets, tdee(body_from_row(stats)) if stats else None)
     if problems:

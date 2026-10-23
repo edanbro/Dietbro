@@ -89,6 +89,7 @@ from larder_solver import (
 from larder_solver.candidates import TastePrefs, allowed, preference
 from larder_solver.candidates import select as select_candidates
 from larder_solver.metrics import allocate, cost_millipence, day_totals, to_minor, waste_millipence
+from larder_solver.shopping import ShoppingLine
 
 logger = logging.getLogger(__name__)
 
@@ -398,6 +399,28 @@ class UserInputs:
     paid: Mapping[int, Sequence[int]] = field(default_factory=dict[int, Sequence[int]])
 
 
+@dataclass(frozen=True, slots=True)
+class Household:
+    """Who the user cooks for. The plan is the user's own (their goals, one person's
+    portions) and everyone eats the same meals, so shopping, cost, pantry use and waste are
+    `size` times the plan's; the planner gets a 1/size share of the pantry and the budget."""
+
+    size: int = 1
+    budget_minor: int | None = None  # the whole household's, over the plan's days
+
+
+def household_of(inputs: UserInputs, days: int) -> Household:
+    weekly = inputs.goals.weekly_budget_minor
+    return Household(
+        max(inputs.goals.household or 1, 1), None if weekly is None else weekly * days // 7
+    )
+
+
+def plan_household(plan: db.MealPlan) -> int:
+    """The household a saved plan was made for (plans before households: 1)."""
+    return int(plan.stats.get("household", 1)) if plan.stats else 1
+
+
 async def load_inputs(session: AsyncSession, user: db.User) -> UserInputs:
     goals = await session.get(db.Goals, user.id)
     allergies = await session.get(db.Allergies, user.id)
@@ -541,6 +564,7 @@ def make_problem(
     pool = catalog.merged(private)
     currency: Currency = inputs.goals.currency  # pyright: ignore[reportAssignmentType]
     foods = {fid: _priced(f, inputs) for fid, f in pool.catalog.foods.items()}
+    household = household_of(inputs, days)
     lots: list[Lot] = []
     for item in inputs.pantry:
         expires = (item.expires_on - start).days if item.expires_on else None
@@ -551,13 +575,11 @@ def make_problem(
         if fid not in foods:
             basis = solver_food(item.food, food_info(item.food))
             foods[fid] = _priced(basis, inputs)
-        lots.append(Lot(fid, math.floor(item.grams), expires))
+        lots.append(Lot(fid, math.floor(item.grams / household.size), expires))
 
     targets = targets_from(inputs.goals, days)
     budget = (
-        inputs.goals.weekly_budget_minor * days // 7
-        if inputs.goals.weekly_budget_minor is not None
-        else None
+        household.budget_minor // household.size if household.budget_minor is not None else None
     )
     profile = profile_of(inputs.allergies, inputs.preferences)
     specs, recipes = select_candidates(
@@ -920,6 +942,8 @@ class PlanStats(BaseModel):
     excluded_allergens: list[Allergen]
     diet: Diet | None
     day_totals: list[MacrosOut]  # per day: its meals + its logged food
+    # People it's cooked for: cost, budget, pantry use, waste and shopping are theirs together.
+    household: int = 1
     # Per day: food logged off-plan and skipped meals (active meal_logs when this was saved).
     logged: list[list[MealLogOut]] = Field(default_factory=list[list[MealLogOut]])
     # What the chat change that made this version did (results + diff), for explain_plan_diff.
@@ -949,10 +973,29 @@ def targets_out(targets: Targets) -> TargetsOut:
     )
 
 
-def violation_out(v: Violation, offset: int = 0) -> ViolationOut:
+def _amount(minor: int) -> str:
+    return f"{minor // 100:,}.{minor % 100:02d}"  # as the validator writes money
+
+
+def violation_out(
+    v: Violation, offset: int = 0, *, household: Household | None = None, cost_minor: int = 0
+) -> ViolationOut:
+    """`household` (with the plan's whole `cost_minor`) words an over-budget plan for everyone,
+    not in the one person's share the planner was given."""
+    message = v.message
+    if (
+        v.code is Code.BUDGET
+        and household is not None
+        and household.size > 1
+        and household.budget_minor is not None
+    ):
+        message = (
+            f"Estimated shopping cost {_amount(cost_minor)} for {household.size} people is over"
+            f" your {_amount(household.budget_minor)} budget"
+        )
     return ViolationOut(
         code=v.code.value,
-        message=v.message,
+        message=message,
         hard=v.hard,
         day=None if v.day is None else v.day + offset,
         slot=v.slot,
@@ -969,20 +1012,26 @@ def plan_stats(
     seed: int,
     time_limit_ms: int,
     previous: Plan | None = None,
+    household: Household | None = None,
 ) -> PlanStats:
+    """`household`: who it's cooked for (default: one person, the problem's budget)."""
+    home = household or Household(1, problem.budget)
+    n = home.size
     alloc = allocate(problem, plan)
     s = score(problem, plan, previous)
-    cost = cost_millipence(problem, alloc.buy)
+    cost = cost_millipence(problem, alloc.buy) * n
     return PlanStats(
         targets=targets_out(problem.targets),
-        budget_minor=problem.budget,
+        budget_minor=home.budget_minor,
         cost_millipence=cost,
         cost_minor=to_minor(cost),
-        pantry_used_g=sum(alloc.pantry_used.values()),
-        waste_g=sum(alloc.waste.values()),
-        waste_millipence=waste_millipence(problem, alloc.waste),
+        pantry_used_g=sum(alloc.pantry_used.values()) * n,
+        waste_g=sum(alloc.waste.values()) * n,
+        waste_millipence=waste_millipence(problem, alloc.waste) * n,
         score={**s.terms, "total": s.total},
-        violations=[violation_out(v) for v in violations],
+        violations=[
+            violation_out(v, household=home, cost_minor=to_minor(cost)) for v in violations
+        ],
         notes=list(result.notes),
         candidates={spec.slot.value: len(spec.candidates) for spec in problem.slots},
         seed=seed,
@@ -991,6 +1040,7 @@ def plan_stats(
         excluded_allergens=sorted(problem.profile.allergens),
         diet=problem.profile.diet,
         day_totals=[macros_out(m) for m in day_totals(problem, plan)],
+        household=n,
     )
 
 
@@ -1140,6 +1190,32 @@ def copy_meal(meal: db.PlanMeal) -> db.PlanMeal:
     )
 
 
+def household_shopping(problem: Problem, plan: Plan, size: int) -> list[ShoppingLine]:
+    """The plan's shopping list for `size` people: each line's grams and cost times `size`
+    (the planner had a 1/size share of the pantry, so this is everyone's need less the whole
+    pantry), the costs shared out again so they add up to the plan's cost."""
+    lines = shopping_list(problem, plan).lines
+    if size == 1:
+        return list(lines)
+    millipence = {line.food_id: line.cost_millipence * size for line in lines if not line.staple}
+    total = to_minor(sum(millipence.values()))
+    minor = {f: m // 1000 for f, m in millipence.items()}
+    spare = max(total - sum(minor.values()), 0)  # largest remainder, as the solver's list
+    for f in sorted(millipence, key=lambda f: (-(millipence[f] % 1000), f))[:spare]:
+        minor[f] += 1
+    return [
+        line
+        if line.staple
+        else replace(
+            line,
+            grams=line.grams * size,
+            cost_millipence=millipence[line.food_id],
+            cost_minor=minor[line.food_id],
+        )
+        for line in lines
+    ]
+
+
 def save_plan(
     session: AsyncSession,
     user_id: int,
@@ -1186,7 +1262,7 @@ def save_plan(
         )
     row.meals.extend(sorted(meals, key=lambda m: (m.day, SLOT_ORDER.index(Slot(m.slot)))))
     before = {s.food_id: s for s in carried.shopping} if carried else {}
-    for line in shopping_list(problem, plan).lines:
+    for line in household_shopping(problem, plan, stats.household):
         if line.food_id in unshoppable:
             continue
         old = before.get(line.food_id)

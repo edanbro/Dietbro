@@ -142,6 +142,7 @@ async def turn_context(scope: ChatScope) -> TurnContext:
         allergens=tuple(LABELS[Allergen(a)] for a in allergies.allergens) if allergies else (),
         avoided_foods=tuple(dict.fromkeys(short_name(d) for d in avoided)),
         diet=preferences.diet if preferences else None,
+        household=goals.household if goals else 1,
         expiring=tuple(
             f"{short_name(p.food.description)} {p.quantity:g} {p.unit}, expires "
             f"{p.expires_on:%a %d %b}"

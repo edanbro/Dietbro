@@ -57,7 +57,7 @@ export function WeekSummary({ plan }: { plan: Plan }) {
           note={dailyKcal ? `target ${dailyKcal}` : "no daily target"}
         />
         <Stat
-          label="Estimated cost"
+          label={plan.household > 1 ? `Estimated cost for ${plan.household}` : "Estimated cost"}
           value={cost}
           warn={over}
           note={

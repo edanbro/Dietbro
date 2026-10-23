@@ -104,6 +104,7 @@ class TurnContext:
     avoided_foods: tuple[str, ...] = ()
     diet: str | None = None
     expiring: tuple[str, ...] = field(default=())  # "spinach 200 g, expires Thu 15 Oct"
+    household: int = 1  # people the user cooks for (shopping and cost cover them all)
 
 
 def escape(text: str) -> str:
@@ -136,6 +137,11 @@ def render_context(ctx: TurnContext) -> str:
     lines.append(target)
     if ctx.weekly_budget:
         lines.append(f"budget: {escape(ctx.weekly_budget)}/week")
+    if ctx.household > 1:
+        lines.append(
+            f"cooks for {ctx.household} people: amounts, shopping and cost cover everyone; "
+            "kcal and servings are the user's own"
+        )
     lines.append(f"allergies (strict): {_names(ctx.allergens)}")
     if ctx.avoided_foods:
         lines.append(f"avoids (strict): {_names(ctx.avoided_foods)}")

@@ -108,4 +108,13 @@ describe("PrepPicker", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start meal prep" }));
     expect(nav.push.at(-1)).toBe(`/prep?r=${first.id}x${first.servings}`);
   });
+
+  it("cooks for everyone when the plan is for a household", () => {
+    const plan = makePlan();
+    const today = plan.days[0]!.date;
+    const alone = prepChoices(plan, today);
+    const family = prepChoices({ ...plan, household: 3 }, today);
+
+    expect(family.map((c) => c.servings)).toEqual(alone.map((c) => c.servings * 3));
+  });
 });

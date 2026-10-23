@@ -367,7 +367,8 @@ async def mark(
             for line in recipe.ingredients
         ),
         servings=recipe.servings or 0,
-        portions=row.portions,
+        # Everyone the plan is cooked for ate it: their share comes out of the pantry too.
+        portions=row.portions * planning.plan_household(plan),
     )
     pantry_rows = (
         await session.scalars(

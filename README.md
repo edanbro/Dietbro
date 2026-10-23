@@ -69,6 +69,8 @@ flowchart LR
 - **Shares and syncs**: a read-only link to a recipe or a week (revocable, nothing personal in
   it), and a private calendar feed so meals show up in Google, Apple or Outlook Calendar.
 - **Cook once, eat twice**: cook extra tonight and tomorrow's lunch becomes the leftovers.
+- **Cooks for the household**: say how many you cook for; the shopping list, cost, budget,
+  pantry use and recipe amounts cover everyone, while calories and nutrition stay yours.
 - **Fits a busy week**: every recipe says about how long it takes (estimated from its method),
   recipes filter to "under 30 min", and on the busy nights you pick, dinner stays quick.
 - **Thinks a day ahead**: "Tonight, for tomorrow" says what to take out of the freezer and what

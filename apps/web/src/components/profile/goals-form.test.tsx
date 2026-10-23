@@ -105,3 +105,36 @@ describe("GoalsForm advanced targets", () => {
     expect(body).toMatchObject({ fat_g_min: 50, carbs_g_max: 250, fat_g_max: null });
   });
 });
+
+describe("GoalsForm household", () => {
+  it("cooks for the saved household, and the budget becomes everyone's", async () => {
+    const saved = { kcal_min: 1800, kcal_max: 2200, household: 3, currency: "GBP", updated_at: "x" };
+    const calls = mockApi((req) =>
+      req.method === "PUT"
+        ? Response.json(saved)
+        : Response.json(new URL(req.url).pathname === "/me/goals" ? saved : null),
+    );
+    const onSaved = renderForm();
+
+    await waitFor(() => expect(screen.getByLabelText("Cooking for")).toHaveValue("3"));
+    expect(screen.getByLabelText("Cooking for")).toHaveAccessibleDescription(
+      /cover everyone; calories and nutrition stay yours/,
+    );
+    fill("Cooking for", "4");
+    fill("Weekly food budget for everyone (optional)", "120");
+    fireEvent.click(screen.getByRole("button", { name: "Save goals" }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const body = await calls.find((c) => c.method === "PUT")?.json();
+    expect(body).toMatchObject({ household: 4, weekly_budget_minor: 12000 });
+  });
+
+  it("is just the user by default", async () => {
+    mockApi(() => Response.json(null));
+    renderForm();
+
+    expect(screen.getByLabelText("Cooking for")).toHaveValue("1");
+    expect(screen.getByRole("option", { name: "Just me" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Weekly food budget (optional)")).toBeInTheDocument();
+  });
+});

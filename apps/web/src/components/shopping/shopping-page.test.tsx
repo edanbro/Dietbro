@@ -103,6 +103,12 @@ describe("ShoppingPage", () => {
     expect(screen.getByText("For Fri 9 Oct – Thu 15 Oct")).toBeInTheDocument();
   });
 
+  it("says who the list is for when the plan is for a household", async () => {
+    setup({ "GET /plans/7/shopping": json(makeShoppingList({ household: 3 })) });
+
+    expect(await screen.findByText("Estimated total, for 3 people")).toBeInTheDocument();
+  });
+
   it("warns when the list costs more than the budget", async () => {
     setup({ "GET /plans/7/shopping": json(makeShoppingList({ total_minor: 5600 })) });
 

@@ -335,6 +335,7 @@ class Goals(Base):
     """Daily energy/macro bands (validated by larder_core.energy) and a weekly budget."""
 
     __tablename__ = "goals"
+    __table_args__ = (CheckConstraint("household BETWEEN 1 AND 8", name="household"),)
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
@@ -352,6 +353,8 @@ class Goals(Base):
     carbs_g_max: Mapped[float | None] = mapped_column(Float)
     weekly_budget_minor: Mapped[int | None] = mapped_column(Integer)  # pence / cents
     currency: Mapped[str] = mapped_column(String(3), default="GBP")
+    # People the user cooks for: shopping, cost and amounts cover them all; nutrition is theirs.
+    household: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
     updated_at: Mapped[datetime] = _now()
 
 

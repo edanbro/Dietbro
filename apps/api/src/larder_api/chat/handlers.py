@@ -295,6 +295,7 @@ async def _meal_facts(
         )
         per_kg = price_with_receipts(estimate, line.food_id, paid)
         cost += grams * meal.portions * per_kg
+    household = planning.plan_household(plan)
     facts: dict[str, Any] = {
         "slot": meal.slot,
         "recipe_id": recipe.id,
@@ -302,9 +303,11 @@ async def _meal_facts(
         "servings": meal.portions / 2,
         "kcal": meal.kcal,
         "protein_g": meal.protein_g,
-        "cost_estimate": money(round(cost / 1000), plan.currency),
+        "cost_estimate": money(round(cost * household / 1000), plan.currency),
         "pinned_by_user": meal.locked,
     }
+    if household > 1:
+        facts["cost_covers"] = f"{household} people"
     if recipe.cuisine:
         facts["cuisine"] = recipe.cuisine
         if prefs is not None and recipe.cuisine in prefs.liked_cuisines:
