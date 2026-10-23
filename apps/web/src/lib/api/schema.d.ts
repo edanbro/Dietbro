@@ -792,6 +792,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shopping/extras/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Extras
+         * @description Add several items (a recipe's ingredients), all or none. One already on the list and not
+         *     ticked off (the same name, any case) isn't added twice; the items added come back.
+         */
+        post: operations["addShoppingExtras"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shopping/extras/{extra_id}": {
         parameters: {
             query?: never;
@@ -3410,6 +3431,14 @@ export interface components {
             /** Checked */
             checked: boolean;
         };
+        /**
+         * ShoppingExtrasIn
+         * @description Several items at once (a recipe's ingredients): one request, all or none.
+         */
+        ShoppingExtrasIn: {
+            /** Names */
+            names: string[];
+        };
         /** ShoppingItemOut */
         ShoppingItemOut: {
             /** Food Id */
@@ -5546,6 +5575,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    addShoppingExtras: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingExtrasIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingExtraOut"][];
+                };
+            };
+            /** @description the list would be over MAX_EXTRAS items */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

@@ -17,16 +17,10 @@ import { ErrorAlert } from "@/components/form-bits";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Recipe, useRecipe } from "@/lib/api/hooks";
-import { parseServings, scaleFactor, steps, stepTimers } from "@/lib/cooking";
-import { formatGrams } from "@/lib/format";
+import { parseServings, scaledAmount, scaleFactor, steps, stepTimers } from "@/lib/cooking";
 import { useWakeLock } from "@/lib/use-wake-lock";
 
 import { RunningTimers, TimerChip, useTimers } from "./timers";
-
-function amount(ing: Recipe["ingredients"][number], factor: number): string {
-  if (factor === 1 || ing.grams == null) return ing.measure || "";
-  return formatGrams(ing.grams * factor);
-}
 
 function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
   const [servings, setServings] = useState(initial);
@@ -154,7 +148,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
                   >
                     <span className="font-medium">{ing.name}</span>
                     <span className="text-muted-foreground tabular-nums">
-                      {amount(ing, factor)}
+                      {scaledAmount(ing, factor)}
                     </span>
                   </span>
                   {ing.in_pantry ? (

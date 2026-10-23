@@ -1,5 +1,7 @@
 /** Cook mode helpers: a method split into steps, timers read from a step, amounts scaled. */
 
+import { formatGrams } from "./format";
+
 export type StepTimer = { label: string; seconds: number };
 
 const UNITS: Record<string, number> = {
@@ -53,6 +55,16 @@ export function clock(seconds: number): string {
 export function scaleFactor(servings: number, recipeServings: number | null | undefined): number {
   if (!recipeServings || recipeServings <= 0 || servings <= 0) return 1;
   return servings / recipeServings;
+}
+
+/** An ingredient's amount at `factor` times the recipe: as written at 1 (or without grams),
+ * else its grams scaled ("2 tbsp" doesn't scale as text). */
+export function scaledAmount(
+  ing: { measure: string; grams: number | null },
+  factor: number,
+): string {
+  if (factor === 1 || ing.grams == null) return ing.measure || "";
+  return formatGrams(ing.grams * factor);
 }
 
 /** Servings from a ?servings= value: halves from 0.5 to 20, else null. */

@@ -287,6 +287,17 @@ export function useSaveQuickNights() {
   );
 }
 
+/** Several items on the user's own list at once (a recipe's ingredients); returns those added. */
+export function useAddShoppingExtras() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (names: string[]) =>
+      unwrap(await api.POST("/shopping/extras/batch", { body: { names } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.shoppingExtras }),
+  });
+}
+
 export type AheadItem = Schemas["AheadItemOut"];
 
 /** What tomorrow's meals need doing tonight: food to defrost, steps to start. */

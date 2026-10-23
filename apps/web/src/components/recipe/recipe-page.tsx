@@ -25,6 +25,7 @@ import { parseServings, steps } from "@/lib/cooking";
 import { allergenLabel, formatMinutes, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
+import { AddToList } from "@/components/recipe/add-to-list";
 import { RecipeArt } from "@/components/recipe/recipe-art";
 import { Micronutrients } from "@/components/nutrients/micronutrients";
 import { RecipeNotes } from "@/components/recipe/recipe-notes";
@@ -301,9 +302,12 @@ export function RecipePage({ id }: { id: number }) {
       <Allergens recipe={recipe} />
 
       <section aria-labelledby="recipe-ingredients" className="flex flex-col gap-2">
-        <h2 id="recipe-ingredients" className="text-base font-semibold">
-          Ingredients
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="recipe-ingredients" className="text-base font-semibold">
+            Ingredients
+          </h2>
+          <AddToList recipe={recipe} servings={servings} />
+        </div>
         <ul className="flex flex-col divide-y rounded-lg border text-sm">
           {recipe.ingredients.map((ing, i) => (
             <li key={`${ing.name}-${i}`} className="flex gap-3 px-3 py-2">

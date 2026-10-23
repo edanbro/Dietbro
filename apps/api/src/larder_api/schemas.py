@@ -774,6 +774,14 @@ class ShoppingExtraIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
 
 
+class ShoppingExtrasIn(BaseModel):
+    """Several items at once (a recipe's ingredients): one request, all or none."""
+
+    names: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(
+        min_length=1, max_length=40
+    )
+
+
 class ShoppingExtraPatch(BaseModel):
     checked: bool
 
