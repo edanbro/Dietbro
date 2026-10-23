@@ -21,7 +21,7 @@ export function ShareLinkButton({
   title: string;
   label?: string;
   size?: "sm" | "default";
-  /** Icon only on phones (the label stays for screen readers). */
+  /** On phones, the label's first word only ("Share"); the rest stays for screen readers. */
   compact?: boolean;
 }) {
   const create = useShareLink();
@@ -63,7 +63,23 @@ export function ShareLinkButton({
   return (
     <Button variant="outline" size={size} disabled={create.isPending} onClick={() => void share()}>
       <Link2Icon aria-hidden />
-      {compact ? <span className="sr-only sm:not-sr-only">{label}</span> : label}
+      {compact ? <ShortLabel label={label} /> : label}
     </Button>
+  );
+}
+
+/** "Share week": "Share" on phones, the whole label everywhere else and to screen readers. */
+function ShortLabel({ label }: { label: string }) {
+  const [first, ...rest] = label.split(" ");
+  return (
+    <>
+      {first}
+      {rest.length ? (
+        <>
+          {" "}
+          <span className="max-sm:sr-only">{rest.join(" ")}</span>
+        </>
+      ) : null}
+    </>
   );
 }

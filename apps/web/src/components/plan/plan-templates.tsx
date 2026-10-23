@@ -101,7 +101,8 @@ export function SaveTemplate({ plan }: { plan: Plan }) {
     return (
       <Button variant="ghost" onClick={() => setOpen(true)}>
         <BookmarkPlusIcon aria-hidden />
-        <span className="max-sm:sr-only">Save as template</span>
+        {/* "Save" on phones; "Save as template" everywhere else and to screen readers. */}
+        Save <span className="max-sm:sr-only">as template</span>
       </Button>
     );
   }

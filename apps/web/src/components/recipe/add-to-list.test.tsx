@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { json, mockApi, renderWithClient } from "@/test/api";
+import { mockApi, renderWithClient } from "@/test/api";
 import { makeRecipe } from "@/test/fixtures";
 
 import { AddToList, itemName, shoppingLines } from "./add-to-list";

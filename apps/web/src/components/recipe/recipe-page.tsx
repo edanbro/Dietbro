@@ -21,7 +21,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
-import { parseServings, steps } from "@/lib/cooking";
+import { parseServings, scaledAmount, scaleFactor, steps } from "@/lib/cooking";
 import { allergenLabel, formatMinutes, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
@@ -249,6 +249,7 @@ export function RecipePage({ id }: { id: number }) {
     );
   }
 
+  const factor = servings ? scaleFactor(servings, recipe.servings) : 1;
   const details = [
     recipe.minutes ? `About ${formatMinutes(recipe.minutes)}` : null,
     recipe.cuisine,
@@ -308,10 +309,18 @@ export function RecipePage({ id }: { id: number }) {
           </h2>
           <AddToList recipe={recipe} servings={servings} />
         </div>
+        {factor !== 1 ? (
+          <p className="text-xs text-muted-foreground">
+            For {servings} {servings === 1 ? "serving" : "servings"}, as planned (the recipe
+            makes {recipe.servings}).
+          </p>
+        ) : null}
         <ul className="flex flex-col divide-y rounded-lg border text-sm">
           {recipe.ingredients.map((ing, i) => (
             <li key={`${ing.name}-${i}`} className="flex gap-3 px-3 py-2">
-              <span className="w-24 shrink-0 text-muted-foreground">{ing.measure}</span>
+              <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
+                {scaledAmount(ing, factor)}
+              </span>
               <span className="min-w-0 flex-1">{ing.name}</span>
               {ing.in_pantry ? (
                 <span className="shrink-0 text-xs text-emerald-700 dark:text-emerald-400">
