@@ -548,6 +548,25 @@ class ShareLink(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class RecipeNote(Base):
+    """The user's own note on a recipe ("more chilli") and a 1-5 star rating. Private: shown on
+    their recipe page and in cook mode, never on a share link. Ratings don't steer the planner;
+    favourites and "never again" do."""
+
+    __tablename__ = "recipe_notes"
+    __table_args__ = (CheckConstraint("rating BETWEEN 1 AND 5", name="rating"),)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    recipe_id: Mapped[int] = mapped_column(
+        ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    rating: Mapped[int | None] = mapped_column(SmallInteger)
+    updated_at: Mapped[datetime] = _now()
+
+
 class PlanTemplate(Base):
     """A week of meals saved by name ("busy weeknights") to plan from again. `cells` are
     [{"day": 0-6, "slot", "recipe_id"}], day counted from the template's first day. Planning from

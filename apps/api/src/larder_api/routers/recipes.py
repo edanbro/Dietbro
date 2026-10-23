@@ -32,6 +32,8 @@ from larder_api.schemas import (
     RecipeIngredientOut,
     RecipeListItem,
     RecipeListOut,
+    RecipeNoteIn,
+    RecipeNoteOut,
     RecipeVerdict,
 )
 from larder_api.settings import Settings, get_settings
@@ -39,7 +41,7 @@ from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.nutrigrade import NutriInput, grade
 from larder_core.recipe_import import ImportedRecipe, split_line
 from larder_core.regions import local_today
-from larder_db.models import Food, PantryItem, Preferences, Recipe, User
+from larder_db.models import Food, PantryItem, Preferences, Recipe, RecipeNote, User
 from larder_llm.schemas import CreateRecipeInput, DraftIngredient
 
 logger = logging.getLogger(__name__)
@@ -161,19 +163,68 @@ async def delete_feedback(recipe_id: int, user: CurrentUser, session: Session) -
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-async def _feedback_target(session: Session, user_id: int, recipe_id: int) -> Preferences:
-    visible = await session.scalar(
+async def _visible(session: Session, user_id: int, recipe_id: int) -> None:
+    """404 unless the recipe is in the catalogue or the user's own."""
+    found = await session.scalar(
         select(Recipe.id).where(
             Recipe.id == recipe_id,
             or_(Recipe.owner_user_id.is_(None), Recipe.owner_user_id == user_id),
         )
     )
-    if visible is None:
+    if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "recipe not found")
+
+
+async def _feedback_target(session: Session, user_id: int, recipe_id: int) -> Preferences:
+    await _visible(session, user_id, recipe_id)
     prefs = await session.get(Preferences, user_id)
     if prefs is None:
         raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
     return prefs
+
+
+@router.put("/{recipe_id}/note", operation_id="putRecipeNote", responses=_NOT_FOUND)
+async def put_note(
+    recipe_id: int, body: RecipeNoteIn, user: CurrentUser, session: Session
+) -> RecipeNoteOut | None:
+    """The user's own note and 1-5 rating on a recipe; both empty removes it (null). Private:
+    never on a share link, and it doesn't steer the planner."""
+    await _visible(session, user.id, recipe_id)
+    text = (body.note or "").strip() or None
+    row = await session.get(RecipeNote, (user.id, recipe_id))
+    if text is None and body.rating is None:
+        if row is not None:
+            await session.delete(row)
+            await session.commit()
+        return None
+    if row is None:
+        row = RecipeNote(user_id=user.id, recipe_id=recipe_id)
+        session.add(row)
+    row.note, row.rating = text, body.rating
+    await session.commit()
+    await session.refresh(row)
+    return note_out(row)
+
+
+@router.delete(
+    "/{recipe_id}/note",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="deleteRecipeNote",
+    responses=_NOT_FOUND,
+)
+async def delete_note(recipe_id: int, user: CurrentUser, session: Session) -> Response:
+    await _visible(session, user.id, recipe_id)
+    row = await session.get(RecipeNote, (user.id, recipe_id))
+    if row is not None:
+        await session.delete(row)
+        await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def note_out(row: RecipeNote | None) -> RecipeNoteOut | None:
+    if row is None:
+        return None
+    return RecipeNoteOut(note=row.note, rating=row.rating, updated_at=row.updated_at)
 
 
 def verdict_of(prefs: Preferences | None, recipe_id: int) -> RecipeVerdict | None:
@@ -240,6 +291,7 @@ async def recipe_detail(session: AsyncSession, recipe: Recipe, viewer: int | Non
         per_serving=per_serving,
         grade=recipe_grade(recipe, foods),
         feedback=verdict_of(await session.get(Preferences, viewer), recipe.id) if viewer else None,
+        note=note_out(await session.get(RecipeNote, (viewer, recipe.id))) if viewer else None,
         meal_types=sorted(facts.slots, key=SLOT_ORDER.index),
         allergens=sorted(facts.tags.allergens),
         allergens_complete=facts.tags.complete,
@@ -380,7 +432,18 @@ async def import_recipe(
         planner=planner,
         settings=settings,
     )
-    draft = CreateRecipeInput(
+    created = await create_recipe(
+        scope,
+        _draft(body),
+        source="imported",
+        source_url=_web_address(body.source_url),
+        image_url=_web_address(body.image_url),
+    )
+    return ImportResultOut(recipe_id=created.recipe_id, problems=created.problems)
+
+
+def _draft(body: ImportDraft) -> CreateRecipeInput:
+    return CreateRecipeInput(
         name=body.name,
         slot=body.slot,
         servings=body.servings,
@@ -390,14 +453,64 @@ async def import_recipe(
         ],
         instructions=body.instructions,
     )
+
+
+@router.put(
+    "/{recipe_id}",
+    operation_id="editRecipe",
+    responses=_NOT_FOUND,
+    dependencies=[Depends(per_user("import_save"))],
+)
+async def edit_recipe(
+    recipe_id: int,
+    body: ImportDraft,
+    user: CurrentUser,
+    session: Session,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> ImportResultOut:
+    """Change a recipe, checked exactly like a new one. The user's own recipe changes in place
+    (its id stays, so favourites, plans and links keep pointing at it; meals already planned
+    keep the numbers they were planned with). A catalogue recipe is saved as the user's own
+    copy ("custom", with the original's photo), the original untouched for everyone else."""
+    recipe = await session.scalar(
+        select(Recipe).where(
+            Recipe.id == recipe_id,
+            or_(Recipe.owner_user_id.is_(None), Recipe.owner_user_id == user.id),
+        )
+    )
+    if recipe is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "recipe not found")
+    mine = recipe.owner_user_id == user.id
+    photo, link = recipe.image_url, recipe.source_url
+    await session.commit()  # create_recipe uses its own sessions
+    now = clock()
+    scope = replans.app_scope(
+        user.id,
+        today=local_today(user.timezone, now),
+        local_time=None,
+        now=now,
+        sessionmaker=sessionmaker,
+        catalog=cache,
+        planner=planner,
+        settings=settings,
+    )
     created = await create_recipe(
         scope,
-        draft,
-        source="imported",
-        source_url=_web_address(body.source_url),
-        image_url=_web_address(body.image_url),
+        _draft(body),
+        source="custom",
+        source_url=link,
+        image_url=photo,
+        replacing=recipe_id if mine else None,
     )
-    return ImportResultOut(recipe_id=created.recipe_id, problems=created.problems)
+    return ImportResultOut(
+        recipe_id=created.recipe_id,
+        problems=created.problems,
+        copied=not mine and created.recipe_id is not None,
+    )
 
 
 def _web_address(url: str | None) -> str | None:

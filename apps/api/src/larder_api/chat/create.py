@@ -20,6 +20,9 @@
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from larder_api import planning
 from larder_api.chat import foods
 from larder_api.chat.foods import tokens
@@ -68,9 +71,12 @@ async def create_recipe(
     source: str = "generated",
     source_url: str | None = None,
     image_url: str | None = None,
+    replacing: int | None = None,
 ) -> Created:
-    """`source` "imported" (with the page's address and photo) for recipes read from the web;
-    they go through exactly the same checks."""
+    """`source` "imported" (with the page's address and photo) for recipes read from the web,
+    "custom" for one the user edited; they go through exactly the same checks. `replacing`: an
+    edit of the user's own recipe, which then changes in place (same id: favourites, plans and
+    links keep pointing at it; plans keep the numbers they were made with)."""
     lines, problems = await _resolve(scope, draft)
     if problems:
         return Created(None, problems)
@@ -103,7 +109,22 @@ async def create_recipe(
         return Created(None, list(dict.fromkeys(problems)))
 
     async with scope.sessionmaker() as session:
-        session.add(row)
+        if replacing is None:
+            session.add(row)
+        else:
+            target = await session.scalar(
+                select(db.Recipe)
+                .where(db.Recipe.id == replacing, db.Recipe.owner_user_id == scope.user_id)
+                .options(selectinload(db.Recipe.ingredients))
+            )
+            if target is None:
+                return Created(None, ["That recipe can't be changed."])
+            _replace(target, row)
+            # The old lines go first: (recipe, position) is unique.
+            target.ingredients.clear()
+            await session.flush()
+            target.ingredients.extend(_copy_lines(row))
+            row = target
         await session.commit()
     return Created(
         row.id,
@@ -176,6 +197,31 @@ def _row(
             for i, x in enumerate(lines)
         ],
     )
+
+
+def _replace(target: db.Recipe, checked: db.Recipe) -> None:
+    """An edit's content onto the user's recipe; where it came from (source, link, photo) and
+    its id stay."""
+    target.name, target.category, target.cuisine = checked.name, checked.category, checked.cuisine
+    target.instructions = checked.instructions
+    target.servings, target.servings_estimated = checked.servings, checked.servings_estimated
+    target.nutrition_complete = checked.nutrition_complete
+    for field in Nutrients.FIELDS:
+        setattr(target, field, getattr(checked, field))
+
+
+def _copy_lines(checked: db.Recipe) -> list[db.RecipeIngredient]:
+    return [
+        db.RecipeIngredient(
+            position=i.position,
+            raw_name=i.raw_name,
+            raw_measure=i.raw_measure,
+            food_id=i.food_id,
+            grams=i.grams,
+            match_method=i.match_method,
+        )
+        for i in checked.ingredients
+    ]
 
 
 def _quoted(names: list[str]) -> str:

@@ -7,6 +7,7 @@ import {
   ChefHatIcon,
   ExternalLinkIcon,
   HeartIcon,
+  PencilIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -25,6 +26,7 @@ import { allergenLabel, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { RecipeArt } from "@/components/recipe/recipe-art";
+import { RecipeNotes } from "@/components/recipe/recipe-notes";
 import { ShareLinkButton } from "@/components/share-link-button";
 
 /** http(s) URLs only: recipe data comes from third parties. */
@@ -164,6 +166,14 @@ function Feedback({ recipe }: { recipe: Recipe }) {
         {verdict === "never" ? "Never planned" : "Never again"}
       </Button>
       <ShareLinkButton target={{ kind: "recipe", recipe_id: recipe.id }} title={recipe.name} />
+      {/* Your own recipe changes in place; a catalogue one is saved as your copy. */}
+      <Link
+        href={`/recipes/${recipe.id}/edit`}
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+      >
+        <PencilIcon aria-hidden />
+        {recipe.generated ? "Edit" : "Edit a copy"}
+      </Link>
     </div>
   );
 }
@@ -268,6 +278,7 @@ export function RecipePage({ id }: { id: number }) {
         Start cooking{servings ? ` (${servings} ${servings === 1 ? "serving" : "servings"})` : ""}
       </Link>
       <Feedback recipe={recipe} />
+      <RecipeNotes key={recipe.note?.updated_at ?? "none"} recipe={recipe} />
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">
         <h2 id="recipe-nutrition" className="text-base font-semibold">

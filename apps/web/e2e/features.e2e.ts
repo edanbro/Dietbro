@@ -3,7 +3,8 @@ import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { expect, type Page, test } from "@playwright/test";
 
 /**
- * The newer features end to end, on the real API: quick-add to the diary, typing a recipe in,
+ * The newer features end to end, on the real API: quick-add to the diary, typing a recipe in
+ * (then rating it, a note, and an edit),
  * a share link (seen signed out, then revoked), the calendar feed, cooking extra for
  * tomorrow's lunch, saving a week as a template and planning from it, and copying a day.
  */
@@ -103,6 +104,24 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       );
     });
 
+    await test.step("rate it, note it, then edit it", async () => {
+      const rated = page.waitForResponse((r) => r.url().endsWith("/note"));
+      await page.getByRole("radio", { name: "4 stars" }).click();
+      expect((await rated).ok()).toBe(true);
+      await page.getByRole("textbox", { name: "Note" }).fill("Less rice next time");
+      await page.getByRole("button", { name: "Save note" }).click();
+      await expect(page.getByRole("button", { name: "Save note" })).toHaveCount(0);
+
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await page.getByRole("textbox", { name: "Name" }).fill("Weeknight chicken and broccoli");
+      await page.getByRole("button", { name: "Save changes" }).click();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "Weeknight chicken and broccoli",
+        { timeout: 30_000 },
+      );
+      await expect(page.getByRole("textbox", { name: "Note" })).toHaveValue("Less rice next time");
+    });
+
     await test.step("share it, see it signed out, then stop sharing", async () => {
       const made = page.waitForResponse(
         (r) => r.url().endsWith("/share") && r.request().method() === "POST",
@@ -114,7 +133,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       const shown = await open.goto(new URL(path, page.url()).toString());
       expect(shown?.status()).toBe(200);
       await expect(open.getByRole("heading", { level: 1 })).toHaveText(
-        "Weeknight chicken and rice",
+        "Weeknight chicken and broccoli",
       );
       // The recipe's own allergen facts are shown; nothing about the person (their pantry,
       // their allergies: this account avoids peanuts) is.

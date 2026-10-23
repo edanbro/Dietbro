@@ -1013,6 +1013,44 @@ export function useImportRecipe() {
   });
 }
 
+/** Save changes to a recipe: the user's own in place, a catalogue one as their copy. */
+export function useEditRecipe(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: ImportDraft): Promise<ImportResult> =>
+      unwrap(
+        await api.PUT("/recipes/{recipe_id}", {
+          params: { path: { recipe_id: recipeId } },
+          body: draft,
+        }),
+      ),
+    onSuccess: (result) => {
+      if (result.recipe_id !== null) void qc.invalidateQueries({ queryKey: ["recipes"] });
+    },
+  });
+}
+
+export type RecipeNoteIn = Schemas["RecipeNoteIn"];
+
+/** The user's private note and rating on a recipe; both empty removes it. */
+export function useRecipeNote(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RecipeNoteIn) =>
+      unwrap(
+        await api.PUT("/recipes/{recipe_id}/note", {
+          params: { path: { recipe_id: recipeId } },
+          body,
+        }),
+      ),
+    onSuccess: (note) => {
+      qc.setQueryData<Recipe>(keys.recipe(recipeId), (r) => (r ? { ...r, note } : r));
+    },
+  });
+}
+
 export type Spending = Schemas["SpendingOut"];
 
 /** Grocery spending from confirmed receipts per week, beside the plans' estimates. */

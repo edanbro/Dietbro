@@ -31,6 +31,7 @@ EXPORTED: dict[str, Rows] = {
     "push_subscriptions": lambda e: e["push_subscriptions"],
     "share_links": lambda e: e["share_links"],
     "plan_templates": lambda e: e["plan_templates"],
+    "recipe_notes": lambda e: e["recipe_notes"],
     "preferences": lambda e: [e["preferences"]],
     "allergies": lambda e: [e["allergies"]],
     "pantry_items": lambda e: e["pantry"],
@@ -200,7 +201,8 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
     template = db.PlanTemplate(
         user_id=uid, name="Busy week", cells=[{"day": 0, "slot": "dinner", "recipe_id": recipe.id}]
     )
-    session.add_all([log, call, upload, share, template])
+    note = db.RecipeNote(user_id=uid, recipe_id=recipe.id, note="More chilli", rating=4)
+    session.add_all([log, call, upload, share, template, note])
     await session.flush()
     return {
         "goals": uid,
@@ -213,6 +215,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "push_subscriptions": push.id,
         "share_links": share.id,
         "plan_templates": template.id,
+        "recipe_notes": uid,
         "meal_plans": plan.id,
         "chat_threads": thread.id,
         "chat_messages": message.id,

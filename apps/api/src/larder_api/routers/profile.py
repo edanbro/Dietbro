@@ -66,6 +66,7 @@ from larder_db.models import (
     PushSubscription,
     ReceiptUpload,
     Recipe,
+    RecipeNote,
     ShareLink,
     ShoppingExtra,
     User,
@@ -260,6 +261,14 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "share_links": rows(
             await session.scalars(
                 select(ShareLink).where(ShareLink.user_id == user.id).order_by(ShareLink.id)
+            ),
+            "user_id",
+        ),
+        "recipe_notes": rows(
+            await session.scalars(
+                select(RecipeNote)
+                .where(RecipeNote.user_id == user.id)
+                .order_by(RecipeNote.recipe_id)
             ),
             "user_id",
         ),

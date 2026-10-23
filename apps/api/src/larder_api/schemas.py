@@ -459,6 +459,18 @@ class ImportDraft(BaseModel):
 class ImportResultOut(BaseModel):
     recipe_id: int | None  # set when saved
     problems: list[str]  # what to fix when not saved, e.g. "couldn't match 'X'"
+    copied: bool = False  # an edit of a catalogue recipe: saved as the user's own copy
+
+
+class RecipeNoteIn(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+    rating: int | None = Field(default=None, ge=1, le=5)
+
+
+class RecipeNoteOut(BaseModel):
+    note: str | None
+    rating: int | None
+    updated_at: datetime
 
 
 class PushConfigOut(BaseModel):
@@ -670,6 +682,8 @@ class RecipeDetail(RecipeCard):
     ingredients: list[RecipeIngredientOut]
     # The signed-in viewer's verdict on it (PUT /recipes/{id}/feedback).
     feedback: "RecipeVerdict | None" = None
+    # The viewer's own note and rating (PUT /recipes/{id}/note); never on a share link.
+    note: RecipeNoteOut | None = None
 
 
 RecipeVerdict = Literal["favourite", "never"]

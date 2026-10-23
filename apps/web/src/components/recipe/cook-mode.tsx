@@ -1,7 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, CheckIcon, MinusIcon, PlusIcon, SunIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  MinusIcon,
+  PlusIcon,
+  StickyNoteIcon,
+  SunIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -69,6 +76,17 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
               {done.size} of {method.length} steps
             </span>
           </div>
+        ) : null}
+        {recipe.note?.note ? (
+          <p
+            role="note"
+            className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+          >
+            <StickyNoteIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <span className="font-medium">Your note:</span> {recipe.note.note}
+            </span>
+          </p>
         ) : null}
         {awake ? (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

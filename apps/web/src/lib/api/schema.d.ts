@@ -813,6 +813,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recipes/{recipe_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Note
+         * @description The user's own note and 1-5 rating on a recipe; both empty removes it (null). Private:
+         *     never on a share link, and it doesn't steer the planner.
+         */
+        put: operations["putRecipeNote"];
+        post?: never;
+        /** Delete Note */
+        delete: operations["deleteRecipeNote"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recipes/{recipe_id}": {
         parameters: {
             query?: never;
@@ -827,7 +849,14 @@ export interface paths {
          *     recipe is only found by its owner.
          */
         get: operations["getRecipe"];
-        put?: never;
+        /**
+         * Edit Recipe
+         * @description Change a recipe, checked exactly like a new one. The user's own recipe changes in place
+         *     (its id stays, so favourites, plans and links keep pointing at it; meals already planned
+         *     keep the numbers they were planned with). A catalogue recipe is saved as the user's own
+         *     copy ("custom", with the original's photo), the original untouched for everyone else.
+         */
+        put: operations["editRecipe"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2007,6 +2036,11 @@ export interface components {
             recipe_id: number | null;
             /** Problems */
             problems: string[];
+            /**
+             * Copied
+             * @default false
+             */
+            copied: boolean;
         };
         /**
          * Logged
@@ -2688,6 +2722,7 @@ export interface components {
             ingredients: components["schemas"]["RecipeIngredientOut"][];
             /** Feedback */
             feedback?: ("favourite" | "never") | null;
+            note?: components["schemas"]["RecipeNoteOut"] | null;
         };
         /** RecipeEvent */
         RecipeEvent: {
@@ -2763,6 +2798,25 @@ export interface components {
             items: components["schemas"]["RecipeListItem"][];
             /** Total */
             total: number;
+        };
+        /** RecipeNoteIn */
+        RecipeNoteIn: {
+            /** Note */
+            note?: string | null;
+            /** Rating */
+            rating?: number | null;
+        };
+        /** RecipeNoteOut */
+        RecipeNoteOut: {
+            /** Note */
+            note: string | null;
+            /** Rating */
+            rating: number | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * ReferenceIntakes
@@ -5195,6 +5249,84 @@ export interface operations {
             };
         };
     };
+    putRecipeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeNoteOut"] | null;
+                };
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteRecipeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getRecipe: {
         parameters: {
             query?: never;
@@ -5213,6 +5345,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipeDetail"];
+                };
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    editRecipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResultOut"];
                 };
             };
             /** @description no such recipe (or another user's) */

@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   type ImportDraft,
   type Slot,
+  useEditRecipe,
   useImportRecipe,
   useReadRecipePage,
 } from "@/lib/api/hooks";
@@ -32,10 +33,24 @@ export const EMPTY_DRAFT: ImportDraft = {
   instructions: "",
 };
 
-/** The editable draft: everything read from the page can be changed before saving. */
-function DraftForm({ initial, onBack }: { initial: ImportDraft; onBack: () => void }) {
+/**
+ * The editable draft: everything read from the page can be changed before saving. With
+ * `editing`, it saves changes to that recipe instead (the user's own in place; a catalogue
+ * recipe as their own copy).
+ */
+export function DraftForm({
+  initial,
+  onBack,
+  editing,
+}: {
+  initial: ImportDraft;
+  onBack: () => void;
+  editing?: number;
+}) {
   const router = useRouter();
-  const save = useImportRecipe();
+  const create = useImportRecipe();
+  const change = useEditRecipe(editing ?? 0);
+  const save = editing === undefined ? create : change;
   const [draft, setDraft] = useState<ImportDraft>(initial);
   const [lines, setLines] = useState<Line[]>(() => {
     const read = initial.ingredients.map((i) => ({ ...i, key: crypto.randomUUID() }));
@@ -53,7 +68,11 @@ function DraftForm({ initial, onBack }: { initial: ImportDraft; onBack: () => vo
       {
         onSuccess: (result) => {
           if (result.recipe_id === null) return;
-          toast.success(`Saved ${draft.name.trim()} to your recipes`);
+          toast.success(
+            editing === undefined || result.copied
+              ? `Saved ${draft.name.trim()} to your recipes`
+              : "Changes saved",
+          );
           router.push(`/recipes/${result.recipe_id}`);
         },
       },
@@ -189,10 +208,10 @@ function DraftForm({ initial, onBack }: { initial: ImportDraft; onBack: () => vo
       <ErrorAlert error={save.error} />
       <div className="flex gap-2">
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Checking…" : "Save recipe"}
+          {save.isPending ? "Checking…" : editing === undefined ? "Save recipe" : "Save changes"}
         </Button>
         <Button type="button" variant="ghost" onClick={onBack}>
-          Start again
+          {editing === undefined ? "Start again" : "Cancel"}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
