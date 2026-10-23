@@ -61,19 +61,21 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     // 5. Pantry: search, pick, choose a count unit, add.
     await expect(page.getByRole("heading", { name: "What's in your kitchen" })).toBeVisible();
     await page.getByPlaceholder("Add food, e.g. onions").fill("onion");
-    await page.getByRole("button", { name: /^Onions, raw/ }).click();
+    // Two foods are called "Onions, raw" (USDA SR Legacy and survey foods): either will do.
+    await page.getByRole("button", { name: /^Onions, raw/ }).first().click();
     await page.getByLabel("Quantity", { exact: true }).fill("2");
     await page.getByLabel("Unit", { exact: true }).selectOption("large");
     await page.getByRole("button", { name: "Add to pantry" }).click();
-    await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("Onions, raw");
-    await page.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByRole("button", { name: /^Edit Onions, raw/ })).toBeVisible();
+    // "Not now": finish without planning (the plan e2e covers planning).
+    await page.getByRole("button", { name: "Not now" }).click();
 
     // Setup done: the app opens on the (empty) plan.
     await expect(page).toHaveURL(/\/plan$/);
     await expect(page.getByRole("button", { name: "Plan my week" })).toBeVisible();
     await expect(page.getByText("Finish setting up")).toHaveCount(0);
     await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Pantry" }).click();
-    await expect(page.getByRole("list", { name: "Pantry items" })).toContainText("2 large");
+    await expect(page.getByRole("button", { name: /^Edit Onions, raw/ })).toContainText("2 large");
 
     // GDPR: delete the account from the profile page.
     await page.getByRole("link", { name: "Profile" }).click();
