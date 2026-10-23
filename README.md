@@ -46,8 +46,8 @@ flowchart LR
 - **Plans a week** of breakfast, lunch, dinner (and snacks) for your calories, protein, fat,
   carbs and budget, using up what's in your pantry before it expires.
 - **Re-plans when life happens**, from the chat or one tap on a meal: skip, swap (pick from
-  safe options), "had something else", rebuild a day, undo. Replans keep the rest of the week
-  calm (churn is penalised).
+  safe options), trade meals between two days, "had something else", rebuild a day, undo.
+  Replans keep the rest of the week calm (churn is penalised).
 - **Stocks the pantry fast**: scan a barcode, paste or photograph a receipt (offline OCR), or
   search 200,000+ foods sold in Ireland and the UK. Product photos and nutrition grades
   (Nutri-Score method) from Open Food Facts.

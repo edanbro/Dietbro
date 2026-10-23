@@ -2,6 +2,7 @@
 
 import {
   ArrowLeftIcon,
+  ArrowLeftRightIcon,
   CircleCheckIcon,
   CircleSlashIcon,
   CookingPotIcon,
@@ -22,8 +23,10 @@ import {
   type Meal,
   type PantryChange,
   type PlanChange,
+  type PlanDay,
   useAlternatives,
 } from "@/lib/api/hooks";
+import { dayOfMonth, weekday } from "@/lib/dates";
 import { formatGrams, formatNumber } from "@/lib/format";
 
 import { SLOT_LABEL } from "./slots";
@@ -40,9 +43,27 @@ export type MealActionsProps = {
   onReplan: (changes: PlanChange[]) => Promise<unknown>;
   /** Tomorrow's date when this dinner can be cooked in double for tomorrow's lunch. */
   cookExtraFor?: string | null;
+  /** The plan's days: a meal in the same slot on another day can trade places with this one. */
+  week?: PlanDay[];
 };
 
-type Mode = "menu" | "skip" | "other" | "swap";
+type Mode = "menu" | "skip" | "other" | "swap" | "trade";
+
+export type Trade = { date: string; meal: Meal };
+
+/** The meals `meal` (on `date`) can trade places with: the same slot on the plan's other days
+ * from `today` on, not eaten, and another recipe. */
+export function tradesFor(week: PlanDay[], date: string, meal: Meal, today: string): Trade[] {
+  return week.flatMap((day) =>
+    day.date < today || day.date === date
+      ? []
+      : day.meals
+          .filter(
+            (m) => m.slot === meal.slot && m.status !== "eaten" && m.recipe.id !== meal.recipe.id,
+          )
+          .map((m) => ({ date: day.date, meal: m })),
+  );
+}
 
 /** "200 g chickpeas", "200 g chickpeas and 1 kg rice", "a, b and c". */
 function foodList(items: PantryChange[]): string {
@@ -87,6 +108,7 @@ export function MealActions({
   onEaten,
   onReplan,
   cookExtraFor = null,
+  week = [],
   onDone,
 }: MealActionsProps & { id: string; meal: Meal; onDone: () => void }) {
   const [mode, setMode] = useState<Mode>("menu");
@@ -104,6 +126,15 @@ export function MealActions({
   };
   const replan = (change: PlanChange) => run(onReplan([change]));
   const options = useAlternatives(planId, date, slot, mode === "swap");
+  const trades = past ? [] : tradesFor(week, date, meal, today);
+  // Each meal goes to the other's day: two swaps, made (and checked) as one change.
+  const trade = (t: Trade) =>
+    run(
+      onReplan([
+        { intent: "swap", when, recipe_id: t.meal.recipe.id },
+        { intent: "swap", when: { date: t.date, slot }, recipe_id: meal.recipe.id },
+      ]),
+    );
 
   return (
     <div
@@ -145,6 +176,12 @@ export function MealActions({
                     <RefreshCwIcon aria-hidden />
                     Swap for something else
                   </Button>
+                  {trades.length ? (
+                    <Button variant="outline" disabled={busy} onClick={() => setMode("trade")}>
+                      <ArrowLeftRightIcon aria-hidden />
+                      Swap with another day
+                    </Button>
+                  ) : null}
                   {slot === "dinner" && cookExtraFor ? (
                     <Button
                       variant="outline"
@@ -228,6 +265,31 @@ export function MealActions({
           <Button variant="outline" onClick={() => replan({ intent: "swap", when })}>
             Anything else - you pick
           </Button>
+          <Button variant="ghost" onClick={() => setMode("menu")}>
+            <ArrowLeftIcon aria-hidden />
+            Back
+          </Button>
+        </fieldset>
+      ) : null}
+
+      {mode === "trade" ? (
+        <fieldset className="flex flex-col gap-2" disabled={busy}>
+          <legend className="mb-2 text-sm font-medium">
+            Swap {name.toLowerCase()} with the one on:
+          </legend>
+          {trades.map((t) => (
+            <Button
+              key={t.date}
+              variant="outline"
+              className="h-auto justify-start gap-2 py-2 text-left"
+              onClick={() => trade(t)}
+            >
+              <span className="w-14 shrink-0 font-medium">
+                {weekday(t.date)} {dayOfMonth(t.date)}
+              </span>{" "}
+              <span className="min-w-0 truncate font-normal">{t.meal.recipe.name}</span>
+            </Button>
+          ))}
           <Button variant="ghost" onClick={() => setMode("menu")}>
             <ArrowLeftIcon aria-hidden />
             Back

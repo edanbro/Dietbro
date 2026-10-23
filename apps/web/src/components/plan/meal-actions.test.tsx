@@ -7,7 +7,7 @@ import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/a
 import { makePlan, ME } from "@/test/fixtures";
 import { resetNavigation } from "@/test/navigation";
 
-import { eatenMessage } from "./meal-actions";
+import { eatenMessage, tradesFor } from "./meal-actions";
 import { PlanPage } from "./plan-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
@@ -91,6 +91,7 @@ describe("meal options", () => {
       "Mark eaten",
       "Skip",
       "Swap for something else",
+      "Swap with another day",
       "Had something else",
     ]);
     // The recipe stays a link next to the options.
@@ -114,7 +115,30 @@ describe("meal options", () => {
     expect(names(await openOptions("Meals on Sunday 11 October", "Dinner"))).toEqual([
       "Skip",
       "Swap for something else",
+      "Swap with another day",
       "Cook extra for tomorrow's lunch",
+    ]);
+  });
+
+  it("swaps a meal with the same meal on another day, as one change", async () => {
+    const plan = makePlan();
+    const calls = setup({
+      "GET /plans/current": json(plan),
+      "POST /plans/replan": json({ type: "outcome", results: [], changes: [] }),
+    });
+
+    const group = await openOptions(FRIDAY, "Dinner");
+    fireEvent.click(within(group).getByRole("button", { name: "Swap with another day" }));
+    const choices = within(group).getByRole("group", { name: "Swap dinner with the one on:" });
+    // Fri 9 is this one; the other six days, each with its dinner.
+    expect(within(choices).getAllByRole("button", { name: /^\w{3} \d+/ })).toHaveLength(6);
+    fireEvent.click(within(choices).getByRole("button", { name: "Sun 11 Dinner 3" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/plans/replan")).toBe(true));
+    const body = calls.find((c) => c.path === "/plans/replan")!.body as { changes: unknown[] };
+    expect(body.changes).toEqual([
+      { intent: "swap", when: { date: "2026-10-09", slot: "dinner" }, recipe_id: 302 },
+      { intent: "swap", when: { date: "2026-10-11", slot: "dinner" }, recipe_id: 300 },
     ]);
   });
 
@@ -470,5 +494,27 @@ describe("eatenMessage", () => {
       title: "Breakfast marked eaten",
       description: undefined,
     });
+  });
+});
+
+describe("tradesFor", () => {
+  it("finds the same meal on the other days still to come, not eaten, of another recipe", () => {
+    const plan = makePlan();
+    const [fri, sat, sun, mon] = plan.days;
+    sat!.meals[2] = { ...sat!.meals[2]!, status: "eaten" };
+    sun!.meals[2] = { ...sun!.meals[2]!, recipe: { ...sun!.meals[2]!.recipe, id: 301 } };
+    const sundayDinner = sun!.meals[2]!;
+
+    const trades = tradesFor(plan.days, sun!.date, sundayDinner, fri!.date);
+
+    expect(trades.map((t) => t.date)).toEqual([
+      fri!.date, // today counts
+      mon!.date,
+      ...plan.days.slice(4).map((d) => d.date),
+    ]); // not Saturday (eaten), not Sunday itself
+    expect(tradesFor(plan.days, fri!.date, fri!.meals[2]!, sat!.date)).not.toContainEqual(
+      expect.objectContaining({ date: fri!.date }),
+    );
+    expect(trades.every((t) => t.meal.slot === "dinner")).toBe(true);
   });
 });

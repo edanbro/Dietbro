@@ -215,3 +215,33 @@ async def test_meals_say_what_they_use_from_the_pantry(
     plan = (await api.get("/plans/current", headers=auth)).json()
 
     assert plan["days"][3]["meals"][0]["uses_pantry"] == [food["food_name"].split(",")[0]]
+
+
+async def test_two_days_trade_dinners_in_one_change(
+    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+) -> None:
+    """The plan screen's "Swap with another day": two swaps, each to the other day's recipe."""
+    auth = chat.auth("user_a")
+    before = (await api.get("/plans/current", headers=auth)).json()
+    thu, sat = WED + timedelta(days=1), WED + timedelta(days=3)
+    thursday, saturday = meal_at(before, thu, "dinner"), meal_at(before, sat, "dinner")
+    assert thursday is not None
+    assert saturday is not None
+    if thursday["recipe"]["id"] == saturday["recipe"]["id"]:
+        pytest.skip("the plan has the same dinner on both days")
+
+    outcome = await replan(
+        api,
+        chat,
+        swap(thu, "dinner", saturday["recipe"]["id"]),
+        swap(sat, "dinner", thursday["recipe"]["id"]),
+    )
+    after = (await api.get("/plans/current", headers=auth)).json()
+
+    assert [r["status"] for r in outcome["results"]] == ["applied", "applied"]
+    assert after["version"] == before["version"] + 1  # one new version, not two
+    new_thursday, new_saturday = meal_at(after, thu, "dinner"), meal_at(after, sat, "dinner")
+    assert new_thursday is not None
+    assert new_saturday is not None
+    assert new_thursday["recipe"]["id"] == saturday["recipe"]["id"]
+    assert new_saturday["recipe"]["id"] == thursday["recipe"]["id"]
