@@ -481,6 +481,7 @@ async def meal_alternatives(
             protein_g_per_serving=h.protein_g_per_serving,
             uses_pantry=list(h.uses_pantry),
             favourite=h.favourite,
+            minutes=h.minutes,
         )
         for h in picked
     ]

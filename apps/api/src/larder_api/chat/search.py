@@ -117,6 +117,7 @@ class RecipeHit:
     category: str | None = None
     image_url: str | None = None
     favourite: bool = False
+    minutes: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,10 +205,12 @@ def rank_recipes(
     slot: Slot | None = None,
     *,
     favourites_only: bool = False,
+    max_minutes: int | None = None,
 ) -> list[RecipeHit]:
     """Recipes safe for the viewer (never ones they blocked), best first: by how well they
     match `words` (all of them when there are no words), then preference (favourites rank
-    up), then pantry use, then id. Shared by the chat's search and recipe browsing."""
+    up), then pantry use, then id. `max_minutes` keeps those known to take at most that long.
+    Shared by the chat's search and recipe browsing."""
     words = list(words)
     taste = viewer.taste
     ranked: list[tuple[tuple[int, int, int, int], RecipeHit]] = []
@@ -219,6 +222,10 @@ def rank_recipes(
         favourite = recipe.id in taste.favourite_recipe_ids
         if favourites_only and not favourite:
             continue
+        text = pool.text.get(recipe.id)
+        minutes = text.minutes if text else None
+        if max_minutes is not None and (minutes is None or minutes > max_minutes):
+            continue
         if not allowed(recipe, pool.catalog.foods, viewer.profile):
             continue
         points, matched = match(words, _fields(pool, recipe)) if words else (0, ())
@@ -229,7 +236,6 @@ def rank_recipes(
                 viewer.pantry[i.food_id] for i in recipe.ingredients if i.food_id in viewer.pantry
             )
         )
-        text = pool.text.get(recipe.id)
         hit = RecipeHit(
             id=recipe.id,
             name=recipe.name,
@@ -242,6 +248,7 @@ def rank_recipes(
             category=text.category if text else None,
             image_url=text.image_url if text else None,
             favourite=favourite,
+            minutes=minutes,
         )
         key = (-points, -preference(recipe, taste), -len(uses), recipe.id)
         ranked.append((key, hit))

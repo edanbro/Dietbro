@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
 import { parseServings, steps } from "@/lib/cooking";
-import { allergenLabel, formatNumber, humanize } from "@/lib/format";
+import { allergenLabel, formatMinutes, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { RecipeArt } from "@/components/recipe/recipe-art";
@@ -249,6 +249,7 @@ export function RecipePage({ id }: { id: number }) {
   }
 
   const details = [
+    recipe.minutes ? `About ${formatMinutes(recipe.minutes)}` : null,
     recipe.cuisine,
     recipe.servings
       ? `Serves ${recipe.servings}${recipe.servings_estimated ? " (estimated)" : ""}`

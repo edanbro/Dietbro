@@ -9,6 +9,7 @@ describe("stepTimers", () => {
     ["Rest 30 to 40 mins", [["30 to 40 mins", 2400]]],
     ["Fry 5 min, then bake for 1.5 hrs", [["5 min", 300], ["1.5 hrs", 5400]]],
     ["Boil ½ hour", [["½ hour", 1800]]],
+    ["Roast for 1½ hours", [["1½ hours", 5400]]],
     ["Season to taste.", []],
     ["Cook for 3 days", []],
   ])("%s", (step, expected) => {

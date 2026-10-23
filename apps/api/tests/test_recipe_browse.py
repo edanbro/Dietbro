@@ -5,6 +5,11 @@ from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from larder_db.engine import make_sessionmaker
+from larder_db.models import Recipe
 
 Auth = Callable[..., dict[str, str]]
 NewUser = Callable[..., Awaitable[int]]
@@ -123,3 +128,28 @@ async def test_recipe_marks_what_is_in_the_pantry(
         "oat": True,
         "apple": False,
     }
+
+
+async def test_browse_shows_cooking_time_and_filters_quick_recipes(
+    api: httpx.AsyncClient,
+    auth: Auth,
+    new_user: NewUser,
+    menu: dict[str, int],
+    db_engine: AsyncEngine,
+) -> None:
+    await new_user("user_a")
+    porridge, traybake = menu["Porridge"], menu["Chicken traybake"]
+    async with make_sessionmaker(db_engine)() as session:
+        for rid, minutes in ((porridge, 10), (traybake, 50)):
+            await session.execute(update(Recipe).where(Recipe.id == rid).values(minutes=minutes))
+        await session.commit()
+
+    everything = {i["name"]: i for i in (await browse(api, auth, limit=60))["items"]}
+    quick = await browse(api, auth, max_minutes=30, limit=60)
+    detail = (await api.get(f"/recipes/{porridge}", headers=auth())).json()
+
+    assert everything["Porridge"]["minutes"] == 10
+    assert everything["Chicken traybake"]["minutes"] == 50
+    # Only recipes known to be quick: one without an estimate isn't.
+    assert names(quick) == ["Porridge"]
+    assert detail["minutes"] == 10

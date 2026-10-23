@@ -254,6 +254,7 @@ async def test_import_saves_a_private_checked_recipe(
         assert (row.source, row.owner_user_id) == ("imported", owner)
         assert row.source_url == "https://example.com/recipe"
         assert row.image_url == "https://example.com/dish.jpg"
+        assert row.minutes == 30  # "Roast the chicken." implies half an hour
     mine = await api.get(f"/recipes/{result['recipe_id']}", headers=chat.auth("user_a"))
     theirs = await api.get(f"/recipes/{result['recipe_id']}", headers=chat.auth("user_b"))
     assert (mine.status_code, theirs.status_code) == (200, 404)

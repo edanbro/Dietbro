@@ -85,3 +85,5 @@ async def test_load_recipes_inserts_then_updates(
         "Ginger",
     ]
     assert sorted(t.tag for t in recipes[0].tags) == ["casserole", "meat"]
+    # Estimated from the method: "Preheat oven." is a minute's work, "Boil." implies 10.
+    assert [r.minutes for r in recipes] == [5, 10]

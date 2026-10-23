@@ -110,6 +110,8 @@ async def api(db_engine: AsyncEngine, jwks_calls: list[int]) -> AsyncIterator[ht
     app.dependency_overrides[get_sessionmaker] = lambda: maker
     app.dependency_overrides[get_verifier] = lambda: verifier
     app.dependency_overrides[get_optional_verifier] = lambda: verifier
+    # A fresh plannable catalog per test (the app keeps one for CATALOG_TTL_S otherwise).
+    app.state.catalog = planning.CatalogCache()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         yield client

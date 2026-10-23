@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { DownloadIcon, HeartIcon, SearchIcon } from "lucide-react";
+import { ClockIcon, DownloadIcon, HeartIcon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -12,9 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
 import { type RecipeListItem, type Slot, useRecipeList } from "@/lib/api/hooks";
-import { formatNumber } from "@/lib/format";
+import { pantryUse } from "@/lib/food-name";
+import { formatMinutes, formatNumber } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { RecipeArt } from "@/components/recipe/recipe-art";
+
+/** "Quick": recipes that take at most this long. */
+export const QUICK_MINUTES = 30;
 
 const SLOTS: { value: Slot | null; label: string }[] = [
   { value: null, label: "All" },
@@ -62,6 +66,13 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
               <HeartIcon aria-label="Favourite" className="size-4 fill-red-500 text-red-500" />
             </span>
           ) : null}
+          {recipe.minutes ? (
+            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium tabular-nums">
+              <ClockIcon aria-hidden className="size-3" />
+              <span className="sr-only">about </span>
+              {formatMinutes(recipe.minutes)}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-0.5 p-2.5">
           <span className="line-clamp-2 text-sm font-medium">{recipe.name}</span>
@@ -71,7 +82,7 @@ function RecipeTile({ recipe }: { recipe: RecipeListItem }) {
           </span>
           {recipe.uses_pantry.length ? (
             <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
-              Uses your {recipe.uses_pantry.slice(0, 2).join(", ").toLowerCase()}
+              {pantryUse(recipe.uses_pantry)}
             </span>
           ) : recipe.cuisine ? (
             <span className="text-xs text-muted-foreground">{recipe.cuisine}</span>
@@ -87,7 +98,13 @@ export function RecipeBrowser() {
   const [q, setQ] = useState("");
   const [slot, setSlot] = useState<Slot | null>(null);
   const [favourites, setFavourites] = useState(false);
-  const query = { q: useDebounced(q.trim(), 300), slot, favourites };
+  const [quick, setQuick] = useState(false);
+  const query = {
+    q: useDebounced(q.trim(), 300),
+    slot,
+    favourites,
+    maxMinutes: quick ? QUICK_MINUTES : null,
+  };
   const list = useRecipeList(query);
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const total = list.data?.pages[0]?.total ?? 0;
@@ -117,6 +134,10 @@ export function RecipeBrowser() {
         <Chip pressed={favourites} onClick={() => setFavourites(!favourites)}>
           <HeartIcon aria-hidden className={cn("size-4", favourites && "fill-current")} />
           Favourites
+        </Chip>
+        <Chip pressed={quick} onClick={() => setQuick(!quick)}>
+          <ClockIcon aria-hidden className="size-4" />
+          Under {QUICK_MINUTES} min
         </Chip>
         {SLOTS.map((s) => (
           <Chip key={s.label} pressed={slot === s.value} onClick={() => setSlot(s.value)}>

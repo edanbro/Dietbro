@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { foodName } from "./food-name";
+import { foodName, pantryUse } from "./food-name";
 
 describe("foodName", () => {
   it.each([
@@ -39,5 +39,18 @@ describe("foodName", () => {
       name: "Kerrygold Pure Irish Butter",
       detail: null,
     });
+  });
+});
+
+describe("pantryUse", () => {
+  it("names pantry foods readably, each once", () => {
+    expect(pantryUse(["Egg, whole, raw, fresh"])).toBe("Uses your egg");
+    expect(pantryUse(["Carrots, raw", "Onions, raw"])).toBe("Uses your carrots and onions");
+    expect(pantryUse(["Carrots, raw", "Carrots, baby, raw", "Onions, raw"])).toBe(
+      "Uses your carrots and onions",
+    );
+    expect(pantryUse(["Carrots, raw", "Onions, raw", "Rice, white, long-grain", "Leeks"])).toBe(
+      "Uses your carrots, onions +2",
+    );
   });
 });

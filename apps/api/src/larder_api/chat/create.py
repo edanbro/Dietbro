@@ -29,6 +29,7 @@ from larder_api.chat.foods import tokens
 from larder_api.chat.scope import ChatScope
 from larder_core.aliases import load_alias_rows
 from larder_core.allergens import Allergen
+from larder_core.cook_time import cook_minutes
 from larder_core.meals import MAX_KCAL_PER_SERVING, MAX_OIL_SHARE, Slot
 from larder_core.nutrition import MICROS, Nutrients, micro_totals
 from larder_core.quantities import grams_for
@@ -184,6 +185,7 @@ def _row(
         category=CATEGORY[draft.slot],
         cuisine=draft.cuisine,
         instructions=draft.instructions,
+        minutes=cook_minutes(draft.instructions),
         servings=draft.servings,
         servings_estimated=False,
         nutrition_complete=True,
@@ -207,7 +209,7 @@ def _replace(target: db.Recipe, checked: db.Recipe) -> None:
     """An edit's content onto the user's recipe; where it came from (source, link, photo) and
     its id stay."""
     target.name, target.category, target.cuisine = checked.name, checked.category, checked.cuisine
-    target.instructions = checked.instructions
+    target.instructions, target.minutes = checked.instructions, checked.minutes
     target.servings, target.servings_estimated = checked.servings, checked.servings_estimated
     target.nutrition_complete = checked.nutrition_complete
     for field in (*Nutrients.FIELDS, *MICROS):

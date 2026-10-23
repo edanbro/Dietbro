@@ -93,3 +93,16 @@ export function foodName(description: string): FoodName {
   const name = capitalise([...adjectives, head!.toLowerCase()].join(" "));
   return { name, detail: rest.length ? rest.join(", ").toLowerCase() : null };
 }
+
+/**
+ * "Uses your egg and carrots", "Uses your egg, carrots +2": what a recipe takes from the pantry,
+ * by readable name (foodName), each food once.
+ */
+export function pantryUse(descriptions: readonly string[], shown = 2): string {
+  const names = [...new Set(descriptions.map((d) => foodName(d).name.toLowerCase()))];
+  const first = names.slice(0, shown);
+  const more = names.length - first.length;
+  const list =
+    first.length === 2 && !more ? `${first[0]} and ${first[1]}` : first.join(", ");
+  return `Uses your ${list}${more ? ` +${more}` : ""}`;
+}
