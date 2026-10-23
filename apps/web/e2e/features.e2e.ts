@@ -3,9 +3,9 @@ import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { expect, type Page, test } from "@playwright/test";
 
 /**
- * The round-3 features end to end, on the real API: quick-add to the diary, typing a recipe in,
- * a share link (seen signed out, then revoked), the calendar feed, and cooking extra for
- * tomorrow's lunch.
+ * The newer features end to end, on the real API: quick-add to the diary, typing a recipe in,
+ * a share link (seen signed out, then revoked), the calendar feed, cooking extra for
+ * tomorrow's lunch, saving a week as a template and planning from it, and copying a day.
  */
 test.skip(!process.env.CLERK_SECRET_KEY, "needs a Clerk dev instance (CLERK_SECRET_KEY)");
 test.setTimeout(240_000);
@@ -27,7 +27,7 @@ async function api(page: Page, method: string, path: string, data?: unknown) {
   return res.status() === 204 ? null : res.json();
 }
 
-test("quick-add, type-in import, share, calendar and leftovers", async ({
+test("quick-add, import, share, calendar, leftovers and templates", async ({
   page,
   browser,
   context,
@@ -159,6 +159,39 @@ test("quick-add, type-in import, share, calendar and leftovers", async ({
       await expect(page.getByText("Cook extra: it's tomorrow's lunch too")).toBeVisible();
       await page.getByRole("tablist", { name: "Day" }).getByRole("tab").nth(1).click();
       await expect(page.getByText("Leftovers from last night's dinner")).toBeVisible();
+    });
+
+    await test.step("save the week as a template and plan from it", async () => {
+      await page.goto("/plan");
+      await page.getByRole("button", { name: "Save as template" }).click();
+      await page.getByLabel("Template name").fill("Busy weeknights");
+      const saved = page.waitForResponse((r) => r.url().endsWith("/me/templates"));
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      expect((await saved).status()).toBe(201);
+
+      await page.getByRole("button", { name: "New plan" }).click();
+      const planned = page.waitForResponse(
+        (r) => r.url().endsWith("/plans") && r.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Use template" }).click();
+      expect((await planned).status()).toBe(201);
+      await expect(page.getByRole("group", { name: "Confirm new plan" })).toHaveCount(0);
+    });
+
+    await test.step("copy another day's meals", async () => {
+      await page.getByRole("tablist", { name: "Day" }).getByRole("tab").nth(2).click();
+      await page.getByRole("button", { name: "Copy another day" }).first().click();
+      const from = page.getByLabel("Use the meals from");
+      // Two days later this week has meals planned too.
+      const target = await page.evaluate(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 4);
+        return d.toLocaleDateString("en-CA");
+      });
+      await from.fill(target);
+      const replanned = page.waitForResponse((r) => r.url().endsWith("/plans/replan"));
+      await page.getByRole("button", { name: "Use these meals" }).click();
+      expect((await replanned).ok()).toBe(true);
     });
 
     await api(page, "DELETE", "/me");

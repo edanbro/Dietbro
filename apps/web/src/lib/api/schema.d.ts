@@ -567,6 +567,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plans/meals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Meals On
+         * @description The meals planned on a date (the newest plan covering it), to copy to another day.
+         */
+        get: operations["getMealsOn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/{plan_id}/alternatives": {
         parameters: {
             query?: never;
@@ -1181,6 +1201,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["listTemplates"];
+        put?: never;
+        /**
+         * Save Template
+         * @description Save the meals of the user's plan starting on `start` (its newest version).
+         */
+        post: operations["saveTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Template */
+        delete: operations["deleteTemplate"];
+        options?: never;
+        head?: never;
+        /** Rename Template */
+        patch: operations["renameTemplate"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1480,6 +1539,14 @@ export interface components {
             relaxed: boolean;
             /** Within */
             within: boolean;
+        };
+        /**
+         * DayMealOut
+         * @description A meal planned on a date (GET /plans/meals): to copy a day's meals to another.
+         */
+        DayMealOut: {
+            slot: components["schemas"]["Slot"];
+            recipe: components["schemas"]["RecipeCard"];
         };
         /** DayOut */
         DayOut: {
@@ -2306,6 +2373,16 @@ export interface components {
              * @description first day (the user's local date, from yesterday to a week ahead); defaults to today (UTC)
              */
             start?: string | null;
+            /**
+             * Repeat From
+             * @description plan the same meals as the 7 days from this date (an earlier week), where they still suit the user's allergies, diet and blocks
+             */
+            repeat_from?: string | null;
+            /**
+             * Template Id
+             * @description plan the meals of this saved template (GET /me/templates)
+             */
+            template_id?: number | null;
         };
         /** PreferencesIn */
         PreferencesIn: {
@@ -3060,6 +3137,41 @@ export interface components {
             /** Calorie Floor */
             calorie_floor: number;
             reference?: components["schemas"]["ReferenceIntakes"];
+        };
+        /** TemplateIn */
+        TemplateIn: {
+            /** Name */
+            name: string;
+            /**
+             * Start
+             * Format: date
+             * @description save the week of the user's plan starting on this date
+             */
+            start: string;
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Meals */
+            meals: number;
+            /**
+             * Recipes
+             * @description a few of its recipes' names, for a preview
+             */
+            recipes: string[];
+        };
+        /** TemplatePatch */
+        TemplatePatch: {
+            /** Name */
+            name: string;
         };
         /** TextEvent */
         TextEvent: {
@@ -4405,6 +4517,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanOut"] | null;
+                };
+            };
+        };
+    };
+    getMealsOn: {
+        parameters: {
+            query: {
+                on: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayMealOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5812,6 +5955,123 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"][];
+                };
+            };
+        };
+    };
+    saveTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    renameTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplatePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
             };
             /** @description Validation Error */
             422: {

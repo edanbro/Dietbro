@@ -32,6 +32,7 @@ from larder_api.ratelimit import per_user
 from larder_api.routers.pantry import out as pantry_out
 from larder_api.schemas import (
     ChatProblem,
+    DayMealOut,
     DayOut,
     EatenIn,
     EatenOut,
@@ -41,6 +42,7 @@ from larder_api.schemas import (
     PlanOut,
     PlanRequest,
     Problems,
+    RecipeCard,
     RecipeListItem,
     ReplanRequest,
     ShoppingItemOut,
@@ -60,10 +62,13 @@ from larder_db.models import (
     MealPlan,
     PantryItem,
     PlanMeal,
+    PlanTemplate,
+    Recipe,
     RecipeIngredient,
     ShoppingItem,
     User,
 )
+from larder_solver import Plan, PlanResult, Problem, Violation
 
 logger = logging.getLogger(__name__)
 
@@ -245,8 +250,15 @@ async def create_plan(
     current = await planning.plan_for(session, user.id, today)
     version = await planning.next_version(session, user.id, start)
     seed = planning.plan_seed(user.id, start, version)
-    novelty = frozenset(m.recipe_id for m in current.meals) if current else frozenset[int]()
-    problem = planning.make_problem(
+    # Planning a week again (an earlier week or a saved template): its meals, where they
+    # still suit the user (planning.repeat_choices). Novelty would only fight that.
+    cells = await _repeat_cells(session, user.id, body)
+    novelty = (
+        frozenset(m.recipe_id for m in current.meals)
+        if current and cells is None
+        else frozenset[int]()
+    )
+    fresh = planning.make_problem(
         inputs,
         catalog,
         start,
@@ -255,22 +267,45 @@ async def create_plan(
         novelty=novelty,
         private=private,
     )
+    pool = catalog.merged(private)
+    notes: list[str] = []
+    problem = fresh
+    if cells:
+        choices, dropped = planning.repeat_choices(fresh, inputs, pool, cells)
+        problem = planning.constrain(fresh, inputs, pool, choices=choices, extra={})
+        if dropped:
+            notes.append(await planning.left_out_note(session, dropped))
     # Food already logged in these dates (chat) keeps its meal empty and counts on its day.
     logs = await planning.active_logs(session, user.id, start, problem.days)
-    problem = planning.with_logs(problem, inputs, catalog.merged(private), logs)
-    prepared = planning.Prepared(problem, version, seed, None, novelty)
+    problem = planning.with_logs(problem, inputs, pool, logs)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
     await session.commit()
 
-    result = await anyio.to_thread.run_sync(planner, problem, None, limiter=plan_limiter(settings))
+    async def solve(p: Problem) -> tuple[PlanResult, Plan, list[Violation]]:
+        result = await anyio.to_thread.run_sync(planner, p, None, limiter=plan_limiter(settings))
+        plan, violations = planning.check_outcome(p, result)
+        return result, plan, violations
+
     try:
-        plan, violations = planning.check_outcome(problem, result)
+        result, plan, violations = await solve(problem)
     except planning.PlanningError as e:
-        raise HTTPException(e.status_code, e.detail) from e
+        if not problem.choices:
+            raise HTTPException(e.status_code, e.detail) from e
+        # The same meals can't all fit the user's goals as they are now: plan it fresh.
+        problem = planning.with_logs(fresh, inputs, pool, logs)
+        notes = [
+            "Those meals don't all fit your goals as they are now, so this week was planned fresh."
+        ]
+        try:
+            result, plan, violations = await solve(problem)
+        except planning.PlanningError as e2:
+            raise HTTPException(e2.status_code, e2.detail) from e2
+    prepared = planning.Prepared(problem, version, seed, None, novelty)
     stats = planning.plan_stats(
         problem, result, plan, violations, seed=seed, time_limit_ms=settings.plan_time_limit_ms
     )
+    stats.notes = [*notes, *stats.notes]
     stats.total_ms = round((time.perf_counter() - started) * 1000)
     stats.logged = planning.logged_by_day(logs, start, problem.days)
 
@@ -284,6 +319,29 @@ async def create_plan(
     row = planning.save_plan(session, user.id, prepared, result, plan, stats, currency, unshoppable)
     await session.commit()
     return await with_pantry(session, user.id, plan_out(await _load_plan(session, user, row.id)))
+
+
+async def _repeat_cells(
+    session: AsyncSession, user_id: int, body: PlanRequest
+) -> list[tuple[int, Slot, int]] | None:
+    """The meals to plan again, or None for a fresh plan."""
+    if body.template_id is not None:
+        template = await session.scalar(
+            select(PlanTemplate).where(
+                PlanTemplate.id == body.template_id, PlanTemplate.user_id == user_id
+            )
+        )
+        if template is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, ["That template doesn't exist."])
+        return planning.template_cells(template)
+    if body.repeat_from is not None:
+        cells = await planning.week_cells(session, user_id, body.repeat_from)
+        if not cells:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, ["There's no plan for that week to repeat."]
+            )
+        return cells
+    return None
 
 
 @router.post(
@@ -354,6 +412,23 @@ async def upcoming_plan(
     if not covers or row.start_date <= today:
         return None
     return await with_pantry(session, user.id, plan_out(row))
+
+
+@router.get("/meals", operation_id="getMealsOn")
+async def meals_on(on: date, user: CurrentUser, session: Session) -> list[DayMealOut]:
+    """The meals planned on a date (the newest plan covering it), to copy to another day."""
+    cells = await planning.week_cells(session, user.id, on, days=1)
+    recipes = {
+        r.id: r
+        for r in await session.scalars(
+            select(Recipe).where(Recipe.id.in_({rid for _, _, rid in cells}))
+        )
+    }
+    return [
+        DayMealOut(slot=slot, recipe=RecipeCard.model_validate(recipes[rid], from_attributes=True))
+        for _, slot, rid in sorted(cells, key=lambda c: SLOT_ORDER.index(c[1]))
+        if rid in recipes
+    ]
 
 
 @router.get(

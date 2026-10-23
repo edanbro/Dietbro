@@ -9,6 +9,7 @@ import { GoalsForm } from "@/components/profile/goals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
 import { RegionForm } from "@/components/profile/region-form";
 import { RemindersForm } from "@/components/profile/reminders-form";
+import { TemplatesForm } from "@/components/profile/templates-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -22,6 +23,7 @@ const SECTIONS = [
   { id: "region", title: "Region", body: <RegionForm /> },
   { id: "reminders", title: "Reminders", body: <RemindersForm /> },
   { id: "calendar", title: "Calendar", body: <CalendarForm /> },
+  { id: "templates", title: "Templates", body: <TemplatesForm /> },
   { id: "appearance", title: "Appearance", body: <ThemeToggle /> },
   { id: "account", title: "Your data", body: <AccountControls /> },
 ];

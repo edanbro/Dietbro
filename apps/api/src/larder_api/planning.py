@@ -85,7 +85,7 @@ from larder_solver import (
     solve,
     validate,
 )
-from larder_solver.candidates import TastePrefs, preference
+from larder_solver.candidates import TastePrefs, allowed, preference
 from larder_solver.candidates import select as select_candidates
 from larder_solver.metrics import allocate, cost_millipence, day_totals, to_minor, waste_millipence
 
@@ -649,11 +649,45 @@ async def active_logs(
     )
 
 
+def repeat_choices(
+    problem: Problem,
+    inputs: UserInputs,
+    pool: PlanningCatalog,
+    cells: Iterable[tuple[int, Slot, int]],
+) -> tuple[dict[Cell, tuple[int, ...]], list[int]]:
+    """Planning a week again (an earlier week, or a saved template): each (day, slot, recipe)
+    becomes that cell's only choice when the recipe can still be planned for this user: in
+    their catalogue (shared or theirs, nutrition complete), of that meal type, not blocked
+    ("never again"), and safe under their allergies, diet and avoided foods as they are now
+    (`candidates.allowed`, the planner's own rule). The planner still picks the portions and
+    the validator checks the result. Returns the choices and the recipe ids left out."""
+    profile = profile_of(inputs.allergies, inputs.preferences)
+    blocked = set(inputs.preferences.blocked_recipe_ids or ())
+    slots = {s.slot for s in problem.slots}
+    choices: dict[Cell, tuple[int, ...]] = {}
+    dropped: list[int] = []
+    for day, slot, recipe_id in cells:
+        if not 0 <= day < problem.days or slot not in slots:
+            continue
+        recipe = pool.catalog.recipes.get(recipe_id)
+        if (
+            recipe is None
+            or recipe_id in blocked
+            or slot not in recipe.meal_types
+            or not allowed(recipe, pool.catalog.foods, profile)
+        ):
+            dropped.append(recipe_id)
+            continue
+        choices[(day, slot)] = (recipe_id,)
+    return choices, dropped
+
+
 def with_logs(
     problem: Problem, inputs: UserInputs, pool: PlanningCatalog, logs: Iterable[db.MealLog]
 ) -> Problem:
     """A new plan around food already logged in its dates: a logged meal's slot stays empty
-    and every log's macros count on its day (`constrain`, so its day band follows)."""
+    and every log's macros count on its day (`constrain`, so its day band follows). Choices
+    already on the problem (a repeated week) are kept, except in the slots now empty."""
     extra: dict[int, Macros] = {}
     empty: set[Cell] = set()
     for log in logs:
@@ -663,7 +697,8 @@ def with_logs(
             empty.add((d, Slot(log.slot)))
     if not extra and not empty:
         return problem
-    return constrain(problem, inputs, pool, choices={}, empty=empty, extra=extra)
+    choices = {cell: ids for cell, ids in problem.choices.items() if cell not in empty}
+    return constrain(problem, inputs, pool, choices=choices, empty=empty, extra=extra)
 
 
 def log_kind(log: db.MealLog) -> Literal["off_plan", "skipped", "eaten"]:
@@ -966,6 +1001,52 @@ async def plan_id_for(session: AsyncSession, user_id: int, on: date) -> int | No
         return found
     return await session.scalar(
         select(db.MealPlan.id).where(db.MealPlan.user_id == user_id).order_by(*newest).limit(1)
+    )
+
+
+async def week_cells(
+    session: AsyncSession, user_id: int, first: date, days: int = DAYS
+) -> list[tuple[int, Slot, int]]:
+    """The meals planned on the `days` dates from `first`, each date from the newest plan
+    version covering it, as (day counted from `first`, slot, recipe id)."""
+    cells: list[tuple[int, Slot, int]] = []
+    plans: dict[int, db.MealPlan] = {}
+    for i in range(days):
+        on = first + timedelta(days=i)
+        plan_id = await session.scalar(
+            select(db.MealPlan.id)
+            .where(db.MealPlan.user_id == user_id, covering(on))
+            .order_by(db.MealPlan.created_at.desc(), db.MealPlan.id.desc())
+            .limit(1)
+        )
+        if plan_id is None:
+            continue
+        if plan_id not in plans:
+            plan = await session.scalar(
+                select(db.MealPlan)
+                .where(db.MealPlan.id == plan_id)
+                .options(selectinload(db.MealPlan.meals))
+            )
+            assert plan is not None
+            plans[plan_id] = plan
+        plan = plans[plan_id]
+        day = (on - plan.start_date).days
+        cells += [(i, Slot(m.slot), m.recipe_id) for m in plan.meals if m.day == day]
+    return cells
+
+
+def template_cells(template: db.PlanTemplate) -> list[tuple[int, Slot, int]]:
+    return [(int(c["day"]), Slot(c["slot"]), int(c["recipe_id"])) for c in template.cells]
+
+
+async def left_out_note(session: AsyncSession, recipe_ids: Iterable[int]) -> str:
+    """The plan note for recipes a repeated week couldn't use (repeat_choices)."""
+    ids = set(recipe_ids)
+    names = sorted(await session.scalars(select(db.Recipe.name).where(db.Recipe.id.in_(ids))))
+    shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+    return (
+        f"Left out {shown or 'some meals'}: no longer right for your allergies, diet or "
+        "blocked recipes, so other meals took their place."
     )
 
 

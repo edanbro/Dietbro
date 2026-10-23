@@ -167,6 +167,7 @@ test("record the API for the visual comparison", async ({ browser }) => {
       slot: "breakfast",
     });
     await api(page, "POST", "/shopping/extras", { name: "Bin bags" });
+    await api(page, "POST", "/me/templates", { name: "Busy weeknights", start: plan.start });
     const dinner = plan.days[0].meals.find((m: { slot: string }) => m.slot === "dinner");
     const meta: Meta = { recordedAt: new Date().toISOString(), recipeId: dinner.recipe.id };
 

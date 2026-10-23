@@ -57,6 +57,10 @@ export type Eaten = Schemas["EatenOut"];
 export type PantryChange = Schemas["PantryChangeOut"];
 /** A typed plan change (skip, swap, off-plan food, craving), as the chat's executor takes it. */
 export type PlanChange = Schemas["ReplanRequest"]["changes"][number];
+export type PlanTemplate = Schemas["TemplateOut"];
+export type DayMeal = Schemas["DayMealOut"];
+/** A fresh plan from `start`, or the same meals again: an earlier week's or a template's. */
+export type CreatePlanArgs = { start?: string; repeat_from?: string; template_id?: number };
 export type ExpiringPantry = Schemas["ExpiringPantry"];
 export type ExpiringItem = Schemas["ExpiringItem"];
 export type Receipt = Schemas["ReceiptOut"];
@@ -101,6 +105,9 @@ export const keys = {
   /** Under `plans`: marking meals eaten and chat logs change it. */
   diary: (days: number) => ["plans", "diary", days] as const,
   weights: ["me", "weights"] as const,
+  templates: ["me", "templates"] as const,
+  /** Under `plans`: what a plan change makes stale. */
+  mealsOn: (date: string) => ["plans", "meals", date] as const,
   chatThread: ["chat", "thread"] as const,
   /** Mutations that change the current plan from the plan screen (one at a time). */
   planChange: ["plan-change"] as const,
@@ -359,9 +366,14 @@ export function useCreatePlan() {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (start?: string) =>
-      unwrap(await api.POST("/plans", { body: { start: start ?? localISODate() } })),
-    onSuccess: async (plan, start) => {
+    mutationFn: async (args?: string | CreatePlanArgs) => {
+      const { start, ...from } = typeof args === "string" ? { start: args } : (args ?? {});
+      return unwrap(
+        await api.POST("/plans", { body: { start: start ?? localISODate(), ...from } }),
+      );
+    },
+    onSuccess: async (plan, args) => {
+      const start = typeof args === "string" ? args : args?.start;
       if (start && start > localISODate()) {
         await qc.invalidateQueries({ queryKey: keys.upcomingPlan });
         return;
@@ -901,6 +913,67 @@ export function useShareLink() {
   return useMutation({
     mutationFn: async (target: ShareTarget) =>
       unwrap(await api.POST("/share", { body: target })),
+  });
+}
+
+/** Saved weeks of meals to plan from again. */
+export function useTemplates(enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.templates,
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/me/templates")),
+  });
+}
+
+/** Save the week starting on `start` as a template. */
+export function useSaveTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { name: string; start: string }) =>
+      unwrap(await api.POST("/me/templates", { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+export function useRenameTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) =>
+      unwrap(
+        await api.PATCH("/me/templates/{template_id}", {
+          params: { path: { template_id: id } },
+          body: { name },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+export function useDeleteTemplate() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const result = await api.DELETE("/me/templates/{template_id}", {
+        params: { path: { template_id: id } },
+      });
+      if (!result.response.ok) unwrap(result);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.templates }),
+  });
+}
+
+/** The meals planned on `date` (to copy them to another day), fetched when `enabled`. */
+export function useMealsOn(date: string, enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.mealsOn(date),
+    enabled: enabled && Boolean(date),
+    queryFn: async () =>
+      unwrap(await api.GET("/plans/meals", { params: { query: { on: date } } })),
   });
 }
 

@@ -61,6 +61,7 @@ from larder_db.models import (
     MealLog,
     MealPlan,
     PantryItem,
+    PlanTemplate,
     Preferences,
     PushSubscription,
     ReceiptUpload,
@@ -259,6 +260,14 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         "share_links": rows(
             await session.scalars(
                 select(ShareLink).where(ShareLink.user_id == user.id).order_by(ShareLink.id)
+            ),
+            "user_id",
+        ),
+        "plan_templates": rows(
+            await session.scalars(
+                select(PlanTemplate)
+                .where(PlanTemplate.user_id == user.id)
+                .order_by(PlanTemplate.id)
             ),
             "user_id",
         ),

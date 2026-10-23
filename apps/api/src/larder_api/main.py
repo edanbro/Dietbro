@@ -19,6 +19,7 @@ from larder_api.routers import (
     recipes,
     share,
     shopping,
+    templates,
 )
 from larder_api.settings import get_settings
 from larder_core.brand import APP_NAME
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(push.router)
     app.include_router(share.router)
     app.include_router(calendar.router)
+    app.include_router(templates.router)
     return app
 
 

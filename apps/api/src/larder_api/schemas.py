@@ -2,10 +2,10 @@
 domain rules (calorie floor, deficit) live in larder_core.energy."""
 
 from datetime import date, datetime, time
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from larder_core.allergens import Allergen
 from larder_core.energy import (
@@ -517,6 +517,20 @@ class PlanRequest(BaseModel):
         description="first day (the user's local date, from yesterday to a week ahead); "
         "defaults to today (UTC)",
     )
+    repeat_from: date | None = Field(
+        default=None,
+        description="plan the same meals as the 7 days from this date (an earlier week), where "
+        "they still suit the user's allergies, diet and blocks",
+    )
+    template_id: int | None = Field(
+        default=None, description="plan the meals of this saved template (GET /me/templates)"
+    )
+
+    @model_validator(mode="after")
+    def _one_source(self) -> Self:
+        if self.repeat_from is not None and self.template_id is not None:
+            raise ValueError("give repeat_from or template_id, not both")
+        return self
 
 
 class PlanOut(BaseModel):
@@ -840,6 +854,30 @@ class ShareIn(BaseModel):
     kind: Literal["recipe", "week"]
     recipe_id: int | None = None  # for a recipe
     start: date | None = Field(default=None, description="for a week: the plan's start date")
+
+
+class TemplateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    start: date = Field(description="save the week of the user's plan starting on this date")
+
+
+class TemplatePatch(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class TemplateOut(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    meals: int
+    recipes: list[str] = Field(description="a few of its recipes' names, for a preview")
+
+
+class DayMealOut(BaseModel):
+    """A meal planned on a date (GET /plans/meals): to copy a day's meals to another."""
+
+    slot: Slot
+    recipe: RecipeCard
 
 
 class ShareOut(BaseModel):

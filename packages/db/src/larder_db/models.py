@@ -548,6 +548,20 @@ class ShareLink(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class PlanTemplate(Base):
+    """A week of meals saved by name ("busy weeknights") to plan from again. `cells` are
+    [{"day": 0-6, "slot", "recipe_id"}], day counted from the template's first day. Planning from
+    it checks every recipe again against the user's current allergies, diet and blocks."""
+
+    __tablename__ = "plan_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    cells: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ShoppingExtra(Base):
     """Something the user wants on their shopping list that no plan needs ("bin bags"). Per
     user, not per plan, so it survives replans until bought and cleared."""

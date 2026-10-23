@@ -30,6 +30,7 @@ EXPORTED: dict[str, Rows] = {
     "body_weights": lambda e: e["weights"],
     "push_subscriptions": lambda e: e["push_subscriptions"],
     "share_links": lambda e: e["share_links"],
+    "plan_templates": lambda e: e["plan_templates"],
     "preferences": lambda e: [e["preferences"]],
     "allergies": lambda e: [e["allergies"]],
     "pantry_items": lambda e: e["pantry"],
@@ -196,7 +197,10 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         ],
     )
     share = db.ShareLink(token=f"share-{sub}", user_id=uid, kind="recipe", recipe_id=recipe.id)
-    session.add_all([log, call, upload, share])
+    template = db.PlanTemplate(
+        user_id=uid, name="Busy week", cells=[{"day": 0, "slot": "dinner", "recipe_id": recipe.id}]
+    )
+    session.add_all([log, call, upload, share, template])
     await session.flush()
     return {
         "goals": uid,
@@ -208,6 +212,7 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "shopping_extras": extra.id,
         "push_subscriptions": push.id,
         "share_links": share.id,
+        "plan_templates": template.id,
         "meal_plans": plan.id,
         "chat_threads": thread.id,
         "chat_messages": message.id,

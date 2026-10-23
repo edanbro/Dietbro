@@ -53,6 +53,7 @@ import { dayRows, LoggedCard, LoggedNote } from "./logged";
 import { DayMacros } from "./macro-bars";
 import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
+import { CopyDay, RepeatChoices, SaveTemplate } from "./plan-templates";
 import { WeekGrid } from "./week-grid";
 import { WeekSummary } from "./week-summary";
 import { WhatChanged } from "./what-changed";
@@ -423,6 +424,7 @@ function PlanView({
             size="default"
             compact
           />
+          <SaveTemplate plan={plan} />
           {ended || plan !== current ? null : (
             <Button
               variant="ghost"
@@ -491,6 +493,14 @@ function PlanView({
               Cancel
             </Button>
           </div>
+          <RepeatChoices
+            today={today}
+            create={create}
+            onCreated={() => {
+              setConfirming(false);
+              onCreated();
+            }}
+          />
         </div>
       ) : null}
 
@@ -573,11 +583,13 @@ function PlanView({
                     </li>
                   ))}
                 </ul>
-                {d.date > today && d.meals.some((m) => m.status !== "eaten") ? (
+                {d.date >= today && d.meals.some((m) => m.status !== "eaten") ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {d.date > today ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="self-start"
                     disabled={actions(d.date).busy}
                     onClick={() =>
                       void actions(d.date)
@@ -595,6 +607,15 @@ function PlanView({
                     <RefreshCwIcon aria-hidden />
                     Rebuild {weekday(d.date)}
                   </Button>
+                      ) : null}
+                    </div>
+                    <CopyDay
+                      day={d}
+                      today={today}
+                      busy={actions(d.date).busy}
+                      onReplan={actions(d.date).onReplan}
+                    />
+                  </div>
                 ) : null}
                 <div className="flex flex-col gap-2">
                   <DayMacros
