@@ -47,7 +47,7 @@ export function PrepPicker({ plan, today }: { plan: Plan; today: string }) {
     return (
       <Button variant="ghost" onClick={() => setOpen(true)}>
         <ChefHatIcon aria-hidden />
-        <span className="max-sm:sr-only">Meal prep</span>
+        Meal prep
       </Button>
     );
   }

@@ -126,6 +126,20 @@ describe("RecipePage", () => {
     expect(screen.queryByRole("link", { name: /alert/ })).not.toBeInTheDocument();
   });
 
+  it("lists the ingredients at the planned servings", async () => {
+    resetNavigation("/recipes/101?servings=2");
+    mockApi({ "GET /recipes/101": json(makeRecipe()), "GET /allergens": json(ALLERGENS) });
+    renderWithClient(<RecipePage id={101} />);
+
+    expect(
+      await screen.findByText("For 2 servings, as planned (the recipe makes 4)."),
+    ).toBeInTheDocument();
+    const list = screen.getByRole("heading", { name: "Ingredients" }).closest("section")!;
+    // The onion (1 large, 150 g, for 4) is 75 g for 2.
+    expect(list).toHaveTextContent("75 gOnion");
+    expect(screen.getByRole("link", { name: /Start cooking \(2 servings\)/ })).toBeInTheDocument();
+  });
+
   it("handles a missing recipe", async () => {
     mockApi({ "GET /allergens": json(ALLERGENS) });
     renderWithClient(<RecipePage id={999} />);
