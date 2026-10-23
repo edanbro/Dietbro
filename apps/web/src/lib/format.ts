@@ -25,6 +25,18 @@ export function formatGrams(grams: number): string {
   return `${kg % 1 ? kg.toFixed(1) : kg} kg`;
 }
 
+/**
+ * About how long a recipe takes: 25 -> "25 min", 80 -> "1 h 20 min", 720 -> "12 h",
+ * 2880 -> "2 days" (long times are rough, so they're rounded more).
+ */
+export function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes >= 2 * 24 * 60) return `${Math.round(minutes / (24 * 60))} days`;
+  if (minutes >= 10 * 60) return `${Math.round(minutes / 60)} h`;
+  const m = minutes % 60;
+  return `${Math.floor(minutes / 60)} h${m ? ` ${m} min` : ""}`;
+}
+
 /** Half-servings -> "×½", "×1", "×1½". */
 export function formatServings(portions: number): string {
   const whole = Math.floor(portions / 2);

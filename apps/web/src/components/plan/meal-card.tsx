@@ -1,13 +1,20 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronRightIcon, CircleCheckIcon, EllipsisVerticalIcon, PinIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  CircleCheckIcon,
+  ClockIcon,
+  EllipsisVerticalIcon,
+  PinIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Meal } from "@/lib/api/hooks";
-import { formatNumber, formatServings, servingsLabel } from "@/lib/format";
+import { pantryUse } from "@/lib/food-name";
+import { formatMinutes, formatNumber, formatServings, servingsLabel } from "@/lib/format";
 
 import { MealActions, type MealActionsProps } from "./meal-actions";
 import { SLOT_ICON, SLOT_LABEL } from "./slots";
@@ -72,6 +79,13 @@ function MealLink({ meal, chevron, note }: { meal: Meal; chevron: boolean; note?
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Icon aria-hidden className="size-3.5" />
           {SLOT_LABEL[meal.slot]}
+          {meal.recipe.minutes ? (
+            <span className="ml-1 flex items-center gap-0.5">
+              <ClockIcon aria-hidden className="size-3" />
+              <span className="sr-only">about </span>
+              {formatMinutes(meal.recipe.minutes)}
+            </span>
+          ) : null}
           {meal.locked ? (
             // Pinned by the user through the chat (a craving or swap): replans keep it.
             <span className="ml-1 flex items-center gap-0.5 font-medium text-foreground">
@@ -102,8 +116,7 @@ function MealLink({ meal, chevron, note }: { meal: Meal; chevron: boolean; note?
         ) : null}
         {meal.uses_pantry.length ? (
           <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
-            Uses your {meal.uses_pantry.slice(0, 2).join(", ").toLowerCase()}
-            {meal.uses_pantry.length > 2 ? ` +${meal.uses_pantry.length - 2}` : ""}
+            {pantryUse(meal.uses_pantry)}
           </span>
         ) : null}
       </div>

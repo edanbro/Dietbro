@@ -175,6 +175,18 @@ describe("loaded plan", () => {
     expect(screen.getByRole("meter", { name: "Protein" })).toBeInTheDocument();
   });
 
+  it("shows about how long each meal takes", async () => {
+    today(2026, 10, 9);
+    const plan = makePlan();
+    plan.days[0]!.meals[0] = meal("breakfast", 100, "Quick oats", { minutes: 10 });
+    setup({ "GET /plans/current": json(plan) });
+
+    const meals = await screen.findByRole("list", { name: "Meals on Friday 9 October" });
+    const links = within(meals).getAllByRole("link");
+    expect(links[0]).toHaveTextContent("about 10 min");
+    expect(links[1]).not.toHaveTextContent("min");
+  });
+
   it("lazy-loads meal photos", async () => {
     setup({ "GET /plans/current": json(makePlan()) });
 

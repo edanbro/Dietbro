@@ -67,7 +67,7 @@ async def test_a_week_link_shows_only_the_meals(
     assert len(shared["days"]) == 7
     meal = shared["days"][0]["meals"][0]
     assert set(meal) == {"slot", "recipe", "kcal"}
-    assert set(meal["recipe"]) == {"id", "name", "category", "cuisine", "image_url"}
+    assert set(meal["recipe"]) == {"id", "name", "category", "cuisine", "image_url", "minutes"}
     text = str(shared).lower()
     assert "peanut" not in text  # nothing about the person's allergies
 

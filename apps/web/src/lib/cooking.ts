@@ -13,10 +13,12 @@ const UNITS: Record<string, number> = {
 
 // "20 minutes", "1-2 hours", "30 to 40 mins", "1½ hours", "45 secs"
 const TIME =
-  /(\d+(?:[.,]\d+)?|½)(?:\s*(?:-|–|to)\s*(\d+(?:[.,]\d+)?))?\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/gi;
+  /(\d+(?:[.,]\d+)?½?|½)(?:\s*(?:-|–|to)\s*(\d+(?:[.,]\d+)?))?\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/gi;
 
 function num(text: string): number {
-  return text === "½" ? 0.5 : Number(text.replace(",", "."));
+  const half = text.endsWith("½") ? 0.5 : 0;
+  const whole = text.replace("½", "");
+  return (whole ? Number(whole.replace(",", ".")) : 0) + half;
 }
 
 /**

@@ -364,6 +364,9 @@ class RecipeCard(BaseModel):
     category: str | None
     cuisine: str | None
     image_url: str | None
+    minutes: int | None = Field(
+        default=None, description="about how long it takes, estimated from the method"
+    )
 
 
 class MealOut(BaseModel):

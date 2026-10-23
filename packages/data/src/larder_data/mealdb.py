@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from larder_core.cook_time import cook_minutes
 from larder_db.models import Recipe, RecipeIngredient, RecipeTag
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ async def load_recipes(
         recipe.category = d.category
         recipe.cuisine = d.cuisine
         recipe.instructions = d.instructions
+        recipe.minutes = cook_minutes(d.instructions)
         recipe.image_url = d.image_url
         recipe.source_url = d.source_url
         recipe.nutrition_complete = False

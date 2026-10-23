@@ -75,6 +75,9 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
         .getByRole("button", { name: /Bananas, raw/i })
         .first()
         .click();
+      // A snack, whatever the time: the meal defaults to the time of day, and logging over
+      // today's dinner would take the dinner the leftovers step below cooks extra of.
+      await page.getByLabel("Meal", { exact: true }).selectOption("snack");
       const logged = page.waitForResponse((r) => r.url().endsWith("/diary/log"));
       await page.getByRole("button", { name: "Log it" }).click();
       expect((await logged).ok()).toBe(true);

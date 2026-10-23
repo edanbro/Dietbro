@@ -42,6 +42,7 @@ async def test_editing_your_own_recipe_changes_it_in_place(
     before = (await api.get(f"/recipes/{rid}", headers=chat.auth("user_a"))).json()
 
     edited = body(("chicken", "300 g"), ("rice", "250 g"), name="Chicken and more rice")
+    edited["instructions"] = "Cook the rice for 15 minutes. Fry the chicken for 10 minutes."
     response = await api.put(f"/recipes/{rid}", json=edited, headers=chat.auth("user_a"))
 
     assert response.status_code == 200, response.text
@@ -51,6 +52,7 @@ async def test_editing_your_own_recipe_changes_it_in_place(
     assert [i["name"] for i in after["ingredients"]] == ["chicken", "rice"]
     assert after["per_serving"]["kcal"] != before["per_serving"]["kcal"]
     assert after["source"] == "imported"  # where it came from stays
+    assert (before["minutes"], after["minutes"]) == (30, 25)  # follows the method
 
 
 async def test_an_unsafe_edit_is_refused_and_changes_nothing(

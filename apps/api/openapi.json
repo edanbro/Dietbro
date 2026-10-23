@@ -2553,6 +2553,24 @@
             }
           },
           {
+            "name": "max_minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 240,
+                  "minimum": 5
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Minutes"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -8482,6 +8500,18 @@
               }
             ],
             "title": "Image Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes",
+            "description": "about how long it takes, estimated from the method"
           }
         },
         "type": "object",
@@ -8560,6 +8590,18 @@
               }
             ],
             "title": "Image Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes",
+            "description": "about how long it takes, estimated from the method"
           },
           "instructions": {
             "type": "string",
@@ -8849,6 +8891,18 @@
               }
             ],
             "title": "Image Url"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes",
+            "description": "about how long it takes, estimated from the method"
           },
           "slots": {
             "items": {

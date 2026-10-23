@@ -5,6 +5,7 @@ import {
   bandStatus,
   formatBand,
   formatGrams,
+  formatMinutes,
   formatMoney,
   formatNumber,
   formatServings,
@@ -78,4 +79,15 @@ describe("labels", () => {
     );
     expect(formatNumber(13300)).toBe("13,300");
   });
+});
+
+describe("formatMinutes", () => {
+  it.each([
+    [5, "5 min"],
+    [45, "45 min"],
+    [60, "1 h"],
+    [80, "1 h 20 min"],
+    [725, "12 h"],
+    [4320, "3 days"],
+  ])("%i -> %s", (minutes, text) => expect(formatMinutes(minutes)).toBe(text));
 });

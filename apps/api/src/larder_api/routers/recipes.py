@@ -93,6 +93,7 @@ async def list_recipes(
     q: Annotated[str, Query(max_length=100)] = "",
     slot: Slot | None = None,
     favourites: bool = False,
+    max_minutes: Annotated[int | None, Query(ge=5, le=240)] = None,
     limit: Annotated[int, Query(ge=1, le=60)] = 24,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RecipeListOut:
@@ -108,7 +109,9 @@ async def list_recipes(
     pool = (await cache.get(sessionmaker)).merged(
         await planning.load_private_recipes(session, user.id)
     )
-    hits = rank_recipes(pool, viewer, words, slot, favourites_only=favourites)
+    hits = rank_recipes(
+        pool, viewer, words, slot, favourites_only=favourites, max_minutes=max_minutes
+    )
     return RecipeListOut(
         items=[
             RecipeListItem(
@@ -122,6 +125,7 @@ async def list_recipes(
                 protein_g_per_serving=h.protein_g_per_serving,
                 uses_pantry=list(h.uses_pantry),
                 favourite=h.favourite,
+                minutes=h.minutes,
             )
             for h in hits[offset : offset + limit]
         ],
@@ -282,6 +286,7 @@ async def recipe_detail(session: AsyncSession, recipe: Recipe, viewer: int | Non
         category=recipe.category,
         cuisine=recipe.cuisine,
         image_url=recipe.image_url,
+        minutes=recipe.minutes,
         instructions=recipe.instructions,
         generated=recipe.owner_user_id is not None,
         source=recipe.source,

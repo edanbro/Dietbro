@@ -42,11 +42,11 @@ export function meal(
   slot: Slot,
   id: number,
   name: string,
-  { portions = 2, image = null as string | null } = {},
+  { portions = 2, image = null as string | null, minutes = null as number | null } = {},
 ): Meal {
   return {
     slot,
-    recipe: { id, name, category: null, cuisine: null, image_url: image },
+    recipe: { id, name, category: null, cuisine: null, image_url: image, minutes },
     portions,
     servings: portions / 2,
     nutrition: { kcal: 600, protein_g: 30, fat_g: 20, carbs_g: 70 },

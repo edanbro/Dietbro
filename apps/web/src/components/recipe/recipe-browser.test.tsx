@@ -83,6 +83,25 @@ describe("RecipeBrowser", () => {
     expect(await screen.findByText(/No favourites yet/)).toBeInTheDocument();
   });
 
+  it("shows how long recipes take and filters quick ones", async () => {
+    const urls: URL[] = [];
+    mockApi({
+      "GET /recipes": (req: Request) => {
+        urls.push(new URL(req.url));
+        return Response.json({ items: [item(1, "Omelette", { minutes: 15 })], total: 1 });
+      },
+    });
+    renderWithClient(<RecipeBrowser />);
+    expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent("about 15 min");
+
+    fireEvent.click(screen.getByRole("button", { name: "Under 30 min" }));
+
+    await waitFor(() =>
+      expect(urls.some((u) => u.searchParams.get("max_minutes") === "30")).toBe(true),
+    );
+    expect(urls[0]!.searchParams.has("max_minutes")).toBe(false);
+  });
+
   it("asks to finish setup first", async () => {
     mockApi({ "GET /recipes": json({ detail: ["Tell us first"] }, 409) });
     renderWithClient(<RecipeBrowser />);

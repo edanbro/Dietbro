@@ -203,6 +203,9 @@ class Recipe(NutrientColumns, Base):
     source_url: Mapped[str | None] = mapped_column(Text)
     servings: Mapped[int | None] = mapped_column(Integer)
     servings_estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    # About how long it takes, estimated from the method (larder_core.cook_time); every writer
+    # of `instructions` sets it. NULL without a method.
+    minutes: Mapped[int | None] = mapped_column(SmallInteger)
     # True when every ingredient resolved to a food with grams: only these are plannable.
     nutrition_complete: Mapped[bool] = mapped_column(Boolean, default=False)
     # Set for recipes drafted for one user (source "generated"): only that user may see, search

@@ -142,6 +142,7 @@ class RecipeText:
     tags: tuple[str, ...]  # TheMealDB tags
     ingredients: tuple[str, ...]  # ingredient lines as written
     image_url: str | None = None  # for recipe browsing
+    minutes: int | None = None  # about how long it takes (larder_core.cook_time)
 
 
 @dataclass(frozen=True, slots=True)
@@ -336,6 +337,7 @@ async def _load(session: AsyncSession, owner: ColumnElement[bool]) -> PlanningCa
             tuple(sorted(t.tag for t in r.tags)),
             tuple(line.raw_name for line in r.ingredients),
             r.image_url,
+            r.minutes,
         )
     used = {i.food_id for r in recipes.values() for i in r.ingredients}
     return PlanningCatalog(
@@ -1199,7 +1201,12 @@ def meal_out(m: db.PlanMeal) -> MealOut:
     return MealOut(
         slot=Slot(m.slot),
         recipe=RecipeCard(
-            id=r.id, name=r.name, category=r.category, cuisine=r.cuisine, image_url=r.image_url
+            id=r.id,
+            name=r.name,
+            category=r.category,
+            cuisine=r.cuisine,
+            image_url=r.image_url,
+            minutes=r.minutes,
         ),
         portions=m.portions,
         servings=m.portions / 2,

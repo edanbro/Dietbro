@@ -23,6 +23,16 @@ if [ -z "$CLERK_SECRET_KEY" ]; then
   exit 1
 fi
 
+# Updating rewrites every screenshot, not only those past the comparison's tolerance (a few
+# small labels can stay under it, and the baselines would drift from the pages).
+for a; do
+  shift
+  case "$a" in
+    -u | --update-snapshots) set -- "$@" --update-snapshots=all ;;
+    *) set -- "$@" "$a" ;;
+  esac
+done
+
 rm -rf test-results-visual
 # MSYS_NO_PATHCONV: Git Bash on Windows would otherwise rewrite the container paths.
 MSYS_NO_PATHCONV=1 docker run --rm --ipc=host --add-host=host.docker.internal:host-gateway \
@@ -43,7 +53,7 @@ MSYS_NO_PATHCONV=1 docker run --rm --ipc=host --add-host=host.docker.internal:ho
     npx playwright test --project=setup --project=visual-phone --project=visual-desktop \
       --reporter=list "$@" || status=$?
     if [ -d test-results ]; then cp -r test-results /web/test-results-visual; fi
-    case " $* " in *" --update-snapshots "*|*" -u "*)
+    case " $* " in *" --update-snapshots"*)
       rm -rf /web/e2e/__screenshots__ && cp -r e2e/__screenshots__ /web/e2e/ ;;
     esac
     exit $status

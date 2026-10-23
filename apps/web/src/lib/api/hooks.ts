@@ -79,7 +79,13 @@ export type DiaryDay = Schemas["DiaryDayOut"];
 export type Weight = Schemas["WeightOut"];
 export type RecipeListItem = Schemas["RecipeListItem"];
 export type RecipeVerdict = Schemas["RecipeFeedbackIn"]["verdict"];
-export type RecipeQuery = { q: string; slot: Slot | null; favourites: boolean };
+export type RecipeQuery = {
+  q: string;
+  slot: Slot | null;
+  favourites: boolean;
+  /** Only recipes known to take at most this long. */
+  maxMinutes?: number | null;
+};
 
 export const keys = {
   me: ["me"] as const,
@@ -1168,6 +1174,7 @@ export function useRecipeList(query: RecipeQuery) {
               q: query.q,
               slot: query.slot ?? undefined,
               favourites: query.favourites,
+              max_minutes: query.maxMinutes ?? undefined,
               limit: RECIPE_PAGE,
               offset: pageParam,
             },

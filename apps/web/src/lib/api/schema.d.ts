@@ -2918,6 +2918,11 @@ export interface components {
             cuisine: string | null;
             /** Image Url */
             image_url: string | null;
+            /**
+             * Minutes
+             * @description about how long it takes, estimated from the method
+             */
+            minutes?: number | null;
         };
         /** RecipeCreatedOut */
         RecipeCreatedOut: {
@@ -2943,6 +2948,11 @@ export interface components {
             cuisine: string | null;
             /** Image Url */
             image_url: string | null;
+            /**
+             * Minutes
+             * @description about how long it takes, estimated from the method
+             */
+            minutes?: number | null;
             /** Instructions */
             instructions: string;
             /** Generated */
@@ -3022,6 +3032,11 @@ export interface components {
             cuisine: string | null;
             /** Image Url */
             image_url: string | null;
+            /**
+             * Minutes
+             * @description about how long it takes, estimated from the method
+             */
+            minutes?: number | null;
             /** Slots */
             slots: components["schemas"]["Slot"][];
             /** Kcal Per Serving */
@@ -5407,6 +5422,7 @@ export interface operations {
                 q?: string;
                 slot?: components["schemas"]["Slot"] | null;
                 favourites?: boolean;
+                max_minutes?: number | null;
                 limit?: number;
                 offset?: number;
             };
