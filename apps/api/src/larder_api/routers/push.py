@@ -1,4 +1,5 @@
-"""Expiry reminders by Web Push: turn them on or off per browser (larder_api.reminders sends)."""
+"""Reminders by Web Push: turn them on or off per browser, and the weekly recap on or off
+(larder_api.reminders sends)."""
 
 from typing import Annotated
 
@@ -7,7 +8,12 @@ from sqlalchemy import delete, func, select
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
-from larder_api.schemas import PushConfigOut, PushSubscriptionIn, PushUnsubscribeIn
+from larder_api.schemas import (
+    PushConfigOut,
+    PushSubscriptionIn,
+    PushUnsubscribeIn,
+    RecapSettingIn,
+)
 from larder_api.settings import Settings, get_settings
 from larder_db.models import PushSubscription
 
@@ -28,7 +34,16 @@ async def get_push(
         enabled=enabled,
         public_key=settings.vapid_public_key if enabled else None,
         subscribed=count or 0,
+        weekly_recap=user.weekly_recap,
     )
+
+
+@router.put("/recap", status_code=status.HTTP_204_NO_CONTENT, operation_id="putRecapSetting")
+async def put_recap(body: RecapSettingIn, user: CurrentUser, session: Session) -> Response:
+    """The Sunday-evening recap on or off (in every browser with reminders on)."""
+    user.weekly_recap = body.enabled
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.put("", status_code=status.HTTP_204_NO_CONTENT, operation_id="putPush")

@@ -121,6 +121,19 @@ export function RemindersForm() {
     }
   };
 
+  const setRecap = async (enabled: boolean) => {
+    setBusy(true);
+    try {
+      const result = await api.PUT("/me/push/recap", { body: { enabled } });
+      if (!result.response.ok) unwrap(result);
+    } catch {
+      toast.error("Couldn't save that. Try again.");
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  };
+
   const on = here.data === true;
   return (
     <div className="flex flex-col gap-3">
@@ -136,6 +149,18 @@ export function RemindersForm() {
         {on ? <BellOffIcon aria-hidden /> : <BellIcon aria-hidden />}
         {on ? "Turn off on this device" : "Turn on reminders"}
       </Button>
+      {config.data?.enabled ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            checked={config.data.weekly_recap}
+            disabled={busy}
+            onChange={(e) => void setRecap(e.target.checked)}
+          />
+          Also a week in review on Sunday evenings
+        </label>
+      ) : null}
       {config.data && config.data.subscribed > (on ? 1 : 0) ? (
         <p className="text-xs text-muted-foreground">
           Also on in {config.data.subscribed - (on ? 1 : 0)} other{" "}

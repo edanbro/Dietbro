@@ -1063,6 +1063,18 @@ export function useSpending(weeks = 12) {
   });
 }
 
+export type Recap = Schemas["RecapOut"];
+
+/** A week looked back on: `week` is any of its days; the last full week without one. */
+export function useRecap(week?: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["recap", week ?? "last"] as const,
+    queryFn: async () =>
+      unwrap(await api.GET("/insights/recap", { params: { query: week ? { week } : {} } })),
+  });
+}
+
 export type Prices = Schemas["PricesOut"];
 export type PriceItem = Prices["items"][number];
 

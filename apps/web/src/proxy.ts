@@ -8,6 +8,7 @@ const isAppRoute = createRouteMatcher([
   "/setup(.*)",
   "/pantry(.*)",
   "/profile(.*)",
+  "/recap(.*)",
 ]);
 
 export default clerkMiddleware(

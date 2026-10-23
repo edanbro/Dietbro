@@ -101,6 +101,7 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     await visit("recipe", recipe!);
     await visit("cook", `${recipe}/cook`);
     await visit("diary", "/diary");
+    await visit("recap", "/recap");
     await visit("chat", "/chat");
     await visit("profile", "/profile");
     await visit("setup", "/setup");

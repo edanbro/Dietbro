@@ -7,7 +7,8 @@ Jobs (names in larder_api.jobs):
 - sweep_receipts (cron, every 5 min): fail uploads stuck queued/processing past
   receipt_stale_after_min (e.g. a job killed by its timeout) and delete their photos.
 - send_reminders (cron, hourly): expiry reminders by Web Push to users for whom it is
-  reminder_hour now (larder_api.reminders); off without VAPID keys.
+  reminder_hour now, and the weekly recap where it is Sunday at recap_hour
+  (larder_api.reminders); off without VAPID keys.
 - reset_demo (cron, 03:00 UTC): the public demo account back to its starting point
   (larder_api.demo); only with DEMO_AUTH_SUBJECT set.
 
@@ -26,7 +27,7 @@ from arq.typing import WorkerCoroutine
 from larder_api.demo import reset_demo
 from larder_api.jobs import READ_RECEIPT, RESET_DEMO, SEND_REMINDERS, SWEEP_RECEIPTS
 from larder_api.receipts import ReceiptUnreadable, process_upload, sweep_stale
-from larder_api.reminders import send_due
+from larder_api.reminders import send_due, send_recaps
 from larder_api.settings import get_settings
 from larder_db.engine import make_engine, make_sessionmaker
 from larder_worker.ocr import Ocr, UnreadableImage
@@ -81,10 +82,14 @@ async def reset_demo_account(ctx: dict[str, Any]) -> None:
 
 
 async def send_reminders(ctx: dict[str, Any]) -> int:
-    sent = await send_due(ctx["maker"], datetime.now(UTC), settings)
+    now = datetime.now(UTC)
+    sent = await send_due(ctx["maker"], now, settings)
     if sent:
         logger.info("sent %d expiry reminders", sent)
-    return sent
+    recaps = await send_recaps(ctx["maker"], now, settings)
+    if recaps:
+        logger.info("sent %d weekly recaps", recaps)
+    return sent + recaps
 
 
 class WorkerSettings:

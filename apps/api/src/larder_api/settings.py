@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     vapid_private_key: SecretStr | None = None  # base64url raw private key
     vapid_subject: str = "mailto:admin@localhost"  # who push services contact about abuse
     reminder_hour: int = 9  # local time
+    recap_hour: int = 18  # the weekly recap, Sundays, local time
 
     # Hosting without a separate worker (free tiers, larder_api.inline): pasted receipts are read
     # in the API process and periodic jobs run on a minute ticker; receipt photos are refused.

@@ -33,6 +33,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     text,
+    true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, deferred, mapped_column, relationship
@@ -320,6 +321,9 @@ class User(Base):
         String(32), unique=True, info={"constraint": "uq_users_calendar_token"}
     )
     calendar_times: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    # The Sunday-evening recap by push (larder_api.reminders.send_recaps), in browsers that
+    # have reminders on.
+    weekly_recap: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
 
 class Goals(Base):
@@ -530,6 +534,7 @@ class PushSubscription(Base):
     p256dh: Mapped[str] = mapped_column(String(200))
     auth: Mapped[str] = mapped_column(String(100))
     last_sent_on: Mapped[date | None] = mapped_column(Date)
+    recap_sent_on: Mapped[date | None] = mapped_column(Date)  # the Sunday it last went out
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

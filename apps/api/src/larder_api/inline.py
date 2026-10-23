@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api.demo import reset_demo
 from larder_api.receipts import ReceiptUnreadable, process_upload, sweep_stale
-from larder_api.reminders import send_due
+from larder_api.reminders import send_due, send_recaps
 from larder_api.settings import Settings
 
 __all__ = ["NO_PHOTOS", "InlineWorker"]
@@ -73,6 +73,9 @@ class InlineWorker:
             sent = await send_due(self.sessionmaker, now, self.settings)
             if sent:
                 logger.info("sent %d expiry reminders", sent)
+            recaps = await send_recaps(self.sessionmaker, now, self.settings)
+            if recaps:
+                logger.info("sent %d weekly recaps", recaps)
         if self.settings.demo_auth_subject and now.hour == 3 and now.minute == 0:
             await reset_demo(self.sessionmaker, self.settings.demo_auth_subject, now)
             logger.info("demo account reset")

@@ -1076,6 +1076,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/insights/recap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recap
+         * @description A week looked back on: meals, energy and protein, spending, weight, favourites and price
+         *     rises. Weeks after this one have nothing to show.
+         */
+        get: operations["getRecap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/insights/prices": {
         parameters: {
             query?: never;
@@ -1111,6 +1132,26 @@ export interface paths {
          * @description Send reminders to this browser (an endpoint moves to the user who subscribed last).
          */
         put: operations["putPush"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/push/recap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Recap
+         * @description The Sunday-evening recap on or off (in every browser with reminders on).
+         */
+        put: operations["putRecapSetting"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2590,6 +2631,11 @@ export interface components {
              * @default 0
              */
             subscribed: number;
+            /**
+             * Weekly Recap
+             * @default true
+             */
+            weekly_recap: boolean;
         };
         /** PushKeys */
         PushKeys: {
@@ -2623,6 +2669,105 @@ export interface components {
             checks: {
                 [key: string]: "ok" | "error";
             };
+        };
+        /**
+         * RecapOut
+         * @description A week looked back on (Monday to Sunday): only what happened, from the meal logs,
+         *     confirmed receipts, weigh-ins and price watch.
+         */
+        RecapOut: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "GBP" | "EUR" | "USD";
+            /** Planned Meals */
+            planned_meals: number;
+            /**
+             * Eaten Meals
+             * @description planned meals marked eaten
+             */
+            eaten_meals: number;
+            /** Skipped Meals */
+            skipped_meals: number;
+            /**
+             * Off Plan
+             * @description food logged that wasn't on the plan
+             */
+            off_plan: number;
+            /** Logged Days */
+            logged_days: number;
+            /**
+             * Avg Kcal
+             * @description a logged day's average
+             */
+            avg_kcal: number | null;
+            /** Kcal Min */
+            kcal_min: number | null;
+            /** Kcal Max */
+            kcal_max: number | null;
+            /**
+             * On Target Days
+             * @description logged days within the calorie band
+             */
+            on_target_days: number;
+            /** Protein G Min */
+            protein_g_min: number | null;
+            /**
+             * Protein Days
+             * @description logged days reaching the protein goal
+             */
+            protein_days: number | null;
+            /** Spent Minor */
+            spent_minor: number;
+            /** Budget Minor */
+            budget_minor: number | null;
+            /** Planned Cost Minor */
+            planned_cost_minor: number | null;
+            /**
+             * Weight Change Kg
+             * @description first to last weigh-in that week
+             */
+            weight_change_kg: number | null;
+            /** Weight Kg */
+            weight_kg: number | null;
+            /** Top Recipes */
+            top_recipes: components["schemas"]["RecapTopOut"][];
+            /** Price Rises */
+            price_rises: components["schemas"]["RecapRiseOut"][];
+            /**
+             * Empty
+             * @description nothing logged, bought or weighed that week
+             */
+            empty: boolean;
+        };
+        /** RecapRiseOut */
+        RecapRiseOut: {
+            /** Name */
+            name: string;
+            /** Change Pct */
+            change_pct: number;
+        };
+        /** RecapSettingIn */
+        RecapSettingIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** RecapTopOut */
+        RecapTopOut: {
+            recipe: components["schemas"]["RecipeCard"];
+            /** Times */
+            times: number;
         };
         /** ReceiptConfirmOut */
         ReceiptConfirmOut: {
@@ -5953,6 +6098,38 @@ export interface operations {
             };
         };
     };
+    getRecap: {
+        parameters: {
+            query?: {
+                /** @description any day of the week (default: the last full week) */
+                week?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecapOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getPrices: {
         parameters: {
             query?: {
@@ -6014,6 +6191,37 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PushSubscriptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putRecapSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecapSettingIn"];
             };
         };
         responses: {

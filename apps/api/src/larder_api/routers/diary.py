@@ -9,10 +9,9 @@ from datetime import date, timedelta
 from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.orm import aliased
 
 from larder_api import planning, replans
 from larder_api.auth import CurrentUser
@@ -20,6 +19,7 @@ from larder_api.chat import offplan
 from larder_api.chat.context import short_name
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
+from larder_api.insights import monday, weekly_recap, weekly_spending
 from larder_api.price_watch import load_lines, watch
 from larder_api.ratelimit import per_user
 from larder_api.routers.plans import REPLAN_ERRORS, get_catalog_cache, get_replan_planner
@@ -34,6 +34,7 @@ from larder_api.schemas import (
     PriceItemOut,
     PricePointOut,
     PricesOut,
+    RecapOut,
     ReplanRequest,
     SpendingCategoryOut,
     SpendingOut,
@@ -50,8 +51,6 @@ from larder_db.models import (
     Goals,
     MealPlan,
     PlanMeal,
-    ReceiptLine,
-    ReceiptUpload,
 )
 from larder_llm.schemas import AteOffPlan, OffPlanItem, When
 
@@ -284,12 +283,6 @@ async def log_food(
 
 
 MAX_WEEKS = 52
-# Receipt lines that went into the pantry (not rejected), as in larder_api.prices.
-_KEPT = ("suggested", "accepted", "edited")
-
-
-def monday(d: date) -> date:
-    return d - timedelta(days=d.weekday())
 
 
 @router.get("/insights/spending", operation_id="getSpending")
@@ -303,74 +296,38 @@ async def spending(
     estimated food cost, and where the money went by food group."""
     this_week = monday(local_today(user.timezone, clock()))
     first = this_week - timedelta(weeks=weeks - 1)
-    generic = aliased(Food)
-    rows = (
-        await session.execute(
-            select(
-                ReceiptUpload.purchased_on,
-                ReceiptLine.price_minor,
-                ReceiptLine.food_id,
-                func.coalesce(generic.category, Food.category),
-            )
-            .join(ReceiptUpload, ReceiptLine.upload_id == ReceiptUpload.id)
-            .outerjoin(Food, ReceiptLine.food_id == Food.id)
-            .outerjoin(generic, Food.generic_food_id == generic.id)
-            .where(
-                ReceiptUpload.user_id == user.id,
-                ReceiptUpload.status == "confirmed",
-                ReceiptUpload.purchased_on >= first,
-                ReceiptLine.status.in_(_KEPT),
-                ReceiptLine.price_minor > 0,
-            )
-        )
-    ).all()
-    spent = dict.fromkeys((first + timedelta(weeks=i) for i in range(weeks)), 0)
-    by_category: dict[str | None, int] = {}
-    unmatched = 0
-    for bought, price, food_id, category in rows:
-        week = monday(bought)
-        if week not in spent or price is None:
-            continue
-        spent[week] += price
-        if food_id is None:
-            unmatched += price
-        else:
-            by_category[category] = by_category.get(category, 0) + price
-
-    # The latest version of each plan (per start date) starting in the window.
-    latest = (
-        select(MealPlan.start_date, func.max(MealPlan.version).label("version"))
-        .where(MealPlan.user_id == user.id, MealPlan.start_date >= first)
-        .group_by(MealPlan.start_date)
-        .subquery()
-    )
-    plans = await session.execute(
-        select(MealPlan.start_date, MealPlan.stats)
-        .join(
-            latest,
-            (MealPlan.start_date == latest.c.start_date) & (MealPlan.version == latest.c.version),
-        )
-        .where(MealPlan.user_id == user.id)
-    )
-    planned: dict[date, int] = {}
-    for start, stats in plans:
-        cost = stats.get("cost_minor")
-        if isinstance(cost, int) and monday(start) in spent:
-            planned[monday(start)] = planned.get(monday(start), 0) + cost
-
+    data = await weekly_spending(session, user.id, first, weeks)
     goals = await session.get(Goals, user.id)
     return SpendingOut(
         currency=cast(Currency, goals.currency) if goals is not None else "GBP",
         weeks=[
-            SpendingWeekOut(start=w, spent_minor=v, planned_minor=planned.get(w))
-            for w, v in spent.items()
+            SpendingWeekOut(start=w, spent_minor=v, planned_minor=data.planned.get(w))
+            for w, v in data.spent.items()
         ],
         categories=[
             SpendingCategoryOut(category=c, spent_minor=v)
-            for c, v in sorted(by_category.items(), key=lambda kv: -kv[1])
+            for c, v in sorted(data.by_category.items(), key=lambda kv: -kv[1])
         ],
-        unmatched_minor=unmatched,
+        unmatched_minor=data.unmatched,
     )
+
+
+@router.get("/insights/recap", operation_id="getRecap")
+async def recap(
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    week: Annotated[
+        date | None, Query(description="any day of the week (default: the last full week)")
+    ] = None,
+) -> RecapOut:
+    """A week looked back on: meals, energy and protein, spending, weight, favourites and price
+    rises. Weeks after this one have nothing to show."""
+    today = local_today(user.timezone, clock())
+    start = monday(week) if week else monday(today) - timedelta(weeks=1)
+    if start > today:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, ["That week hasn't started yet."])
+    return await weekly_recap(session, user, start, today)
 
 
 @router.get("/insights/prices", operation_id="getPrices")

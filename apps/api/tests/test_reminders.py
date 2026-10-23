@@ -152,7 +152,7 @@ async def test_push_is_off_without_keys(api: httpx.AsyncClient, auth: Auth) -> N
         )
     finally:
         app.dependency_overrides.pop(get_settings, None)
-    assert config == {"enabled": False, "public_key": None, "subscribed": 0}
+    assert config == {"enabled": False, "public_key": None, "subscribed": 0, "weekly_recap": True}
     assert refused.status_code == 409
 
 
@@ -163,7 +163,7 @@ async def test_subscribe_and_unsubscribe(api: httpx.AsyncClient, auth: Auth) -> 
     assert (await api.put("/me/push", json=body, headers=auth())).status_code == 204
     assert (await api.put("/me/push", json=body, headers=auth())).status_code == 204  # again
     config = (await api.get("/me/push", headers=auth())).json()
-    assert config == {"enabled": True, "public_key": KEYS[0], "subscribed": 1}
+    assert config == {"enabled": True, "public_key": KEYS[0], "subscribed": 1, "weekly_recap": True}
 
     gone = await api.post(
         "/me/push/unsubscribe", json={"endpoint": body["endpoint"]}, headers=auth()

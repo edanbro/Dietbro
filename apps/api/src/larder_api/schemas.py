@@ -466,6 +466,44 @@ class PricesOut(BaseModel):
     items: list[PriceItemOut] = Field(description="rises first, biggest first; then by name")
 
 
+class RecapTopOut(BaseModel):
+    recipe: RecipeCard
+    times: int
+
+
+class RecapRiseOut(BaseModel):
+    name: str
+    change_pct: int
+
+
+class RecapOut(BaseModel):
+    """A week looked back on (Monday to Sunday): only what happened, from the meal logs,
+    confirmed receipts, weigh-ins and price watch."""
+
+    week_start: date
+    week_end: date
+    currency: Currency
+    planned_meals: int
+    eaten_meals: int = Field(description="planned meals marked eaten")
+    skipped_meals: int
+    off_plan: int = Field(description="food logged that wasn't on the plan")
+    logged_days: int
+    avg_kcal: int | None = Field(description="a logged day's average")
+    kcal_min: float | None
+    kcal_max: float | None
+    on_target_days: int = Field(description="logged days within the calorie band")
+    protein_g_min: float | None
+    protein_days: int | None = Field(description="logged days reaching the protein goal")
+    spent_minor: int
+    budget_minor: int | None
+    planned_cost_minor: int | None
+    weight_change_kg: float | None = Field(description="first to last weigh-in that week")
+    weight_kg: float | None
+    top_recipes: list[RecapTopOut]
+    price_rises: list[RecapRiseOut]
+    empty: bool = Field(description="nothing logged, bought or weighed that week")
+
+
 class SpendingOut(BaseModel):
     """Grocery spending from the user's own confirmed receipts, week by week, beside what the
     plans estimated. Lines without a price, or rejected, don't count."""
@@ -524,6 +562,11 @@ class PushConfigOut(BaseModel):
     enabled: bool
     public_key: str | None = None
     subscribed: int = 0  # browsers this user turned reminders on in
+    weekly_recap: bool = True  # also the Sunday-evening recap
+
+
+class RecapSettingIn(BaseModel):
+    enabled: bool
 
 
 class PushKeys(BaseModel):

@@ -1,13 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { Trash2Icon } from "lucide-react";
+import { CalendarCheckIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ErrorAlert, LabeledInput } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type DiaryDay, useDiary, useWeight, useWeights } from "@/lib/api/hooks";
 import { localISODate, shortDate } from "@/lib/dates";
@@ -184,7 +185,13 @@ export function DiaryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Diary</h1>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Diary</h1>
+        <Link href="/recap" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <CalendarCheckIcon aria-hidden />
+          Week in review
+        </Link>
+      </div>
       {diary.isPending ? (
         <div className="flex flex-col gap-2" aria-busy>
           <Skeleton className="h-16" />

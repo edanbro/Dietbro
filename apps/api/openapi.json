@@ -3588,6 +3588,64 @@
         }
       }
     },
+    "/insights/recap": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Recap",
+        "description": "A week looked back on: meals, energy and protein, spending, weight, favourites and price\nrises. Weeks after this one have nothing to show.",
+        "operationId": "getRecap",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "any day of the week (default: the last full week)",
+              "title": "Week"
+            },
+            "description": "any day of the week (default: the last full week)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecapOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/insights/prices": {
       "get": {
         "tags": [
@@ -3676,6 +3734,46 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PushSubscriptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/me/push/recap": {
+      "put": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Put Recap",
+        "description": "The Sunday-evening recap on or off (in every browser with reminders on).",
+        "operationId": "putRecapSetting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecapSettingIn"
               }
             }
           },
@@ -7566,6 +7664,11 @@
             "type": "integer",
             "title": "Subscribed",
             "default": 0
+          },
+          "weekly_recap": {
+            "type": "boolean",
+            "title": "Weekly Recap",
+            "default": true
           }
         },
         "type": "object",
@@ -7659,6 +7762,256 @@
           "checks"
         ],
         "title": "Readiness"
+      },
+      "RecapOut": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GBP",
+              "EUR",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "planned_meals": {
+            "type": "integer",
+            "title": "Planned Meals"
+          },
+          "eaten_meals": {
+            "type": "integer",
+            "title": "Eaten Meals",
+            "description": "planned meals marked eaten"
+          },
+          "skipped_meals": {
+            "type": "integer",
+            "title": "Skipped Meals"
+          },
+          "off_plan": {
+            "type": "integer",
+            "title": "Off Plan",
+            "description": "food logged that wasn't on the plan"
+          },
+          "logged_days": {
+            "type": "integer",
+            "title": "Logged Days"
+          },
+          "avg_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Kcal",
+            "description": "a logged day's average"
+          },
+          "kcal_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Max"
+          },
+          "on_target_days": {
+            "type": "integer",
+            "title": "On Target Days",
+            "description": "logged days within the calorie band"
+          },
+          "protein_g_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein G Min"
+          },
+          "protein_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Days",
+            "description": "logged days reaching the protein goal"
+          },
+          "spent_minor": {
+            "type": "integer",
+            "title": "Spent Minor"
+          },
+          "budget_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Minor"
+          },
+          "planned_cost_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Cost Minor"
+          },
+          "weight_change_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Change Kg",
+            "description": "first to last weigh-in that week"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "top_recipes": {
+            "items": {
+              "$ref": "#/components/schemas/RecapTopOut"
+            },
+            "type": "array",
+            "title": "Top Recipes"
+          },
+          "price_rises": {
+            "items": {
+              "$ref": "#/components/schemas/RecapRiseOut"
+            },
+            "type": "array",
+            "title": "Price Rises"
+          },
+          "empty": {
+            "type": "boolean",
+            "title": "Empty",
+            "description": "nothing logged, bought or weighed that week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start",
+          "week_end",
+          "currency",
+          "planned_meals",
+          "eaten_meals",
+          "skipped_meals",
+          "off_plan",
+          "logged_days",
+          "avg_kcal",
+          "kcal_min",
+          "kcal_max",
+          "on_target_days",
+          "protein_g_min",
+          "protein_days",
+          "spent_minor",
+          "budget_minor",
+          "planned_cost_minor",
+          "weight_change_kg",
+          "weight_kg",
+          "top_recipes",
+          "price_rises",
+          "empty"
+        ],
+        "title": "RecapOut",
+        "description": "A week looked back on (Monday to Sunday): only what happened, from the meal logs,\nconfirmed receipts, weigh-ins and price watch."
+      },
+      "RecapRiseOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "change_pct": {
+            "type": "integer",
+            "title": "Change Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "change_pct"
+        ],
+        "title": "RecapRiseOut"
+      },
+      "RecapSettingIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "RecapSettingIn"
+      },
+      "RecapTopOut": {
+        "properties": {
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCard"
+          },
+          "times": {
+            "type": "integer",
+            "title": "Times"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe",
+          "times"
+        ],
+        "title": "RecapTopOut"
       },
       "ReceiptConfirmOut": {
         "properties": {

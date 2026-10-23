@@ -42,6 +42,7 @@ const PAGES = (recipeId: number): [string, string][] => [
   ["recipe", `/recipes/${recipeId}`],
   ["cook", `/recipes/${recipeId}/cook`],
   ["diary", "/diary"],
+  ["recap", "/recap"],
   ["chat", "/chat"],
   ["profile", "/profile"],
   ["setup", "/setup"],
