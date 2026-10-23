@@ -2674,7 +2674,7 @@
           "recipes"
         ],
         "summary": "List Recipes",
-        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use.",
+        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest\nfoods still to get first, each with those foods (`missing`).",
         "operationId": "listRecipes",
         "security": [
           {
@@ -2735,6 +2735,16 @@
                 }
               ],
               "title": "Max Minutes"
+            }
+          },
+          {
+            "name": "pantry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Pantry"
             }
           },
           {
@@ -9297,6 +9307,21 @@
             "type": "boolean",
             "title": "Favourite",
             "default": false
+          },
+          "missing": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing",
+            "description": "?pantry=true: the foods it needs that the pantry hasn't got"
           }
         },
         "type": "object",

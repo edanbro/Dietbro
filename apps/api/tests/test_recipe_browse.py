@@ -9,7 +9,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_db.engine import make_sessionmaker
-from larder_db.models import Recipe
+from larder_db.models import PantryItem, Recipe
 
 Auth = Callable[..., dict[str, str]]
 NewUser = Callable[..., Awaitable[int]]
@@ -153,3 +153,39 @@ async def test_browse_shows_cooking_time_and_filters_quick_recipes(
     # Only recipes known to be quick: one without an estimate isn't.
     assert names(quick) == ["Porridge"]
     assert detail["minutes"] == 10
+
+
+async def test_cook_from_the_pantry_puts_fewest_foods_to_get_first(
+    api: httpx.AsyncClient,
+    auth: Auth,
+    new_user: NewUser,
+    menu: dict[str, int],
+    db_engine: AsyncEngine,
+) -> None:
+    user_id = await new_user("user_a")
+    traybake = (await api.get(f"/recipes/{menu['Chicken traybake']}", headers=auth())).json()
+    foods = {i["name"]: i["food_id"] for i in traybake["ingredients"]}
+    for name in ("chicken", "broccoli"):
+        body = {"food_id": foods[name], "quantity": 500, "unit": "g"}
+        assert (await api.post("/pantry", json=body, headers=auth())).status_code == 201
+    porridge = (await api.get(f"/recipes/{menu['Porridge']}", headers=auth())).json()
+    async with make_sessionmaker(db_engine)() as session:  # oats, all used up
+        oats = porridge["ingredients"][0]["food_id"]
+        session.add(PantryItem(user_id=user_id, food_id=oats, grams=0, quantity=0, unit="g"))
+        await session.commit()
+
+    page = await browse(api, auth, pantry=True, limit=60)
+    usual = await browse(api, auth, limit=60)
+    items = {i["name"]: i for i in page["items"]}
+
+    assert names(page)[:2] == ["Chicken traybake", "Chicken and broccoli rice"]
+    assert items["Chicken traybake"]["missing"] == []
+    [rice] = items["Chicken and broccoli rice"]["missing"]
+    assert rice.startswith("Rice")
+    # Only recipes using something in the pantry; a used-up item isn't in it.
+    assert all(i["uses_pantry"] for i in page["items"])
+    assert "Porridge" not in items
+    assert all(i["missing"] is None for i in usual["items"])
+    assert not next(i for i in usual["items"] if i["name"] == "Porridge")["uses_pantry"]
+    missing = [len(i["missing"]) for i in page["items"]]
+    assert missing == sorted(missing)

@@ -118,6 +118,8 @@ class RecipeHit:
     image_url: str | None = None
     favourite: bool = False
     minutes: int | None = None
+    # Cooking from the pantry: the foods it needs that the pantry hasn't got (else None).
+    missing: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,7 +142,7 @@ async def viewer_of(session: AsyncSession, user_id: int) -> Viewer | None:
     prefs = await session.get(db.Preferences, user_id)
     pantry = await session.scalars(
         select(db.PantryItem)
-        .where(db.PantryItem.user_id == user_id)
+        .where(db.PantryItem.user_id == user_id, db.PantryItem.grams > 0)  # not used up
         .options(selectinload(db.PantryItem.food))
     )
     stock: dict[int, str] = {}
@@ -206,14 +208,17 @@ def rank_recipes(
     *,
     favourites_only: bool = False,
     max_minutes: int | None = None,
+    from_pantry: bool = False,
 ) -> list[RecipeHit]:
     """Recipes safe for the viewer (never ones they blocked), best first: by how well they
     match `words` (all of them when there are no words), then preference (favourites rank
     up), then pantry use, then id. `max_minutes` keeps those known to take at most that long.
+    `from_pantry` keeps those using something in the pantry, fewest foods still to get first
+    (store-cupboard staples and tap water never count), then most pantry foods used.
     Shared by the chat's search and recipe browsing."""
     words = list(words)
     taste = viewer.taste
-    ranked: list[tuple[tuple[int, int, int, int], RecipeHit]] = []
+    ranked: list[tuple[tuple[int, ...], RecipeHit]] = []
     for recipe in pool.catalog.recipes.values():
         if slot is not None and slot not in recipe.meal_types:
             continue
@@ -236,6 +241,20 @@ def rank_recipes(
                 viewer.pantry[i.food_id] for i in recipe.ingredients if i.food_id in viewer.pantry
             )
         )
+        missing: tuple[str, ...] | None = None
+        if from_pantry:
+            if not uses:
+                continue
+            missing = tuple(
+                dict.fromkeys(
+                    pool.catalog.foods[i.food_id].name
+                    for i in recipe.ingredients
+                    if i.grams > 0
+                    and i.food_id in pool.catalog.foods
+                    and i.food_id not in viewer.pantry
+                    and i.food_id not in pool.unshoppable
+                )
+            )
         hit = RecipeHit(
             id=recipe.id,
             name=recipe.name,
@@ -249,8 +268,13 @@ def rank_recipes(
             image_url=text.image_url if text else None,
             favourite=favourite,
             minutes=minutes,
+            missing=missing,
         )
-        key = (-points, -preference(recipe, taste), -len(uses), recipe.id)
+        key = (
+            (-points, len(missing), -len(uses), -preference(recipe, taste), recipe.id)
+            if missing is not None
+            else (-points, -preference(recipe, taste), -len(uses), recipe.id)
+        )
         ranked.append((key, hit))
     ranked.sort(key=lambda pair: pair[0])
     return [hit for _, hit in ranked]

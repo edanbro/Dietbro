@@ -86,6 +86,8 @@ export type RecipeQuery = {
   favourites: boolean;
   /** Only recipes known to take at most this long. */
   maxMinutes?: number | null;
+  /** What can be cooked from the pantry: fewest foods still to get first. */
+  pantry?: boolean;
 };
 
 export const keys = {
@@ -1210,6 +1212,7 @@ export function useRecipeList(query: RecipeQuery) {
               slot: query.slot ?? undefined,
               favourites: query.favourites,
               max_minutes: query.maxMinutes ?? undefined,
+              pantry: query.pantry || undefined,
               limit: RECIPE_PAGE,
               offset: pageParam,
             },

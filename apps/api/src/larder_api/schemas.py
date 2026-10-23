@@ -849,6 +849,9 @@ class RecipeListItem(RecipeCard):
     protein_g_per_serving: int
     uses_pantry: list[str] = Field(default=[], description="pantry foods it uses")
     favourite: bool = False
+    missing: list[str] | None = Field(
+        default=None, description="?pantry=true: the foods it needs that the pantry hasn't got"
+    )
 
 
 class RecipeListOut(BaseModel):
