@@ -28,8 +28,11 @@ type FormState = {
   carbs_g_max: string;
   weekly_budget: string;
   currency: GoalsIn["currency"];
+  household: number;
   calorie_floor: string;
 };
+
+const HOUSEHOLD = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const GOALS: { value: Goal; label: string }[] = [
   { value: "lose", label: "Lose weight slowly" },
@@ -37,7 +40,8 @@ const GOALS: { value: Goal; label: string }[] = [
   { value: "gain", label: "Gain" },
 ];
 
-/** Daily energy band (+ optional protein minimum) and a weekly food budget. */
+/** Daily energy band (+ optional protein minimum), who the user cooks for and a weekly food
+ * budget. */
 export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
   const { data: saved } = useGoals();
   const { data: body } = useBody();
@@ -60,6 +64,7 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
         ? ""
         : String(saved.weekly_budget_minor / 100),
     currency: saved?.currency ?? me?.region.currency ?? "GBP",
+    household: saved?.household ?? 1,
     calorie_floor: fromNumber(saved?.calorie_floor ?? 1200),
   };
   const set = (patch: Partial<FormState>) => setForm({ ...current, ...patch });
@@ -81,6 +86,7 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
       carbs_g_max: toNumber(current.carbs_g_max),
       weekly_budget_minor: budget === null ? null : Math.round(budget * 100),
       currency: current.currency,
+      household: current.household,
       calorie_floor: toNumber(current.calorie_floor) ?? 1200,
       max_daily_deficit: saved?.max_daily_deficit ?? 1000,
     };
@@ -162,10 +168,32 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
         value={current.protein_g_min}
         onChange={(e) => set({ protein_g_min: e.target.value })}
       />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="household">Cooking for</Label>
+        <NativeSelect
+          id="household"
+          aria-describedby="household-hint"
+          value={current.household}
+          onChange={(e) => set({ household: Number(e.target.value) })}
+        >
+          {HOUSEHOLD.map((n) => (
+            <option key={n} value={n}>
+              {n === 1 ? "Just me" : `${n} people`}
+            </option>
+          ))}
+        </NativeSelect>
+        <p id="household-hint" className="text-xs text-muted-foreground">
+          Shopping, cost and recipe amounts cover everyone; calories and nutrition stay yours.
+        </p>
+      </div>
       <div className="grid grid-cols-[1fr_6rem] gap-3">
         <LabeledInput
           id="budget"
-          label="Weekly food budget (optional)"
+          label={
+            current.household > 1
+              ? "Weekly food budget for everyone (optional)"
+              : "Weekly food budget (optional)"
+          }
           type="number"
           inputMode="decimal"
           step="0.01"

@@ -6303,6 +6303,14 @@
             ],
             "title": "Currency",
             "default": "GBP"
+          },
+          "household": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Household",
+            "description": "people the user cooks for: shopping, cost and amounts cover them all",
+            "default": 1
           }
         },
         "type": "object",
@@ -6450,6 +6458,14 @@
             ],
             "title": "Currency",
             "default": "GBP"
+          },
+          "household": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Household",
+            "description": "people the user cooks for: shopping, cost and amounts cover them all",
+            "default": 1
           },
           "updated_at": {
             "type": "string",
@@ -7583,6 +7599,12 @@
           "shopping_items": {
             "type": "integer",
             "title": "Shopping Items"
+          },
+          "household": {
+            "type": "integer",
+            "title": "Household",
+            "description": "people the plan is cooked for (its shopping, cost, pantry use)",
+            "default": 1
           },
           "excluded_allergens": {
             "items": {
@@ -9955,6 +9977,12 @@
               }
             ],
             "title": "Budget Minor"
+          },
+          "household": {
+            "type": "integer",
+            "title": "Household",
+            "description": "people the amounts are for",
+            "default": 1
           },
           "items": {
             "items": {

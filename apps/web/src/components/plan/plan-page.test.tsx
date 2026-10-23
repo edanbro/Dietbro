@@ -187,6 +187,23 @@ describe("loaded plan", () => {
     expect(links[1]).not.toHaveTextContent("min");
   });
 
+  it("opens a recipe at everyone's servings when the plan is for a household", async () => {
+    today(2026, 10, 9);
+    setup({ "GET /plans/current": json(makePlan({ household: 3 })) });
+
+    const meals = await screen.findByRole("list", { name: "Meals on Friday 9 October" });
+    const links = within(meals).getAllByRole("link");
+    expect(links[0]).toHaveAttribute("href", "/recipes/100?servings=4.5"); // 1½ each x 3
+    expect(links[0]).toHaveTextContent("×1½"); // the user's own serving, as before
+
+    fireEvent.click(screen.getByRole("tab", { name: "Week" }));
+    const grid = await screen.findByRole("table", { name: "Meals this week" });
+    expect(within(grid).getByRole("link", { name: "Dinner 1" })).toHaveAttribute(
+      "href",
+      "/recipes/300?servings=6",
+    );
+  });
+
   it("lazy-loads meal photos", async () => {
     setup({ "GET /plans/current": json(makePlan()) });
 
@@ -242,6 +259,13 @@ describe("loaded plan", () => {
     expect(await screen.findByText("Breakfast 4")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(currentUrl()).toBe("/plan?day=2026-10-12");
+  });
+
+  it("says the cost is everyone's when the plan is for a household", async () => {
+    setup({ "GET /plans/current": json(makePlan({ household: 4 })) });
+
+    const summary = await screen.findByRole("region", { name: "This plan" });
+    expect(within(summary).getByText("Estimated cost for 4")).toBeInTheDocument();
   });
 
   it("summarises the week: energy, protein, cost against budget, pantry and waste", async () => {

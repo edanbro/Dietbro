@@ -13,6 +13,7 @@ import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Meal } from "@/lib/api/hooks";
+import { cookServings } from "@/lib/cooking";
 import { pantryUse } from "@/lib/food-name";
 import { formatMinutes, formatNumber, formatServings, servingsLabel } from "@/lib/format";
 
@@ -29,11 +30,14 @@ export function MealCard({
   meal,
   actions,
   note,
+  household = 1,
 }: {
   meal: Meal;
   actions?: MealActionsProps;
   /** e.g. "Leftovers from last night's dinner" */
   note?: string;
+  /** People the plan is cooked for: the recipe opens at everyone's servings. */
+  household?: number;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -46,7 +50,7 @@ export function MealCard({
       )}
     >
       <div className="flex items-center">
-        <MealLink meal={meal} chevron={!actions} note={note} />
+        <MealLink meal={meal} chevron={!actions} note={note} household={household} />
         {actions ? (
           <Button
             variant="ghost"
@@ -67,11 +71,21 @@ export function MealCard({
   );
 }
 
-function MealLink({ meal, chevron, note }: { meal: Meal; chevron: boolean; note?: string }) {
+function MealLink({
+  meal,
+  chevron,
+  note,
+  household,
+}: {
+  meal: Meal;
+  chevron: boolean;
+  note?: string;
+  household: number;
+}) {
   const Icon = SLOT_ICON[meal.slot];
   return (
     <Link
-      href={`/recipes/${meal.recipe.id}?servings=${meal.servings}`}
+      href={`/recipes/${meal.recipe.id}?servings=${cookServings(meal.servings, household)}`}
       className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <RecipeArt recipe={meal.recipe} className="size-16 shrink-0 rounded-lg" />

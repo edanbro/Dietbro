@@ -104,7 +104,9 @@ function Total({ list }: { list: ShoppingList }) {
   return (
     <div className="flex items-end justify-between gap-3 rounded-lg bg-muted/60 p-3">
       <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground">Estimated total</span>
+        <span className="text-xs text-muted-foreground">
+          Estimated total{list.household > 1 ? `, for ${list.household} people` : ""}
+        </span>
         <span className="text-2xl font-semibold tabular-nums">
           ≈ {formatMoney(list.total_minor, list.currency)}
         </span>

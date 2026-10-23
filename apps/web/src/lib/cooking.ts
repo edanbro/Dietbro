@@ -67,6 +67,12 @@ export function scaledAmount(
   return formatGrams(ing.grams * factor);
 }
 
+/** Servings to cook for a planned meal: the user's own times everyone they cook for, in
+ * halves, at most 20 (what ?servings= takes). */
+export function cookServings(servings: number, household = 1): number {
+  return Math.min(20, Math.round(servings * household * 2) / 2);
+}
+
 /** Servings from a ?servings= value: halves from 0.5 to 20, else null. */
 export function parseServings(value: string | null): number | null {
   if (!value) return null;

@@ -3,6 +3,7 @@ import { CircleCheckIcon } from "lucide-react";
 import Link from "next/link";
 
 import type { PlanDay, Slot } from "@/lib/api/hooks";
+import { cookServings } from "@/lib/cooking";
 import { dayOfMonth, weekday } from "@/lib/dates";
 import { formatNumber, servingsLabel } from "@/lib/format";
 
@@ -14,18 +15,33 @@ export function WeekGrid({
   days,
   today,
   onPickDay,
+  household = 1,
 }: {
   days: PlanDay[];
   today: string;
   onPickDay: (date: string) => void;
+  /** People the plan is cooked for: recipes open at everyone's servings. */
+  household?: number;
 }) {
   const used = new Set(days.flatMap((d) => d.meals.map((m) => m.slot)));
   const slots: Slot[] = SLOT_ORDER.filter((s) => REQUIRED_SLOTS.includes(s) || used.has(s));
 
   return (
     <>
-      <WeekColumns days={days} today={today} slots={slots} onPickDay={onPickDay} />
-      <WeekTable days={days} today={today} slots={slots} onPickDay={onPickDay} />
+      <WeekColumns
+        days={days}
+        today={today}
+        slots={slots}
+        onPickDay={onPickDay}
+        household={household}
+      />
+      <WeekTable
+        days={days}
+        today={today}
+        slots={slots}
+        onPickDay={onPickDay}
+        household={household}
+      />
     </>
   );
 }
@@ -35,10 +51,11 @@ type Props = {
   today: string;
   slots: Slot[];
   onPickDay: (date: string) => void;
+  household: number;
 };
 
 /** Wide screens: a column per day, meals as small cards, today highlighted. */
-function WeekColumns({ days, today, slots, onPickDay }: Props) {
+function WeekColumns({ days, today, slots, onPickDay, household }: Props) {
   return (
     <ol aria-label="Days this week" className="hidden grid-cols-7 gap-2 lg:grid">
       {days.map((day) => {
@@ -73,7 +90,7 @@ function WeekColumns({ days, today, slots, onPickDay }: Props) {
                   <span className="block text-[0.7rem] text-muted-foreground">{SLOT_LABEL[s]}</span>
                   {meal ? (
                     <Link
-                      href={`/recipes/${meal.recipe.id}?servings=${meal.servings}`}
+                      href={`/recipes/${meal.recipe.id}?servings=${cookServings(meal.servings, household)}`}
                       className="line-clamp-3 leading-snug font-medium hover:underline"
                       title={`${meal.recipe.name}, ${servingsLabel(meal.portions)}`}
                     >
@@ -107,7 +124,7 @@ function WeekColumns({ days, today, slots, onPickDay }: Props) {
 }
 
 /** Phones: one row per day, one column per meal of the day. */
-function WeekTable({ days, today, slots, onPickDay }: Props) {
+function WeekTable({ days, today, slots, onPickDay, household }: Props) {
   return (
     <table className="w-full table-fixed border-separate border-spacing-0 text-xs lg:hidden">
       <caption className="sr-only">Meals this week</caption>
@@ -152,7 +169,7 @@ function WeekTable({ days, today, slots, onPickDay }: Props) {
                 <td key={s} className="border-t px-1 py-1.5 align-top">
                   {meal ? (
                     <Link
-                      href={`/recipes/${meal.recipe.id}`}
+                      href={`/recipes/${meal.recipe.id}?servings=${cookServings(meal.servings, household)}`}
                       className="line-clamp-3 leading-snug hover:underline"
                       title={`${meal.recipe.name}, ${servingsLabel(meal.portions)}`}
                     >

@@ -577,6 +577,7 @@ function PlanView({
                           key={row.meal.recipe.id}
                           meal={row.meal}
                           note={noteFor(leftovers, d.date, row.meal.slot)}
+                          household={plan.household}
                           actions={{
                             ...actions(d.date),
                             cookExtraFor: cookExtraFor(plan.days, d.date, today),
@@ -636,7 +637,12 @@ function PlanView({
         </TabsContent>
 
         <TabsContent value="week" className="pt-2">
-          <WeekGrid days={plan.days} today={today} onPickDay={(d) => set({ day: d, view: null })} />
+          <WeekGrid
+            days={plan.days}
+            today={today}
+            household={plan.household}
+            onPickDay={(d) => set({ day: d, view: null })}
+          />
         </TabsContent>
       </Tabs>
 
