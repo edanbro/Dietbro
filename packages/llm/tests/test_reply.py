@@ -6,7 +6,7 @@ import pytest
 
 from larder_core.meals import Slot
 from larder_llm.outcome import ChangeResult, DayKcal, Logged, ReplanOutcome, SlotChange
-from larder_llm.reply import HELP_TEXT, OfflineReason, Reply, offline_reply
+from larder_llm.reply import HELP_TEXT, OfflineReason, RecipeAnswer, Reply, offline_reply
 from larder_llm.rules import parse_rules
 
 TODAY = date(2026, 10, 14)  # Wednesday
@@ -206,3 +206,25 @@ def test_every_reason_has_an_announcement(reason: OfflineReason) -> None:
     assert first.text.startswith("(Simple mode: ")
     assert first.text.endswith(again.text)
     assert first.text.count("\n") == again.text.count("\n") + 1
+
+
+def test_a_recipe_question_answers_with_recipes_and_chips_that_parse() -> None:
+    parsed = parse_rules("what can I make with spinach?", TODAY)
+    found = RecipeAnswer("spinach", ("Saag aloo", "Spinach dal"))
+    reply = offline_reply(parsed, [], TODAY, reason="no_key", announce=False, recipes=found)
+    assert reply.text == (
+        "Recipes with spinach: Saag aloo, Spinach dal.\n"
+        'To have one, say "swap tonight\'s dinner for saag aloo" (or any day and meal).'
+    )
+    assert reply.suggestions == (
+        "swap tonight's dinner for saag aloo",
+        "swap tonight's dinner for spinach dal",
+    )
+    for chip in reply.suggestions:
+        assert parse_rules(chip, TODAY).understood
+
+    none = offline_reply(
+        parsed, [], TODAY, reason="no_key", announce=False, recipes=RecipeAnswer("kale", ())
+    )
+    assert none.text == "I couldn't find a recipe with kale that's safe for you."
+    assert none.suggestions == ()

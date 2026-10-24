@@ -58,7 +58,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning
-from larder_api.chat import context, limits, replan
+from larder_api.chat import context, limits, replan, search
 from larder_api.chat.gate import PreparedTurn
 from larder_api.chat.handlers import make_handlers
 from larder_api.chat.scope import ChatScope, Emit, Models
@@ -89,7 +89,7 @@ from larder_llm.client import (
     TextSink,
     Turn,
 )
-from larder_llm.reply import OfflineReason, offline_reply
+from larder_llm.reply import OfflineReason, RecipeAnswer, offline_reply
 from larder_llm.tools import TOOLS
 
 logger = logging.getLogger(__name__)
@@ -443,12 +443,16 @@ class _Turn:
             outcome = await replan.apply_changes(self.scope, list(parsed.changes), source="offline")
             self.scope.outcomes.append(outcome)
             await self.scope.emit(OutcomeEvent.model_validate(outcome.model_dump()))
+        recipes = None
+        if not parsed.understood and (query := rules.recipe_question(self.p.text)) is not None:
+            recipes = await self._recipes(query)
         reply = offline_reply(
             parsed,
             self.scope.outcomes,
             self.scope.today,
             reason=reason,
             announce=await self._announce(reason),
+            recipes=recipes,
         )
         await self._say(reply.text)
         self.suggestions = reply.suggestions
@@ -461,6 +465,18 @@ class _Turn:
             ]
         else:
             self.user_api, self.assistant_api = [], []
+
+    async def _recipes(self, query: str) -> RecipeAnswer:
+        """A question about what to cook, in simple mode: safe recipes using the foods it
+        names, or what the pantry can make."""
+        if query:
+            hits = await search.search_recipes(self.scope, query, None, limit=5)
+        else:
+            viewer = await search.load_viewer(self.scope)
+            pool = await search.recipe_pool(self.scope)
+            ranked = search.rank_recipes(pool, viewer, [], None, from_pantry=True) if viewer else []
+            hits = ranked[:5]
+        return RecipeAnswer(query, tuple(h.name for h in hits))
 
     async def _announce(self, reason: OfflineReason) -> bool:
         """Say why replies are simple once: when the previous reply wasn't offline for the same

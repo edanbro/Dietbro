@@ -133,3 +133,23 @@ async def test_off_plan_after_a_skip_still_replans_the_day(
         ("skipped", "dinner", outcomes[0]["plan_id"]),
         ("off_plan", "lunch", outcomes[1]["plan_id"]),
     ]
+
+
+async def test_a_recipe_question_gets_recipes_not_a_change(
+    api: httpx.AsyncClient, chat: ChatEnv, user: int, db_engine: AsyncEngine
+) -> None:
+    before = await versions(db_engine)
+
+    _, events = await chat.send(api, "What can I make with chicken?")
+    _, pantry = await chat.send(api, "what can I cook?")
+
+    assert [e["type"] for e in events] == ["thread", "text", "done"]
+    message = events[-1]["message"]
+    assert "Recipes with chicken: " in message["text"]
+    assert "Chicken" in message["text"].split("Recipes with chicken: ")[1]
+    assert "Satay" not in message["text"]  # peanuts: never offered
+    assert message["suggestions"][0].startswith("swap tonight's dinner for ")
+    assert "I didn't catch" not in message["text"]
+    # Nothing in the pantry yet: say so.
+    assert "Nothing safe uses what's in your pantry yet" in pantry[-1]["message"]["text"]
+    assert await versions(db_engine) == before

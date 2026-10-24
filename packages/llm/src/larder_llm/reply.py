@@ -14,7 +14,7 @@ from typing import Literal
 from larder_llm.outcome import Logged, ReplanOutcome, SlotChange
 from larder_llm.rules import RuleParse
 
-__all__ = ["HELP_TEXT", "OfflineReason", "Reply", "offline_reply"]
+__all__ = ["HELP_TEXT", "OfflineReason", "RecipeAnswer", "Reply", "offline_reply"]
 
 HELP_TEXT = (
     'I can change your plan when you tell me things like "skip dinner tonight", '
@@ -24,6 +24,15 @@ HELP_TEXT = (
 # Why this turn has no model: no API key configured, the user's daily/monthly budget is spent,
 # or the model failed (after which only already-applied outcomes are summarised).
 type OfflineReason = Literal["no_key", "budget", "model_error"]
+
+
+@dataclass(frozen=True, slots=True)
+class RecipeAnswer:
+    """Recipes found for a question like "what can I make with spinach?" (rules.recipe_question):
+    `query` the foods named ("" for what the pantry can make), `names` the safe recipes found."""
+
+    query: str
+    names: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +48,7 @@ def offline_reply(
     *,
     reason: OfflineReason,
     announce: bool,
+    recipes: RecipeAnswer | None = None,
 ) -> Reply:
     """`parsed` is None when the model already applied `outcomes` and failed afterwards (the
     reply then only summarises them). `announce`: add the one-line note on why replies are
@@ -50,6 +60,10 @@ def offline_reply(
         if not summary:
             lines.append("Nothing was changed.")
         return Reply("\n".join(lines))
+    if recipes is not None and not parsed.understood:
+        lines += _recipe_lines(recipes)
+        chips = tuple(f"swap tonight's dinner for {n.lower()}" for n in recipes.names[:2])
+        return Reply("\n".join(lines), chips)
     if parsed.understood and not summary:
         lines.append("I understood that, but couldn't update your plan just now.")
     if parsed.unparsed:
@@ -58,6 +72,19 @@ def offline_reply(
     if not parsed.understood:
         lines.append(HELP_TEXT)
     return Reply("\n".join(lines), parsed.suggestions)
+
+
+def _recipe_lines(answer: RecipeAnswer) -> list[str]:
+    where = f"with {answer.query}" if answer.query else "from your pantry"
+    if not answer.names:
+        if answer.query:
+            return [f"I couldn't find a recipe {where} that's safe for you."]
+        return ["Nothing safe uses what's in your pantry yet. Add what you have and ask again."]
+    return [
+        f"Recipes {where}: {', '.join(answer.names)}.",
+        f'To have one, say "swap tonight\'s dinner for {answer.names[0].lower()}" (or any day '
+        "and meal).",
+    ]
 
 
 _ANNOUNCE: dict[OfflineReason, str] = {
