@@ -69,12 +69,14 @@ describe("AppShell", () => {
     expect(within(nav).getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual(
       [],
     );
-    // The desktop rail has the diary.
+    // The desktop rail has the diary, and so does the phone's header.
     const rail = screen.getByRole("navigation", { name: "Sidebar" });
     expect(within(rail).getByRole("link", { name: "Diary" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    const header = screen.getByRole("banner");
+    expect(within(header).getByRole("link", { name: "Diary" })).toHaveAttribute("href", "/diary");
   });
 
   it("badges the Pantry tab with how much food expires soon", async () => {
