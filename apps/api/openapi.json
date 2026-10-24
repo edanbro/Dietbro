@@ -3892,6 +3892,70 @@
         ]
       }
     },
+    "/diary/logs/{log_id}": {
+      "delete": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Remove Log",
+        "description": "Remove food logged by mistake, or a skip: it stops counting. On today or later, the\nmeal it stood for is planned again (a swap through the executor, so the day rebalances);\na past day just loses it. A meal marked eaten is undone from the plan instead.",
+        "operationId": "removeLog",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "log_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Log Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemovedLogOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "a meal marked eaten: undo it on the plan"
+          },
+          "409": {
+            "description": "busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such log (or not yours)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/insights/spending": {
       "get": {
         "tags": [
@@ -7242,6 +7306,18 @@
             ],
             "title": "Recipe Id",
             "description": "eaten: the recipe"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "the log (DELETE /diary/logs/{id})"
           }
         },
         "type": "object",
@@ -10098,6 +10174,23 @@
           "saved"
         ],
         "title": "RegionOut"
+      },
+      "RemovedLogOut": {
+        "properties": {
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "RemovedLogOut",
+        "description": "A log removed; `outcome`: the meal it stood for planned again (today or later)."
       },
       "ReplanRequest": {
         "properties": {

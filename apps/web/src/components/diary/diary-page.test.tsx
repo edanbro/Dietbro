@@ -67,6 +67,27 @@ describe("DiaryPage", () => {
     expect(days[1]).toHaveTextContent("Lunch: Toasted sandwich");
   });
 
+  it("removes food logged by mistake", async () => {
+    const today = day("2026-10-14", 600, "under");
+    today.logged[0] = { ...today.logged[0]!, id: 5 };
+    const calls = mockApi({
+      "GET /diary": json({ ...DIARY, days: [today] }),
+      "GET /me/weights": json([]),
+      "DELETE /diary/logs/5": json({ outcome: null }),
+    });
+    renderWithClient(<DiaryPage />);
+
+    const [row] = within(await screen.findByRole("region", { name: "Days" })).getAllByRole(
+      "listitem",
+    );
+    fireEvent.click(within(row!).getAllByRole("button")[0]!);
+    fireEvent.click(within(row!).getByRole("button", { name: "Remove Toasted sandwich" }));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "DELETE" && c.path === "/diary/logs/5")).toBe(true),
+    );
+  });
+
   it("shows the last week, with the rest on request", async () => {
     const days = Array.from({ length: 14 }, (_, i) =>
       day(`2026-10-${String(i + 1).padStart(2, "0")}`, 0, null),

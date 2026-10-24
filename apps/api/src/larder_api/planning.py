@@ -925,6 +925,7 @@ def logged_out(log: db.MealLog) -> MealLogOut:
         kcal=log.kcal,
         estimated=log.estimated,
         recipe_id=log.recipe_id,
+        id=log.id,
     )
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { CalendarCheckIcon, Trash2Icon } from "lucide-react";
+import { CalendarCheckIcon, Trash2Icon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,7 +10,14 @@ import { ErrorAlert, LabeledInput } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type DiaryDay, useDiary, useUnits, useWeight, useWeights } from "@/lib/api/hooks";
+import {
+  type DiaryDay,
+  useDiary,
+  useRemoveLog,
+  useUnits,
+  useWeight,
+  useWeights,
+} from "@/lib/api/hooks";
 import { localISODate, shortDate } from "@/lib/dates";
 import { formatNumber, humanize } from "@/lib/format";
 import { bodyUnit, formatBodyWeight, kgFrom } from "@/lib/units";
@@ -47,6 +54,7 @@ export function eatenText(kcal: number, min?: number | null, max?: number | null
 
 function DayRow({ day, today }: { day: DiaryDay; today: string }) {
   const [open, setOpen] = useState(false);
+  const remove = useRemoveLog();
   const status = day.status ? STATUS[day.status] : null;
   const isToday = day.date === today;
   return (
@@ -83,8 +91,8 @@ function DayRow({ day, today }: { day: DiaryDay; today: string }) {
       {open ? (
         <ul className="flex flex-col gap-1 px-3 pb-2.5 text-xs text-muted-foreground">
           {day.logged.map((l, i) => (
-            <li key={`${l.description}-${i}`} className="flex justify-between gap-2">
-              <span className="min-w-0 truncate">
+            <li key={`${l.description}-${i}`} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate">
                 {l.slot ? `${humanize(l.slot)}: ` : ""}
                 {l.kind === "skipped" ? "Skipped " : ""}
                 {l.description}
@@ -92,6 +100,26 @@ function DayRow({ day, today }: { day: DiaryDay; today: string }) {
               <span className="shrink-0 tabular-nums">
                 {formatNumber(l.kcal)} kcal{l.estimated ? " (est.)" : ""}
               </span>
+              {l.id != null && l.kind !== "eaten" ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="-my-1 shrink-0"
+                  aria-label={`Remove ${l.kind === "skipped" ? "the skip" : l.description}`}
+                  disabled={remove.isPending}
+                  onClick={() =>
+                    remove.mutate(l.id!, {
+                      onSuccess: (out) =>
+                        toast.success(
+                          out.outcome ? "Removed, and that meal is planned again" : "Removed",
+                        ),
+                      onError: () => toast.error("Couldn't remove that. Try again."),
+                    })
+                  }
+                >
+                  <XIcon />
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>

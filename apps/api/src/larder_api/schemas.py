@@ -453,6 +453,13 @@ class MealLogOut(Logged):
     (`MealOut.status` eaten), not here."""
 
     recipe_id: int | None = Field(default=None, description="eaten: the recipe")
+    id: int | None = Field(default=None, description="the log (DELETE /diary/logs/{id})")
+
+
+class RemovedLogOut(BaseModel):
+    """A log removed; `outcome`: the meal it stood for planned again (today or later)."""
+
+    outcome: "OutcomeOut | None" = None
 
 
 class DayOut(BaseModel):
