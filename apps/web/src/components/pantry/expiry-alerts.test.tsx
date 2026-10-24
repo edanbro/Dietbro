@@ -51,8 +51,8 @@ describe("ExpiryAlerts", () => {
     expect(region).toHaveTextContent("1 expired, 1 to use in the next 3 days");
     const rows = within(region).getAllByRole("listitem");
     expect(rows.map((r) => r.textContent)).toEqual([
-      `${MILK.description}expired 2 days ago`,
-      `${TOMATOES.description}expires tomorrow`,
+      "Milk · reduced fat, 2%expired 2 days ago",
+      "Canned tomatoesexpires tomorrow",
     ]);
     const url = new URL(`http://x${calls[0].path}`);
     expect(url.pathname).toBe("/pantry/expiring");

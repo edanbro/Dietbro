@@ -36,6 +36,7 @@ import {
   useUpdateReceiptLine,
 } from "@/lib/api/hooks";
 import { shortDate } from "@/lib/dates";
+import { displayName } from "@/lib/food-name";
 
 /** How long to wait for the worker before saying something is wrong. */
 export const GIVE_UP_MS = 60_000;
@@ -137,7 +138,7 @@ function LineEditor({
   return (
     <form onSubmit={save} className="flex flex-col gap-3 pt-2" aria-label={`Edit ${label}`}>
       <div className="flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2">
-        <span className="min-w-0 text-sm">{line.food.description}</span>
+        <span className="min-w-0 text-sm">{displayName(line.food.description, line.food.brand)}</span>
         <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)}>
           Change food
         </Button>

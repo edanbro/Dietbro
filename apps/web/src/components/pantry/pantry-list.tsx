@@ -22,13 +22,8 @@ import {
 } from "@/lib/api/hooks";
 import { addDays, daysBetween, localISODate, shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/empty-state";
-import { foodName } from "@/lib/food-name";
+import { displayName } from "@/lib/food-name";
 import { formatWeight, type Units } from "@/lib/units";
-
-function friendly(description: string): string {
-  const { name, detail } = foodName(description);
-  return detail ? `${name} · ${detail}` : name;
-}
 
 /** Days until `isoDate` (local midnight to local midnight); negative when past. */
 export function daysUntil(isoDate: string, today: Date = new Date()): number {
@@ -165,9 +160,7 @@ export function PantryList({ searchFrom = 0 }: { searchFrom?: number } = {}) {
                       onClick={() => setEditing(item.id)}
                     >
                       <span className="truncate text-sm">
-                        {item.food.brand
-                          ? `${item.food.brand} ${item.food.description}`
-                          : friendly(item.food.description)}
+                        {displayName(item.food.description, item.food.brand)}
                       </span>
                       <span className="text-xs text-muted-foreground">{formatAmount(item, units)}</span>
                     </button>
@@ -247,7 +240,9 @@ function PantryEdit({ item, onDone }: { item: PantryItem; onDone: () => void }) 
       className="flex flex-col gap-3"
       aria-label={`Edit ${item.food.description}`}
     >
-      <span className="text-sm font-medium">{item.food.description}</span>
+      <span className="text-sm font-medium">
+        {displayName(item.food.description, item.food.brand)}
+      </span>
       <div className="grid grid-cols-2 gap-3">
         <LabeledInput
           id={`qty-${item.id}`}

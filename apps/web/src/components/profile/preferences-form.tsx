@@ -16,6 +16,7 @@ import {
   usePreferences,
   useSavePreferences,
 } from "@/lib/api/hooks";
+import { displayName } from "@/lib/food-name";
 
 type Diet = NonNullable<PreferencesIn["diet"]>;
 type Rating = "like" | "dislike" | "neutral";
@@ -68,7 +69,7 @@ function FoodChips({
           {foods.map((f) => (
             <li key={f.id}>
               <Badge variant="secondary" className="gap-1">
-                {f.description}
+                {displayName(f.description, f.brand)}
                 <button
                   type="button"
                   className="relative after:absolute after:-inset-3 after:content-['']"

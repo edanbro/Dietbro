@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useCreatePlan, useExpiring } from "@/lib/api/hooks";
-import { foodNoun } from "@/lib/food-name";
+import { displayName, foodNoun } from "@/lib/food-name";
 
 /** "expired 2 days ago", "expired yesterday", "use today", "expires tomorrow", "expires in 2 days". */
 export function expiryText(daysLeft: number): string {
@@ -46,7 +46,9 @@ export function ExpiryAlerts() {
       <ul className="flex flex-col gap-1" aria-label="Expiring food">
         {data.items.map((item) => (
           <li key={item.id} className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate">{item.food.description}</span>
+            <span className="min-w-0 truncate">
+              {displayName(item.food.description, item.food.brand)}
+            </span>
             <span
               className={cn(
                 "shrink-0 text-xs",
