@@ -64,6 +64,26 @@ SYNONYMS: dict[str, frozenset[str]] = {
     "chilli": frozenset({"chili", "chilly"}),
     "curry": frozenset({"curry", "masala", "korma", "tikka", "dal", "dhal"}),
 }
+# Qualities a recipe's words rarely show: they rank a match up, never rule a recipe out.
+SOFT = frozenset(
+    {
+        "healthy",
+        "healthier",
+        "hearty",
+        "filling",
+        "comforting",
+        "comfort",
+        "warm",
+        "warming",
+        "fresh",
+        "different",
+        "new",
+        "tasty",
+    }
+)
+# Quick and easy: a time limit (minutes), not words to find.
+QUICK = frozenset({"quick", "quicker", "fast", "faster", "easy", "easier", "simple", "simpler"})
+QUICK_MINUTES = 30
 # Words that say nothing about the dish.
 _STOP = frozenset(
     {
@@ -168,6 +188,12 @@ def query_words(query: str) -> list[str]:
     return sorted(tokens(query) - _STOP)
 
 
+def time_limit(words: list[str]) -> tuple[list[str], int | None]:
+    """The words without "quick", "easy" and the like, and the time limit they asked for."""
+    rest = [w for w in words if w not in QUICK]
+    return rest, (QUICK_MINUTES if len(rest) < len(words) else None)
+
+
 def _fields(pool: planning.PlanningCatalog, recipe: Recipe) -> list[tuple[int, frozenset[str]]]:
     text = pool.text.get(recipe.id)
     labels = [recipe.cuisine or ""]
@@ -236,7 +262,8 @@ def rank_recipes(
         if not allowed(recipe, pool.catalog.foods, viewer.profile):
             continue
         points, matched = match(words, _fields(pool, recipe)) if words else (0, ())
-        if words and not points:
+        required = [w for w in words if w not in SOFT]
+        if required and not set(matched) & set(required):
             continue
         uses = tuple(
             dict.fromkeys(
@@ -288,12 +315,12 @@ def rank_recipes(
 async def search_recipes(
     scope: ChatScope, query: str, slot: Slot | None, limit: int = 5
 ) -> list[RecipeHit]:
-    words = query_words(query)
+    words, minutes = time_limit(query_words(query))
     viewer = await load_viewer(scope)
-    if not words or viewer is None:
+    if not (words or minutes) or viewer is None:
         return []
     pool = await recipe_pool(scope)
-    return rank_recipes(pool, viewer, words, slot)[: max(limit, 0)]
+    return rank_recipes(pool, viewer, words, slot, max_minutes=minutes)[: max(limit, 0)]
 
 
 # --- one recipe the model names (handlers.visible_recipe / guard_recipe; also the executor) ----

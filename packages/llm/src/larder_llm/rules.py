@@ -61,6 +61,7 @@ def parse_rules(text: str, today: date) -> RuleParse:
     """The changes in the order they were said; clauses it can't read are reported verbatim,
     never guessed. At most MAX_CHANGES changes (later clauses are reported as not understood)."""
     changes: list[RuleChange] = []
+    vague: set[int] = set()  # indexes of skips from clauses that named no day or meal
     unparsed: list[str] = []
     for clause in _clauses(text):
         if _NOISE.match(clause.text):
@@ -76,10 +77,23 @@ def parse_rules(text: str, today: date) -> RuleParse:
             if new[0].eating_elsewhere:
                 changes[-1] = last.model_copy(update={"eating_elsewhere": True})
             continue
+        if (
+            explicit
+            and isinstance(last, Skip)
+            and len(changes) - 1 in vague
+            and all(isinstance(c, Skip) and c.when.date == last.when.date for c in new)
+        ):
+            # "not hungry, skip lunch": the second clause says which meal the first meant.
+            changes.pop()
+            vague.discard(len(changes))
+            if last.eating_elsewhere:
+                new = [c.model_copy(update={"eating_elsewhere": True}) for c in new]
         fresh = [c for c in new if c not in changes]
         if len(changes) + len(fresh) > MAX_CHANGES:
             unparsed.append(clause.verbatim)
             continue
+        if not explicit and len(fresh) == 1 and isinstance(fresh[0], Skip):
+            vague.add(len(changes))
         changes += fresh
     suggestions = [s for c in changes if c.when.slot is None for s in _suggest(c, today)]
     return RuleParse(tuple(changes), tuple(unparsed), tuple(dict.fromkeys(suggestions)))
@@ -196,6 +210,21 @@ _ELSEWHERE = re.compile(
     _I,
 )
 _HOST = re.compile(r"\bat\s+[A-Z][a-z]+(?:'s|s')(?=\s|$)")  # "dinner at Sarah's"
+# A meal disliked by name only ("I don't like tonight's dinner", the time and meal masked): swap.
+_DISLIKE = re.compile(
+    rf"(?:{_NEG}\s+(?:really\s+)?(?:like|fancy|want)|\b(?:hate|dislike))\b"
+    r"[\s,.!]*(?:the|my|this|that)?[\s,.!]*(?:one|meal)?[\s,.!]*$",
+    _I,
+)
+# "skip all my meals on Saturday", "eating out all day": every main meal of the day.
+_ALL_DAY = re.compile(
+    r"\b(?:all\s+(?:my\s+|the\s+|of\s+my\s+)?meals|(?:all|the\s+whole|whole)\s+day|every\s+meal)\b",
+    _I,
+)
+# "make Friday dinner pasta", "make tomorrow's lunch something light": a wish, firmly put.
+_MAKE = re.compile(r"^\s*(?:let's\s+)?make\b", _I)
+# A wish without a verb: "something vegetarian on Friday", "anything with rice tomorrow".
+_BARE_WISH = re.compile(r"^\s*(?:something|anything)\b", _I)
 _SKIP = re.compile(
     r"\bskip\w*|\bfasting\b|\bfast\s+(?:today|tomorrow|tonight|on)\b"
     rf"|\bmiss(?:ing|ed)?\s+(?:my\s+|a\s+)?(?:{_SLOTS}|meal|tea)\b|\bno\s+(?:{_SLOTS}|tea)\b",
@@ -250,7 +279,7 @@ _NOISE = re.compile(
     _I,
 )
 _CHANGE_OF_PLAN = re.compile(r"\bchange\s+of\s+plans?\b", _I)
-_ANY_CUE = (_SKIP_NEG, _NEG_OTHER, _SWAP, _ATE, _ELSEWHERE, _HOST, _SKIP, _CRAVE)
+_ANY_CUE = (_SKIP_NEG, _NEG_OTHER, _SWAP, _ATE, _ELSEWHERE, _HOST, _SKIP, _CRAVE, _MAKE)
 
 _ARTICLE = re.compile(r"^(?:a|an|some|the|my)\s+", _I)
 _TRAILING = re.compile(
@@ -389,9 +418,18 @@ def _parse_clause(text: str, question: bool, today: date) -> tuple[list[RuleChan
     slots: list[Slot | None] = list(dict.fromkeys(sl for _, _, sl in slot_spans))
     if not slots:
         slots = [next((t.slot for t in times if t.slot is not None), None)]
+    # Skips over a whole day: each main meal of each day named.
+    whole_day = not slot_spans and bool(_ALL_DAY.search(s))
+    skip_whens = (
+        [When(date=d, slot=sl) for d in days for sl in (Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER)]
+        if whole_day
+        else _whens(days, slots)
+    )
 
     if _SKIP_NEG.search(s):
-        return [_skip(w, False) for w in _whens(days, slots)], explicit
+        return [_skip(w, False) for w in skip_whens], explicit or whole_day
+    if explicit and _DISLIKE.search(masked):
+        return [Swap(intent="swap", when=w) for w in _whens(days, slots)], explicit
     if _NEG_OTHER.search(s):
         return None
     if m := _SWAP.search(s):
@@ -405,9 +443,21 @@ def _parse_clause(text: str, question: bool, today: date) -> tuple[list[RuleChan
         when = When(date=days[0], slot=slots[0])
         return [_ate_off_plan(when, food)], explicit
     if _ELSEWHERE.search(s) or _HOST.search(s):
-        return [_skip(w, True) for w in _whens(days, slots)], explicit
+        return [_skip(w, True) for w in skip_whens], explicit or whole_day
     if _SKIP.search(s):
-        return [_skip(w, False) for w in _whens(days, slots)], explicit
+        return [_skip(w, False) for w in skip_whens], explicit or whole_day
+    if (m := _MAKE.search(masked)) and explicit:
+        dish, tags = _wish(_object(masked[m.end() :]))
+        if dish or tags:
+            when = When(date=days[0], slot=slots[0])
+            craving = Craving(intent="craving", when=when, dish=dish, tags=tags, strength="hard")
+            return [craving], explicit
+    if _BARE_WISH.match(masked) and not _CRAVE.search(s):
+        dish, tags = _wish(_object(masked))
+        if tags:
+            when = When(date=days[0], slot=slots[0])
+            craving = Craving(intent="craving", when=when, dish=dish, tags=tags, strength="soft")
+            return [craving], explicit
     if m := _CRAVE.search(s):
         dish, tags = _wish(_object(masked[m.end() :]))
         if dish or tags:

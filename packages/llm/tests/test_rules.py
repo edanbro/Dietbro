@@ -137,6 +137,18 @@ TABLE: list[tuple[str, list[RuleChange]]] = [
         "Had a burger and chips for lunch. Then skip dinner",
         [ate(WED, L, "burger and chips", ("burger", None), ("chips", None)), skip(WED, D)],
     ),
+    # --- found by testing ----------------------------------------------------------------------
+    ("something vegetarian on Friday", [crave(FRI, tags=("vegetarian",))]),
+    ("anything with rice tomorrow", [crave(THU, tags=("rice",))]),
+    ("I don't like tonight's dinner", [swap(WED, D)]),
+    ("I hate Friday's lunch", [swap(FRI, L)]),
+    ("make friday dinner pasta", [crave(FRI, D, dish="pasta", hard=True)]),
+    ("skip all my meals on Saturday", [skip(SAT, B), skip(SAT, L), skip(SAT, D)]),
+    (
+        "eating out all day Sunday",
+        [skip(SUN, B, out=True), skip(SUN, L, out=True), skip(SUN, D, out=True)],
+    ),
+    ("not hungry, skip lunch", [skip(WED, L)]),
     # --- no change: questions and negations ---------------------------------------------------
     ("should I skip dinner?", []),
     ("I'm not skipping lunch", []),
