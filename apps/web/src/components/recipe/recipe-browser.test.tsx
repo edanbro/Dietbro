@@ -182,6 +182,21 @@ describe("RecipeBrowser", () => {
     expect(urls[0]!.searchParams.get("pantry")).toBe("true");
   });
 
+  it("asks for the cheapest first", async () => {
+    const urls: URL[] = [];
+    mockApi({
+      "GET /recipes": (req: Request) => {
+        urls.push(new URL(req.url));
+        return Response.json({ items: [], total: 0 });
+      },
+    });
+    renderWithClient(<RecipeBrowser />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Cheapest first" }));
+    await waitFor(() => expect(urls.at(-1)!.searchParams.get("cheapest")).toBe("true"));
+    expect(urls[0]!.searchParams.has("cheapest")).toBe(false);
+  });
+
   it("shows what a serving costs on each recipe", async () => {
     mockApi({
       "GET /recipes": json({

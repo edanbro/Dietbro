@@ -212,3 +212,15 @@ async def test_recipes_say_what_a_serving_costs(
     # The recipe page and the list price it the same way (the planner's grams and prices).
     assert (detail["cost_per_serving"], detail["currency"]) == (curry["cost_per_serving"], "GBP")
     assert (signed_out["cost_per_serving"], signed_out["currency"]) == (None, None)
+
+
+async def test_cheapest_first(api: httpx.AsyncClient, auth: Auth, new_user: NewUser) -> None:
+    await new_user("user_a")
+
+    page = await browse(api, auth, cheapest=True, limit=60)
+
+    costs = [i["cost_per_serving"] for i in page["items"]]
+    priced = [c for c in costs if c is not None]
+    assert priced, "the menu has priced recipes"
+    assert priced == sorted(priced)
+    assert costs[: len(priced)] == priced  # unpriced ones come last

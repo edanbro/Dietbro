@@ -2813,7 +2813,7 @@
           "recipes"
         ],
         "summary": "List Recipes",
-        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest\nfoods still to get first, each with those foods (`missing`).",
+        "description": "Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they\nblocked), matching `q` if given, ranked like the chat's search: match, then preference\n(favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest\nfoods still to get first, each with those foods (`missing`). `cheapest`: the lowest cost a\nserving first (in the user's prices), those without a price last.",
         "operationId": "listRecipes",
         "security": [
           {
@@ -2884,6 +2884,16 @@
               "type": "boolean",
               "default": false,
               "title": "Pantry"
+            }
+          },
+          {
+            "name": "cheapest",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Cheapest"
             }
           },
           {
