@@ -153,6 +153,13 @@ async def test_browse_shows_cooking_time_and_filters_quick_recipes(
     # Only recipes known to be quick: one without an estimate isn't.
     assert names(quick) == ["Porridge"]
     assert detail["minutes"] == 10
+    # "Quick" or "easy" in a search is the same time limit, not a word to find.
+    assert names(await browse(api, auth, q="something quick", limit=60)) == ["Porridge"]
+    assert names(await browse(api, auth, q="easy chicken", limit=60)) == []
+    assert "Chicken traybake" in names(await browse(api, auth, q="chicken", limit=60))
+    # A quality no recipe spells out ranks, never hides: "healthy chicken" is still chicken.
+    assert "Chicken traybake" in names(await browse(api, auth, q="healthy chicken", limit=60))
+    assert len(names(await browse(api, auth, q="something hearty", limit=60))) > 1
 
 
 async def test_cook_from_the_pantry_puts_fewest_foods_to_get_first(

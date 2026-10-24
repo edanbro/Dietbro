@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 from larder_api import planning, recipe_import, replans
 from larder_api.auth import AuthError, CurrentUser, TokenVerifier
 from larder_api.chat.create import create_recipe
-from larder_api.chat.search import query_words, rank_recipes, viewer_of
+from larder_api.chat.search import query_words, rank_recipes, time_limit, viewer_of
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.ratelimit import per_user
@@ -105,9 +105,11 @@ async def list_recipes(
     viewer = await viewer_of(session, user.id)
     if viewer is None:
         raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
-    words = query_words(q)
-    if q.strip() and not words:
+    words, quick = time_limit(query_words(q))
+    if q.strip() and not (words or quick):
         return RecipeListOut(items=[], total=0)
+    if quick is not None:
+        max_minutes = min(max_minutes or quick, quick)
     pool = (await cache.get(sessionmaker)).merged(
         await planning.load_private_recipes(session, user.id)
     )
