@@ -22,13 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
-import {
-  type Recipe,
-  useAllergens,
-  useDeleteRecipe,
-  useRecipe,
-  useRecipeFeedback,
-} from "@/lib/api/hooks";
+import { type Recipe, useAllergens, useDeleteRecipe, useRecipe, useRecipeFeedback, useUnits } from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps } from "@/lib/cooking";
 import { allergenLabel, formatMinutes, formatMoney, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
@@ -275,6 +269,7 @@ export function RecipePage({ id }: { id: number }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const units = useUnits();
   const servings = parseServings(params.get("servings"));
   // The stepper keeps its servings in the address, so a link (or going back) keeps them too.
   const setServings = (n: number) => {
@@ -384,7 +379,7 @@ export function RecipePage({ id }: { id: number }) {
           {recipe.ingredients.map((ing, i) => (
             <li key={`${ing.name}-${i}`} className="flex gap-3 px-3 py-2">
               <span className="w-24 shrink-0 text-muted-foreground tabular-nums">
-                {scaledAmount(ing, factor)}
+                {scaledAmount(ing, factor, units)}
               </span>
               <span className="min-w-0 flex-1">{ing.name}</span>
               {ing.in_pantry ? (
