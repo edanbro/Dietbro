@@ -512,12 +512,13 @@ async def meal_alternatives(
     quick: bool = False,
     pantry: bool = False,
     favourites: bool = False,
+    cheaper: bool = False,
 ) -> list[RecipeListItem]:
     """A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
     its recipe_id): ranked like recipe search, not already planned that day, close to the
     meal's energy first. `q` searches like recipe search ("curry", "something quick");
     `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;
-    `favourites`, the user's favourites."""
+    `favourites`, the user's favourites; `cheaper` puts the lowest cost a serving first."""
     plan = await _load_plan(session, user, plan_id)
     day = (on - plan.start_date).days
     if not 0 <= day < plan.days:
@@ -536,6 +537,7 @@ async def meal_alternatives(
         minutes = search.QUICK_MINUTES
     if q.strip() and not (words or minutes):
         return []
+    pricer = await planning.pricer_for(session, user.id) if cheaper else None
     hits = [
         h
         for h in search.rank_recipes(
@@ -546,15 +548,19 @@ async def meal_alternatives(
             favourites_only=favourites,
             max_minutes=minutes,
             from_pantry=pantry,
+            pricer=pricer,
         )
         if h.id not in that_day
     ]
+    if cheaper:  # stable: ties keep the ranking above
+        hits.sort(key=lambda h: (h.cost_per_serving is None, h.cost_per_serving or 0))
 
     def close(kcal: int) -> bool:
         return target is None or abs(kcal - target) <= 0.35 * target
 
-    # Searched for: the best matches. Otherwise those close to the meal's energy first.
-    picked = [] if words else [h for h in hits if close(h.kcal_per_serving)][:limit]
+    # Searched for (or cheapest asked for): in that order. Otherwise those close to the meal's
+    # energy first.
+    picked = [] if words or cheaper else [h for h in hits if close(h.kcal_per_serving)][:limit]
     picked += [h for h in hits if h not in picked][: limit - len(picked)]
     return [
         RecipeListItem(
@@ -569,6 +575,7 @@ async def meal_alternatives(
             uses_pantry=list(h.uses_pantry),
             favourite=h.favourite,
             minutes=h.minutes,
+            cost_per_serving=h.cost_per_serving,
         )
         for h in picked
     ]

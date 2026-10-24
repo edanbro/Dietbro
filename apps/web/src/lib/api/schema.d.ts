@@ -662,7 +662,7 @@ export interface paths {
          *     its recipe_id): ranked like recipe search, not already planned that day, close to the
          *     meal's energy first. `q` searches like recipe search ("curry", "something quick");
          *     `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;
-         *     `favourites`, the user's favourites.
+         *     `favourites`, the user's favourites; `cheaper` puts the lowest cost a serving first.
          */
         get: operations["getMealAlternatives"];
         put?: never;
@@ -5566,6 +5566,7 @@ export interface operations {
                 quick?: boolean;
                 pantry?: boolean;
                 favourites?: boolean;
+                cheaper?: boolean;
             };
             header?: never;
             path: {

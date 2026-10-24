@@ -1949,7 +1949,7 @@
           "plans"
         ],
         "summary": "Meal Alternatives",
-        "description": "A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and\nits recipe_id): ranked like recipe search, not already planned that day, close to the\nmeal's energy first. `q` searches like recipe search (\"curry\", \"something quick\");\n`quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;\n`favourites`, the user's favourites.",
+        "description": "A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and\nits recipe_id): ranked like recipe search, not already planned that day, close to the\nmeal's energy first. `q` searches like recipe search (\"curry\", \"something quick\");\n`quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;\n`favourites`, the user's favourites; `cheaper` puts the lowest cost a serving first.",
         "operationId": "getMealAlternatives",
         "security": [
           {
@@ -2035,6 +2035,16 @@
               "type": "boolean",
               "default": false,
               "title": "Favourites"
+            }
+          },
+          {
+            "name": "cheaper",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Cheaper"
             }
           }
         ],
