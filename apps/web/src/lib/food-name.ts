@@ -84,6 +84,8 @@ const HEADINGS = new Set([
 const TRAILING = new Set(["oil", "nuts", "seeds", "cheese", "vinegar", "sauce"]);
 /** Meats are bought fresh anyway: "Pork, fresh, shoulder" is pork. */
 const MEATS = new Set(["beef", "pork", "lamb", "veal"]);
+/** Products a meat heading files: "Pork, cured, bacon" is bacon. */
+const CURED = new Set(["bacon", "ham", "salami", "pancetta", "prosciutto", "chorizo", "gammon"]);
 
 export type FoodName = { name: string; detail: string | null };
 
@@ -131,7 +133,10 @@ function parse(description: string): Parsed | null {
     head = `egg ${rest.shift()!.toLowerCase()}`;
     rest = rest.filter((p) => p.toLowerCase() !== "fresh");
   } else if (MEATS.has(lower)) {
-    rest = rest.filter((p) => p.toLowerCase() !== "fresh");
+    rest = rest.filter((p) => !["fresh", "cured"].includes(p.toLowerCase()));
+    // "Pork, cured, bacon" is bacon, "Beef, cured, corned beef" corned beef.
+    const product = rest.findIndex((p) => CURED.has(p.toLowerCase()) || p.toLowerCase().endsWith(` ${lower}`));
+    if (product >= 0) head = rest.splice(product, 1)[0]!;
   }
 
   const adjectives: string[] = [];
