@@ -508,10 +508,14 @@ async def meal_alternatives(
     cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
     sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
     limit: Annotated[int, Query(ge=1, le=6)] = 3,
+    q: Annotated[str, Query(max_length=80)] = "",
+    quick: bool = False,
+    pantry: bool = False,
 ) -> list[RecipeListItem]:
     """A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
     its recipe_id): ranked like recipe search, not already planned that day, close to the
-    meal's energy first."""
+    meal's energy first. `q` searches like recipe search ("curry", "something quick");
+    `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry."""
     plan = await _load_plan(session, user, plan_id)
     day = (on - plan.start_date).days
     if not 0 <= day < plan.days:
@@ -525,12 +529,24 @@ async def meal_alternatives(
     that_day = {m.recipe_id for m in plan.meals if m.day == day}
     meal = next((m for m in plan.meals if m.day == day and m.slot == slot), None)
     target = round(meal.kcal * 2 / max(meal.portions, 1)) if meal else None
-    hits = [h for h in search.rank_recipes(pool, viewer, [], slot) if h.id not in that_day]
+    words, minutes = search.time_limit(search.query_words(q))
+    if quick:
+        minutes = search.QUICK_MINUTES
+    if q.strip() and not (words or minutes):
+        return []
+    hits = [
+        h
+        for h in search.rank_recipes(
+            pool, viewer, words, slot, max_minutes=minutes, from_pantry=pantry
+        )
+        if h.id not in that_day
+    ]
 
     def close(kcal: int) -> bool:
         return target is None or abs(kcal - target) <= 0.35 * target
 
-    picked = [h for h in hits if close(h.kcal_per_serving)][:limit]
+    # Searched for: the best matches. Otherwise those close to the meal's energy first.
+    picked = [] if words else [h for h in hits if close(h.kcal_per_serving)][:limit]
     picked += [h for h in hits if h not in picked][: limit - len(picked)]
     return [
         RecipeListItem(

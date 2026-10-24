@@ -410,6 +410,51 @@ describe("replans from the plan", () => {
     ]);
   });
 
+  it("searches and filters what to swap a meal for", async () => {
+    const asked: URLSearchParams[] = [];
+    const stew = {
+      id: 300,
+      name: "Lentil stew",
+      category: null,
+      cuisine: null,
+      image_url: null,
+      slots: ["lunch"],
+      kcal_per_serving: 520,
+      protein_g_per_serving: 30,
+      uses_pantry: [],
+      favourite: false,
+      minutes: 25,
+    };
+    setup({
+      "GET /plans/current": json(makePlan()),
+      "GET /plans/7/alternatives": (req) => {
+        const params = new URL(req.url).searchParams;
+        asked.push(params);
+        return Response.json(params.get("q") === "zzz" ? [] : [stew]);
+      },
+    });
+
+    const group = await openOptions(FRIDAY, "Lunch");
+    fireEvent.click(within(group).getByRole("button", { name: "Swap for something else" }));
+    expect(
+      await within(group).findByRole("button", { name: /Lentil stew25 min · 520 kcal/ }),
+    ).toBeVisible();
+    fireEvent.click(within(group).getByRole("button", { name: "Quick" }));
+    expect(within(group).getByRole("button", { name: "Quick" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await waitFor(() => expect(asked.at(-1)?.get("quick")).toBe("true"));
+    expect(asked.at(-1)?.get("limit")).toBe("6");
+    fireEvent.change(within(group).getByRole("searchbox", { name: "Search recipes" }), {
+      target: { value: "zzz" },
+    });
+    expect(
+      await within(group).findByText("Nothing safe for you matches. Try other words."),
+    ).toBeVisible();
+    expect(asked.at(-1)?.get("q")).toBe("zzz");
+  });
+
   it.each([
     ["busy", "Another change to your plan is still running. Try again in a moment."],
     ["duplicate", "That change was already made. Showing your latest plan."],

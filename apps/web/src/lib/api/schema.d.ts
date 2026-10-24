@@ -660,7 +660,8 @@ export interface paths {
          * Meal Alternatives
          * @description A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
          *     its recipe_id): ranked like recipe search, not already planned that day, close to the
-         *     meal's energy first.
+         *     meal's energy first. `q` searches like recipe search ("curry", "something quick");
+         *     `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry.
          */
         get: operations["getMealAlternatives"];
         put?: never;
@@ -5469,6 +5470,9 @@ export interface operations {
                 date: string;
                 slot: components["schemas"]["Slot"];
                 limit?: number;
+                q?: string;
+                quick?: boolean;
+                pantry?: boolean;
             };
             header?: never;
             path: {

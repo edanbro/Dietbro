@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 import pytest
 from chat_support import ChatEnv
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_db import models as db
@@ -20,12 +20,17 @@ NewUser = Callable[..., Awaitable[int]]
 MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
 MON = date(2026, 10, 12)
 WED = MON + timedelta(days=2)
+THU = MON + timedelta(days=3)
 NEXT_MON = MON + timedelta(days=7)
 
 
 @pytest.fixture
 async def plan_id(menu: dict[str, int], new_user: NewUser, make_plan: MakePlan) -> int:
     return await make_plan(await new_user("user_a"), MON)
+
+
+def meal_day(plan: dict[str, Any], on: date) -> list[dict[str, Any]]:
+    return next(d for d in plan["days"] if d["date"] == on.isoformat())["meals"]
 
 
 def meal_at(plan: dict[str, Any], on: date, slot: str) -> dict[str, Any] | None:
@@ -126,6 +131,39 @@ async def test_alternatives_are_safe_and_new_for_the_day(
     assert outcome["results"][0]["status"] == "applied"
     now = (await api.get("/plans/current", headers=auth)).json()
     assert meal_at(now, WED, "dinner")["recipe"]["id"] == options[0]["id"]  # type: ignore[index]
+
+
+async def test_alternatives_can_be_searched_and_filtered(
+    api: httpx.AsyncClient, chat: ChatEnv, db_engine: AsyncEngine, plan_id: int
+) -> None:
+    auth = chat.auth("user_a")
+    async with make_sessionmaker(db_engine)() as session:
+        await session.execute(update(db.Recipe).values(minutes=60))
+        await session.execute(
+            update(db.Recipe).where(db.Recipe.name == "Lentil stew").values(minutes=25)
+        )
+        await session.commit()
+
+    async def options(**params: str | bool) -> list[str]:
+        response = await api.get(
+            f"/plans/{plan_id}/alternatives",
+            params={"date": THU.isoformat(), "slot": "dinner", "limit": 6, **params},
+            headers=auth,
+        )
+        assert response.status_code == 200, response.text
+        return [o["name"] for o in response.json()]
+
+    curry = await options(q="curry")
+    quick = await options(quick=True)
+    said = await options(q="something quick")
+
+    plan = (await api.get(f"/plans/{plan_id}", headers=auth)).json()
+    thursday = {m["recipe"]["name"] for m in meal_day(plan, THU)}
+    assert curry
+    assert all("curry" in name.lower() for name in curry)
+    # Only the 25-minute stew is quick (unless it's already on Thursday).
+    assert quick == said == ([] if "Lentil stew" in thursday else ["Lentil stew"])
+    assert await options(q="zzzz") == []
 
 
 async def test_alternatives_for_a_day_outside_the_plan_404(
@@ -262,11 +300,10 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
         prefs.meal_modes = {"lunch": "own"}
         await session.commit()
     await make_plan(uid, MON)
-    thu = WED + timedelta(days=1)
-    when = {"date": thu.isoformat(), "slot": "lunch"}
+    when = {"date": THU.isoformat(), "slot": "lunch"}
     skip = {"intent": "skip", "when": when, "eating_elsewhere": False}
 
-    out = await replan(api, chat, swap(thu, "lunch"), swap(thu, "dinner"), skip)
+    out = await replan(api, chat, swap(THU, "lunch"), swap(THU, "dinner"), skip)
 
     plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
     assert [(r["status"], r["message"]) for r in out["results"]] == [
@@ -279,4 +316,4 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
         ("applied", "Skipped Thu lunch."),  # a fact: logged as said
     ]
     assert all(m["slot"] != "lunch" for d in plan["days"] for m in d["meals"])
-    assert meal_at(plan, thu, "dinner") is not None
+    assert meal_at(plan, THU, "dinner") is not None

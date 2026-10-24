@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQueries,
@@ -454,15 +455,30 @@ export function useCreatePlan() {
 }
 
 /** A few safe recipes to swap a planned meal for (fetched when `enabled`). */
-export function useAlternatives(planId: number, date: string, slot: Slot, enabled: boolean) {
+export type SwapFilters = { q: string; quick: boolean; pantry: boolean };
+const NO_FILTERS: SwapFilters = { q: "", quick: false, pantry: false };
+
+/** Recipes to swap a meal for: a few suggestions, or up to 6 for a search or filter. */
+export function useAlternatives(
+  planId: number,
+  date: string,
+  slot: Slot,
+  enabled: boolean,
+  filters: SwapFilters = NO_FILTERS,
+) {
   const api = useApi();
+  const filtered = Boolean(filters.q || filters.quick || filters.pantry);
   return useQuery({
-    queryKey: keys.alternatives(planId, date, slot),
+    queryKey: [...keys.alternatives(planId, date, slot), filters],
     enabled,
+    placeholderData: keepPreviousData,
     queryFn: async () =>
       unwrap(
         await api.GET("/plans/{plan_id}/alternatives", {
-          params: { path: { plan_id: planId }, query: { date, slot } },
+          params: {
+            path: { plan_id: planId },
+            query: { date, slot, limit: filtered ? 6 : 3, ...filters },
+          },
         }),
       ),
   });
