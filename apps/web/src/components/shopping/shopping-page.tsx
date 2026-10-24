@@ -36,7 +36,7 @@ import {
   useStockShopping,
   useTickShoppingItem,
 } from "@/lib/api/hooks";
-import { dateRange } from "@/lib/dates";
+import { dateRange, weekday } from "@/lib/dates";
 import { formatMoney } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { aisle } from "@/lib/aisles";
@@ -55,6 +55,15 @@ export function groupByAisle(items: ShoppingItem[]): [string, ShoppingItem[]][] 
 
 type Tick = ReturnType<typeof useTickShoppingItem>;
 
+/** "For Chilli (Mon, Thu) and Fish pie (Wed)", "For Chilli (Mon), Fish pie (Wed) +2". */
+export function usedFor(used: ShoppingItem["used_in"], shown = 2): string | null {
+  if (!used?.length) return null;
+  const parts = used.slice(0, shown).map((u) => `${u.name} (${u.dates.map(weekday).join(", ")})`);
+  if (used.length > shown) return `For ${parts.join(", ")} +${used.length - shown}`;
+  const last = parts.pop()!;
+  return `For ${parts.length ? `${parts.join(", ")} and ${last}` : last}`;
+}
+
 function ItemRow({
   item,
   tick,
@@ -71,12 +80,14 @@ function ItemRow({
   const amount = item.staple
     ? detail
     : [formatWeight(item.grams, units), item.approx_units, detail].filter(Boolean).join(" · ");
+  const used = usedFor(item.used_in);
+  const described = [amount ? `${id}-amount` : null, used ? `${id}-used` : null].filter(Boolean);
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
       <Checkbox
         id={id}
         checked={item.checked}
-        aria-describedby={amount ? `${id}-amount` : undefined}
+        aria-describedby={described.length ? described.join(" ") : undefined}
         onCheckedChange={(checked) => tick.mutate({ item, checked })}
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -93,6 +104,11 @@ function ItemRow({
           <span id={`${id}-amount`} className="text-xs text-muted-foreground">
             {amount}
             {item.stocked ? " · in your pantry" : ""}
+          </span>
+        ) : null}
+        {used ? (
+          <span id={`${id}-used`} className="line-clamp-2 text-xs text-muted-foreground">
+            {used}
           </span>
         ) : null}
       </div>

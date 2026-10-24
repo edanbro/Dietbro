@@ -440,6 +440,36 @@ async def test_shopping_list_lines_add_up_and_tick(api: httpx.AsyncClient, auth:
     assert next(i for i in again["items"] if i["food_id"] == RICE)["checked"] is True
 
 
+async def test_shopping_lines_say_which_meals_need_them(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    await set_up(api, auth)
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+    on: dict[int, list[str]] = {}
+    for day in plan["days"]:
+        for meal in day["meals"]:
+            on.setdefault(meal["recipe"]["id"], []).append(day["date"])
+
+    shopping = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
+
+    async with make_sessionmaker(db_engine)() as session:
+        uses = {
+            (r, f)
+            for r, f in await session.execute(
+                select(RecipeIngredient.recipe_id, RecipeIngredient.food_id)
+            )
+        }
+    for item in shopping["items"]:
+        assert item["used_in"], item["name"]
+        for u in item["used_in"]:
+            assert (u["recipe_id"], item["food_id"]) in uses
+            assert u["dates"] == sorted(dict.fromkeys(on[u["recipe_id"]]))
+        firsts = [u["dates"][0] for u in item["used_in"]]
+        assert firsts == sorted(firsts)
+    rice = next(i for i in shopping["items"] if i["food_id"] == RICE)
+    assert {u["recipe_id"] for u in rice["used_in"]} == {r for r in on if (r, RICE) in uses}
+
+
 async def test_recipe_detail_derives_allergens(
     api: httpx.AsyncClient, db_engine: AsyncEngine
 ) -> None:

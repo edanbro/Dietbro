@@ -51,6 +51,7 @@ from larder_api.schemas import (
     ShoppingItemPatch,
     ShoppingListOut,
     StockIn,
+    UsedInOut,
 )
 from larder_api.settings import Settings, get_settings
 from larder_core.meals import SLOT_ORDER, Slot
@@ -705,9 +706,40 @@ def approx_units(grams: int, portions: list[Portion]) -> str | None:
     return f"≈ {count} {unit}"
 
 
+async def used_in(session: AsyncSession, plan: MealPlan) -> dict[int, list[UsedInOut]]:
+    """Per food: the plan's recipes that use it, in the order they're first eaten."""
+    rows = await session.execute(
+        select(PlanMeal.day, PlanMeal.recipe_id, Recipe.name)
+        .join(Recipe, Recipe.id == PlanMeal.recipe_id)
+        .where(PlanMeal.plan_id == plan.id)
+        .order_by(PlanMeal.day, PlanMeal.id)
+    )
+    recipes: dict[int, UsedInOut] = {}
+    for day, recipe_id, name in rows:
+        on = plan.start_date + timedelta(days=day)
+        seen = recipes.setdefault(recipe_id, UsedInOut(recipe_id=recipe_id, name=name, dates=[]))
+        if on not in seen.dates:
+            seen.dates.append(on)
+    lines = await session.execute(
+        select(RecipeIngredient.food_id, RecipeIngredient.recipe_id).where(
+            RecipeIngredient.recipe_id.in_(recipes), RecipeIngredient.food_id.is_not(None)
+        )
+    )
+    out: dict[int, list[UsedInOut]] = {}
+    for food_id, recipe_id in lines:
+        if food_id is None:
+            continue
+        uses = out.setdefault(food_id, [])
+        if recipes[recipe_id] not in uses:
+            uses.append(recipes[recipe_id])
+    order = list(recipes)
+    return {f: sorted(uses, key=lambda u: order.index(u.recipe_id)) for f, uses in out.items()}
+
+
 async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut:
     """A plan's shopping list (`plan.shopping` loaded) as the API shows it."""
     food_ids = [s.food_id for s in plan.shopping]
+    uses = await used_in(session, plan)
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(food_ids)))}
     portions: dict[int, list[Portion]] = {}
     for p in await session.scalars(select(FoodPortion).where(FoodPortion.food_id.in_(food_ids))):
@@ -726,6 +758,7 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
             stocked=s.stocked_at is not None,
             staple=s.staple,
             approx_units=None if s.staple else approx_units(s.grams, portions.get(s.food_id, [])),
+            used_in=uses.get(s.food_id, []),
         )
 
     items = sorted(
