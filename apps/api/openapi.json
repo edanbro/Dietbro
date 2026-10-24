@@ -518,6 +518,73 @@
         ]
       }
     },
+    "/me/preferences/meals": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Meals",
+        "description": "Which meals to plan: each planned, sorted out by the user (its share of the day is\nkept free) or skipped. Applies from the next plan or change.",
+        "operationId": "putMeals",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "nothing left to plan, or too much on one meal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "preferences not set up yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/allergies": {
       "get": {
         "tags": [
@@ -7151,6 +7218,52 @@
         ],
         "title": "MealOut"
       },
+      "MealsIn": {
+        "properties": {
+          "breakfast": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "own",
+              "skip"
+            ],
+            "title": "Breakfast",
+            "default": "plan"
+          },
+          "lunch": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "own",
+              "skip"
+            ],
+            "title": "Lunch",
+            "default": "plan"
+          },
+          "dinner": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "own",
+              "skip"
+            ],
+            "title": "Dinner",
+            "default": "plan"
+          },
+          "snack": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "skip"
+            ],
+            "title": "Snack",
+            "default": "plan"
+          }
+        },
+        "type": "object",
+        "title": "MealsIn",
+        "description": "Which meals the planner plans: \"plan\" it, \"own\" (the user sorts it out, and about its\nshare of the day's targets is kept free for it) or \"skip\" (not eaten: the planned meals\ncover the day). Snacks are planned (when they help) or skipped."
+      },
       "NutrientBands": {
         "properties": {
           "kcal": {
@@ -7388,6 +7501,24 @@
         "type": "object",
         "title": "OutcomeOut",
         "description": "What one plan change request did (also sent live as the `outcome` event)."
+      },
+      "OwnMealOut": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/Slot"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "kcal"
+        ],
+        "title": "OwnMealOut",
+        "description": "A meal the user sorts out themselves: about this much is kept free for it each day (and\ncounted in the day's totals)."
       },
       "PantryChangeOut": {
         "properties": {
@@ -7776,6 +7907,21 @@
             },
             "type": "array",
             "title": "Notes"
+          },
+          "own_meals": {
+            "items": {
+              "$ref": "#/components/schemas/OwnMealOut"
+            },
+            "type": "array",
+            "title": "Own Meals"
+          },
+          "skipped_meals": {
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            },
+            "type": "array",
+            "title": "Skipped Meals",
+            "description": "meals the user doesn't eat (never planned)"
           }
         },
         "type": "object",
@@ -7965,6 +8111,9 @@
             "type": "integer",
             "title": "Quick Minutes",
             "default": 30
+          },
+          "meals": {
+            "$ref": "#/components/schemas/MealsIn"
           }
         },
         "type": "object",

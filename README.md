@@ -80,6 +80,8 @@ flowchart LR
   to marinate or soak, on the plan and as an evening notification.
 - **Any recipe to the list**: a recipe's missing ingredients go on the shopping list in one tap,
   scaled to the servings you'll cook.
+- **Only the meals you want**: plan every meal, or say you sort one out yourself (a lunch at
+  work: about its share of the day is kept free, and what you log replaces it) or skip it.
 - **Metric or US units**: grams and kilograms, or ounces, pounds, feet and inches (the default
   in the US), for the shopping list, pantry, weigh-ins, body stats and prices per weight.
 - **Installable and offline**: PWA with a hand-written service worker; light, dark or system

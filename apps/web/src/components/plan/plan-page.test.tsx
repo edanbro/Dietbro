@@ -494,3 +494,60 @@ describe("food logged in the chat", () => {
     ]);
   });
 });
+
+describe("meals the user sorts out or skips", () => {
+  function planWithoutLunch() {
+    const plan = makePlan({
+      own_meals: [{ slot: "lunch", kcal: 700 }],
+      skipped_meals: ["breakfast"],
+    });
+    for (const day of plan.days) day.meals = day.meals.filter((m) => m.slot === "dinner");
+    // Friday's lunch was logged: it takes the place of the room kept for it.
+    plan.days[0].logged = [
+      {
+        date: "2026-10-09",
+        slot: "lunch",
+        kind: "off_plan",
+        description: "canteen curry",
+        kcal: 900,
+        estimated: true,
+      },
+    ];
+    return plan;
+  }
+
+  it("keeps a card for an own lunch until something is logged for it", async () => {
+    setup({ "GET /plans/current": json(planWithoutLunch()) });
+
+    const friday = await screen.findByRole("list", { name: "Meals on Friday 9 October" });
+    expect(within(friday).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "LunchCanteen curry (off-plan, ~900 kcal est.)",
+      expect.stringContaining("Dinner 1"),
+    ]);
+    expect(screen.getByText("Totals include ~900 kcal of logged food (estimated).")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Sat 10 October" }));
+    const saturday = await screen.findByRole("list", { name: "Meals on Saturday 10 October" });
+    const rows = within(saturday).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("LunchYour ownAbout 700 kcal kept for it.");
+    expect(within(rows[0]).getByRole("link", { name: "Change" })).toHaveAttribute(
+      "href",
+      "/profile#meals",
+    );
+    expect(screen.getByText("Totals include about 700 kcal kept for your own lunch.")).toBeVisible();
+  });
+
+  it("leaves a skipped breakfast out of the week grid and marks own lunches", async () => {
+    resetNavigation("/plan?view=week");
+    setup({ "GET /plans/current": json(planWithoutLunch()) });
+
+    const grid = await screen.findByRole("table", { name: "Meals this week" });
+    const heads = within(grid).getAllByRole("columnheader").map((h) => h.textContent);
+    expect(heads).not.toContain("Breakfast");
+    const saturday = within(grid).getAllByRole("row")[2];
+    expect(within(saturday).getAllByRole("cell").map((c) => c.textContent)).toEqual([
+      "Your own",
+      "Dinner 2",
+    ]);
+  });
+});

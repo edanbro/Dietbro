@@ -416,6 +416,11 @@ class Preferences(Base):
         ARRAY(SmallInteger), default=list, server_default=text("'{}'")
     )
     quick_minutes: Mapped[int] = mapped_column(SmallInteger, default=30, server_default="30")
+    # Which meals are planned: slot -> "plan" (the default), "own" (the user sorts it out; its
+    # share of the day is kept free) or "skip" (not eaten). larder_api.planning.meal_modes.
+    meal_modes: Mapped[dict[str, str]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'")
+    )
     updated_at: Mapped[datetime] = _now()
 
 

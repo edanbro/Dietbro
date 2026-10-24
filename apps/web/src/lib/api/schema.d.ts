@@ -185,6 +185,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/preferences/meals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Meals
+         * @description Which meals to plan: each planned, sorted out by the user (its share of the day is
+         *     kept free) or skipped. Applies from the next plan or change.
+         */
+        put: operations["putMeals"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/allergies": {
         parameters: {
             query?: never;
@@ -2434,6 +2455,38 @@ export interface components {
              */
             uses_pantry: string[];
         };
+        /**
+         * MealsIn
+         * @description Which meals the planner plans: "plan" it, "own" (the user sorts it out, and about its
+         *     share of the day's targets is kept free for it) or "skip" (not eaten: the planned meals
+         *     cover the day). Snacks are planned (when they help) or skipped.
+         */
+        MealsIn: {
+            /**
+             * Breakfast
+             * @default plan
+             * @enum {string}
+             */
+            breakfast: "plan" | "own" | "skip";
+            /**
+             * Lunch
+             * @default plan
+             * @enum {string}
+             */
+            lunch: "plan" | "own" | "skip";
+            /**
+             * Dinner
+             * @default plan
+             * @enum {string}
+             */
+            dinner: "plan" | "own" | "skip";
+            /**
+             * Snack
+             * @default plan
+             * @enum {string}
+             */
+            snack: "plan" | "skip";
+        };
         /** NutrientBands */
         NutrientBands: {
             kcal?: components["schemas"]["BandOut"] | null;
@@ -2514,6 +2567,16 @@ export interface components {
              * @enum {string}
              */
             type: "outcome";
+        };
+        /**
+         * OwnMealOut
+         * @description A meal the user sorts out themselves: about this much is kept free for it each day (and
+         *     counted in the day's totals).
+         */
+        OwnMealOut: {
+            slot: components["schemas"]["Slot"];
+            /** Kcal */
+            kcal: number;
         };
         /**
          * PantryChangeOut
@@ -2668,6 +2731,13 @@ export interface components {
             violations: components["schemas"]["ViolationOut"][];
             /** Notes */
             notes: string[];
+            /** Own Meals */
+            own_meals?: components["schemas"]["OwnMealOut"][];
+            /**
+             * Skipped Meals
+             * @description meals the user doesn't eat (never planned)
+             */
+            skipped_meals?: components["schemas"]["Slot"][];
         };
         /** PlanRequest */
         PlanRequest: {
@@ -2721,6 +2791,7 @@ export interface components {
              * @default 30
              */
             quick_minutes: number;
+            meals?: components["schemas"]["MealsIn"];
         };
         /** PriceItemOut */
         PriceItemOut: {
@@ -4340,6 +4411,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description preferences not set up yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putMeals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description nothing left to plan, or too much on one meal */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
                 };
             };
             /** @description preferences not set up yet */
