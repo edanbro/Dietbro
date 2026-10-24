@@ -658,6 +658,9 @@ async def _solve(scope: ChatScope, items: list[_Item], read: _Read, decided: _Pl
         return
     pins = await _pins(scope, items, read, decided, rows)
 
+    modes = planning.meal_modes(read.inputs.preferences if read.inputs else None)
+    unplanned = {slot for slot, mode in modes.items() if mode != "plan"}
+
     def build(chosen: list[_Item], keep_pins: bool) -> Problem:
         extra: dict[int, Macros] = {}
         empty: set[tuple[int, Slot]] = set()
@@ -676,8 +679,8 @@ async def _solve(scope: ChatScope, items: list[_Item], read: _Read, decided: _Pl
             extra[d] = extra.get(d, Macros()) + item.macros
             empty.add((d, item.slot))
         for slot, row in decided.frozen.items():
-            if (0, slot) in empty:
-                continue
+            if (0, slot) in empty or (row is None and slot in unplanned):
+                continue  # an own meal that's over keeps its share of the day (constrain)
             empty.add((0, slot))
             if row is not None:
                 extra[0] = extra.get(0, Macros()) + Macros(

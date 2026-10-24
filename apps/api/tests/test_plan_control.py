@@ -317,3 +317,35 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
     ]
     assert all(m["slot"] != "lunch" for d in plan["days"] for m in d["meals"])
     assert meal_at(plan, THU, "dinner") is not None
+
+
+async def test_an_own_lunch_that_is_over_still_counts_for_the_day(
+    api: httpx.AsyncClient,
+    chat: ChatEnv,
+    db_engine: AsyncEngine,
+    menu: dict[str, int],
+    new_user: NewUser,
+    make_plan: MakePlan,
+) -> None:
+    uid = await new_user("user_a")
+    async with make_sessionmaker(db_engine)() as session:
+        prefs = await session.get(db.Preferences, uid)
+        assert prefs is not None
+        prefs.meal_modes = {"lunch": "own"}
+        await session.commit()
+    await make_plan(uid, MON)
+    body = {
+        "changes": [swap(WED, "dinner")],
+        "client_id": str(uuid.uuid4()),
+        "today": WED.isoformat(),
+        "local_time": "16:00",  # lunch is over
+    }
+
+    response = await api.post("/plans/replan", json=body, headers=chat.auth("user_a"))
+
+    assert response.status_code == 200, response.text
+    plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
+    kept = plan["own_meals"][0]["kcal"]
+    wed = next(d for d in plan["days"] if d["date"] == WED.isoformat())
+    planned = sum(m["nutrition"]["kcal"] for m in wed["meals"])
+    assert wed["totals"]["kcal"] == pytest.approx(planned + kept, abs=1)
