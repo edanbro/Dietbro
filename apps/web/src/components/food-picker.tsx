@@ -7,6 +7,27 @@ import { ProductThumb } from "@/components/food-bits";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { type FoodScope, type FoodSummary, useFoodSearch } from "@/lib/api/hooks";
+import { foodName } from "@/lib/food-name";
+
+/** "Chicken · breast, skinless, boneless" for a database food (foodName), a product as named
+ * by its brand. */
+function FoodLabel({ food }: { food: FoodSummary }) {
+  if (food.brand) {
+    return (
+      <span>
+        <span className="font-medium">{food.brand} </span>
+        {food.description}
+      </span>
+    );
+  }
+  const { name, detail } = foodName(food.description);
+  return (
+    <span>
+      {name}
+      {detail ? <span className="text-muted-foreground"> · {detail}</span> : null}
+    </span>
+  );
+}
 
 export function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -70,10 +91,7 @@ export function FoodPicker({
                 <ProductThumb url={food.image_url} />
                 <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
                   <span className="flex w-full items-start justify-between gap-2 text-sm">
-                    <span>
-                      {food.brand ? <span className="font-medium">{food.brand} </span> : null}
-                      {food.description}
-                    </span>
+                    <FoodLabel food={food} />
                     {food.kind === "product" ? (
                       <Badge variant="secondary" className="shrink-0">
                         Product

@@ -62,7 +62,7 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     await expect(page.getByRole("heading", { name: "What's in your kitchen" })).toBeVisible();
     await page.getByPlaceholder("Add food, e.g. onions").fill("onion");
     // Two foods are called "Onions, raw" (USDA SR Legacy and survey foods): either will do.
-    await page.getByRole("button", { name: /^Onions, raw/ }).first().click();
+    await page.getByRole("button", { name: /^Onions(?! ·)/ }).first().click();
     await page.getByLabel("Quantity", { exact: true }).fill("2");
     await page.getByLabel("Unit", { exact: true }).selectOption("large");
     await page.getByRole("button", { name: "Add to pantry" }).click();
