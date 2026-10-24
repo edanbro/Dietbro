@@ -130,6 +130,7 @@ export function MealActions({
     quick: false,
     pantry: false,
     favourites: false,
+    cheaper: false,
   });
   useEffect(() => {
     const wait = setTimeout(() => setFilters((f) => ({ ...f, q: typed.trim() })), 300);
@@ -148,7 +149,9 @@ export function MealActions({
   };
   const replan = (change: PlanChange) => run(onReplan([change]));
   const options = useAlternatives(planId, date, slot, mode === "swap", filters);
-  const searching = Boolean(filters.q || filters.quick || filters.pantry || filters.favourites);
+  const searching = Boolean(
+    filters.q || filters.quick || filters.pantry || filters.favourites || filters.cheaper,
+  );
   const trades = past ? [] : tradesFor(week, date, meal, today);
   // Each meal goes to the other's day: two swaps, made (and checked) as one change.
   const trade = (t: Trade) =>
@@ -278,6 +281,7 @@ export function MealActions({
                 ["quick", "Quick"],
                 ["pantry", "Uses my pantry"],
                 ["favourites", "Favourites"],
+                ["cheaper", "Cheaper"],
               ] as const
             ).map(([key, label]) => (
               <button

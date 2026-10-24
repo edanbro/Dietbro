@@ -447,6 +447,8 @@ describe("replans from the plan", () => {
     await waitFor(() => expect(asked.at(-1)?.get("quick")).toBe("true"));
     fireEvent.click(within(group).getByRole("button", { name: "Favourites" }));
     await waitFor(() => expect(asked.at(-1)?.get("favourites")).toBe("true"));
+    fireEvent.click(within(group).getByRole("button", { name: "Cheaper" }));
+    await waitFor(() => expect(asked.at(-1)?.get("cheaper")).toBe("true"));
     expect(asked.at(-1)?.get("limit")).toBe("6");
     fireEvent.change(within(group).getByRole("searchbox", { name: "Search recipes" }), {
       target: { value: "zzz" },

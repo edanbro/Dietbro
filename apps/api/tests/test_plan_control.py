@@ -169,6 +169,15 @@ async def test_alternatives_can_be_searched_and_filtered(
     stew_id = next(i["id"] for i in stew["items"] if i["name"] == "Lentil stew")
     await api.put(f"/recipes/{stew_id}/feedback", json={"verdict": "favourite"}, headers=auth)
     assert await options(favourites=True) == quick
+    cheap = await api.get(
+        f"/plans/{plan_id}/alternatives",
+        params={"date": THU.isoformat(), "slot": "dinner", "limit": 6, "cheaper": True},
+        headers=auth,
+    )
+    costs = [o["cost_per_serving"] for o in cheap.json()]
+    assert costs
+    assert all(c is not None for c in costs)
+    assert costs == sorted(costs)
 
 
 async def test_alternatives_for_a_day_outside_the_plan_404(
