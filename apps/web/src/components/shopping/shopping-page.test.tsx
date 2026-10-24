@@ -347,3 +347,31 @@ describe("what each line is for", () => {
     );
   });
 });
+
+describe("what you often buy", () => {
+  it("offers usuals not on the list yet, and adds one in a tap", async () => {
+    const calls = setup({
+      "GET /plans/7/shopping": json(
+        makeShoppingList({ items: [item({ food_id: 11, name: "Onions, raw" })] }),
+      ),
+      "GET /shopping/extras": json([{ id: 1, name: "white bread", checked: false }]),
+      "GET /shopping/usuals": json([
+        { food_id: 11, name: "Onions, raw", weeks: 5, last_bought: "2026-10-07" },
+        { food_id: 20, name: "Milk, whole, 3.25% milkfat", weeks: 4, last_bought: "2026-10-07" },
+        { food_id: 21, name: "Bread, white", weeks: 3, last_bought: "2026-10-01" },
+      ]),
+      "POST /shopping/extras": json({ id: 2, name: "Milk", checked: false }, 201),
+    });
+
+    const usuals = await screen.findByRole("list", { name: "You often buy" });
+    // Onions are on the list already; bread is one of your own items.
+    expect(within(usuals).getAllByRole("button").map((b) => b.textContent)).toEqual(["Milk"]);
+    fireEvent.click(within(usuals).getByRole("button", { name: "Add Milk" }));
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "POST" && c.path === "/shopping/extras")?.body).toEqual(
+        { name: "Milk" },
+      ),
+    );
+  });
+});
