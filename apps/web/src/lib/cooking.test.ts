@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clock, cookServings, parseServings, scaleFactor, stepTimers } from "./cooking";
+import { clock, cookServings, parseServings, scaleFactor, steps, stepTimers } from "./cooking";
 
 describe("stepTimers", () => {
   it.each([
@@ -44,5 +44,21 @@ describe("scaling", () => {
     expect(cookServings(1.5, 3)).toBe(4.5);
     expect(cookServings(2.5, 8)).toBe(20);
     expect(cookServings(2.5, 7)).toBe(17.5);
+  });
+});
+
+describe("steps", () => {
+  it("drops step headings and numbers", () => {
+    expect(steps("STEP 1\r\nChop the onion.\r\n2. Fry it for 5 minutes.\n3) Serve")).toEqual([
+      "Chop the onion.",
+      "Fry it for 5 minutes.",
+      "Serve",
+    ]);
+  });
+
+  it("joins a line wrapped mid-sentence onto the one before", () => {
+    expect(
+      steps("Add the eggs and stir\ngently until set.\nServe on toast.\nseason to taste."),
+    ).toEqual(["Add the eggs and stir gently until set.", "Serve on toast.", "season to taste."]);
   });
 });

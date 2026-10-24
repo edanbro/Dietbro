@@ -49,6 +49,8 @@ def meal_types(category: str | None) -> frozenset[Slot]:
 # over this is almost always a parsing or matching error (deep-frying oil counted in full).
 MAX_KCAL_PER_SERVING = 1000.0
 MAX_OIL_SHARE = 0.25  # share of a recipe's grams that are "Fats and Oils"
+# 6 g of salt, an adult's whole day: a whole pot's seasoning counted in one serving.
+MAX_SODIUM_MG_PER_SERVING = 2400.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +87,7 @@ def recipe_slots(
     category: str | None,
     kcal_per_serving: float | None,
     oil_share: float,
+    sodium_mg_per_serving: float | None = None,
 ) -> frozenset[Slot]:
     """Slots a recipe may fill: a reviewed override, else none when its nutrition looks broken,
     else by category."""
@@ -94,5 +97,7 @@ def recipe_slots(
     if kcal_per_serving is None or kcal_per_serving > MAX_KCAL_PER_SERVING:
         return frozenset()
     if oil_share > MAX_OIL_SHARE:
+        return frozenset()
+    if (sodium_mg_per_serving or 0) > MAX_SODIUM_MG_PER_SERVING:
         return frozenset()
     return meal_types(category)

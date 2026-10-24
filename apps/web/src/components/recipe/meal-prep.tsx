@@ -36,7 +36,10 @@ type Line = { key: string; name: string; amount: string; recipes: string[] };
 /** What to get out: weighed ingredients added up across the recipes (by food), the rest as
  * written, each scaled to its recipe's servings. */
 export function gatherIngredients(cooking: { recipe: Recipe; servings: number }[]): Line[] {
-  const byFood = new Map<number, { name: string; grams: number; recipes: Set<string> }>();
+  const byFood = new Map<
+    number,
+    { name: string; grams: number; measures: string[]; recipes: Set<string> }
+  >();
   const other: Line[] = [];
   for (const { recipe, servings } of cooking) {
     const factor = scaleFactor(servings, recipe.servings);
@@ -45,11 +48,13 @@ export function gatherIngredients(cooking: { recipe: Recipe; servings: number }[
         const seen = byFood.get(ing.food_id);
         if (seen) {
           seen.grams += ing.grams * factor;
+          seen.measures.push(ing.measure);
           seen.recipes.add(recipe.name);
         } else {
           byFood.set(ing.food_id, {
             name: ing.name,
             grams: ing.grams * factor,
+            measures: [ing.measure],
             recipes: new Set([recipe.name]),
           });
         }
@@ -66,7 +71,13 @@ export function gatherIngredients(cooking: { recipe: Recipe; servings: number }[
   const weighed: Line[] = [...byFood].map(([id, v]) => ({
     key: `food-${id}`,
     name: v.name,
-    amount: formatGrams(v.grams),
+    // A pinch of pepper weighs nothing: say it as the recipe does.
+    amount:
+      v.grams >= 1
+        ? formatGrams(v.grams)
+        : v.measures.length === 1 && v.measures[0]
+          ? v.measures[0]
+          : "a pinch",
     recipes: [...v.recipes],
   }));
   return [...weighed, ...other].sort((a, b) => a.name.localeCompare(b.name));
@@ -203,6 +214,7 @@ export function MealPrep() {
       id: recipe.id,
       name: recipe.name,
       steps: steps(recipe.instructions),
+      minutes: recipe.minutes,
     })),
   );
   const lines = gatherIngredients(cooking);

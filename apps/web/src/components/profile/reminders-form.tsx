@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellIcon, BellOffIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ function supported(): boolean {
   );
 }
 
+const noSubscribe = () => () => {};
+
 async function currentSubscription(): Promise<PushSubscription | null> {
   const reg = await navigator.serviceWorker.getRegistration("/");
   return (await reg?.pushManager.getSubscription()) ?? null;
@@ -42,13 +44,15 @@ export function RemindersForm() {
   const api = useApi();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  // Unknown (null) while server rendering and hydrating, so both render the same markup.
+  const canPush = useSyncExternalStore(noSubscribe, supported, () => null);
   const config = useQuery({
     queryKey: ["me", "push"],
     queryFn: async () => unwrap(await api.GET("/me/push")),
   });
   const here = useQuery({
     queryKey: ["push-subscription"],
-    enabled: supported(),
+    enabled: canPush === true,
     queryFn: async () => Boolean(await currentSubscription()),
   });
   const refresh = () =>
@@ -57,7 +61,7 @@ export function RemindersForm() {
       qc.invalidateQueries({ queryKey: ["push-subscription"] }),
     ]);
 
-  if (!supported()) {
+  if (canPush === false) {
     return (
       <p className="text-sm text-muted-foreground">
         This browser can&apos;t show reminders. On iPhone, add the app to your Home Screen first
@@ -155,7 +159,7 @@ export function RemindersForm() {
       </p>
       <Button
         variant={on ? "outline" : "default"}
-        disabled={busy || config.isPending || here.isPending}
+        disabled={busy || !canPush || config.isPending || here.isPending}
         onClick={() => void (on ? turnOff() : turnOn())}
         className="self-start"
       >

@@ -5,6 +5,7 @@ Every ingredient name is a curated alias, so these resolve without the embedding
 serving counts are explicit rather than estimated.
 """
 
+import re
 import tomllib
 from importlib import resources
 from typing import Any
@@ -15,6 +16,13 @@ from larder_data.mealdb import IngredientLine, RecipeDraft
 SOURCE = "curated"
 # Any category that fills a meal slot (larder_core.meals.CATEGORY_SLOTS; not "Side").
 CATEGORIES = frozenset(c for c, slots in CATEGORY_SLOTS.items() if slots)
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
+
+
+def method(text: str) -> str:
+    """The TOML wraps each method at 100 columns; one sentence per line gives the cook-mode
+    steps instead of breaks mid-sentence."""
+    return "\n".join(SENTENCE_END.split(" ".join(text.split())))
 
 
 def parse(data: dict[str, Any]) -> list[RecipeDraft]:
@@ -42,7 +50,7 @@ def parse(data: dict[str, Any]) -> list[RecipeDraft]:
                 name=str(r["name"]),
                 category=str(r["category"]),
                 cuisine=r.get("cuisine"),
-                instructions=str(r["instructions"]).strip(),
+                instructions=method(str(r["instructions"])),
                 image_url=None,
                 source_url=None,
                 tags=tuple(r.get("tags", ())),

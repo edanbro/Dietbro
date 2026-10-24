@@ -89,10 +89,20 @@ const NUMBERING = /^(?:step\s*\d+\s*[.):-]?\s*|\d{1,2}[.)]\s+)/i;
 /**
  * A recipe's method as steps: one per line, without the "STEP 1" headings and "1." numbers
  * some sources write (a heading on its own line is dropped, a number before text is removed).
+ * A line that carries on a sentence (lower case, after a line with no closing punctuation)
+ * joins the one before it, so text wrapped mid-sentence stays one step.
  */
 export function steps(instructions: string): string[] {
-  return instructions
-    .split(/\r?\n+/)
-    .map((s) => s.trim().replace(NUMBERING, "").trim())
-    .filter(Boolean);
+  const out: string[] = [];
+  for (const line of instructions.split(/\r?\n+/)) {
+    const s = line.trim().replace(NUMBERING, "").trim();
+    if (!s) continue;
+    const last = out.at(-1);
+    if (last !== undefined && /^[a-z]/.test(s) && !/[.!?:;]$/.test(last)) {
+      out[out.length - 1] = `${last} ${s}`;
+    } else {
+      out.push(s);
+    }
+  }
+  return out;
 }

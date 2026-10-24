@@ -218,7 +218,11 @@ def recipe_nutrition(
     totals = total(resolved)
     estimated = servings is None
     if servings is None:
-        servings = estimate_servings(totals.kcal, KCAL_PER_SERVING.get(category or "", 650.0))
+        servings = estimate_servings(
+            totals.kcal,
+            KCAL_PER_SERVING.get(category or "", 650.0),
+            sum(grams for _, grams in resolved),
+        )
     per = totals.per_serving(servings)
     out |= {f: getattr(per, f) for f in Nutrients.FIELDS}
     out |= micro_totals(micros, servings)

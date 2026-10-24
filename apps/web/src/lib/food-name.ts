@@ -27,7 +27,12 @@ const NOISE = [
   /^ripe$/,
   /^table$/,
   /^solids and liquids$/,
-  /^without salt$/,
+  /^without salt( added)?$/,
+  /^ready[- ]to[- ]serve$/,
+  /^bottled$/,
+  /^home-prepared$/,
+  /^unprepared$/,
+  /^all$/,
 ];
 
 /** Words that read naturally in front of the food: "red onions", "ground ginger". */
@@ -54,12 +59,31 @@ const ADJECTIVES = new Set([
   "canned",
   "light",
   "dark",
+  "powdered",
 ]);
 
-/** Leading words that only file the food under a heading: "Spices, paprika" is paprika. */
-const HEADINGS = new Set(["spices", "fish", "salad dressing", "beverages", "cereals", "sugars"]);
+/** Leading words that only file the food under a heading: "Spices, paprika" is paprika, and
+ * "Alcoholic beverage, distilled, rum" is rum. */
+const HEADINGS = new Set([
+  "spices",
+  "fish",
+  "salad dressing",
+  "beverages",
+  "cereals",
+  "sugars",
+  "alcoholic beverage",
+  "candies",
+  "leavening agents",
+  "crustaceans",
+  "mollusks",
+  "soup",
+  "distilled",
+  "carbonated",
+]);
 /** Headings that belong after the food: "Oil, olive" is olive oil. */
-const TRAILING = new Set(["oil", "nuts", "seeds", "cheese", "vinegar"]);
+const TRAILING = new Set(["oil", "nuts", "seeds", "cheese", "vinegar", "sauce"]);
+/** Meats are bought fresh anyway: "Pork, fresh, shoulder" is pork. */
+const MEATS = new Set(["beef", "pork", "lamb", "veal"]);
 
 export type FoodName = { name: string; detail: string | null };
 
@@ -70,7 +94,7 @@ function capitalise(s: string): string {
 export function foodName(description: string): FoodName {
   const parts = description
     .replace(/\s*\(includes foods for usda[^)]*\)/gi, "")
-    .split(",")
+    .split(/,(?![^(]*\))/) // not the commas inside brackets
     .map((p) => p.trim())
     .filter(Boolean);
   if (parts.length < 2) return { name: description.trim(), detail: null };
@@ -79,11 +103,31 @@ export function foodName(description: string): FoodName {
   rest = rest.filter((p) => !NOISE.some((re) => re.test(p.toLowerCase())));
   const lower = head!.toLowerCase();
   if (HEADINGS.has(lower) && rest.length) {
-    head = rest.shift()!;
-    // "Sugars, granulated" keeps its noun.
-    if (lower === "sugars" && ADJECTIVES.has(head.toLowerCase())) head = `${head} sugar`;
+    while (HEADINGS.has(head!.toLowerCase()) && rest.length) head = rest.shift()!;
+    // "Sugars, granulated" keeps its noun; "Soup, stock, chicken" is chicken stock.
+    if (lower === "sugars" && ADJECTIVES.has(head!.toLowerCase())) head = `${head} sugar`;
+    if (/^(stock|broth)$/i.test(head!) && rest.length) head = `${rest.shift()!} ${head}`;
+    if (/^all \(gin/i.test(head!)) head = "spirits"; // "distilled, all (gin, rum, vodka...)"
   } else if (TRAILING.has(lower) && rest.length) {
-    head = `${rest.shift()!} ${lower}`;
+    const first = rest.shift()!;
+    const f = first.toLowerCase();
+    // "Nuts, almonds" and "Seeds, sesame butter" are whole names already.
+    const whole =
+      f.endsWith(lower) ||
+      ((lower === "nuts" || lower === "seeds") && /\s|s$|nut|seed/.test(f));
+    head = whole ? first : `${first} ${lower}`;
+  } else if (lower === "tomato products") {
+    // "Tomato products, canned, paste" is canned tomato paste.
+    const i = rest.findIndex((p) => !ADJECTIVES.has(p.toLowerCase()));
+    if (i >= 0) head = `tomato ${rest.splice(i, 1)[0]!}`;
+  } else if (lower === "bread" && rest[0]?.toLowerCase() === "crumbs") {
+    rest.shift();
+    head = "breadcrumbs";
+  } else if (lower === "egg" && /^(white|yolk)$/i.test(rest[0] ?? "")) {
+    head = `egg ${rest.shift()!.toLowerCase()}`;
+    rest = rest.filter((p) => p.toLowerCase() !== "fresh");
+  } else if (MEATS.has(lower)) {
+    rest = rest.filter((p) => p.toLowerCase() !== "fresh");
   }
 
   const adjectives: string[] = [];

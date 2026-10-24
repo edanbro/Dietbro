@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from larder_core.meals import (
     MAX_KCAL_PER_SERVING,
     MAX_OIL_SHARE,
+    MAX_SODIUM_MG_PER_SERVING,
     SLOT_ORDER,
     load_overrides,
     recipe_slots,
@@ -99,7 +100,7 @@ async def planning_eligibility(
         total = sum(i.grams or 0.0 for i in r.ingredients)
         oil = sum(i.grams or 0.0 for i in r.ingredients if i.food_id in oils)
         share = oil / total if total else 0.0
-        slots = recipe_slots(r.source, r.source_id, r.category, r.kcal, share)
+        slots = recipe_slots(r.source, r.source_id, r.category, r.kcal, share, r.sodium_mg)
         per_slot.update(s.value for s in slots)
         if (o := overrides.get((r.source, r.source_id))) is not None:
             where = ", ".join(sorted(o.slots)) + " only" if o.slots else "not planned"
@@ -108,6 +109,8 @@ async def planning_eligibility(
             excluded.append((r.name, f"{r.kcal:,.0f} kcal per serving"))
         elif not slots and share > MAX_OIL_SHARE:
             excluded.append((r.name, f"oil is {100 * share:.0f}% of the recipe"))
+        elif not slots and (r.sodium_mg or 0) > MAX_SODIUM_MG_PER_SERVING:
+            excluded.append((r.name, f"{(r.sodium_mg or 0) * 2.5 / 1000:.1f} g salt per serving"))
     return {s.value: per_slot[s.value] for s in SLOT_ORDER}, excluded
 
 

@@ -101,6 +101,11 @@ SLOT_RULES: dict[Slot, tuple[bool, int, int, int | None]] = {
     Slot.DINNER: (True, 2, 4, None),
     Slot.SNACK: (False, 1, 2, 4),
 }
+# The longest a recipe may take to be planned for a slot, in minutes: a six-hour roast is no
+# weekday lunch. Dinner is open (busy nights have their own limit, `quick_choices`). A limit
+# holds only while at least MIN_TIMED recipes within it suit the user.
+SLOT_MINUTES: dict[Slot, int] = {Slot.BREAKFAST: 30, Slot.LUNCH: 60, Slot.SNACK: 60}
+MIN_TIMED = 10
 # Daily macro bands are looser than the weekly budget they add up to (PLAN §6).
 DAILY_MIN_FACTOR, DAILY_MAX_FACTOR = 0.8, 1.25
 CATALOG_TTL_S = 600.0
@@ -218,7 +223,12 @@ def recipe_facts(
     )
     kcal = recipe.kcal if recipe.nutrition_complete else None
     slots = recipe_slots(
-        recipe.source, recipe.source_id, recipe.category, kcal, oil_g / total_g if total_g else 0
+        recipe.source,
+        recipe.source_id,
+        recipe.category,
+        kcal,
+        oil_g / total_g if total_g else 0,
+        recipe.sodium_mg if recipe.nutrition_complete else None,
     )
     lines = [
         make_line(
@@ -593,6 +603,28 @@ def weights_for(currency: Currency) -> Weights:
 type Cell = tuple[int, Slot]
 
 
+def timed(pool: PlanningCatalog, profile: Profile) -> dict[int, Recipe]:
+    """The pool's recipes, each without the slots it takes too long for (SLOT_MINUTES). A
+    recipe of unknown length keeps its slots."""
+    recipes = dict(pool.catalog.recipes)
+    for slot, limit in SLOT_MINUTES.items():
+        slow: list[int] = []
+        quick = 0
+        for rid, recipe in pool.catalog.recipes.items():
+            if slot not in recipe.meal_types:
+                continue
+            minutes = (text := pool.text.get(rid)) and text.minutes
+            if minutes and minutes > limit:
+                slow.append(rid)
+            elif allowed(recipe, pool.catalog.foods, profile):
+                quick += 1
+        if quick < MIN_TIMED:
+            continue
+        for rid in slow:
+            recipes[rid] = replace(recipes[rid], meal_types=recipes[rid].meal_types - {slot})
+    return recipes
+
+
 def make_problem(
     inputs: UserInputs,
     catalog: PlanningCatalog,
@@ -631,7 +663,7 @@ def make_problem(
     )
     profile = profile_of(inputs.allergies, inputs.preferences)
     specs, recipes = select_candidates(
-        Catalog(recipes=pool.catalog.recipes, foods=foods),
+        Catalog(recipes=timed(pool, profile), foods=foods),
         profile,
         taste_of(inputs.preferences),
         lots,
@@ -682,10 +714,14 @@ def constrain(
     prefs = taste_of(inputs.preferences)
     recipes = dict(problem.recipes)
     foods = dict(problem.foods)
-    for rid in {r for ids in choices.values() for r in ids} - recipes.keys():
+    for rid in {r for ids in choices.values() for r in ids}:
         recipe = pool.catalog.recipes.get(rid)
         if recipe is None:
             continue  # check_problem reports it
+        if rid in recipes:
+            # A meal asked for by name may take as long as it takes (`timed`).
+            recipes[rid] = replace(recipes[rid], meal_types=recipe.meal_types)
+            continue
         recipes[rid] = replace(recipe, preference=preference(recipe, prefs))
         for i in recipe.ingredients:
             if i.food_id not in foods and i.food_id in pool.catalog.foods:

@@ -30,7 +30,12 @@ from larder_api.chat.scope import ChatScope
 from larder_core.aliases import load_alias_rows
 from larder_core.allergens import Allergen
 from larder_core.cook_time import cook_minutes
-from larder_core.meals import MAX_KCAL_PER_SERVING, MAX_OIL_SHARE, Slot
+from larder_core.meals import (
+    MAX_KCAL_PER_SERVING,
+    MAX_OIL_SHARE,
+    MAX_SODIUM_MG_PER_SERVING,
+    Slot,
+)
 from larder_core.nutrition import MICROS, Nutrients, micro_totals
 from larder_core.quantities import grams_for
 from larder_core.tagging import line_tags, make_line, tag_text
@@ -274,6 +279,8 @@ def _slot_problem(draft: CreateRecipeInput, row: db.Recipe, food_rows: dict[int,
     )
     if total_g and oil / total_g > MAX_OIL_SHARE:
         return "too much of it is oil or fat - use less"
+    if (row.sodium_mg or 0) > MAX_SODIUM_MG_PER_SERVING:
+        return "it has more than a day's salt in a serving - use less salt or more servings"
     return f"it can't be a {draft.slot} recipe"
 
 
