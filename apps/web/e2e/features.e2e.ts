@@ -264,6 +264,25 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       expect((await replanned).ok()).toBe(true);
     });
 
+    await test.step("lunch sorted out by me: a new plan keeps room for it", async () => {
+      await page.goto("/profile#meals");
+      const meals = page.getByRole("form", { name: "Meals to plan" });
+      await meals.getByRole("group", { name: "Lunch" }).getByText("I'll sort it").click();
+      await meals.getByRole("button", { name: "Save meals" }).click();
+      await expect(page.getByText("Saved: your next plan or change follows it")).toBeVisible();
+
+      await page.goto("/plan");
+      await page.getByRole("button", { name: "New plan" }).click();
+      const created = page.waitForResponse(
+        (r) => r.url().endsWith("/plans") && r.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Replace plan" }).click();
+      expect((await created).ok()).toBe(true);
+      const today = page.getByRole("list", { name: /^Meals on / }).first();
+      await expect(today.getByText("Your own")).toBeVisible();
+      await expect(today.getByText("Lunch", { exact: true })).toHaveCount(1);
+    });
+
     await api(page, "DELETE", "/me");
   } finally {
     await clerkClient.users.deleteUser(user.id).catch(() => undefined);

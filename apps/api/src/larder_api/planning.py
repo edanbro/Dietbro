@@ -31,8 +31,10 @@ from larder_api.schemas import (
     BandOut,
     MacrosOut,
     MealLogOut,
+    MealMode,
     MealOut,
     NutrientBands,
+    OwnMealOut,
     RecipeCard,
     TargetsOut,
     ViolationOut,
@@ -41,7 +43,7 @@ from larder_api.settings import Settings
 from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
-from larder_core.meals import SLOT_ORDER, Slot, recipe_slots
+from larder_core.meals import SLOT_ORDER, Slot, own_shares, recipe_slots
 from larder_core.nutrition import MICROS
 from larder_core.prices import PER_GBP, Currency, Price, price
 from larder_core.regions import local_price, region_for
@@ -603,6 +605,46 @@ def weights_for(currency: Currency) -> Weights:
 type Cell = tuple[int, Slot]
 
 
+def meal_modes(prefs: db.Preferences | None) -> dict[Slot, MealMode]:
+    """Every slot's mode: "plan" unless the user said otherwise."""
+    saved = (prefs.meal_modes if prefs is not None else None) or {}
+    return {s: saved.get(s.value, "plan") for s in SLOT_ORDER}  # pyright: ignore[reportReturnType]
+
+
+def day_aim(goals: db.Goals) -> Macros:
+    """A day's intake aimed at: the middle of each band (its one bound when half-open)."""
+
+    def mid(lo: float | None, hi: float | None) -> int:
+        bounds = [b for b in (lo, hi) if b is not None]
+        return round(sum(bounds) / len(bounds)) if bounds else 0
+
+    return Macros(
+        mid(max(goals.kcal_min, goals.calorie_floor), goals.kcal_max),
+        mid(goals.protein_g_min, goals.protein_g_max),
+        mid(goals.fat_g_min, goals.fat_g_max),
+        mid(goals.carbs_g_min, goals.carbs_g_max),
+    )
+
+
+def own_meals(inputs: UserInputs) -> dict[Slot, Macros]:
+    """What's kept free each day for each meal the user sorts out themselves."""
+    aim = day_aim(inputs.goals)
+    return {
+        slot: Macros(
+            round(aim.kcal * share),
+            round(aim.protein_g * share),
+            round(aim.fat_g * share),
+            round(aim.carbs_g * share),
+        )
+        for slot, share in own_shares(meal_modes(inputs.preferences)).items()
+    }
+
+
+def skipped_meals(inputs: UserInputs) -> list[Slot]:
+    """The meals the user doesn't eat."""
+    return [s for s, mode in meal_modes(inputs.preferences).items() if mode == "skip"]
+
+
 def timed(pool: PlanningCatalog, profile: Profile) -> dict[int, Recipe]:
     """The pool's recipes, each without the slots it takes too long for (SLOT_MINUTES). A
     recipe of unknown length keeps its slots."""
@@ -662,21 +704,25 @@ def make_problem(
         household.budget_minor // household.size if household.budget_minor is not None else None
     )
     profile = profile_of(inputs.allergies, inputs.preferences)
+    modes = meal_modes(inputs.preferences)
     specs, recipes = select_candidates(
         Catalog(recipes=timed(pool, profile), foods=foods),
         profile,
         taste_of(inputs.preferences),
         lots,
-        [(slot, SLOT_RULES[slot][0]) for slot in SLOT_ORDER],
+        [(slot, SLOT_RULES[slot][0] and modes[slot] == "plan") for slot in SLOT_ORDER],
         targets=targets,
         budget=budget,
         novelty=novelty,
         k=k,
         seed=seed,
     )
+    # A meal the user sorts out or skips keeps its slot, never filled (`constrain` keeps its
+    # share of the day free for an "own" one).
     slots = tuple(
         replace(
             s,
+            candidates=s.candidates if modes[s.slot] == "plan" else (),
             min_portions=SLOT_RULES[s.slot][1],
             max_portions=SLOT_RULES[s.slot][2],
             max_repeats=SLOT_RULES[s.slot][3],
@@ -709,9 +755,19 @@ def constrain(
 ) -> Problem:
     """A replan's fixed state on top of a prefiltered problem (ADR-0014): the recipes named in
     `choices` (from `pool`, with their foods priced in the user's currency and their preference
-    set), cells kept `empty` (locked to None), intake already fixed per day (`extra`), and the
-    per-day kcal bands that follow (`day_bands`). Raises if the result breaks check_problem."""
+    set), cells kept `empty` (locked to None), intake already fixed per day (`extra`, plus the
+    share kept for each meal the user sorts out themselves unless food is logged in it), and
+    the per-day kcal bands that follow (`day_bands`). Raises if the result breaks
+    check_problem. Choices in a slot that isn't planned are dropped."""
     prefs = taste_of(inputs.preferences)
+    modes = meal_modes(inputs.preferences)
+    empty = set(empty)
+    choices = {cell: ids for cell, ids in choices.items() if modes[cell[1]] == "plan"}
+    fixed = dict(extra)
+    for slot, kept in own_meals(inputs).items():
+        for d in range(problem.days):
+            if (d, slot) not in empty:
+                fixed[d] = fixed.get(d, Macros()) + kept
     recipes = dict(problem.recipes)
     foods = dict(problem.foods)
     for rid in {r for ids in choices.values() for r in ids}:
@@ -732,7 +788,7 @@ def constrain(
         foods=foods,
         choices=dict(choices),
         locked=dict.fromkeys(empty),
-        extra={d: m for d, m in extra.items() if m != Macros()},
+        extra={d: m for d, m in fixed.items() if m != Macros()},
     )
     out = replace(out, day_kcal=day_bands(out))
     if errors := check_problem(out):
@@ -1028,6 +1084,9 @@ class PlanStats(BaseModel):
     day_totals: list[MacrosOut]  # per day: its meals + its logged food
     # People it's cooked for: cost, budget, pantry use, waste and shopping are theirs together.
     household: int = 1
+    # Meals the user sorts out themselves (kept free in day_totals) and doesn't eat.
+    own_meals: list[OwnMealOut] = Field(default_factory=list[OwnMealOut])
+    skipped_meals: list[Slot] = Field(default_factory=list[Slot])
     # Per day: food logged off-plan and skipped meals (active meal_logs when this was saved).
     logged: list[list[MealLogOut]] = Field(default_factory=list[list[MealLogOut]])
     # What the chat change that made this version did (results + diff), for explain_plan_diff.
@@ -1097,8 +1156,11 @@ def plan_stats(
     time_limit_ms: int,
     previous: Plan | None = None,
     household: Household | None = None,
+    own: Mapping[Slot, Macros] | None = None,
+    skipped: Sequence[Slot] = (),
 ) -> PlanStats:
-    """`household`: who it's cooked for (default: one person, the problem's budget)."""
+    """`household`: who it's cooked for (default: one person, the problem's budget). `own`
+    and `skipped`: the meals not planned (`own_meals`, `skipped_meals`)."""
     home = household or Household(1, problem.budget)
     n = home.size
     alloc = allocate(problem, plan)
@@ -1125,6 +1187,8 @@ def plan_stats(
         diet=problem.profile.diet,
         day_totals=[macros_out(m) for m in day_totals(problem, plan)],
         household=n,
+        own_meals=[OwnMealOut(slot=s, kcal=m.kcal) for s, m in (own or {}).items()],
+        skipped_meals=list(skipped),
     )
 
 

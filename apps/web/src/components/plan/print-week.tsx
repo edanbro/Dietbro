@@ -15,8 +15,14 @@ import { REQUIRED_SLOTS, SLOT_LABEL, SLOT_ORDER } from "./slots";
 export function PrintWeek({ plan }: { plan: Plan }) {
   const printing = usePrinting();
   if (!printing) return null;
-  const used = new Set(plan.days.flatMap((d) => d.meals.map((m) => m.slot)));
-  const slots: Slot[] = SLOT_ORDER.filter((s) => REQUIRED_SLOTS.includes(s) || used.has(s));
+  const used = new Set(
+    plan.days.flatMap((d) => [...d.meals.map((m) => m.slot), ...d.logged.map((l) => l.slot)]),
+  );
+  const skipped = plan.skipped_meals ?? [];
+  const own = (plan.own_meals ?? []).map((o) => o.slot);
+  const slots: Slot[] = SLOT_ORDER.filter(
+    (s) => (REQUIRED_SLOTS.includes(s) && !skipped.includes(s)) || used.has(s),
+  );
   const first = plan.days[0]?.date ?? plan.start;
   const last = plan.days.at(-1)?.date ?? plan.start;
   return (
@@ -65,6 +71,8 @@ export function PrintWeek({ plan }: { plan: Plan }) {
                       </>
                     ) : logged ? (
                       <span className="text-muted-foreground">{loggedShort(logged)}</span>
+                    ) : own.includes(s) ? (
+                      <span className="text-muted-foreground italic">Your own</span>
                     ) : (
                       <span className="text-muted-foreground">–</span>
                     )}

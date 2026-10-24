@@ -194,6 +194,8 @@ def plan_out(row: MealPlan) -> PlanOut:
         waste_g=stats.waste_g,
         shopping_items=sum(1 for s in row.shopping if not s.staple),
         household=stats.household,
+        own_meals=stats.own_meals,
+        skipped_meals=stats.skipped_meals,
         excluded_allergens=stats.excluded_allergens,
         diet=stats.diet,
         violations=stats.violations,
@@ -335,6 +337,8 @@ async def create_plan(
         seed=seed,
         time_limit_ms=settings.plan_time_limit_ms,
         household=planning.household_of(inputs, problem.days),
+        own=planning.own_meals(inputs),
+        skipped=planning.skipped_meals(inputs),
     )
     stats.notes = [*notes, *stats.notes]
     stats.total_ms = round((time.perf_counter() - started) * 1000)

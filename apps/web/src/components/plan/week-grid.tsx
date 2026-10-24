@@ -16,15 +16,24 @@ export function WeekGrid({
   today,
   onPickDay,
   household = 1,
+  own = [],
+  skipped = [],
 }: {
   days: PlanDay[];
   today: string;
   onPickDay: (date: string) => void;
   /** People the plan is cooked for: recipes open at everyone's servings. */
   household?: number;
+  /** Meals the user sorts out themselves, and meals they skip (not planned). */
+  own?: Slot[];
+  skipped?: Slot[];
 }) {
-  const used = new Set(days.flatMap((d) => d.meals.map((m) => m.slot)));
-  const slots: Slot[] = SLOT_ORDER.filter((s) => REQUIRED_SLOTS.includes(s) || used.has(s));
+  const used = new Set(
+    days.flatMap((d) => [...d.meals.map((m) => m.slot), ...d.logged.map((l) => l.slot)]),
+  );
+  const slots: Slot[] = SLOT_ORDER.filter(
+    (s) => (REQUIRED_SLOTS.includes(s) && !skipped.includes(s)) || used.has(s),
+  );
 
   return (
     <>
@@ -34,6 +43,7 @@ export function WeekGrid({
         slots={slots}
         onPickDay={onPickDay}
         household={household}
+        own={own}
       />
       <WeekTable
         days={days}
@@ -41,6 +51,7 @@ export function WeekGrid({
         slots={slots}
         onPickDay={onPickDay}
         household={household}
+        own={own}
       />
     </>
   );
@@ -52,10 +63,11 @@ type Props = {
   slots: Slot[];
   onPickDay: (date: string) => void;
   household: number;
+  own: Slot[];
 };
 
 /** Wide screens: a column per day, meals as small cards, today highlighted. */
-function WeekColumns({ days, today, slots, onPickDay, household }: Props) {
+function WeekColumns({ days, today, slots, onPickDay, household, own }: Props) {
   return (
     <ol aria-label="Days this week" className="hidden grid-cols-7 gap-2 lg:grid">
       {days.map((day) => {
@@ -107,6 +119,8 @@ function WeekColumns({ days, today, slots, onPickDay, household }: Props) {
                     <span className="line-clamp-3 leading-snug text-muted-foreground italic">
                       {loggedShort(logged)}
                     </span>
+                  ) : own.includes(s) ? (
+                    <span className="text-muted-foreground italic">Your own</span>
                   ) : (
                     <span className="text-muted-foreground">
                       <span aria-hidden>—</span>
@@ -124,7 +138,7 @@ function WeekColumns({ days, today, slots, onPickDay, household }: Props) {
 }
 
 /** Phones: one row per day, one column per meal of the day. */
-function WeekTable({ days, today, slots, onPickDay, household }: Props) {
+function WeekTable({ days, today, slots, onPickDay, household, own }: Props) {
   return (
     <table className="w-full table-fixed border-separate border-spacing-0 text-xs lg:hidden">
       <caption className="sr-only">Meals this week</caption>
@@ -191,6 +205,8 @@ function WeekTable({ days, today, slots, onPickDay, household }: Props) {
                     <span className="line-clamp-3 leading-snug text-muted-foreground italic">
                       {loggedShort(logged)}
                     </span>
+                  ) : own.includes(s) ? (
+                    <span className="text-muted-foreground italic">Your own</span>
                   ) : (
                     <span className="text-muted-foreground">
                       <span aria-hidden>—</span>

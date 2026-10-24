@@ -36,6 +36,7 @@ export type BodyIn = Schemas["BodyIn"];
 export type BodyOut = Schemas["BodyOut"];
 export type PreferencesIn = Schemas["PreferencesIn"];
 export type QuickNightsIn = Schemas["QuickNightsIn"];
+export type MealsIn = Schemas["MealsIn"];
 export type AllergiesIn = Schemas["AllergiesIn"];
 export type FoodSummary = Schemas["FoodSummary"];
 export type FoodDetail = Schemas["FoodDetail"];
@@ -54,6 +55,7 @@ export type ShoppingList = Schemas["ShoppingListOut"];
 export type ShoppingItem = Schemas["ShoppingItemOut"];
 export type ShoppingExtra = Schemas["ShoppingExtraOut"];
 export type Recipe = Schemas["RecipeDetail"];
+export type OwnMeal = Schemas["OwnMealOut"];
 export type LoggedEntry = Schemas["MealLogOut"];
 export type ChatThread = Schemas["ThreadOut"];
 export type ChatMessage = Schemas["ChatMessageOut"];
@@ -292,6 +294,14 @@ export function useSaveQuickNights() {
   return useSave(
     async (body: QuickNightsIn) =>
       unwrap(await api.PUT("/me/preferences/quick-nights", { body })),
+    keys.preferences,
+  );
+}
+
+export function useSaveMeals() {
+  const api = useApi();
+  return useSave(
+    async (body: MealsIn) => unwrap(await api.PUT("/me/preferences/meals", { body })),
     keys.preferences,
   );
 }

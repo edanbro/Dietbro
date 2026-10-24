@@ -128,9 +128,25 @@ class PreferencesOut(PreferencesIn):
     # Busy nights (PUT /me/preferences/quick-nights): set on their own, not by PUT preferences.
     quick_days: list[int] = Field(default_factory=list[int])
     quick_minutes: int = 30
+    # Which meals are planned (PUT /me/preferences/meals), every slot listed.
+    meals: "MealsIn" = Field(default_factory=lambda: MealsIn())
 
 
 QuickMinutes = Literal[20, 30, 45]
+
+
+MealMode = Literal["plan", "own", "skip"]
+
+
+class MealsIn(BaseModel):
+    """Which meals the planner plans: "plan" it, "own" (the user sorts it out, and about its
+    share of the day's targets is kept free for it) or "skip" (not eaten: the planned meals
+    cover the day). Snacks are planned (when they help) or skipped."""
+
+    breakfast: MealMode = "plan"
+    lunch: MealMode = "plan"
+    dinner: MealMode = "plan"
+    snack: Literal["plan", "skip"] = "plan"
 
 
 class QuickNightsIn(BaseModel):
@@ -686,6 +702,14 @@ class PlanRequest(BaseModel):
         return self
 
 
+class OwnMealOut(BaseModel):
+    """A meal the user sorts out themselves: about this much is kept free for it each day (and
+    counted in the day's totals)."""
+
+    slot: Slot
+    kcal: int
+
+
 class PlanOut(BaseModel):
     id: int
     version: int
@@ -712,6 +736,10 @@ class PlanOut(BaseModel):
     diet: Diet | None
     violations: list[ViolationOut]
     notes: list[str]
+    own_meals: list[OwnMealOut] = Field(default_factory=list[OwnMealOut])
+    skipped_meals: list[Slot] = Field(
+        default_factory=list[Slot], description="meals the user doesn't eat (never planned)"
+    )
 
 
 class EatenIn(BaseModel):

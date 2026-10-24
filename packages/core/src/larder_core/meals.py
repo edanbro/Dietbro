@@ -1,6 +1,7 @@
 """Meal slots and which recipes can fill them."""
 
 import csv
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cache
@@ -43,6 +44,34 @@ CATEGORY_SLOTS: dict[str, frozenset[Slot]] = {
 def meal_types(category: str | None) -> frozenset[Slot]:
     """Slots a recipe of this category can fill (empty: never planned on its own)."""
     return CATEGORY_SLOTS.get(category or "", frozenset())
+
+
+# A main meal's usual share of the day (preferences.meal_modes): what's kept free for a meal
+# the user sorts out themselves, among the meals they eat. A planned meal may carry at most
+# MAX_MEAL_SHARE of the day on average (portion limits make more impractical).
+MEAL_SHARE: dict[Slot, float] = {Slot.BREAKFAST: 0.25, Slot.LUNCH: 0.35, Slot.DINNER: 0.40}
+MAX_MEAL_SHARE = 0.55
+
+
+def meals_problem(modes: Mapping[Slot, str]) -> str | None:
+    """Why these modes can't be planned, or None: at least one main meal is planned, and the
+    planned ones aren't left more than MAX_MEAL_SHARE of the day each."""
+    planned = [s for s in MEAL_SHARE if modes[s] == "plan"]
+    if not planned:
+        return "Plan at least one of breakfast, lunch and dinner."
+    eaten = sum(MEAL_SHARE[s] for s in MEAL_SHARE if modes[s] != "skip")
+    if sum(MEAL_SHARE[s] for s in planned) / eaten / len(planned) > MAX_MEAL_SHARE:
+        return (
+            "With those meals skipped, each planned meal would be over half your day. Plan "
+            "another meal, or say you sort one out yourself instead of skipping it."
+        )
+    return None
+
+
+def own_shares(modes: Mapping[Slot, str]) -> dict[Slot, float]:
+    """Each meal the user sorts out themselves, as a fraction of the day they eat."""
+    eaten = sum(MEAL_SHARE[s] for s in MEAL_SHARE if modes[s] != "skip")
+    return {s: MEAL_SHARE[s] / eaten for s in MEAL_SHARE if modes[s] == "own"}
 
 
 # Data-quality limits for planning (docs/adr/0010-meal-slots-and-curated-recipes.md): a serving

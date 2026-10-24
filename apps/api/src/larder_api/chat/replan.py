@@ -1089,6 +1089,8 @@ async def _save(
         time_limit_ms=scope.settings.replan_time_limit_ms,
         previous=solved.previous,
         household=household,
+        own=planning.own_meals(read.inputs),
+        skipped=planning.skipped_meals(read.inputs),
     )
     stats.targets = planning.targets_out(planning.targets_from(read.inputs.goals, target.days))
     before = planning.PlanStats.model_validate(parent.stats) if parent is not None else None

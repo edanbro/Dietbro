@@ -24,6 +24,7 @@ from larder_api.schemas import (
     GoalsIn,
     GoalsOut,
     Me,
+    MealsIn,
     PreferencesIn,
     PreferencesOut,
     Problems,
@@ -49,6 +50,7 @@ from larder_core.energy import (
     validate_body,
     validate_targets,
 )
+from larder_core.meals import Slot, meals_problem
 from larder_core.regions import REGIONS, local_today, region_for, valid_timezone
 from larder_db.models import (
     Allergies,
@@ -432,6 +434,28 @@ async def put_quick_nights(
     return await _preferences_out(session, row)
 
 
+@router.put(
+    "/preferences/meals",
+    operation_id="putMeals",
+    responses={
+        400: {"model": Problems, "description": "nothing left to plan, or too much on one meal"},
+        409: {"model": Problems, "description": "preferences not set up yet"},
+    },
+)
+async def put_meals(body: MealsIn, user: CurrentUser, session: Session) -> PreferencesOut:
+    """Which meals to plan: each planned, sorted out by the user (its share of the day is
+    kept free) or skipped. Applies from the next plan or change."""
+    row = await session.get(Preferences, user.id)
+    if row is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, ["Set your preferences first."])
+    modes = body.model_dump()
+    if (problem := meals_problem({Slot(s): m for s, m in modes.items()})) is not None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, [problem])
+    row.meal_modes = {s: m for s, m in modes.items() if m != "plan"}
+    await session.commit()
+    return await _preferences_out(session, row)
+
+
 async def _preferences_out(session: AsyncSession, row: Preferences) -> PreferencesOut:
     ids = {*row.liked_food_ids, *row.disliked_food_ids}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
@@ -445,6 +469,7 @@ async def _preferences_out(session: AsyncSession, row: Preferences) -> Preferenc
         disliked_foods=[summary(foods[i]) for i in row.disliked_food_ids if i in foods],
         quick_days=row.quick_days,
         quick_minutes=row.quick_minutes,
+        meals=MealsIn.model_validate(row.meal_modes or {}),
     )
 
 

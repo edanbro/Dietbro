@@ -52,7 +52,7 @@ import {
 } from "@/lib/dates";
 import { allergenLabel, humanize } from "@/lib/format";
 
-import { dayRows, LoggedCard, LoggedNote } from "./logged";
+import { dayRows, LoggedCard, LoggedNote, OwnCard, ownOpen } from "./logged";
 import { DayMacros } from "./macro-bars";
 import { eatenMessage, type MealActionsProps } from "./meal-actions";
 import { MealCard } from "./meal-card";
@@ -571,7 +571,7 @@ function PlanView({
             {plan.days.map((d) => (
               <TabsContent key={d.date} value={d.date} className="flex flex-col gap-4 pt-2">
                 <ul aria-label={`Meals on ${longDate(d.date)}`} className="flex flex-col gap-2">
-                  {dayRows(d).map((row, i) => (
+                  {dayRows(d, plan.own_meals).map((row, i) => (
                     <li
                       key={row.key}
                       className="motion-safe:animate-rise"
@@ -589,6 +589,8 @@ function PlanView({
                             cookExtraFor: cookExtraFor(plan.days, d.date, today),
                           }}
                         />
+                      ) : row.own ? (
+                        <OwnCard own={row.own} />
                       ) : (
                         <LoggedCard entry={row.entry} />
                       )}
@@ -635,7 +637,7 @@ function PlanView({
                     bands={plan.targets.daily}
                     reference={plan.targets.reference}
                   />
-                  <LoggedNote logged={d.logged} />
+                  <LoggedNote logged={d.logged} own={ownOpen(d, plan.own_meals ?? [])} />
                 </div>
               </TabsContent>
             ))}
@@ -651,6 +653,8 @@ function PlanView({
             days={plan.days}
             today={today}
             household={plan.household}
+            own={(plan.own_meals ?? []).map((o) => o.slot)}
+            skipped={plan.skipped_meals}
             onPickDay={(d) => set({ day: d, view: null })}
           />
         </TabsContent>
