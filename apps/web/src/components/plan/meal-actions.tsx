@@ -27,7 +27,9 @@ import {
   useAlternatives,
 } from "@/lib/api/hooks";
 import { dayOfMonth, weekday } from "@/lib/dates";
-import { formatGrams, formatNumber } from "@/lib/format";
+import { foodName } from "@/lib/food-name";
+import { formatNumber } from "@/lib/format";
+import { formatWeight, type Units } from "@/lib/units";
 
 import { SLOT_LABEL } from "./slots";
 
@@ -66,13 +68,19 @@ export function tradesFor(week: PlanDay[], date: string, meal: Meal, today: stri
 }
 
 /** "200 g chickpeas", "200 g chickpeas and 1 kg rice", "a, b and c". */
-function foodList(items: PantryChange[]): string {
-  const parts = items.map((i) => `${formatGrams(i.grams)} ${i.name.toLowerCase()}`);
+function foodList(items: PantryChange[], units: Units): string {
+  const parts = items.map(
+    (i) => `${formatWeight(i.grams, units)} ${foodName(i.name).name.toLowerCase()}`,
+  );
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
 }
 
 /** The toast after marking (or unmarking) a meal eaten: title and what the pantry did. */
-export function eatenMessage(out: Eaten, undo: boolean): { title: string; description?: string } {
+export function eatenMessage(
+  out: Eaten,
+  undo: boolean,
+  units: Units = "metric",
+): { title: string; description?: string } {
   const slot = SLOT_LABEL[out.slot];
   if (!out.changed) {
     return { title: undo ? `${slot} wasn't marked eaten` : `${slot} was already marked eaten` };
@@ -82,8 +90,8 @@ export function eatenMessage(out: Eaten, undo: boolean): { title: string; descri
   if (moved.length) {
     lines.push(
       undo
-        ? `Put ${foodList(moved)} back in your pantry.`
-        : `Took ${foodList(moved)} from your pantry.`,
+        ? `Put ${foodList(moved, units)} back in your pantry.`
+        : `Took ${foodList(moved, units)} from your pantry.`,
     );
   }
   lines.push(...out.notes);

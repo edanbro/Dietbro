@@ -69,7 +69,7 @@ _SEARCH_SQL = text(
     """
 )
 _WORD = re.compile(r"[a-z0-9]+")
-_PANTRY_MASS_UNITS = ("g", "kg")
+_PANTRY_MASS_UNITS = ("g", "kg", "oz", "lb")
 _PANTRY_VOLUME_UNITS = ("ml", "l", "tsp", "tbsp", "cup")
 _PACK_UNITS = ("packet", "serving")
 

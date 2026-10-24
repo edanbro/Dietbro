@@ -1,5 +1,6 @@
 import type { Weight } from "@/lib/api/hooks";
 import { daysBetween, shortDate } from "@/lib/dates";
+import { bodyUnit, bodyWeight, type Units } from "@/lib/units";
 
 const W = 320;
 const H = 140;
@@ -9,7 +10,7 @@ const PAD = { top: 12, right: 12, bottom: 22, left: 36 };
  * Weigh-ins over time as a hand-drawn SVG line (no chart library): x by date, y scaled to the
  * range with a little headroom. Shows a short text summary for screen readers.
  */
-export function WeightChart({ weights }: { weights: Weight[] }) {
+export function WeightChart({ weights, units = "metric" }: { weights: Weight[]; units?: Units }) {
   if (weights.length < 2) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -20,15 +21,18 @@ export function WeightChart({ weights }: { weights: Weight[] }) {
   const first = weights[0]!;
   const last = weights.at(-1)!;
   const span = Math.max(1, daysBetween(first.measured_on, last.measured_on));
-  const kgs = weights.map((w) => w.weight_kg);
-  const lo = Math.floor(Math.min(...kgs) - 0.5);
-  const hi = Math.ceil(Math.max(...kgs) + 0.5);
+  const unit = bodyUnit(units);
+  const shown = (w: Weight) => bodyWeight(w.weight_kg, units);
+  const values = weights.map(shown);
+  const lo = Math.floor(Math.min(...values) - 0.5);
+  const hi = Math.ceil(Math.max(...values) + 0.5);
   const x = (iso: string) =>
     PAD.left + (daysBetween(first.measured_on, iso) / span) * (W - PAD.left - PAD.right);
-  const y = (kg: number) => PAD.top + ((hi - kg) / (hi - lo)) * (H - PAD.top - PAD.bottom);
-  const points = weights.map((w) => `${x(w.measured_on).toFixed(1)},${y(w.weight_kg).toFixed(1)}`);
-  const change = Math.round((last.weight_kg - first.weight_kg) * 10) / 10;
-  const moved = change === 0 ? "No change" : `${change > 0 ? "Up" : "Down"} ${Math.abs(change)} kg`;
+  const y = (v: number) => PAD.top + ((hi - v) / (hi - lo)) * (H - PAD.top - PAD.bottom);
+  const points = weights.map((w) => `${x(w.measured_on).toFixed(1)},${y(shown(w)).toFixed(1)}`);
+  const change = Math.round((shown(last) - shown(first)) * 10) / 10;
+  const moved =
+    change === 0 ? "No change" : `${change > 0 ? "Up" : "Down"} ${Math.abs(change)} ${unit}`;
   const summary = `${moved} since ${shortDate(first.measured_on)}`;
 
   return (
@@ -38,20 +42,20 @@ export function WeightChart({ weights }: { weights: Weight[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="h-auto w-full max-w-lg text-primary"
         role="img"
-        aria-label={`Weight from ${first.weight_kg} kg to ${last.weight_kg} kg. ${summary}.`}
+        aria-label={`Weight from ${shown(first)} ${unit} to ${shown(last)} ${unit}. ${summary}.`}
       >
-        {[hi, (hi + lo) / 2, lo].map((kg) => (
-          <g key={kg} className="text-muted-foreground">
+        {[hi, (hi + lo) / 2, lo].map((v) => (
+          <g key={v} className="text-muted-foreground">
             <line
               x1={PAD.left}
               x2={W - PAD.right}
-              y1={y(kg)}
-              y2={y(kg)}
+              y1={y(v)}
+              y2={y(v)}
               stroke="currentColor"
               strokeOpacity={0.2}
             />
-            <text x={PAD.left - 6} y={y(kg) + 4} textAnchor="end" fontSize={10} fill="currentColor">
-              {kg}
+            <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={10} fill="currentColor">
+              {v}
             </text>
           </g>
         ))}
@@ -84,7 +88,7 @@ export function WeightChart({ weights }: { weights: Weight[] }) {
           <circle
             key={w.measured_on}
             cx={x(w.measured_on)}
-            cy={y(w.weight_kg)}
+            cy={y(shown(w))}
             r={2.5}
             fill="currentColor"
           />

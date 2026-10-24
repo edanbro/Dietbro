@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Diary, DiaryDay } from "@/lib/api/hooks";
 import { json, mockApi, renderWithClient } from "@/test/api";
+import { ME } from "@/test/fixtures";
 
 import { DiaryPage, eatenText } from "./diary-page";
 import { WeightChart } from "./weight-chart";
@@ -96,6 +97,28 @@ describe("DiaryPage", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
     const put = calls.find((c) => c.method === "PUT");
     expect(put?.body).toMatchObject({ weight_kg: 72.4 });
+  });
+
+  it("takes pounds in US units, and says when a weight can't be right", async () => {
+    const calls = mockApi({
+      "GET /me": json({ ...ME, region: { ...ME.region, country: "US", units: "us" } }),
+      "GET /diary": json(DIARY),
+      "GET /me/weights": json([{ measured_on: "2026-10-01", weight_kg: 80 }]),
+      "PUT /me/weights": json({ measured_on: "2026-10-14", weight_kg: 72.6 }),
+    });
+    renderWithClient(<DiaryPage />);
+
+    const input = await screen.findByLabelText("Today (lb)");
+    expect(await screen.findByText("176.4 lb")).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "16" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Enter your weight in pounds/)).toBeInTheDocument();
+    expect(calls.some((c) => c.method === "PUT")).toBe(false);
+
+    fireEvent.change(input, { target: { value: "160" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({ weight_kg: 72.6 });
   });
 });
 

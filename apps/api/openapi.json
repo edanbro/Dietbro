@@ -9704,6 +9704,21 @@
               }
             ],
             "title": "Locale"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "metric",
+                  "us"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
           }
         },
         "type": "object",
@@ -9767,6 +9782,14 @@
             "type": "string",
             "title": "Timezone"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "us"
+            ],
+            "title": "Units"
+          },
           "saved": {
             "type": "boolean",
             "title": "Saved"
@@ -9779,6 +9802,7 @@
           "currency",
           "locale",
           "timezone",
+          "units",
           "saved"
         ],
         "title": "RegionOut"
@@ -10031,6 +10055,15 @@
           "household": {
             "type": "integer",
             "title": "Household"
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "us"
+            ],
+            "title": "Units",
+            "default": "metric"
           },
           "items": {
             "items": {

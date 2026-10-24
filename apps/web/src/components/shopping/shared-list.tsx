@@ -11,7 +11,7 @@ import type { components } from "@/lib/api/schema";
 import { aisle } from "@/lib/aisles";
 import { addDays, dateRange } from "@/lib/dates";
 import { foodName } from "@/lib/food-name";
-import { formatGrams } from "@/lib/format";
+import { formatWeight } from "@/lib/units";
 
 export type SharedList = components["schemas"]["SharedListOut"];
 type Item = components["schemas"]["SharedItemOut"];
@@ -146,7 +146,7 @@ export function SharedShoppingList({ token, initial }: { token: string; initial:
     const { detail } = foodName(item.name);
     return item.staple
       ? (detail ?? undefined)
-      : [formatGrams(item.grams), item.approx_units, detail].filter(Boolean).join(" · ");
+      : [formatWeight(item.grams, list.units), item.approx_units, detail].filter(Boolean).join(" · ");
   };
 
   return (

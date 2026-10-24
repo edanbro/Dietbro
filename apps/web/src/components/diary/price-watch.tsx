@@ -6,10 +6,11 @@ import Link from "next/link";
 
 import { ErrorAlert } from "@/components/form-bits";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type PriceItem, type Prices, usePrices } from "@/lib/api/hooks";
+import { type PriceItem, type Prices, usePrices, useUnits } from "@/lib/api/hooks";
 import { shortDate } from "@/lib/dates";
 import { foodName } from "@/lib/food-name";
 import { formatMoney } from "@/lib/format";
+import { perWeight, type Units } from "@/lib/units";
 
 const W = 72;
 const H = 24;
@@ -43,8 +44,18 @@ function Sparkline({ item, rise }: { item: PriceItem; rise: boolean }) {
   );
 }
 
-function Row({ item, currency }: { item: PriceItem; currency: Prices["currency"] }) {
-  const money = (minor: number) => formatMoney(minor, currency);
+function Row({
+  item,
+  currency,
+  units,
+}: {
+  item: PriceItem;
+  currency: Prices["currency"];
+  units: Units;
+}) {
+  // Prices per kg as the shopper compares them: "€2.10/kg", or "$0.95/lb" in the US.
+  const price = (perKg: number) => formatMoney(perWeight(perKg, units).minor, currency);
+  const unit = perWeight(0, units).unit;
   const { name, detail } = foodName(item.name);
   const change = item.change_pct;
   return (
@@ -56,7 +67,7 @@ function Row({ item, currency }: { item: PriceItem; currency: Prices["currency"]
             {detail ? <span className="font-normal text-muted-foreground"> · {detail}</span> : null}
           </span>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {money(item.latest_minor)}/kg, usually {money(item.usual_minor)}
+            {price(item.latest_minor)}/{unit}, usually {price(item.usual_minor)}
           </span>
         </div>
         <Sparkline item={item} rise={item.rise} />
@@ -78,7 +89,7 @@ function Row({ item, currency }: { item: PriceItem; currency: Prices["currency"]
       </div>
       {item.cheaper ? (
         <p className="text-xs text-muted-foreground">
-          Cheaper: {item.cheaper.label} at {money(item.cheaper.per_kg_minor)}/kg (last bought{" "}
+          Cheaper: {item.cheaper.label} at {price(item.cheaper.per_kg_minor)}/{unit} (last bought{" "}
           {shortDate(item.cheaper.last_bought)})
         </p>
       ) : null}
@@ -92,6 +103,7 @@ function Row({ item, currency }: { item: PriceItem; currency: Prices["currency"]
  */
 export function PriceWatch() {
   const prices = usePrices();
+  const units = useUnits();
   return (
     <section aria-labelledby="price-watch" className="flex flex-col gap-2">
       <h2 id="price-watch" className="text-xl font-semibold">
@@ -105,11 +117,17 @@ export function PriceWatch() {
         <>
           <ul className="flex flex-col divide-y" aria-label="Prices you've paid">
             {prices.data.items.slice(0, SHOWN).map((item) => (
-              <Row key={item.food_id} item={item} currency={prices.data.currency} />
+              <Row
+                key={item.food_id}
+                item={item}
+                currency={prices.data.currency}
+                units={units}
+              />
             ))}
           </ul>
           <p className="text-xs text-muted-foreground">
-            Per kg, from receipts with the size printed, over the last 6 months.
+            Per {units === "us" ? "lb" : "kg"}, from receipts with the size printed, over the last
+            6 months.
           </p>
         </>
       ) : (

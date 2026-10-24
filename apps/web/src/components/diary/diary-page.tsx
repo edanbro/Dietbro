@@ -10,9 +10,10 @@ import { ErrorAlert, LabeledInput } from "@/components/form-bits";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type DiaryDay, useDiary, useWeight, useWeights } from "@/lib/api/hooks";
+import { type DiaryDay, useDiary, useUnits, useWeight, useWeights } from "@/lib/api/hooks";
 import { localISODate, shortDate } from "@/lib/dates";
 import { formatNumber, humanize } from "@/lib/format";
+import { bodyUnit, formatBodyWeight, kgFrom } from "@/lib/units";
 
 import { QuickAdd } from "./quick-add";
 import { PriceWatch } from "./price-watch";
@@ -99,21 +100,32 @@ function DayRow({ day, today }: { day: DiaryDay; today: string }) {
   );
 }
 
+// What the API accepts (WeightIn): over 20 kg, at most 500.
+const MIN_KG = 20.1;
+const MAX_KG = 500;
+
 function Weights() {
   const weights = useWeights();
   const save = useWeight();
-  const [kg, setKg] = useState("");
+  const units = useUnits();
+  const unit = bodyUnit(units);
+  const [typed, setTyped] = useState("");
+  const [invalid, setInvalid] = useState(false);
   const today = localISODate();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const value = Number(kg.replace(",", "."));
-    if (!Number.isFinite(value) || value <= 20) return;
+    const kg = kgFrom(Number(typed.replace(",", ".")), units);
+    if (!Number.isFinite(kg) || kg < MIN_KG || kg > MAX_KG) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
     save.mutate(
-      { kind: "save", measured_on: today, weight_kg: value },
+      { kind: "save", measured_on: today, weight_kg: kg },
       {
         onSuccess: () => {
-          setKg("");
+          setTyped("");
           toast.success("Weight saved");
         },
       },
@@ -129,17 +141,28 @@ function Weights() {
         <div className="flex-1">
           <LabeledInput
             id="weight-kg"
-            label="Today (kg)"
+            label={`Today (${unit})`}
             inputMode="decimal"
-            value={kg}
-            onChange={(e) => setKg(e.target.value)}
-            placeholder="e.g. 72.4"
+            value={typed}
+            onChange={(e) => {
+              setTyped(e.target.value);
+              setInvalid(false);
+            }}
+            placeholder={units === "us" ? "e.g. 160" : "e.g. 72.4"}
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? "weight-invalid" : undefined}
           />
         </div>
-        <Button type="submit" disabled={!kg || save.isPending}>
+        <Button type="submit" disabled={!typed || save.isPending}>
           Save
         </Button>
       </form>
+      {invalid ? (
+        <p id="weight-invalid" className="text-sm text-destructive">
+          Enter your weight in {unit === "kg" ? "kilograms" : "pounds"}, like{" "}
+          {units === "us" ? "160" : "72.4"}.
+        </p>
+      ) : null}
       <ErrorAlert error={save.error} />
       {weights.isPending ? (
         <Skeleton className="h-36" />
@@ -147,7 +170,7 @@ function Weights() {
         <ErrorAlert error={weights.error} onRetry={() => void weights.refetch()} />
       ) : (
         <>
-          <WeightChart weights={weights.data} />
+          <WeightChart weights={weights.data} units={units} />
           {weights.data.length ? (
             <ul className="flex flex-col divide-y rounded-lg border text-sm">
               {weights.data
@@ -156,7 +179,7 @@ function Weights() {
                 .map((w) => (
                   <li key={w.measured_on} className="flex items-center gap-3 px-3 py-1">
                     <span className="flex-1">{shortDate(w.measured_on)}</span>
-                    <span className="tabular-nums">{w.weight_kg} kg</span>
+                    <span className="tabular-nums">{formatBodyWeight(w.weight_kg, units)}</span>
                     <Button
                       variant="ghost"
                       size="icon"

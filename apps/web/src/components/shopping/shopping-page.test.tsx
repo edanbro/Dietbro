@@ -275,13 +275,14 @@ describe("Shopping to pantry and your own items", () => {
     expect(listText(list, [{ id: 1, name: "foil", checked: false }])).toBe(
       [
         "Vegetables:",
-        "- Onions, raw (≈ 3 medium)",
+        "- Onions (≈ 3 medium)",
         "Grains & pasta:",
-        "- Rice, white (1 kg)",
+        "- White rice (1 kg)",
         "Also:",
         "- foil",
       ].join("\n"),
     );
+    expect(listText(list, [], "us")).toContain("- White rice (2.2 lb)");
   });
 });
 

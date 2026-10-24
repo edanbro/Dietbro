@@ -21,6 +21,7 @@ from larder_api.auth import CurrentUser
 from larder_api.db import Session
 from larder_api.ratelimit import per_ip, per_path, per_user
 from larder_api.routers.plans import shopping_out
+from larder_api.routers.profile import units_of
 from larder_api.routers.recipes import recipe_detail
 from larder_api.schemas import (
     RecipeCard,
@@ -35,7 +36,7 @@ from larder_api.schemas import (
     ShareOut,
 )
 from larder_core.meals import SLOT_ORDER, Slot
-from larder_db.models import MealPlan, Recipe, ShareLink, ShoppingExtra
+from larder_db.models import MealPlan, Recipe, ShareLink, ShoppingExtra, User
 
 router = APIRouter(tags=["share"])
 
@@ -222,9 +223,11 @@ async def _shared_list(session: AsyncSession, link: ShareLink) -> SharedListOut:
         .order_by(ShoppingExtra.id)
     )
     assert link.plan_start is not None  # a list link always has its week (ck_share_links_target)
+    owner = await session.get(User, link.user_id)
     return SharedListOut(
         start=link.plan_start,
         household=full.household,
+        units=units_of(owner) if owner is not None else "metric",
         items=[
             SharedItemOut(
                 food_id=i.food_id,

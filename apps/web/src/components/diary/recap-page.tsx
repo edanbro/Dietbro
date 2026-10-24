@@ -8,9 +8,10 @@ import { EmptyState } from "@/components/empty-state";
 import { ErrorAlert } from "@/components/form-bits";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type Recap, useRecap } from "@/lib/api/hooks";
+import { type Recap, useRecap, useUnits } from "@/lib/api/hooks";
 import { addDays, dateRange, localISODate } from "@/lib/dates";
 import { foodName } from "@/lib/food-name";
+import { bodyUnit, bodyWeight, formatBodyWeight } from "@/lib/units";
 import { formatMoney, formatNumber } from "@/lib/format";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -36,6 +37,7 @@ function days(n: number): string {
 
 function Summary({ recap }: { recap: Recap }) {
   const money = (minor: number) => formatMoney(minor, recap.currency);
+  const units = useUnits();
   const band =
     recap.kcal_min != null && recap.kcal_max != null
       ? `${formatNumber(recap.kcal_min)}–${formatNumber(recap.kcal_max)} kcal`
@@ -88,9 +90,12 @@ function Summary({ recap }: { recap: Recap }) {
         <Card title="Weight">
           <Big>
             {recap.weight_change_kg > 0 ? "+" : ""}
-            {recap.weight_change_kg.toFixed(1)} kg
+            {bodyWeight(recap.weight_change_kg, units).toFixed(1)} {bodyUnit(units)}
           </Big>
-          <Small>to {recap.weight_kg?.toFixed(1)} kg, first to last weigh-in</Small>
+          <Small>
+            {recap.weight_kg != null ? `to ${formatBodyWeight(recap.weight_kg, units)}, ` : ""}
+            first to last weigh-in
+          </Small>
         </Card>
       ) : null}
       {recap.top_recipes.length ? (

@@ -13,6 +13,7 @@ afterEach(() => {
 const LIST: SharedList = {
   start: "2026-10-09",
   household: 3,
+  units: "metric",
   items: [
     {
       food_id: 11,

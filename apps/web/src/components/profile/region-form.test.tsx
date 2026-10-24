@@ -15,6 +15,7 @@ vi.mock("@/lib/region", async (original) => ({
 const REGIONS = [
   { country: "IE", name: "Ireland", currency: "EUR" },
   { country: "GB", name: "United Kingdom", currency: "GBP" },
+  { country: "US", name: "United States", currency: "USD" },
 ];
 const IRELAND = {
   country: "IE",
@@ -22,6 +23,7 @@ const IRELAND = {
   currency: "EUR",
   locale: "en-IE",
   timezone: "Europe/Dublin",
+  units: "metric",
   saved: true,
 };
 
@@ -49,6 +51,7 @@ describe("RegionForm", () => {
       country: "IE",
       timezone: "Europe/Dublin",
       locale: "en-IE",
+      units: "metric",
     });
   });
 
@@ -59,5 +62,23 @@ describe("RegionForm", () => {
     fireEvent.change(screen.getByLabelText("Country"), { target: { value: "GB" } });
 
     expect(screen.getByText(/estimated for United Kingdom/)).toBeInTheDocument();
+  });
+
+  it("follows the country's units until the user picks their own", async () => {
+    renderWithClient(<RegionForm />);
+
+    const units = screen.getByLabelText("Weights and heights");
+    await waitFor(() => expect(screen.getByLabelText("Country")).toHaveValue("IE"));
+    expect(units).toHaveValue("metric");
+    fireEvent.change(screen.getByLabelText("Country"), { target: { value: "US" } });
+    expect(units).toHaveValue("us");
+    fireEvent.change(units, { target: { value: "metric" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save region" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({
+      country: "US",
+      units: "metric",
+    });
   });
 });
