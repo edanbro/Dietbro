@@ -342,6 +342,7 @@ async def log_food(
 @router.delete(
     "/diary/logs/{log_id}",
     operation_id="removeLog",
+    dependencies=[Depends(per_user("diary_log"))],  # it can replan, like logging food
     responses={
         **REPLAN_ERRORS,
         status.HTTP_404_NOT_FOUND: {"description": "no such log (or not yours)"},
