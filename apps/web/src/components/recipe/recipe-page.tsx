@@ -11,7 +11,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { GradeBadge } from "@/components/food-bits";
@@ -29,6 +29,7 @@ import { AddToList } from "@/components/recipe/add-to-list";
 import { RecipeArt } from "@/components/recipe/recipe-art";
 import { Micronutrients } from "@/components/nutrients/micronutrients";
 import { RecipeNotes } from "@/components/recipe/recipe-notes";
+import { ServingsStepper } from "@/components/recipe/servings-stepper";
 import { ShareLinkButton } from "@/components/share-link-button";
 
 /** http(s) URLs only: recipe data comes from third parties. */
@@ -221,7 +222,16 @@ function Credit({ recipe }: { recipe: Recipe }) {
 /** A recipe: photo, numbers per serving, allergens and diets, ingredients and method. */
 export function RecipePage({ id }: { id: number }) {
   const { data: recipe, isPending, error, refetch } = useRecipe(id);
-  const servings = parseServings(useSearchParams().get("servings"));
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const servings = parseServings(params.get("servings"));
+  // The stepper keeps its servings in the address, so a link (or going back) keeps them too.
+  const setServings = (n: number) => {
+    const next = new URLSearchParams(params);
+    next.set("servings", String(n));
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
 
   if (isPending) {
     return (
@@ -310,12 +320,14 @@ export function RecipePage({ id }: { id: number }) {
           <h2 id="recipe-ingredients" className="text-base font-semibold">
             Ingredients
           </h2>
-          <AddToList recipe={recipe} servings={servings} />
+          {recipe.servings ? (
+            <ServingsStepper value={servings ?? recipe.servings} onChange={setServings} step={1} />
+          ) : null}
         </div>
         {factor !== 1 ? (
           <p className="text-xs text-muted-foreground">
-            For {servings} {servings === 1 ? "serving" : "servings"}, as planned (the recipe
-            makes {recipe.servings}).
+            Amounts for {servings} {servings === 1 ? "serving" : "servings"} (the recipe makes{" "}
+            {recipe.servings}).
           </p>
         ) : null}
         <ul className="flex flex-col divide-y rounded-lg border text-sm">
@@ -333,6 +345,9 @@ export function RecipePage({ id }: { id: number }) {
             </li>
           ))}
         </ul>
+        <div className="flex">
+          <AddToList recipe={recipe} servings={servings} />
+        </div>
       </section>
 
       <section aria-labelledby="recipe-method" className="flex flex-col gap-2">
