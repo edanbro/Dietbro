@@ -661,7 +661,8 @@ export interface paths {
          * @description A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
          *     its recipe_id): ranked like recipe search, not already planned that day, close to the
          *     meal's energy first. `q` searches like recipe search ("curry", "something quick");
-         *     `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry.
+         *     `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;
+         *     `favourites`, the user's favourites.
          */
         get: operations["getMealAlternatives"];
         put?: never;
@@ -5563,6 +5564,7 @@ export interface operations {
                 q?: string;
                 quick?: boolean;
                 pantry?: boolean;
+                favourites?: boolean;
             };
             header?: never;
             path: {

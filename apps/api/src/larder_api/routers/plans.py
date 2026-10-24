@@ -511,11 +511,13 @@ async def meal_alternatives(
     q: Annotated[str, Query(max_length=80)] = "",
     quick: bool = False,
     pantry: bool = False,
+    favourites: bool = False,
 ) -> list[RecipeListItem]:
     """A few safe recipes to swap a planned meal for (then POST /plans/replan with a swap and
     its recipe_id): ranked like recipe search, not already planned that day, close to the
     meal's energy first. `q` searches like recipe search ("curry", "something quick");
-    `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry."""
+    `quick` keeps those taking at most 30 minutes; `pantry`, those using the pantry;
+    `favourites`, the user's favourites."""
     plan = await _load_plan(session, user, plan_id)
     day = (on - plan.start_date).days
     if not 0 <= day < plan.days:
@@ -537,7 +539,13 @@ async def meal_alternatives(
     hits = [
         h
         for h in search.rank_recipes(
-            pool, viewer, words, slot, max_minutes=minutes, from_pantry=pantry
+            pool,
+            viewer,
+            words,
+            slot,
+            favourites_only=favourites,
+            max_minutes=minutes,
+            from_pantry=pantry,
         )
         if h.id not in that_day
     ]
