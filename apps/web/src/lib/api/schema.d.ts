@@ -1182,6 +1182,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/diary/logs/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Log
+         * @description Remove food logged by mistake, or a skip: it stops counting. On today or later, the
+         *     meal it stood for is planned again (a swap through the executor, so the day rebalances);
+         *     a past day just loses it. A meal marked eaten is undone from the plan instead.
+         */
+        delete: operations["removeLog"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/insights/spending": {
         parameters: {
             query?: never;
@@ -2465,6 +2487,11 @@ export interface components {
              * @description eaten: the recipe
              */
             recipe_id?: number | null;
+            /**
+             * Id
+             * @description the log (DELETE /diary/logs/{id})
+             */
+            id?: number | null;
         };
         /** MealOut */
         MealOut: {
@@ -3548,6 +3575,13 @@ export interface components {
             units: "metric" | "us";
             /** Saved */
             saved: boolean;
+        };
+        /**
+         * RemovedLogOut
+         * @description A log removed; `outcome`: the meal it stood for planned again (today or later).
+         */
+        RemovedLogOut: {
+            outcome?: components["schemas"]["OutcomeOut"] | null;
         };
         /**
          * ReplanRequest
@@ -6741,6 +6775,60 @@ export interface operations {
                 };
             };
             /** @description a food doesn't exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProblem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    removeLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovedLogOut"];
+                };
+            };
+            /** @description a meal marked eaten: undo it on the plan */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description no such log (or not yours) */
             404: {
                 headers: {
                     [name: string]: unknown;

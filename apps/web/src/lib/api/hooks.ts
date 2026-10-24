@@ -1227,6 +1227,18 @@ export function useWeights(days = 90) {
 }
 
 /** Record or delete a weigh-in; the newest also becomes the body profile's weight. */
+/** Remove food logged by mistake (or a skip); today's or a later meal is planned again. */
+export function useRemoveLog() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: keys.planChange,
+    mutationFn: async (id: number) =>
+      unwrap(await api.DELETE("/diary/logs/{log_id}", { params: { path: { log_id: id } } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["plans"] }),
+  });
+}
+
 export function useWeight() {
   const api = useApi();
   const qc = useQueryClient();

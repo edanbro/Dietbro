@@ -5,6 +5,7 @@ from (meals marked eaten, food logged off-plan, skips). Weigh-ins are one per da
 is copied to the body profile so the energy targets follow the user's weight.
 """
 
+import uuid
 from datetime import date, timedelta
 from typing import Annotated, Any, Literal, cast
 
@@ -38,6 +39,7 @@ from larder_api.schemas import (
     RecapOut,
     RecentFoodItemOut,
     RecentFoodOut,
+    RemovedLogOut,
     ReplanRequest,
     SpendingCategoryOut,
     SpendingOut,
@@ -46,6 +48,7 @@ from larder_api.schemas import (
     WeightOut,
 )
 from larder_api.settings import Settings, get_settings
+from larder_core.meals import Slot
 from larder_core.regions import local_today
 from larder_db.models import (
     BodyProfile,
@@ -55,8 +58,9 @@ from larder_db.models import (
     MealLog,
     MealPlan,
     PlanMeal,
+    Preferences,
 )
-from larder_llm.schemas import AteOffPlan, OffPlanItem, When
+from larder_llm.schemas import AteOffPlan, OffPlanItem, Swap, When
 
 router = APIRouter(tags=["diary"])
 
@@ -333,6 +337,66 @@ async def log_food(
     )
     response.headers["Server-Timing"] = timed.server_timing
     return OutcomeOut.model_validate(timed.outcome.model_dump())
+
+
+@router.delete(
+    "/diary/logs/{log_id}",
+    operation_id="removeLog",
+    responses={
+        **REPLAN_ERRORS,
+        status.HTTP_404_NOT_FOUND: {"description": "no such log (or not yours)"},
+        status.HTTP_400_BAD_REQUEST: {"description": "a meal marked eaten: undo it on the plan"},
+    },
+)
+async def remove_log(
+    log_id: int,
+    user: CurrentUser,
+    session: Session,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> RemovedLogOut:
+    """Remove food logged by mistake, or a skip: it stops counting. On today or later, the
+    meal it stood for is planned again (a swap through the executor, so the day rebalances);
+    a past day just loses it. A meal marked eaten is undone from the plan instead."""
+    log = await session.scalar(
+        select(MealLog).where(
+            MealLog.id == log_id, MealLog.user_id == user.id, MealLog.voided_at.is_(None)
+        )
+    )
+    if log is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, ["That entry isn't in your diary."])
+    if log.kind == "eaten":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, ["Undo a meal marked eaten from your plan."]
+        )
+    now = clock()
+    today = local_today(user.timezone, now)
+    log.voided_at = now
+    on, slot = log.eaten_on, log.slot
+    await session.commit()
+    prefs = await session.get(Preferences, user.id)
+    planned = slot is not None and planning.meal_modes(prefs)[Slot(slot)] == "plan"
+    latest = await planning.latest_plan(session, user.id)
+    covered = latest is not None and 0 <= (on - latest.start_date).days < latest.days
+    if not planned or on < today or not covered:
+        return RemovedLogOut()
+    assert slot is not None
+    swap = Swap(intent="swap", when=When(date=on, slot=Slot(slot)))
+    request = ReplanRequest(changes=[swap], client_id=uuid.uuid4(), today=today)
+    timed = await replans.run(
+        session,
+        user.id,
+        request,
+        sessionmaker=sessionmaker,
+        catalog=cache,
+        planner=planner,
+        settings=settings,
+        now=now,
+    )
+    return RemovedLogOut(outcome=OutcomeOut.model_validate(timed.outcome.model_dump()))
 
 
 MAX_WEEKS = 52
