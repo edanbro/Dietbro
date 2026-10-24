@@ -779,6 +779,14 @@ class EatenOut(BaseModel):
     notes: list[str]
 
 
+class UsedInOut(BaseModel):
+    """A recipe of the plan that needs a shopping line, and the days it's on."""
+
+    recipe_id: int
+    name: str
+    dates: list[date]
+
+
 class ShoppingItemOut(BaseModel):
     food_id: int
     name: str
@@ -790,6 +798,9 @@ class ShoppingItemOut(BaseModel):
     staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
     # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
     approx_units: str | None = None
+    used_in: list[UsedInOut] = Field(
+        default_factory=list[UsedInOut], description="the plan's recipes that need it, by day"
+    )
 
 
 class ShoppingListOut(BaseModel):

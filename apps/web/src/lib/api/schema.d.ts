@@ -3727,6 +3727,11 @@ export interface components {
             staple: boolean;
             /** Approx Units */
             approx_units?: string | null;
+            /**
+             * Used In
+             * @description the plan's recipes that need it, by day
+             */
+            used_in?: components["schemas"]["UsedInOut"][];
         };
         /** ShoppingItemPatch */
         ShoppingItemPatch: {
@@ -4015,6 +4020,18 @@ export interface components {
             messages_today: number;
             /** Daily Limit */
             daily_limit: number;
+        };
+        /**
+         * UsedInOut
+         * @description A recipe of the plan that needs a shopping line, and the days it's on.
+         */
+        UsedInOut: {
+            /** Recipe Id */
+            recipe_id: number;
+            /** Name */
+            name: string;
+            /** Dates */
+            dates: string[];
         };
         /** ValidationError */
         ValidationError: {

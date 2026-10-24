@@ -6,7 +6,7 @@ import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/a
 import { aisle } from "@/lib/aisles";
 import { item, makePlan, makeShoppingList } from "@/test/fixtures";
 
-import { groupByAisle, listText, ShoppingPage } from "./shopping-page";
+import { groupByAisle, listText, ShoppingPage, usedFor } from "./shopping-page";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
@@ -317,5 +317,33 @@ describe("printing the list", () => {
     (await screen.findByRole("button", { name: "Print" })).click();
 
     expect(print).toHaveBeenCalledOnce();
+  });
+});
+
+describe("what each line is for", () => {
+  const chilli = { recipe_id: 1, name: "Chilli", dates: ["2026-10-12", "2026-10-15"] };
+  const pie = { recipe_id: 2, name: "Fish pie", dates: ["2026-10-14"] };
+  const soup = { recipe_id: 3, name: "Soup", dates: ["2026-10-16"] };
+
+  it("names the meals and their days", () => {
+    expect(usedFor([chilli])).toBe("For Chilli (Mon, Thu)");
+    expect(usedFor([chilli, pie])).toBe("For Chilli (Mon, Thu) and Fish pie (Wed)");
+    expect(usedFor([chilli, pie, soup])).toBe("For Chilli (Mon, Thu), Fish pie (Wed) +1");
+    expect(usedFor([])).toBeNull();
+    expect(usedFor(undefined)).toBeNull();
+  });
+
+  it("describes each box with its meals", async () => {
+    setup({
+      "GET /plans/7/shopping": json(
+        makeShoppingList({
+          items: [item({ food_id: 1, name: "Onions, raw", used_in: [chilli, pie] })],
+        }),
+      ),
+    });
+
+    expect(await screen.findByRole("checkbox", { name: "Onions" })).toHaveAccessibleDescription(
+      /For Chilli \(Mon, Thu\) and Fish pie \(Wed\)/,
+    );
   });
 });
