@@ -49,10 +49,10 @@ const FEATURES = [
   },
 ];
 
-/** From the evaluation runs (evals/REPORT.md, docs/receipt-accuracy.md), quick planner. */
+/** From the evaluation runs (evals/REPORT.md, docs/receipt-accuracy.md). */
 const MEASURED = [
   { value: "0 of 200", text: "test plans broke an allergy, diet or calorie-floor rule" },
-  { value: "66 ms", text: "to plan a whole week (95th percentile)" },
+  { value: "100%", text: "of test plans kept to the budget, calories and variety rules" },
   { value: "98%", text: "of pasted receipt lines read correctly" },
 ];
 

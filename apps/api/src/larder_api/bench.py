@@ -439,7 +439,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--time-limit-ms", type=int, default=3_500)
     parser.add_argument(
-        "--replan-time-limit-ms", type=int, default=1_500, help="per planner run in a replan"
+        "--replan-time-limit-ms", type=int, default=1_000, help="per planner run in a replan"
     )
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--concurrency", type=int, default=1, help="plans solved at once")

@@ -1114,3 +1114,31 @@ async def test_plans_saved_before_chat_still_load(world: World) -> None:
     stats = planning.PlanStats.model_validate(old)
 
     assert (stats.v, stats.logged_on(0), stats.outcome) == (1, [], None)
+
+
+CPSAT: planning.Planner = partial(planning.run_planner, mode="auto", time_limit_ms=1000, workers=2)
+
+
+@pytest.mark.parametrize("planner", [GREEDY, CPSAT], ids=["greedy", "cpsat"])
+async def test_cook_extra_keeps_tonights_dinner(world: World, planner: planning.Planner) -> None:
+    """ "Cook extra for tomorrow's lunch" (the plan page) swaps tomorrow's lunch to tonight's
+    dinner and tonight's dinner to itself, so the planner can't move tonight's dinner to make
+    room (CP-SAT would, when that balances the day better)."""
+    v1 = await world.plan()
+    dinner = meal(v1, TODAY, D)
+    assert dinner is not None
+    rid = dinner.recipe_id
+
+    out = await world.say(
+        swap(TODAY, D, recipe_id=rid), swap(THU, L, recipe_id=rid), planner=planner
+    )
+
+    assert [r.status for r in out.results] == ["applied", "applied"], out.results
+    assert out.results[0].message == f"Wed dinner stays {world.name(rid)}."
+    assert out.results[1].message == f"Thu lunch is now {world.name(rid)}."
+    v2 = await world.plan()
+    lunch, kept = meal(v2, THU, L), meal(v2, TODAY, D)
+    assert lunch is not None
+    assert kept is not None
+    assert lunch.recipe_id == dinner.recipe_id
+    assert kept.recipe_id == dinner.recipe_id

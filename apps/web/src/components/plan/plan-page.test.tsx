@@ -340,6 +340,18 @@ describe("violations and planner notes", () => {
     expect(note).toHaveTextContent("The optimiser timed out.");
   });
 
+  it("says why the quick planner stepped in, once", async () => {
+    const why = "No plan meets every target; the quick planner made the closest one.";
+    setup({
+      "GET /plans/current": json(
+        makePlan({ planner: "greedy", violations, notes: ["Made by the quick planner.", why] }),
+      ),
+    });
+
+    const note = await screen.findByTestId("planner-note");
+    expect(note.textContent).toBe(why);
+  });
+
   it("shows no banners for a clean optimised plan", async () => {
     setup({ "GET /plans/current": json(makePlan()) });
 

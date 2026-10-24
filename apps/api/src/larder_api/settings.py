@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     clerk_authorized_parties: list[str] | None = None
 
     # Planning (docs/adr/0009-planning-contract.md). auto = CP-SAT, falling back to the greedy
-    # baseline while solve() is unimplemented or when it finds no plan in time.
+    # baseline when it finds no plan in time.
     planner: Literal["auto", "cpsat", "greedy"] = "auto"
     plan_time_limit_ms: int = 3_500
     plan_workers: int = 4
@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # than this and the epoch is under the token estimate; otherwise start a new epoch.
     chat_epoch_idle_min: int = 30
     chat_epoch_max_tokens: int = 12_000
-    replan_time_limit_ms: int = 1_500  # per planner run in a replan (at most 3 runs)
+    replan_time_limit_ms: int = 1_000  # per planner run in a replan (at most 3 runs)
 
     # Pantry intake (docs/adr/0016-receipt-intake.md). The API stores the upload and enqueues
     # it on Redis (arq); the worker reads it (OCR for photos) and writes the lines.

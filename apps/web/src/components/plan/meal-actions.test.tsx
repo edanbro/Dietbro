@@ -163,6 +163,11 @@ describe("meal options", () => {
     expect(body.changes).toEqual([
       {
         intent: "swap",
+        when: { date: "2026-10-11", slot: "dinner" },
+        recipe_id: dinner.recipe.id,
+      },
+      {
+        intent: "swap",
         when: { date: "2026-10-12", slot: "lunch" },
         recipe_id: dinner.recipe.id,
       },

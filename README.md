@@ -94,13 +94,15 @@ flowchart LR
 | What | Result | Source |
 |---|---|---|
 | Plans with a safety violation (allergen, diet, avoided food, calorie floor) | **0 of 200** | [evals/REPORT.md](evals/REPORT.md) |
-| Plans with no hard violation at all | 92% (94% where a valid plan is known to exist: the rest go 1-7% over a tight budget) | [evals/REPORT.md](evals/REPORT.md) |
-| Plan a week, end to end (p95) | 109 ms | [evals/REPORT.md](evals/REPORT.md) |
-| Replan through the API (p95) | 319 ms | [docs/replan-bench-greedy.md](docs/replan-bench-greedy.md) |
+| Plans with no hard violation at all (budget, kcal bands, repeats included) | **100%** (the greedy baseline: 92%) | [evals/REPORT.md](evals/REPORT.md) |
+| Share of the pantry the plans use up | 27% (baseline: 14%) | [evals/REPORT.md](evals/REPORT.md) |
+| Plan a week, end to end (p95) | 3.6 s (CP-SAT, 3.5 s limit) | [docs/solver-bench-cpsat.md](docs/solver-bench-cpsat.md) |
+| Replan through the API (p95) | 1.1 s | [docs/replan-bench-cpsat.md](docs/replan-bench-cpsat.md) |
 | Receipt lines read correctly, end to end (pasted text) | 98.1% | [docs/receipt-accuracy.md](docs/receipt-accuracy.md) |
 
-These numbers are for the greedy baseline planner standing in while the CP-SAT model is being
-written. The LLM-only comparison (`larder-evals --llm`, paid) is wired up and runs on request.
+The planner is a CP-SAT model ([packages/solver](packages/solver/README.md)) with the greedy
+baseline as its fallback. The LLM-only comparison (`larder-evals --llm`, paid) is wired up and
+runs on request.
 
 ## Stack
 
@@ -176,7 +178,7 @@ make data             # import USDA + TheMealDB + curated recipes, resolve, writ
 make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
 uv run larder-evals --catalog db --n 50   # evals/REPORT.md (add --llm --yes for the paid baseline)
 make llm-smoke        # four real chat turns against Claude (needs ANTHROPIC_API_KEY; ~5 cents)
-uv run pytest packages/solver/tests/test_solve.py   # the spec the CP-SAT solve() must pass
+uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec
 ```
 
 ## Layout

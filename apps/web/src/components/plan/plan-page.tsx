@@ -267,6 +267,10 @@ function PlanNotes({ plan }: { plan: Plan }) {
   const hard = plan.violations.filter((v) => v.hard);
   const soft = plan.violations.filter((v) => !v.hard);
   const greedy = plan.planner === "greedy";
+  // The API notes the quick planner too ("Made by the quick planner."); say it once, and not
+  // at all when a note already says why it stepped in.
+  const notes = plan.notes.filter((n) => n !== "Made by the quick planner.");
+  const generic = greedy && !notes.some((n) => n.includes("quick planner"));
   return (
     <>
       {hard.length ? (
@@ -291,20 +295,17 @@ function PlanNotes({ plan }: { plan: Plan }) {
           </AlertDescription>
         </Alert>
       ) : null}
-      {greedy || plan.notes.length ? (
+      {generic || notes.length ? (
         <div
           data-testid="planner-note"
           className="flex flex-col gap-1 text-xs text-muted-foreground"
         >
-          {greedy ? (
+          {generic ? (
             <p>Made by the quick planner: fast, but it can miss a target now and then.</p>
           ) : null}
-          {plan.notes
-            // The API notes the quick planner too; say it once.
-            .filter((n) => !(greedy && n.startsWith("Made by the quick planner")))
-            .map((n) => (
-              <p key={n}>{n}</p>
-            ))}
+          {notes.map((n) => (
+            <p key={n}>{n}</p>
+          ))}
         </div>
       ) : null}
     </>

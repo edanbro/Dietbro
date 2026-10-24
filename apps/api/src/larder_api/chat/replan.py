@@ -938,11 +938,24 @@ def _finish(scope: ChatScope, items: list[_Item], decided: _Plan) -> None:
                 continue
             item.recipe_id = meal.recipe_id
             item.recipe_name = solved.problem.recipes[meal.recipe_id].name
-            item.finish("applied", f"{when} is now {item.recipe_name}.")
+            kept = _before(decided, item) == meal.recipe_id  # a swap to itself keeps the meal
+            item.finish("applied", f"{when} {'stays' if kept else 'is now'} {item.recipe_name}.")
         elif item.pending:
             item.finish("applied", _fact_message(item, scope.today, decided.target))
         if item.assumed and item.status != "unchanged":
             item.message += f" I took that as {item.slot}."
+
+
+def _before(decided: _Plan, item: _Item) -> int | None:
+    """The recipe the item's meal had before this change."""
+    target = decided.target
+    if target is None or target.plan is None:
+        return None
+    day = target.day(item.on)
+    return next(
+        (m.recipe_id for m in target.plan.meals if m.day == day and Slot(m.slot) == item.slot),
+        None,
+    )
 
 
 def _planned(decided: _Plan, item: _Item) -> Meal | None:

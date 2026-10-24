@@ -993,8 +993,9 @@ type Planner = Callable[[Problem, Plan | None], PlanResult]
 def run_planner(
     problem: Problem, previous: Plan | None, mode: str, time_limit_ms: int, workers: int
 ) -> PlanResult:
-    """CP-SAT, with the greedy baseline standing in while solve() is unimplemented (auto) or
-    when CP-SAT finds no plan in time."""
+    """CP-SAT, with the greedy baseline standing in (auto) when CP-SAT finds no plan: in time
+    (UNKNOWN), or at all (INFEASIBLE: no plan meets every hard rule, so the closest one the
+    baseline finds is saved with its misses shown, as long as it is safe)."""
     if mode == "greedy":
         return greedy(problem, previous, time_limit_ms)
     try:
@@ -1004,14 +1005,22 @@ def run_planner(
             raise
         fallback = greedy(problem, previous, time_limit_ms)
         return replace(fallback, notes=(*fallback.notes, "Made by the quick planner."))
-    if mode == "auto" and result.status == Status.UNKNOWN:
+    if mode == "auto" and result.status in _FALL_BACK:
         fallback = greedy(problem, previous, time_limit_ms)
+        if fallback.plan is None:  # INFEASIBLE either way: the baseline's notes say why
+            return replace(fallback, wall_ms=fallback.wall_ms + result.wall_ms)
         return replace(
             fallback,
-            notes=(*fallback.notes, "The optimiser ran out of time; made by the quick planner."),
+            notes=(*fallback.notes, _FALL_BACK[result.status]),
             wall_ms=fallback.wall_ms + result.wall_ms,
         )
     return result
+
+
+_FALL_BACK = {
+    Status.UNKNOWN: "The optimiser ran out of time; made by the quick planner.",
+    Status.INFEASIBLE: "No plan meets every target; the quick planner made the closest one.",
+}
 
 
 _limiter: anyio.CapacityLimiter | None = None

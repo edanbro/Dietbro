@@ -77,8 +77,8 @@ def main(argv: list[str] | None = None) -> None:
             print(f"hybrid: {i}/{len(items)}", file=sys.stderr)
 
     notes = [
-        f"Hybrid planner mode `{args.planner}` (the greedy baseline stands in for CP-SAT "
-        "until `solve()` is written)."
+        f"Hybrid planner mode `{args.planner}` (auto = CP-SAT, with the greedy baseline when "
+        "it finds no plan in time)."
     ]
     if args.llm:
         llm_n = args.llm_n or args.n
