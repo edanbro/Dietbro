@@ -887,7 +887,8 @@ export interface paths {
          * @description Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
          *     blocked), matching `q` if given, ranked like the chat's search: match, then preference
          *     (favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest
-         *     foods still to get first, each with those foods (`missing`).
+         *     foods still to get first, each with those foods (`missing`). `cheapest`: the lowest cost a
+         *     serving first (in the user's prices), those without a price last.
          */
         get: operations["listRecipes"];
         put?: never;
@@ -6138,6 +6139,7 @@ export interface operations {
                 favourites?: boolean;
                 max_minutes?: number | null;
                 pantry?: boolean;
+                cheapest?: boolean;
                 limit?: number;
                 offset?: number;
             };

@@ -93,6 +93,8 @@ export type RecipeQuery = {
   maxMinutes?: number | null;
   /** What can be cooked from the pantry: fewest foods still to get first. */
   pantry?: boolean;
+  /** The lowest cost a serving first. */
+  cheapest?: boolean;
 };
 
 export const keys = {
@@ -1285,6 +1287,7 @@ export function useRecipeList(query: RecipeQuery) {
               favourites: query.favourites,
               max_minutes: query.maxMinutes ?? undefined,
               pantry: query.pantry || undefined,
+              cheapest: query.cheapest || undefined,
               limit: RECIPE_PAGE,
               offset: pageParam,
             },
@@ -1298,7 +1301,6 @@ export function useRecipeList(query: RecipeQuery) {
   });
 }
 
-/** Favourite a recipe, never plan it again, or clear the verdict (null). */
 /** Delete a recipe of the user's own (hidden instead when a plan has it). */
 export function useDeleteRecipe(recipeId: number) {
   const api = useApi();
@@ -1312,6 +1314,7 @@ export function useDeleteRecipe(recipeId: number) {
   });
 }
 
+/** Favourite a recipe, never plan it again, or clear the verdict (null). */
 export function useRecipeFeedback(recipeId: number) {
   const api = useApi();
   const qc = useQueryClient();

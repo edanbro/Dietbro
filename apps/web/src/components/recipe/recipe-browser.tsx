@@ -1,7 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { ClockIcon, DownloadIcon, HeartIcon, RefrigeratorIcon, SearchIcon } from "lucide-react";
+import {
+  ClockIcon,
+  CoinsIcon,
+  DownloadIcon,
+  HeartIcon,
+  RefrigeratorIcon,
+  SearchIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -132,6 +139,7 @@ export function RecipeBrowser() {
   const [slot, setSlot] = useState<Slot | null>(null);
   const [favourites, setFavourites] = useState(false);
   const [quick, setQuick] = useState(false);
+  const [cheapest, setCheapest] = useState(false);
   const [pantry, setPantry] = useState(params.get("pantry") === "1");
   const query = {
     q: useDebounced(q.trim(), 300),
@@ -139,6 +147,7 @@ export function RecipeBrowser() {
     favourites,
     maxMinutes: quick ? QUICK_MINUTES : null,
     pantry,
+    cheapest,
   };
   const list = useRecipeList(query);
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
@@ -177,6 +186,10 @@ export function RecipeBrowser() {
         <Chip pressed={quick} onClick={() => setQuick(!quick)}>
           <ClockIcon aria-hidden className="size-4" />
           Under {QUICK_MINUTES} min
+        </Chip>
+        <Chip pressed={cheapest} onClick={() => setCheapest(!cheapest)}>
+          <CoinsIcon aria-hidden className="size-4" />
+          Cheapest first
         </Chip>
         {SLOTS.map((s) => (
           <Chip key={s.label} pressed={slot === s.value} onClick={() => setSlot(s.value)}>

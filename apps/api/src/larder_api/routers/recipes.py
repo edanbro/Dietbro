@@ -104,13 +104,15 @@ async def list_recipes(
     favourites: bool = False,
     max_minutes: Annotated[int | None, Query(ge=5, le=240)] = None,
     pantry: bool = False,
+    cheapest: bool = False,
     limit: Annotated[int, Query(ge=1, le=60)] = 24,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RecipeListOut:
     """Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
     blocked), matching `q` if given, ranked like the chat's search: match, then preference
     (favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest
-    foods still to get first, each with those foods (`missing`)."""
+    foods still to get first, each with those foods (`missing`). `cheapest`: the lowest cost a
+    serving first (in the user's prices), those without a price last."""
     viewer = await viewer_of(session, user.id)
     if viewer is None:
         raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
@@ -133,6 +135,8 @@ async def list_recipes(
         from_pantry=pantry,
         pricer=pricer,
     )
+    if cheapest:  # stable: ties keep the ranking above
+        hits.sort(key=lambda h: (h.cost_per_serving is None, h.cost_per_serving or 0))
     return RecipeListOut(
         items=[
             RecipeListItem(
