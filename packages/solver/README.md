@@ -1,7 +1,7 @@
 # larder-solver
 
 Weekly meal planning, pure Python with no I/O: the planning contract, the CP-SAT planner
-(`solve`, to be written), a greedy baseline, an independent validator, plan metrics, the
+(`solve`), a greedy baseline, an independent validator, plan metrics, the
 shopping list and an infeasibility diagnosis. The rationale is in
 [ADR-0009](../../docs/adr/0009-planning-contract.md) and [DESIGN §8](../../docs/DESIGN.md#8-planning).
 
@@ -17,10 +17,9 @@ shopping list and an infeasibility diagnosis. The rationale is in
 | `scenarios.py` | Seeded test problems: `planted`, `replan`, `infeasible`, `realistic`, `synthetic_catalog` |
 | `solve.py` | `solve(problem, previous, time_limit_ms, *, workers)`: **the CP-SAT model** |
 
-The rest of this file is the modelling guide for `solve()`. It explains the choices and the
-traps; it deliberately doesn't contain the model. The specification is
-[`tests/test_solve.py`](tests/test_solve.py): every test xfails today and must pass once
-`solve()` exists.
+The rest of this file is the modelling guide for `solve()`: the choices and the traps. The
+model itself is [`solve.py`](src/larder_solver/solve.py) (encoding B below, light presolve,
+complete hints) and the specification is [`tests/test_solve.py`](tests/test_solve.py).
 
 ## 1. The contract in one page
 
@@ -233,10 +232,11 @@ may choose *any* allocation: at the optimum it is worth exactly as much as EDF's
   before building (an unsafe lock, a required slot with no allowed candidate, a chosen cell
   with no allowed eligible recipe) → INFEASIBLE without solving. `diagnose(problem)` explains
   INFEASIBLE to the user; the API calls it.
-- **Don't expect OPTIMAL at full size within 3.5 s.** Report the gap in `notes`, e.g.
-  `("feasible at the time limit, gap 1.8%",)`.
-- `PLANNER=auto` in the API falls back to `greedy` when `solve()` raises NotImplementedError
-  or returns UNKNOWN. INFEASIBLE is final.
+- **Don't expect OPTIMAL at full size within 3.5 s.** The gap is `bound - objective`; it is
+  not put in `notes`, which the API shows to the user.
+- `PLANNER=auto` in the API falls back to `greedy` when `solve()` returns UNKNOWN or
+  INFEASIBLE: the baseline's closest plan is saved with its misses shown (budget, kcal band),
+  and only when it finds nothing either does the user get `diagnose`'s reasons.
 
 ## 7. Making it fast
 
@@ -285,10 +285,17 @@ first solution in 0.4–1 s with ≥ 2 workers; practically always FEASIBLE at t
 with a 0.5–4% gap, rarely OPTIMAL. With protein/fat/carbs as hard bands, vegetarian, vegan and
 budget profiles often ended UNKNOWN, which is why they are soft. Day-symmetry breaking hurt.
 
+**This model** (`scenarios.realistic`, 4 workers, 3.5 s): with CP-SAT's default presolve,
+probing and big-linear-overlap detection took about 3 s and most runs ended UNKNOWN. One
+presolve pass without either (`solve.py`) finds a plan every time, scoring £20–110 a week
+better than greedy's; the reported gap stays wide (the LP bound is weak) and the search is
+still improving near the limit, so more time buys better plans. Linearization level 2 and
+symmetry detection off made no measurable difference.
+
 ## 8. Running the specification
 
 ```sh
-uv run pytest packages/solver/tests/test_solve.py   # the spec: 85 tests, xfail until solve() exists
+uv run pytest packages/solver/tests/test_solve.py   # the spec: 85 tests, about two minutes
 uv run pytest -m perf packages/solver               # realistic size: 20 seeds, p95 < 4 s
 uv run pytest packages/solver                       # everything else (validator, greedy, ...)
 make bench                                          # end to end through the API (bench added with the API work)
@@ -296,9 +303,9 @@ make bench-replan                                   # M5: replan latency (p50/p9
 ```
 
 Functional tests use `time_limit_ms=2000, workers=4` on planted problems (k=10) and small
-hand-built ones (10 s, where OPTIMAL is expected). Once `solve()` is implemented, delete the
-module-level `pytestmark` in `test_solve.py` so passing tests count as passes; M3 is done when
-the spec passes and a `make bench --planner cpsat` result is recorded in `docs/progress.md`.
+hand-built ones (10 s, where OPTIMAL is expected). The benchmark results are in
+[`docs/solver-bench-cpsat.md`](../../docs/solver-bench-cpsat.md) and
+[`docs/replan-bench-cpsat.md`](../../docs/replan-bench-cpsat.md).
 
 Useful while developing:
 

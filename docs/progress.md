@@ -101,7 +101,7 @@ mode in the PWA.
 
 **Next (M3)**: CP-SAT weekly plan, independent validator, shopping list, plan view.
 
-## M3 — Planning (in progress: CP-SAT `solve()` is Eduard's to write)
+## M3 — Planning (done: CP-SAT `solve()` passes the spec)
 
 **What works**
 - "Plan my week" on the phone: a 7-day plan (breakfast, lunch, dinner, optional snack) that
@@ -111,15 +111,16 @@ mode in the PWA.
 - Week grid and day view, recipe pages (derived allergens, suitable diets), and a shopping list
   grouped by aisle with ticks, estimated cost and a "check you have" staples section.
 - Plans are versioned snapshots: re-planning makes a new version and never edits an old one.
-- Today the plans come from a greedy **baseline** (`PLANNER=auto` falls back to it while
-  `solve()` raises NotImplementedError). Every plan, from any planner, goes through the
+- Plans come from the CP-SAT model (`solve()`), with the greedy **baseline** standing in when
+  it finds no plan in time or none meets every hard rule (`PLANNER=auto`: the baseline's closest
+  plan is saved with its misses shown). Every plan, from any planner, goes through the
   independent validator; a plan with a safety or structural violation is never saved.
 
 **For the CP-SAT model** (`packages/solver`): the integer problem contract, the validator, metrics
 (earliest-deadline-first pantry allocation, score), the prefilter, test scenarios with known
-answers and decoys, and a failing tests-first spec (`tests/test_solve.py`, 62 cases) plus a
-modelling guide (`packages/solver/README.md`). M3's gates, once `solve()` passes the spec:
-validator passes 100% of generated scenarios; `make bench PLANNER=cpsat` end-to-end p95 < 5 s.
+answers and decoys, a tests-first spec (`tests/test_solve.py`, 85 cases) and a modelling
+guide (`packages/solver/README.md`). M3's gates are met: the spec passes, the validator passes
+100% of generated scenarios, and `make bench PLANNER=cpsat` end-to-end p95 is 3.6 s (< 5 s).
 
 **Data**: allergen/diet tags from conservative rules + reviewed data (every approximate or
 automatic ingredient match in a plannable recipe reviewed; tags also read recipe names and
@@ -127,15 +128,18 @@ instructions — "Egg Drop Soup" lists no egg); estimated UK prices; 57 curated 
 snacks so every common allergy/diet combination has a week of breakfasts; recipes with broken
 nutrition (frying oil, missing main ingredient) excluded and listed in the data report.
 
-**Numbers** (`docs/solver-bench-greedy.md`): the baseline plans in ~25 ms (p95 ~40 ms), meets
-every hard rule on planted and realistic scenarios, and misses only tight budgets.
+**Numbers** (`docs/solver-bench-cpsat.md`, `docs/solver-bench-greedy.md`): CP-SAT plans in
+3.5 s and meets every hard rule on planted, realistic, profile and replan scenarios, tight
+budgets included; the baseline plans in ~25 ms and misses tight budgets (80% of profiles).
+Replans through the API (`docs/replan-bench-cpsat.md`): p95 1.1 s, no hard violations, 0.4
+unrequested meal changes per replan.
 
 **See it**
 ```sh
 docker compose up --build && make seed
 open http://localhost:3000            # set up a profile, then "Plan my week"
-make bench PLANNER=greedy             # planner benchmark
-uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec (xfails until solve() exists)
+make bench PLANNER=cpsat              # planner benchmark (PLANNER=greedy for the baseline)
+uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec
 ```
 
 **Docs**: DESIGN §5, §7, §8; ADRs [0009](adr/0009-planning-contract.md),

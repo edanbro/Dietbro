@@ -213,11 +213,18 @@ export function MealActions({
                       variant="outline"
                       disabled={busy}
                       onClick={() =>
-                        replan({
-                          intent: "swap",
-                          when: { date: cookExtraFor, slot: "lunch" },
-                          recipe_id: meal.recipe.id,
-                        })
+                        // Tonight's dinner is pinned too, so the planner can't move it to make
+                        // room for the lunch.
+                        run(
+                          onReplan([
+                            { intent: "swap", when, recipe_id: meal.recipe.id },
+                            {
+                              intent: "swap",
+                              when: { date: cookExtraFor, slot: "lunch" },
+                              recipe_id: meal.recipe.id,
+                            },
+                          ]),
+                        )
                       }
                     >
                       <CookingPotIcon aria-hidden />

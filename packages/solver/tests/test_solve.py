@@ -1,12 +1,11 @@
 """The specification for `larder_solver.solve.solve` (the CP-SAT planner).
 
-Every test here fails today with NotImplementedError and is reported as xfail. Once `solve()`
-exists they run for real: any other failure is a bug in the model. The modelling guide is
-packages/solver/README.md; the contract is larder_solver.problem (PlanResult explains
-objective and bound) and larder_solver.validate is the judge.
+Any failure here is a bug in the model. The modelling guide is packages/solver/README.md;
+the contract is larder_solver.problem (PlanResult explains objective and bound) and
+larder_solver.validate is the judge.
 
-Run: `uv run pytest packages/solver/tests/test_solve.py` (functional, a minute or two once
-implemented) and `uv run pytest -m perf packages/solver` (realistic size, timing).
+Run: `uv run pytest packages/solver/tests/test_solve.py` (functional, about two minutes) and
+`uv run pytest -m perf packages/solver` (realistic size, timing).
 """
 
 import math
@@ -57,10 +56,6 @@ from larder_solver.scenarios import (
 )
 from larder_solver.solve import solve
 from larder_solver.validate import hard, validate
-
-pytestmark = pytest.mark.xfail(
-    raises=NotImplementedError, strict=False, reason="solve() not implemented yet"
-)
 
 B, L, D, S = Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER, Slot.SNACK
 START = date(2026, 1, 5)  # a Monday

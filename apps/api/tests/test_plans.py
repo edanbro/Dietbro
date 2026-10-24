@@ -15,6 +15,7 @@ from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_db.engine import make_sessionmaker
 from larder_db.models import Food, Goals, MealLog, MealPlan, Recipe, RecipeIngredient, User
 from larder_solver import Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
+from larder_solver.scenarios import planted
 
 Auth = Callable[..., dict[str, str]]
 
@@ -622,3 +623,44 @@ async def test_named_lines_can_be_moved_without_ticking(api: httpx.AsyncClient, 
 
     assert [i["food"]["id"] for i in moved.json()] == [RICE]
     assert other.status_code == 404
+
+
+async def test_the_optimiser_plans_a_week_that_breaks_no_hard_rule(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    """The real CP-SAT model end to end (auto mode, as in production, with a short limit): the
+    API saves only plans the validator passes, so a 201 from "cpsat" means no hard violation."""
+    app.dependency_overrides[get_planner] = lambda: partial(
+        planning.run_planner, mode="auto", time_limit_ms=1500, workers=2
+    )
+    await set_up(api, auth)
+
+    response = await api.post("/plans", json={}, headers=auth())
+
+    assert response.status_code == 201, response.text
+    plan = response.json()
+    assert plan["planner"] == "cpsat"
+    assert plan["status"] in ("optimal", "feasible")
+    assert not [v for v in plan["violations"] if v["hard"]]
+
+
+@pytest.mark.parametrize("status", [Status.UNKNOWN, Status.INFEASIBLE])
+def test_auto_falls_back_to_the_quick_planner(
+    monkeypatch: pytest.MonkeyPatch, status: Status
+) -> None:
+    """No CP-SAT plan (out of time, or none meets every hard rule): auto saves the baseline's
+    closest plan with a note, and cpsat mode reports the status as it is."""
+    problem = planted(0, k=10).problem
+
+    def solve(*_: object, **__: object) -> PlanResult:
+        return _result(None, status, "cpsat")
+
+    monkeypatch.setattr(planning, "solve", solve)
+
+    auto = planning.run_planner(problem, None, "auto", 1000, 1)
+    strict = planning.run_planner(problem, None, "cpsat", 1000, 1)
+
+    assert auto.planner == "greedy"
+    assert auto.plan is not None
+    assert "quick planner" in auto.notes[-1]
+    assert (strict.status, strict.plan) == (status, None)

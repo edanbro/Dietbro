@@ -288,13 +288,14 @@ protein-dense ones (when there is a protein target) and the cheapest per kcal (w
 budget), then ranks the rest by preference + pantry overlap with a seeded tiebreak and a cuisine
 cap: top 40.
 
-**Planners.** `solve()` is the CP-SAT model (Eduard's; modelling guide in
+**Planners.** `solve()` is the CP-SAT model (modelling guide in
 [`packages/solver/README.md`](../packages/solver/README.md), spec in
 `packages/solver/tests/test_solve.py`). `baseline.greedy` enumerates each day's meal
-combinations; it stands in until `solve()` exists and is an eval baseline. `PLANNER=auto` uses
-CP-SAT and falls back to greedy if it isn't implemented or finds nothing within 3.5 s. On the
-real catalog the baseline plans in ~25 ms (p95 ~40 ms) and meets every hard rule on planted and
-realistic scenarios; it misses only tight budgets (`make bench PLANNER=greedy`).
+combinations; it is the fallback and the eval baseline. `PLANNER=auto` uses CP-SAT (3.5 s for a
+plan, 1 s per replan run) and falls back to greedy when CP-SAT finds nothing in time or proves
+no plan meets every hard rule; the baseline's closest plan is then saved with its misses shown.
+On the real catalog CP-SAT meets every hard rule on every scenario kind, tight budgets included
+(`make bench PLANNER=cpsat`); the baseline plans in ~25 ms and misses tight budgets.
 
 **Validator** (`larder_solver.validate`): written independently of the prefilter and the
 planners, with one code per rule and a hard/soft flag. Metrics (`larder_solver.metrics`) give day
