@@ -95,8 +95,15 @@ def total(items: Iterable[tuple[Nutrients, float]]) -> Nutrients:
 # A main-meal portion; used only when a recipe source gives no serving count.
 TARGET_KCAL_PER_SERVING = 650
 MAX_ESTIMATED_SERVINGS = 12
+# A big bowlful: a pot of soup is several servings even when its energy says one.
+MAX_GRAMS_PER_SERVING = 500
 
 
-def estimate_servings(total_kcal: float, kcal_per_serving: float = TARGET_KCAL_PER_SERVING) -> int:
-    """Serving count for a recipe without one: total energy / a typical portion, 1..12."""
-    return max(1, min(MAX_ESTIMATED_SERVINGS, round(total_kcal / kcal_per_serving)))
+def estimate_servings(
+    total_kcal: float, kcal_per_serving: float = TARGET_KCAL_PER_SERVING, total_grams: float = 0
+) -> int:
+    """Serving count for a recipe without one: total energy / a typical portion, or more when
+    that would make a serving heavier than MAX_GRAMS_PER_SERVING; 1..12."""
+    by_energy = round(total_kcal / kcal_per_serving)
+    by_weight = round(total_grams / MAX_GRAMS_PER_SERVING)
+    return max(1, min(MAX_ESTIMATED_SERVINGS, max(by_energy, by_weight)))

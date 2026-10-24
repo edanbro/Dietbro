@@ -10,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from test_plans import Auth, set_up, use_planner
 
 from larder_api import planning
+from larder_core.meals import Slot
 from larder_db.engine import make_sessionmaker
 from larder_db.models import Recipe
-from larder_solver import PlanResult, Problem, Status
+from larder_solver import Catalog, Macros, PlanResult, Problem, Profile, Status
+from larder_solver import Recipe as SolverRecipe
 
 # test_plans' fixtures: its recipe catalogue, and the greedy planner (autouse there and here).
 catalog_db = test_plans.catalog_db
@@ -139,3 +141,26 @@ async def test_a_repeated_week_keeps_its_meals_over_quick_dinners(
 
     assert response.status_code == 201, response.text
     assert dinners(response.json()) == dinners(first)
+
+
+def _catalog(lunches: int, minutes: int) -> planning.PlanningCatalog:
+    """`lunches` lunch-or-dinner recipes taking 20 minutes, and one taking `minutes`."""
+    mains = frozenset({Slot.LUNCH, Slot.DINNER})
+    recipes = {
+        i: SolverRecipe(i, f"r{i}", mains, Macros(500, 30, 20, 50)) for i in range(lunches + 1)
+    }
+    text = {
+        i: planning.RecipeText(None, (), (), minutes=minutes if i == 0 else 20) for i in recipes
+    }
+    return planning.PlanningCatalog(Catalog(recipes=recipes, foods={}), text=text)
+
+
+def test_a_slow_recipe_is_dinner_only_while_quick_lunches_are_plenty() -> None:
+    slow = planning.timed(_catalog(planning.MIN_TIMED, 360), Profile())
+    few = planning.timed(_catalog(planning.MIN_TIMED - 1, 360), Profile())
+    fine = planning.timed(_catalog(planning.MIN_TIMED, 45), Profile())
+
+    assert slow[0].meal_types == {Slot.DINNER}
+    assert slow[1].meal_types == {Slot.LUNCH, Slot.DINNER}
+    assert few[0].meal_types == {Slot.LUNCH, Slot.DINNER}  # too few quick ones to insist
+    assert fine[0].meal_types == {Slot.LUNCH, Slot.DINNER}

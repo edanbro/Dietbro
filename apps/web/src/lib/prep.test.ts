@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { estimate, parsePrep, type PrepRecipe, schedule, totalTime } from "./prep";
+import { estimate, fitTo, parsePrep, type PrepRecipe, schedule, totalTime } from "./prep";
 
 describe("estimate", () => {
   it("treats a waiting step with a timer as passive", () => {
@@ -68,6 +68,26 @@ describe("schedule", () => {
       .reduce((sum, e) => sum + e.active + e.passive, 0);
     expect(totalTime(events)).toBeLessThan(serial);
     expect(totalTime(events)).toBeGreaterThanOrEqual(300 + 60 + 2400); // the chilli alone
+  });
+});
+
+describe("fitTo", () => {
+  const eggs = ["Whisk the eggs with the milk.", "Stir gently until just set and serve."].map(
+    (s) => estimate(s),
+  );
+
+  it("stretches untimed steps to the recipe's own time", () => {
+    const fitted = fitTo(eggs, 10);
+    expect(fitted.reduce((sum, e) => sum + e.active, 0)).toBe(600);
+    expect(fitted[0]!.active).toBe(fitted[1]!.active);
+  });
+
+  it("leaves timed steps alone, never shrinks, and caps each step", () => {
+    const chilli = CHILLI.steps.map((s) => estimate(s));
+    expect(fitTo(chilli, 10)).toEqual(chilli);
+    expect(fitTo(eggs, null)).toEqual(eggs);
+    const long = fitTo(eggs, 600);
+    expect(long.every((e) => e.active === 15 * 60)).toBe(true);
   });
 });
 

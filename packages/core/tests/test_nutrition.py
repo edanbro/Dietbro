@@ -80,6 +80,12 @@ def test_estimate_servings_uses_the_portion_size() -> None:
     assert estimate_servings(2800, kcal_per_serving=350) == 8
 
 
+def test_a_light_but_large_pot_is_several_servings() -> None:
+    assert estimate_servings(900, total_grams=1300) == 3  # soup: one by energy alone
+    assert estimate_servings(2600, total_grams=1300) == 4  # energy says more
+    assert estimate_servings(900, total_grams=100_000) == 12
+
+
 @given(st.floats(min_value=0, max_value=1e6), st.floats(min_value=0, max_value=1e6))
 def test_estimate_servings_is_monotonic_and_bounded(a: float, b: float) -> None:
     lo, hi = sorted((a, b))

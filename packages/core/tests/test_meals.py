@@ -25,6 +25,8 @@ def test_recipe_slots_excludes_implausible_nutrition() -> None:
     assert recipe_slots("mealdb", "x", "Chicken", 1439, 0.05) == frozenset()  # fried chicken
     assert recipe_slots("mealdb", "x", "Chicken", 650, 0.4) == frozenset()  # frying oil
     assert recipe_slots("mealdb", "x", "Chicken", None, 0.0) == frozenset()
+    assert recipe_slots("mealdb", "x", "Chicken", 650, 0.0, 2569) == frozenset()  # a pot's salt
+    assert recipe_slots("mealdb", "x", "Chicken", 650, 0.0, 900) == {Slot.LUNCH, Slot.DINNER}
 
 
 def test_overrides_parse_and_reference_valid_slots() -> None:

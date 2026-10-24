@@ -125,3 +125,17 @@ def test_common_restrictions_still_fill_a_week(
     snacks = sum(c == "Snack" for c in allowed.values())
     assert breakfasts >= 6, f"only {breakfasts} breakfasts for {sorted(allergens)} {diet}"
     assert snacks >= 3, f"only {snacks} snacks for {sorted(allergens)} {diet}"
+
+
+def test_method_unwraps_lines_into_one_sentence_per_step() -> None:
+    text = """
+Whisk the eggs. Melt the butter in a pan over a low heat, add the eggs and stir
+gently until just set. Heat oven to 200C/gas 6.
+Serve!
+"""
+    assert curated.method(text).split("\n") == [
+        "Whisk the eggs.",
+        "Melt the butter in a pan over a low heat, add the eggs and stir gently until just set.",
+        "Heat oven to 200C/gas 6.",
+        "Serve!",
+    ]

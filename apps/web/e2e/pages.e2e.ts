@@ -60,6 +60,15 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     emailAddress: [email],
     password: `Larder-e2e-${stamp}-${crypto.randomUUID()}`,
   });
+  // Anything that breaks quietly: uncaught errors, console errors, server errors.
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(`${page.url()} pageerror: ${e.message}`));
+  page.on("console", (m) => {
+    if (m.type() === "error") problems.push(`${page.url()} console: ${m.text()}`);
+  });
+  page.on("response", (r) => {
+    if (r.status() >= 500) problems.push(`${page.url()} ${r.status()} ${r.url()}`);
+  });
   const visit = async (name: string, path: string) => {
     await page.goto(path);
     for (const scheme of ["light", "dark"] as const) {
@@ -83,7 +92,6 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     });
     await api(page, "PUT", "/me/allergies", { allergens: ["peanuts"], avoid_food_ids: [] });
     await api(page, "PUT", "/me/preferences", {});
-
 
     await page.goto("/plan");
     await page.getByRole("button", { name: "Plan my week" }).click();
@@ -115,6 +123,7 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     await visit("shared-recipe", (await recipeLink.json()).path);
     await visit("shared-week", (await weekLink.json()).path);
 
+    expect.soft(problems, "errors while browsing").toEqual([]);
     await api(page, "DELETE", "/me");
   } finally {
     await clerkClient.users.deleteUser(user.id).catch(() => undefined);

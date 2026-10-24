@@ -15,7 +15,8 @@
 
 import { type StepTimer, stepTimers } from "./cooking";
 
-export type PrepRecipe = { id: number; name: string; steps: string[] };
+// minutes: the recipe's own estimate of its time (shown on the recipe page), if it has one.
+export type PrepRecipe = { id: number; name: string; steps: string[]; minutes?: number | null };
 
 export type Estimate = { active: number; passive: number; timer: StepTimer | null };
 
@@ -36,6 +37,7 @@ const SETUP = 60; // starting a passive step
 const MIN_ACTIVE = 60;
 const MAX_ACTIVE = 8 * 60;
 const WORDS_PER_MINUTE = 12;
+const MAX_FITTED = 15 * 60;
 
 export function estimate(step: string): Estimate {
   const timers = stepTimers(step);
@@ -50,9 +52,25 @@ export function estimate(step: string): Estimate {
   return { active, passive: 0, timer: null };
 }
 
+/**
+ * Stretches a recipe's untimed hands-on steps so it takes about as long as its own estimate:
+ * word counts alone make most methods look quicker than they are. Never shrinks, and no step
+ * grows past 15 minutes.
+ */
+export function fitTo(estimates: Estimate[], minutes?: number | null): Estimate[] {
+  const total = estimates.reduce((sum, e) => sum + e.active + e.passive, 0);
+  const loose = estimates.reduce((sum, e) => sum + (e.timer ? 0 : e.active), 0);
+  const missing = (minutes ?? 0) * 60 - total;
+  if (missing <= 0 || !loose) return estimates;
+  const scale = (loose + missing) / loose;
+  return estimates.map((e) =>
+    e.timer ? e : { ...e, active: Math.min(MAX_FITTED, Math.round((e.active * scale) / 60) * 60) },
+  );
+}
+
 /** The merged timeline, in the order the cook does things. */
 export function schedule(recipes: PrepRecipe[]): PrepEvent[] {
-  const steps = recipes.map((r) => r.steps.map(estimate));
+  const steps = recipes.map((r) => fitTo(r.steps.map(estimate), r.minutes));
   const next = recipes.map(() => 0);
   const ready = recipes.map(() => 0); // when each recipe's previous step is done
   const left = (r: number) =>

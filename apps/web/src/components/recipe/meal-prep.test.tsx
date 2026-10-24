@@ -56,6 +56,18 @@ describe("gatherIngredients", () => {
     expect(lines.find((l) => l.name === "Mince")!.amount).toBe("1 kg");
     expect(lines.find((l) => l.name === "Chilli flakes")!.amount).toBe("a pinch");
   });
+
+  it("says a weightless amount as the recipe does, not 0 g", () => {
+    const pepper = makeRecipe({ id: 3, servings: 1, ingredients: [ing("Pepper", 40, 0.2, "1 pinch")] });
+    const both = makeRecipe({ id: 4, servings: 1, ingredients: [ing("Pepper", 40, 0.2, "to taste")] });
+    expect(gatherIngredients([{ recipe: pepper, servings: 2 }])[0]!.amount).toBe("1 pinch");
+    expect(
+      gatherIngredients([
+        { recipe: pepper, servings: 1 },
+        { recipe: both, servings: 1 },
+      ])[0]!.amount,
+    ).toBe("a pinch");
+  });
 });
 
 describe("offset", () => {
