@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { json, mockApi, renderWithClient } from "@/test/api";
 import { makeRecipe } from "@/test/fixtures";
-import { calls as nav, resetNavigation } from "@/test/navigation";
+import { currentUrl, calls as nav, resetNavigation } from "@/test/navigation";
 
 import { steps } from "@/lib/cooking";
 
@@ -144,12 +144,29 @@ describe("RecipePage", () => {
     renderWithClient(<RecipePage id={101} />);
 
     expect(
-      await screen.findByText("For 2 servings, as planned (the recipe makes 4)."),
+      await screen.findByText("Amounts for 2 servings (the recipe makes 4)."),
     ).toBeInTheDocument();
     const list = screen.getByRole("heading", { name: "Ingredients" }).closest("section")!;
     // The onion (1 large, 150 g, for 4) is 75 g for 2.
     expect(list).toHaveTextContent("75 gOnion");
     expect(screen.getByRole("link", { name: /Start cooking \(2 servings\)/ })).toBeInTheDocument();
+  });
+
+  it("scales to the servings picked on the page, in the address", async () => {
+    resetNavigation("/recipes/101");
+    mockApi({ "GET /recipes/101": json(makeRecipe()), "GET /allergens": json(ALLERGENS) });
+    renderWithClient(<RecipePage id={101} />);
+
+    const stepper = await screen.findByRole("group", { name: "Servings" });
+    expect(stepper).toHaveTextContent("4 servings");
+    expect(screen.queryByText(/^Amounts for/)).not.toBeInTheDocument();
+    fireEvent.click(within(stepper).getByRole("button", { name: "Fewer servings" }));
+    fireEvent.click(within(stepper).getByRole("button", { name: "Fewer servings" }));
+
+    expect(currentUrl()).toBe("/recipes/101?servings=2");
+    expect(await screen.findByText("Amounts for 2 servings (the recipe makes 4).")).toBeVisible();
+    const list = screen.getByRole("heading", { name: "Ingredients" }).closest("section")!;
+    expect(list).toHaveTextContent("75 gOnion");
   });
 
   it("handles a missing recipe", async () => {

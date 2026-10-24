@@ -1,25 +1,19 @@
 "use client";
 
 import { cn } from "cn";
-import {
-  ArrowLeftIcon,
-  CheckIcon,
-  MinusIcon,
-  PlusIcon,
-  StickyNoteIcon,
-  SunIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, StickyNoteIcon, SunIcon } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { ErrorAlert } from "@/components/form-bits";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Recipe, useRecipe } from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps, stepTimers } from "@/lib/cooking";
 import { useWakeLock } from "@/lib/use-wake-lock";
 
+import { ServingsStepper } from "./servings-stepper";
 import { RunningTimers, TimerChip, useTimers } from "./timers";
 
 function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
@@ -101,29 +95,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
             <h2 id="cook-ingredients" className="font-heading text-lg font-semibold">
               Ingredients
             </h2>
-            <div className="flex items-center gap-1" role="group" aria-label="Servings">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Fewer servings"
-                disabled={servings <= 0.5}
-                onClick={() => setServings(Math.max(0.5, servings - 0.5))}
-              >
-                <MinusIcon />
-              </Button>
-              <span className="w-24 text-center text-sm tabular-nums" aria-live="polite">
-                {servings} {servings === 1 ? "serving" : "servings"}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="More servings"
-                disabled={servings >= 20}
-                onClick={() => setServings(Math.min(20, servings + 0.5))}
-              >
-                <PlusIcon />
-              </Button>
-            </div>
+            <ServingsStepper value={servings} onChange={setServings} />
           </div>
           {factor !== 1 && recipe.ingredients.some((i) => i.grams == null) ? (
             <p className="text-xs text-muted-foreground">
