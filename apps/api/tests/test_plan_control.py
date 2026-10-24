@@ -245,3 +245,38 @@ async def test_two_days_trade_dinners_in_one_change(
     assert new_saturday is not None
     assert new_thursday["recipe"]["id"] == saturday["recipe"]["id"]
     assert new_saturday["recipe"]["id"] == thursday["recipe"]["id"]
+
+
+async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
+    api: httpx.AsyncClient,
+    chat: ChatEnv,
+    db_engine: AsyncEngine,
+    menu: dict[str, int],
+    new_user: NewUser,
+    make_plan: MakePlan,
+) -> None:
+    uid = await new_user("user_a")
+    async with make_sessionmaker(db_engine)() as session:
+        prefs = await session.get(db.Preferences, uid)
+        assert prefs is not None
+        prefs.meal_modes = {"lunch": "own"}
+        await session.commit()
+    await make_plan(uid, MON)
+    thu = WED + timedelta(days=1)
+    when = {"date": thu.isoformat(), "slot": "lunch"}
+    skip = {"intent": "skip", "when": when, "eating_elsewhere": False}
+
+    out = await replan(api, chat, swap(thu, "lunch"), swap(thu, "dinner"), skip)
+
+    plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
+    assert [(r["status"], r["message"]) for r in out["results"]] == [
+        (
+            "failed",
+            "Lunch isn't planned: you sort it out yourself. You can change that in Profile, "
+            "under Meals to plan.",
+        ),
+        ("applied", "Thu dinner is now Chicken curry."),
+        ("applied", "Skipped Thu lunch."),  # a fact: logged as said
+    ]
+    assert all(m["slot"] != "lunch" for d in plan["days"] for m in d["meals"])
+    assert meal_at(plan, thu, "dinner") is not None

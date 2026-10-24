@@ -445,6 +445,7 @@ def _target(scope: ChatScope, items: list[_Item], read: _Read) -> _Target | None
             frozenset(m.recipe_id for m in latest.meals) if latest else frozenset[int](),
         )
     target = fresh or plan
+    modes = planning.meal_modes(read.inputs.preferences if read.inputs else None)
     for item in items:
         if item.on < scope.today:
             item.where = "past" if plan is not None and plan.covers(item.on) else "outside"
@@ -459,6 +460,13 @@ def _target(scope: ChatScope, items: list[_Item], read: _Read) -> _Target | None
         elif item.where == "outside":
             day = day_label(item.on, scope.today)
             item.finish("failed", f"{day} isn't in your plan yet - make that week's plan first.")
+        elif modes[item.slot] != "plan":
+            why = "you sort it out yourself" if modes[item.slot] == "own" else "you skip it"
+            item.finish(
+                "failed",
+                f"{item.slot.capitalize()} isn't planned: {why}. You can change that in "
+                "Profile, under Meals to plan.",
+            )
     return target
 
 
