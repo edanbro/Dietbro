@@ -57,6 +57,43 @@ class RuleParse:
         return bool(self.changes)
 
 
+# "What can I make with spinach?", "any recipes using leftover chicken", "ideas for dinner":
+# a question about recipes, not a change.
+_RECIPE_QUESTION = re.compile(
+    r"^\s*(?:(?:so|ok|okay|hey|hi)[\s,]+)?(?:"
+    r"(?:what|which)\s+(?:else\s+)?(?:can|could|should|shall)\s+(?:i|we)\s+(?:make|cook|do)"
+    r"|(?:any|got\s+any|some)?\s*(?:recipes?|ideas?|suggestions?)"
+    r"|(?:what|which)\s+recipes?(?=\s+(?:use|uses|have|has|with))"
+    r")\b(?:\s+(?:with|using|from|for|that\s+uses?|use|uses|have|has)\s+(?P<what>.+?))?"
+    r"(?:\s+(?:tonight|today|tomorrow|this\s+week|for\s+(?:breakfast|lunch|dinner|tea|supper)))?"
+    r"[\s?.!]*$",
+    re.IGNORECASE,
+)
+_QUESTION_TAIL = re.compile(
+    r"\s+(?:before\s+(?:it|they)\s+go(?:es)?\s+off|before\s+.*|tonight|today|tomorrow|"
+    r"this\s+week|for\s+(?:breakfast|lunch|dinner|tea|supper))\b.*$",
+    re.IGNORECASE,
+)
+_LEFTOVER_WORDS = re.compile(
+    r"\b(?:the|some|my|leftover|left\s+over|what's\s+left\s+of)\s+", re.IGNORECASE
+)
+
+
+def recipe_question(text: str) -> str | None:
+    """A question about what to cook: the foods it names ("spinach and milk"), "" for none
+    ("what can I make?": from the pantry), or None when it isn't one."""
+    m = _RECIPE_QUESTION.match(text.replace("\u2019", "'"))
+    if m is None:
+        return None
+    what = _QUESTION_TAIL.sub("", m.group("what") or "").strip()
+    what = _LEFTOVER_WORDS.sub("", what).strip(" ,.")
+    if re.fullmatch(
+        r"(?:breakfast|lunch|dinner|tea|supper|pantry|what\s+i\s+have)?", what, re.IGNORECASE
+    ):
+        return ""
+    return what[:80]
+
+
 def parse_rules(text: str, today: date) -> RuleParse:
     """The changes in the order they were said; clauses it can't read are reported verbatim,
     never guessed. At most MAX_CHANGES changes (later clauses are reported as not understood)."""

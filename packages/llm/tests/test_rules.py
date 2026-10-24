@@ -7,7 +7,7 @@ import pytest
 
 from larder_core.meals import Slot
 from larder_llm.reply import HELP_TEXT
-from larder_llm.rules import RuleChange, RuleParse, parse_rules
+from larder_llm.rules import RuleChange, RuleParse, parse_rules, recipe_question
 from larder_llm.schemas import AteOffPlan, Craving, OffPlanItem, Skip, Swap, When
 
 TODAY = date(2026, 10, 14)  # a Wednesday
@@ -285,3 +285,23 @@ def test_limits_hold_for_long_input() -> None:
     assert len(change.description) <= 200
     many = ". ".join(["skip dinner tonight"] * 10)
     assert len(parse_rules(many, TODAY).changes) <= 6
+
+
+@pytest.mark.parametrize(
+    ("text", "query"),
+    [
+        ("What can I make with spinach, milk before they go off?", "spinach, milk"),
+        ("any recipes using leftover chicken", "chicken"),
+        ("which recipes use tofu", "tofu"),
+        ("what can I make with chicken for dinner tomorrow?", "chicken"),
+        ("what can I cook?", ""),
+        ("What should we make tonight?", ""),
+        ("what can I make from my pantry", ""),
+        ("got any ideas?", ""),
+        ("skip dinner tonight", None),
+        ("what's for dinner?", None),
+        ("I want chicken tomorrow", None),
+    ],
+)
+def test_recipe_questions(text: str, query: str | None) -> None:
+    assert recipe_question(text) == query

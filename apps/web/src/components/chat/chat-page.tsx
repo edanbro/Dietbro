@@ -17,12 +17,14 @@ import { LiveReply, PendingReply, StoredMessage } from "./messages";
 import { type Chat, useChat } from "./use-chat";
 import { APP_NAME } from "@/lib/brand";
 
-/** The offline parser's examples (larder_llm.reply.HELP_TEXT): every one of them parses. */
+/** The offline parser's examples (larder_llm.reply.HELP_TEXT): every one of them parses, and
+ * the last is a question it answers with recipes (larder_llm.rules.recipe_question). */
 export const EXAMPLES = [
   "skip dinner tonight",
   "had pizza for lunch",
   "craving something spicy on Friday",
   "swap Thursday's dinner",
+  "what can I make with chicken?",
 ];
 
 /** Why replies are simple right now (no model key, budget spent, model down). */
