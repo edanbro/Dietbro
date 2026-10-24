@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { OfflineBanner } from "@/components/offline-banner";
 import { useRegionSync } from "@/components/region-sync";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { buttonVariants } from "@/components/ui/button";
 import { useMe, useOfflineSync } from "@/lib/api/hooks";
 import { Logo } from "@/components/logo";
 
@@ -124,7 +125,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Rail pathname={pathname} expiring={expiring} />
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden print:hidden">
         <Brand />
-        <UserButton />
+        <div className="flex items-center gap-1">
+          {/* The diary isn't one of the tabs: a tap away from everywhere on a phone. */}
+          <Link
+            href="/diary"
+            aria-label="Diary"
+            aria-current={pathname.startsWith("/diary") ? "page" : undefined}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              pathname.startsWith("/diary") && "text-primary",
+            )}
+          >
+            <NotebookPenIcon aria-hidden />
+          </Link>
+          <UserButton />
+        </div>
       </header>
       <div className="print:hidden">
         <OfflineBanner />
