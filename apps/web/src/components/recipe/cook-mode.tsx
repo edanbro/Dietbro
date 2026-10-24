@@ -9,7 +9,7 @@ import { useState } from "react";
 import { ErrorAlert } from "@/components/form-bits";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type Recipe, useRecipe } from "@/lib/api/hooks";
+import { type Recipe, useRecipe, useUnits } from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps, stepTimers } from "@/lib/cooking";
 import { useWakeLock } from "@/lib/use-wake-lock";
 
@@ -22,6 +22,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
   const [done, setDone] = useState<Set<number>>(new Set());
   const awake = useWakeLock();
   const timers = useTimers();
+  const units = useUnits();
   const factor = scaleFactor(servings, recipe.servings);
   const method = steps(recipe.instructions);
   const current = method.findIndex((_, i) => !done.has(i)); // -1: all done
@@ -120,7 +121,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
                   >
                     <span className="font-medium">{ing.name}</span>
                     <span className="text-muted-foreground tabular-nums">
-                      {scaledAmount(ing, factor)}
+                      {scaledAmount(ing, factor, units)}
                     </span>
                   </span>
                   {ing.in_pantry ? (

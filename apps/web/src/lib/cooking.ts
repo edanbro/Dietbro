@@ -1,6 +1,6 @@
 /** Cook mode helpers: a method split into steps, timers read from a step, amounts scaled. */
 
-import { formatGrams } from "./format";
+import { formatWeight, type Units } from "./units";
 
 export type StepTimer = { label: string; seconds: number };
 
@@ -57,14 +57,21 @@ export function scaleFactor(servings: number, recipeServings: number | null | un
   return servings / recipeServings;
 }
 
+// A weight written in metric: "50g", "1.5 kg", "500 grams".
+const METRIC_WEIGHT = /^\s*\d+(?:[.,]\d+)?\s*(?:g|grams?|kg|kilos?|kilograms?)\s*$/i;
+
 /** An ingredient's amount at `factor` times the recipe: as written at 1 (or without grams),
- * else its grams scaled ("2 tbsp" doesn't scale as text). */
+ * else its grams scaled ("2 tbsp" doesn't scale as text). In US units, weights read in ounces
+ * and pounds (a metric weight as written too); volumes and counts stay as written. */
 export function scaledAmount(
   ing: { measure: string; grams: number | null },
   factor: number,
+  units: Units = "metric",
 ): string {
-  if (factor === 1 || ing.grams == null) return ing.measure || "";
-  return formatGrams(ing.grams * factor);
+  if (ing.grams == null) return ing.measure || "";
+  if (factor !== 1) return formatWeight(ing.grams * factor, units);
+  if (units === "us" && METRIC_WEIGHT.test(ing.measure)) return formatWeight(ing.grams, units);
+  return ing.measure || "";
 }
 
 /** Servings to cook for a planned meal: the user's own times everyone they cook for, in

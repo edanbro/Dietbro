@@ -7,7 +7,8 @@ import { toast } from "sonner";
 
 import { ErrorAlert } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
-import { type Recipe, useAddShoppingExtras } from "@/lib/api/hooks";
+import { type Recipe, useAddShoppingExtras, useUnits } from "@/lib/api/hooks";
+import type { Units } from "@/lib/units";
 import { scaledAmount, scaleFactor } from "@/lib/cooking";
 
 // What nearly every kitchen has: listed, but not ticked to buy.
@@ -17,7 +18,11 @@ const MAX_NAME = 120;
 export type ShoppingLine = { index: number; name: string; amount: string; basic: boolean };
 
 /** The recipe's ingredients not in the pantry, with their amounts at `factor`. */
-export function shoppingLines(recipe: Recipe, factor: number): ShoppingLine[] {
+export function shoppingLines(
+  recipe: Recipe,
+  factor: number,
+  units: Units = "metric",
+): ShoppingLine[] {
   return recipe.ingredients.flatMap((ing, index) =>
     ing.in_pantry
       ? []
@@ -25,7 +30,7 @@ export function shoppingLines(recipe: Recipe, factor: number): ShoppingLine[] {
           {
             index,
             name: ing.name.charAt(0).toUpperCase() + ing.name.slice(1),
-            amount: scaledAmount(ing, factor),
+            amount: scaledAmount(ing, factor, units),
             basic: BASICS.test(ing.name.trim()),
           },
         ],
@@ -47,8 +52,9 @@ export function AddToList({ recipe, servings }: { recipe: Recipe; servings: numb
   const router = useRouter();
   const add = useAddShoppingExtras();
   const [open, setOpen] = useState(false);
+  const units = useUnits();
   const factor = scaleFactor(servings ?? recipe.servings ?? 1, recipe.servings);
-  const lines = shoppingLines(recipe, factor);
+  const lines = shoppingLines(recipe, factor, units);
   const [picked, setPicked] = useState<ReadonlySet<number>>(
     () => new Set(lines.filter((l) => !l.basic).map((l) => l.index)),
   );

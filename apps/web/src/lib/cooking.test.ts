@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { clock, cookServings, parseServings, scaleFactor, steps, stepTimers } from "./cooking";
+import {
+  clock,
+  cookServings,
+  parseServings,
+  scaledAmount,
+  scaleFactor,
+  steps,
+  stepTimers,
+} from "./cooking";
 
 describe("stepTimers", () => {
   it.each([
@@ -60,5 +68,16 @@ describe("steps", () => {
     expect(
       steps("Add the eggs and stir\ngently until set.\nServe on toast.\nseason to taste."),
     ).toEqual(["Add the eggs and stir gently until set.", "Serve on toast.", "season to taste."]);
+  });
+});
+
+describe("scaledAmount in US units", () => {
+  it("reads weights in ounces and pounds, and leaves volumes and counts as written", () => {
+    expect(scaledAmount({ measure: "50g", grams: 50 }, 1, "us")).toBe("2 oz");
+    expect(scaledAmount({ measure: "1 kg", grams: 1000 }, 1, "us")).toBe("2.2 lb");
+    expect(scaledAmount({ measure: "250ml", grams: 258 }, 1, "us")).toBe("250ml");
+    expect(scaledAmount({ measure: "2 large", grams: 300 }, 1, "us")).toBe("2 large");
+    expect(scaledAmount({ measure: "2 large", grams: 300 }, 2, "us")).toBe("1.3 lb");
+    expect(scaledAmount({ measure: "50g", grams: 50 }, 1)).toBe("50g");
   });
 });
