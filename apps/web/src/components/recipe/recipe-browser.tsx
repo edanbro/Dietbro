@@ -124,14 +124,15 @@ function RecipeTile({
 
 /**
  * Every recipe safe for the user: search, filter by meal and favourites, or what can be cooked
- * from the pantry (?pantry=1 opens on it), more on demand.
+ * from the pantry (?pantry=1 opens on it; ?q= starts a search), more on demand.
  */
 export function RecipeBrowser() {
-  const [q, setQ] = useState("");
+  const params = useSearchParams();
+  const [q, setQ] = useState(params.get("q") ?? "");
   const [slot, setSlot] = useState<Slot | null>(null);
   const [favourites, setFavourites] = useState(false);
   const [quick, setQuick] = useState(false);
-  const [pantry, setPantry] = useState(useSearchParams().get("pantry") === "1");
+  const [pantry, setPantry] = useState(params.get("pantry") === "1");
   const query = {
     q: useDebounced(q.trim(), 300),
     slot,
