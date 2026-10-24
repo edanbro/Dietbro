@@ -1299,6 +1299,19 @@ export function useRecipeList(query: RecipeQuery) {
 }
 
 /** Favourite a recipe, never plan it again, or clear the verdict (null). */
+/** Delete a recipe of the user's own (hidden instead when a plan has it). */
+export function useDeleteRecipe(recipeId: number) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.DELETE("/recipes/{recipe_id}", { params: { path: { recipe_id: recipeId } } }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["recipes"] }),
+  });
+}
+
 export function useRecipeFeedback(recipeId: number) {
   const api = useApi();
   const qc = useQueryClient();

@@ -3028,6 +3028,165 @@
         }
       }
     },
+    "/recipes/{recipe_id}": {
+      "delete": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Delete Recipe",
+        "description": "Delete a recipe of the user's own (imported, typed in or edited). One their plans have\ncan't go (the plans keep it): it is hidden instead, never shown in browsing or planned\nagain. Catalogue recipes can't be deleted (\"never again\" hides them).",
+        "operationId": "deleteRecipe",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDeletedOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Get Recipe",
+        "description": "A recipe with allergens and suitable diets derived the same way the planner derives them\n(never TheMealDB's category, which isn't a diet claim). Signing in is optional: a generated\nrecipe is only found by its owner.",
+        "operationId": "getRecipe",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "recipes"
+        ],
+        "summary": "Edit Recipe",
+        "description": "Change a recipe, checked exactly like a new one. The user's own recipe changes in place\n(its id stays, so favourites, plans and links keep pointing at it; meals already planned\nkeep the numbers they were planned with). A catalogue recipe is saved as the user's own\ncopy (\"custom\", with the original's photo), the original untouched for everyone else.",
+        "operationId": "editRecipe",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recipe Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportDraft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResultOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no such recipe (or another user's)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recipes/{recipe_id}/note": {
       "put": {
         "tags": [
@@ -3121,116 +3280,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "404": {
-            "description": "no such recipe (or another user's)"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/recipes/{recipe_id}": {
-      "get": {
-        "tags": [
-          "recipes"
-        ],
-        "summary": "Get Recipe",
-        "description": "A recipe with allergens and suitable diets derived the same way the planner derives them\n(never TheMealDB's category, which isn't a diet claim). Signing in is optional: a generated\nrecipe is only found by its owner.",
-        "operationId": "getRecipe",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "recipe_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Recipe Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecipeDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "no such recipe (or another user's)"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "recipes"
-        ],
-        "summary": "Edit Recipe",
-        "description": "Change a recipe, checked exactly like a new one. The user's own recipe changes in place\n(its id stays, so favourites, plans and links keep pointing at it; meals already planned\nkeep the numbers they were planned with). A catalogue recipe is saved as the user's own\ncopy (\"custom\", with the original's photo), the original untouched for everyone else.",
-        "operationId": "editRecipe",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "recipe_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Recipe Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ImportDraft"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportResultOut"
-                }
-              }
-            }
           },
           "404": {
             "description": "no such recipe (or another user's)"
@@ -9420,6 +9469,20 @@
           "name"
         ],
         "title": "RecipeCreatedOut"
+      },
+      "RecipeDeletedOut": {
+        "properties": {
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hidden"
+        ],
+        "title": "RecipeDeletedOut",
+        "description": "A recipe of the user's own, gone: deleted, or (`hidden`, when a plan of theirs has it)\nkept for those plans but never shown or planned again."
       },
       "RecipeDetail": {
         "properties": {

@@ -27,6 +27,7 @@ from larder_api.schemas import (
     ImportResultOut,
     MacrosOut,
     NutritionGrade,
+    RecipeDeletedOut,
     RecipeDetail,
     RecipeFeedbackIn,
     RecipeIngredientOut,
@@ -41,7 +42,15 @@ from larder_core.meals import SLOT_ORDER, Slot
 from larder_core.nutrigrade import NutriInput, grade
 from larder_core.recipe_import import ImportedRecipe, split_line
 from larder_core.regions import local_today
-from larder_db.models import Food, PantryItem, Preferences, Recipe, RecipeNote, User
+from larder_db.models import (
+    Food,
+    PantryItem,
+    PlanMeal,
+    Preferences,
+    Recipe,
+    RecipeNote,
+    User,
+)
 from larder_llm.schemas import CreateRecipeInput, DraftIngredient
 
 logger = logging.getLogger(__name__)
@@ -180,6 +189,30 @@ async def delete_feedback(recipe_id: int, user: CurrentUser, session: Session) -
     prefs.blocked_recipe_ids = [r for r in prefs.blocked_recipe_ids or [] if r != recipe_id]
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/{recipe_id}", operation_id="deleteRecipe", responses=_NOT_FOUND)
+async def delete_recipe(recipe_id: int, user: CurrentUser, session: Session) -> RecipeDeletedOut:
+    """Delete a recipe of the user's own (imported, typed in or edited). One their plans have
+    can't go (the plans keep it): it is hidden instead, never shown in browsing or planned
+    again. Catalogue recipes can't be deleted ("never again" hides them)."""
+    recipe = await session.scalar(
+        select(Recipe).where(Recipe.id == recipe_id, Recipe.owner_user_id == user.id)
+    )
+    if recipe is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, ["That isn't one of your recipes."])
+    planned = await session.scalar(select(PlanMeal.id).where(PlanMeal.recipe_id == recipe_id))
+    prefs = await session.get(Preferences, user.id)
+    if prefs is not None:
+        prefs.favourite_recipe_ids = [r for r in prefs.favourite_recipe_ids or [] if r != recipe_id]
+        blocked = [r for r in prefs.blocked_recipe_ids or [] if r != recipe_id]
+        prefs.blocked_recipe_ids = [*blocked, recipe_id] if planned is not None else blocked
+    if planned is None:
+        await session.delete(recipe)
+    elif prefs is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, [_SETUP])
+    await session.commit()
+    return RecipeDeletedOut(hidden=planned is not None)
 
 
 async def _visible(session: Session, user_id: int, recipe_id: int) -> None:

@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { json, mockApi, renderWithClient } from "@/test/api";
@@ -167,6 +167,31 @@ describe("RecipePage", () => {
     expect(await screen.findByText("Amounts for 2 servings (the recipe makes 4).")).toBeVisible();
     const list = screen.getByRole("heading", { name: "Ingredients" }).closest("section")!;
     expect(list).toHaveTextContent("75 gOnion");
+  });
+
+  it("deletes your own recipe after a second tap", async () => {
+    const calls = mockApi({
+      "GET /recipes/101": json(makeRecipe({ generated: true })),
+      "GET /allergens": json(ALLERGENS),
+      "DELETE /recipes/101": json({ hidden: false }),
+    });
+    renderWithClient(<RecipePage id={101} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    const confirm = screen.getByRole("group", { name: "Delete this recipe?" });
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Yes, delete" }));
+
+    await waitFor(() => expect(nav.push).toContain("/recipes"));
+    expect(calls.some((c) => c.method === "DELETE" && c.path === "/recipes/101")).toBe(true);
+  });
+
+  it("offers no delete for a catalogue recipe", async () => {
+    mockApi({ "GET /recipes/101": json(makeRecipe()), "GET /allergens": json(ALLERGENS) });
+    renderWithClient(<RecipePage id={101} />);
+
+    expect(await screen.findByRole("link", { name: /Edit a copy/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
   it("handles a missing recipe", async () => {
