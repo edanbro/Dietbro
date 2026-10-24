@@ -123,6 +123,8 @@ export const keys = {
   plans: ["plans"] as const,
   /** Under `plans`: marking meals eaten and chat logs change it. */
   diary: (days: number) => ["plans", "diary", days] as const,
+  /** Under `plans`: logging food (a plan change) adds to it. */
+  recentFoods: ["plans", "recent-foods"] as const,
   weights: ["me", "weights"] as const,
   templates: ["me", "templates"] as const,
   /** Under `plans`: what a plan change makes stale. */
@@ -1174,6 +1176,18 @@ export function useDiary(days = 7) {
   return useQuery({
     queryKey: keys.diary(days),
     queryFn: async () => unwrap(await api.GET("/diary", { params: { query: { days } } })),
+  });
+}
+
+export type RecentFood = Schemas["RecentFoodOut"];
+
+/** Food logged lately with exact amounts, to log again from quick-add. */
+export function useRecentFoods(enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.recentFoods,
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/diary/recent")),
   });
 }
 

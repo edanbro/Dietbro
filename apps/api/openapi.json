@@ -3585,6 +3585,37 @@
         }
       }
     },
+    "/diary/recent": {
+      "get": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Recent Foods",
+        "description": "Food logged off-plan over the last RECENT_DAYS days with exact foods and amounts, newest\nfirst, each mix once (at most RECENT_SHOWN): what quick-add offers to log again.",
+        "operationId": "listRecentFoods",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecentFoodOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listrecentfoods"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/weights": {
       "get": {
         "tags": [
@@ -9111,6 +9142,56 @@
           "text"
         ],
         "title": "ReceiptTextIn"
+      },
+      "RecentFoodItemOut": {
+        "properties": {
+          "food": {
+            "$ref": "#/components/schemas/FoodSummary"
+          },
+          "grams": {
+            "type": "number",
+            "title": "Grams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food",
+          "grams"
+        ],
+        "title": "RecentFoodItemOut"
+      },
+      "RecentFoodOut": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "last_eaten_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Eaten On"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecentFoodItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "kcal",
+          "last_eaten_on",
+          "items"
+        ],
+        "title": "RecentFoodOut",
+        "description": "Food logged lately (diary quick-add or the chat), to log again: each mix of foods and\namounts once, as the diary named it."
       },
       "RecipeCard": {
         "properties": {

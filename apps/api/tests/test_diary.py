@@ -40,6 +40,7 @@ def _log(user_id: int, on: date, kcal: int, **kw: Any) -> MealLog:
         carbs_g=20,
         source="app",
         voided_at=kw.get("voided_at"),
+        items=kw.get("items", []),
     )
 
 
@@ -147,3 +148,46 @@ async def test_weigh_ins_cant_be_in_the_future(
         "/me/weights", json={"measured_on": "2026-10-20", "weight_kg": 70}, headers=auth()
     )
     assert response.status_code == 400
+
+
+ONION, OLIVE_OIL = 170000, 171413  # seeded by the `foods` fixture
+
+
+def _picked(*picks: tuple[int, float]) -> list[dict[str, Any]]:
+    return [{"name": "x", "food_id": f, "food": "x", "grams": g} for f, g in picks]
+
+
+@pytest.mark.usefixtures("foods")
+async def test_recent_foods_offer_each_exact_mix_once(
+    api: httpx.AsyncClient, auth: Auth, new_user: NewUser, db_engine: AsyncEngine
+) -> None:
+    uid = await new_user("user_a")
+    salad = _picked((ONION, 80), (OLIVE_OIL, 10))
+    async with make_sessionmaker(db_engine)() as session:
+        session.add_all(
+            [
+                _log(uid, TODAY - timedelta(days=3), 180, description="onion salad", items=salad),
+                _log(uid, TODAY - timedelta(days=1), 180, description="onion salad", items=salad),
+                _log(uid, TODAY, 40, description="onion", items=_picked((ONION, 100))),
+                _log(uid, TODAY, 850, description="pizza"),  # an estimate: no exact foods
+                _log(uid, TODAY, 40, items=_picked((ONION, 50)), voided_at=datetime.now(UTC)),
+                _log(uid, TODAY, 40, items=_picked((ONION, 50)), kind="skipped"),
+                _log(uid, TODAY - timedelta(days=61), 40, items=_picked((ONION, 20))),
+            ]
+        )
+        await session.commit()
+
+    response = await api.get("/diary/recent", headers=auth())
+
+    assert response.status_code == 200, response.text
+    recent = response.json()
+    assert [(r["description"], r["last_eaten_on"]) for r in recent] == [
+        ("onion", TODAY.isoformat()),
+        ("onion salad", (TODAY - timedelta(days=1)).isoformat()),
+    ]
+    assert [(i["food"]["id"], i["grams"]) for i in recent[1]["items"]] == [
+        (ONION, 80),
+        (OLIVE_OIL, 10),
+    ]
+    assert recent[1]["items"][0]["food"]["description"] == "Onions, raw"
+    assert (await api.get("/diary/recent", headers=auth("user_b"))).json() == []

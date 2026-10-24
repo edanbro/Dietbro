@@ -59,7 +59,8 @@ flowchart LR
 - **Learns your prices and tastes**: prices from your own receipts, and what each recipe costs
   you a serving; favourite recipes, "never again", foods you love or hate.
 - **Tracks what you ate**: a food diary against your goals, a weight trend, and quick-add for
-  anything off the plan (search or scan, exact amounts; the rest of the day rebalances).
+  anything off the plan (search, scan or one of your recent foods, exact amounts; the rest of
+  the day rebalances).
 - **Vitamins and minerals**: iron, calcium, potassium, vitamins C and D, folate and B12 per
   recipe and for an average day of the plan, against the reference intakes on food labels
   (USDA and UK CoFID data; "no data" rather than a guess when a food has no value).
