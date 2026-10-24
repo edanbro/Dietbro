@@ -125,7 +125,12 @@ export function MealActions({
   const [other, setOther] = useState("");
   // The swap picker's search (sent once typing pauses) and filters.
   const [typed, setTyped] = useState("");
-  const [filters, setFilters] = useState<SwapFilters>({ q: "", quick: false, pantry: false });
+  const [filters, setFilters] = useState<SwapFilters>({
+    q: "",
+    quick: false,
+    pantry: false,
+    favourites: false,
+  });
   useEffect(() => {
     const wait = setTimeout(() => setFilters((f) => ({ ...f, q: typed.trim() })), 300);
     return () => clearTimeout(wait);
@@ -143,7 +148,7 @@ export function MealActions({
   };
   const replan = (change: PlanChange) => run(onReplan([change]));
   const options = useAlternatives(planId, date, slot, mode === "swap", filters);
-  const searching = Boolean(filters.q || filters.quick || filters.pantry);
+  const searching = Boolean(filters.q || filters.quick || filters.pantry || filters.favourites);
   const trades = past ? [] : tradesFor(week, date, meal, today);
   // Each meal goes to the other's day: two swaps, made (and checked) as one change.
   const trade = (t: Trade) =>
@@ -272,6 +277,7 @@ export function MealActions({
               [
                 ["quick", "Quick"],
                 ["pantry", "Uses my pantry"],
+                ["favourites", "Favourites"],
               ] as const
             ).map(([key, label]) => (
               <button

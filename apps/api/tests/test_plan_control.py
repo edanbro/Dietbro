@@ -164,6 +164,11 @@ async def test_alternatives_can_be_searched_and_filtered(
     # Only the 25-minute stew is quick (unless it's already on Thursday).
     assert quick == said == ([] if "Lentil stew" in thursday else ["Lentil stew"])
     assert await options(q="zzzz") == []
+    # Favourites only: the one favourite dinner (unless it's already on Thursday).
+    stew = (await api.get("/recipes", params={"q": "lentil stew"}, headers=auth)).json()
+    stew_id = next(i["id"] for i in stew["items"] if i["name"] == "Lentil stew")
+    await api.put(f"/recipes/{stew_id}/feedback", json={"verdict": "favourite"}, headers=auth)
+    assert await options(favourites=True) == quick
 
 
 async def test_alternatives_for_a_day_outside_the_plan_404(

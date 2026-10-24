@@ -456,8 +456,8 @@ export function useCreatePlan() {
 }
 
 /** A few safe recipes to swap a planned meal for (fetched when `enabled`). */
-export type SwapFilters = { q: string; quick: boolean; pantry: boolean };
-const NO_FILTERS: SwapFilters = { q: "", quick: false, pantry: false };
+export type SwapFilters = { q: string; quick: boolean; pantry: boolean; favourites: boolean };
+const NO_FILTERS: SwapFilters = { q: "", quick: false, pantry: false, favourites: false };
 
 /** Recipes to swap a meal for: a few suggestions, or up to 6 for a search or filter. */
 export function useAlternatives(
@@ -468,7 +468,7 @@ export function useAlternatives(
   filters: SwapFilters = NO_FILTERS,
 ) {
   const api = useApi();
-  const filtered = Boolean(filters.q || filters.quick || filters.pantry);
+  const filtered = Boolean(filters.q || filters.quick || filters.pantry || filters.favourites);
   return useQuery({
     queryKey: [...keys.alternatives(planId, date, slot), filters],
     enabled,
