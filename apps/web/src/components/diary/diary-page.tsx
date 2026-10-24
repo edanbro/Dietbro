@@ -3,6 +3,7 @@
 import { cn } from "cn";
 import { CalendarCheckIcon, Trash2Icon, XIcon } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type DiaryDay,
+  type Slot,
   useDiary,
   useRemoveLog,
   useUnits,
@@ -230,8 +232,13 @@ function Weights() {
 }
 
 /** The last two weeks of what was eaten against the goals, and weigh-ins with their trend. */
+const SLOTS = new Set(["breakfast", "lunch", "dinner", "snack"]);
+
 export function DiaryPage() {
   const diary = useDiary(14);
+  // ?add=lunch: open quick-add for that meal (from the plan's "Your own" lunch).
+  const add = useSearchParams().get("add");
+  const addSlot = add && SLOTS.has(add) ? (add as Slot) : null;
   const [allDays, setAllDays] = useState(false);
 
   return (
@@ -278,7 +285,7 @@ export function DiaryPage() {
               )}
             </p>
           </section>
-          <QuickAdd />
+          <QuickAdd initialSlot={addSlot} />
           <section aria-labelledby="diary-days" className="flex flex-col gap-2">
             <h2 id="diary-days" className="text-base font-semibold">
               Days

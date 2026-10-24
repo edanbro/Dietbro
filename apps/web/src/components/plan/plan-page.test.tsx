@@ -535,6 +535,19 @@ describe("meals the user sorts out or skips", () => {
       "/profile#meals",
     );
     expect(screen.getByText("Totals include about 700 kcal kept for your own lunch.")).toBeVisible();
+    // Not today: nothing to log yet.
+    expect(within(rows[0]!).queryByRole("link", { name: "Log what you had" })).toBeNull();
+  });
+
+  it("offers to log today's own lunch", async () => {
+    today(2026, 10, 10);
+    setup({ "GET /plans/current": json(planWithoutLunch()) });
+
+    const saturday = await screen.findByRole("list", { name: "Meals on Saturday 10 October" });
+    expect(within(saturday).getByRole("link", { name: "Log what you had" })).toHaveAttribute(
+      "href",
+      "/diary?add=lunch",
+    );
   });
 
   it("leaves a skipped breakfast out of the week grid and marks own lunches", async () => {

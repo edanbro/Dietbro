@@ -1,16 +1,19 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Diary, DiaryDay } from "@/lib/api/hooks";
 import { json, mockApi, renderWithClient } from "@/test/api";
 import { ME } from "@/test/fixtures";
+import { resetNavigation } from "@/test/navigation";
 
 import { DiaryPage, eatenText } from "./diary-page";
 import { WeightChart } from "./weight-chart";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
+vi.mock("next/navigation", () => import("@/test/navigation"));
 
 afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => resetNavigation("/diary"));
 
 const day = (date: string, kcal: number, status: DiaryDay["status"]): DiaryDay => ({
   date,
@@ -86,6 +89,15 @@ describe("DiaryPage", () => {
     await waitFor(() =>
       expect(calls.some((c) => c.method === "DELETE" && c.path === "/diary/logs/5")).toBe(true),
     );
+  });
+
+  it("opens quick-add for the meal a link asks for", async () => {
+    resetNavigation("/diary?add=lunch");
+    mockApi({ "GET /diary": json(DIARY), "GET /me/weights": json([]) });
+    renderWithClient(<DiaryPage />);
+
+    expect(await screen.findByRole("form", { name: "Add food you ate" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Meal")).toHaveValue("lunch");
   });
 
   it("shows the last week, with the rest on request", async () => {
