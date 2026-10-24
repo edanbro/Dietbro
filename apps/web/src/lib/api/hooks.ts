@@ -110,6 +110,7 @@ export const keys = {
   cuisines: ["cuisines"] as const,
   regions: ["regions"] as const,
   shoppingExtras: ["shopping", "extras"] as const,
+  shoppingUsuals: ["shopping", "usuals"] as const,
   food: (id: number) => ["food", id] as const,
   search: (q: string, scope: string = "all") => ["foods", "search", q, scope] as const,
   currentPlan: ["plans", "current"] as const,
@@ -655,6 +656,16 @@ export function useShoppingExtras() {
   return useQuery({
     queryKey: keys.shoppingExtras,
     queryFn: async () => unwrap(await api.GET("/shopping/extras")),
+  });
+}
+
+/** What the user buys most weeks, from their receipts (offered on the list in one tap). */
+export function useShoppingUsuals() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.shoppingUsuals,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async () => unwrap(await api.GET("/shopping/usuals")),
   });
 }
 

@@ -803,6 +803,15 @@ class ShoppingItemOut(BaseModel):
     )
 
 
+class UsualOut(BaseModel):
+    """A food the user buys most weeks (from their receipts), to add to the list in one tap."""
+
+    food_id: int
+    name: str
+    weeks: int = Field(description="weeks of the last 8 it was bought in")
+    last_bought: date
+
+
 class ShoppingListOut(BaseModel):
     plan_id: int
     currency: Currency

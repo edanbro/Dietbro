@@ -4,6 +4,7 @@ import { cn } from "cn";
 import {
   ArrowLeftIcon,
   PackageCheckIcon,
+  PlusIcon,
   PrinterIcon,
   ShareIcon,
   TriangleAlertIcon,
@@ -31,6 +32,7 @@ import {
   useCurrentPlan,
   useShoppingExtra,
   useShoppingExtras,
+  useShoppingUsuals,
   useShoppingList,
   useUnits,
   useStockShopping,
@@ -268,7 +270,7 @@ function ListView({ plan }: { plan: Plan }) {
           </ul>
         </section>
       ) : null}
-      <Extras />
+      <Extras listed={list.items.map((i) => i.food_id)} />
       <PriceNote>Amounts cover the whole plan after what&apos;s in your pantry.</PriceNote>
     </div>
   );
@@ -320,12 +322,18 @@ function ShareButton({ list, extras }: { list: ShoppingList; extras: ShoppingExt
   );
 }
 
-/** Things you want that no recipe needs; kept until you clear them. */
-function Extras() {
+/** Things you want that no recipe needs; kept until you clear them. Offers what the receipts
+ * say you buy most weeks (`listed`: foods the plan's list already has). */
+function Extras({ listed }: { listed: number[] }) {
   const { data: extras } = useShoppingExtras();
+  const { data: usuals } = useShoppingUsuals();
   const change = useShoppingExtra();
   const [name, setName] = useState("");
   const ticked = (extras ?? []).filter((e) => e.checked).length;
+  const have = new Set((extras ?? []).map((e) => e.name.toLowerCase()));
+  const offered = (usuals ?? [])
+    .map((u) => ({ ...u, label: foodName(u.name).name }))
+    .filter((u) => !listed.includes(u.food_id) && !have.has(u.label.toLowerCase()));
   return (
     <section
       aria-labelledby="extras"
@@ -398,6 +406,29 @@ function Extras() {
           Add
         </Button>
       </form>
+      {offered.length ? (
+        <div className="flex flex-col gap-1.5 print:hidden">
+          <h3 id="usuals" className="text-xs text-muted-foreground">
+            You often buy
+          </h3>
+          <ul aria-labelledby="usuals" className="flex flex-wrap gap-1.5">
+            {offered.map((u) => (
+              <li key={u.food_id}>
+                <button
+                  type="button"
+                  disabled={change.isPending}
+                  onClick={() => change.mutate({ kind: "add", name: u.label })}
+                  className="inline-flex h-8 items-center gap-1 rounded-full border px-3 text-sm hover:bg-muted"
+                  aria-label={`Add ${u.label}`}
+                >
+                  <PlusIcon aria-hidden className="size-3.5" />
+                  {u.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

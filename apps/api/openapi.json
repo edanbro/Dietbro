@@ -2766,6 +2766,37 @@
         }
       }
     },
+    "/shopping/usuals": {
+      "get": {
+        "tags": [
+          "shopping"
+        ],
+        "summary": "Usuals",
+        "description": "Foods on the user's confirmed receipts in at least MIN_WEEKS of the last WEEKS weeks\n(a product counts as its generic food), most weeks first, then most recently bought.",
+        "operationId": "listShoppingUsuals",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsualOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listshoppingusuals"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/recipes": {
       "get": {
         "tags": [
@@ -11308,6 +11339,37 @@
         ],
         "title": "UsedInOut",
         "description": "A recipe of the plan that needs a shopping line, and the days it's on."
+      },
+      "UsualOut": {
+        "properties": {
+          "food_id": {
+            "type": "integer",
+            "title": "Food Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "weeks": {
+            "type": "integer",
+            "title": "Weeks",
+            "description": "weeks of the last 8 it was bought in"
+          },
+          "last_bought": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Bought"
+          }
+        },
+        "type": "object",
+        "required": [
+          "food_id",
+          "name",
+          "weeks",
+          "last_bought"
+        ],
+        "title": "UsualOut",
+        "description": "A food the user buys most weeks (from their receipts), to add to the list in one tap."
       },
       "ValidationError": {
         "properties": {

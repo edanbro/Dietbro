@@ -30,7 +30,8 @@ LATEST = 5  # lines per food
 _LOW, _HIGH = 0.25, 4.0
 
 # The statuses a confirmed line can end in that went into the pantry (not "rejected").
-_KEPT = ("suggested", "accepted", "edited")
+# Receipt lines that count: all but those the user rejected.
+KEPT_LINES = _KEPT = ("suggested", "accepted", "edited")
 
 
 async def receipt_prices(

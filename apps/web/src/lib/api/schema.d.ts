@@ -853,6 +853,27 @@ export interface paths {
         patch: operations["patchShoppingExtra"];
         trace?: never;
     };
+    "/shopping/usuals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usuals
+         * @description Foods on the user's confirmed receipts in at least MIN_WEEKS of the last WEEKS weeks
+         *     (a product counts as its generic food), most weeks first, then most recently bought.
+         */
+        get: operations["listShoppingUsuals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recipes": {
         parameters: {
             query?: never;
@@ -4034,6 +4055,26 @@ export interface components {
             /** Dates */
             dates: string[];
         };
+        /**
+         * UsualOut
+         * @description A food the user buys most weeks (from their receipts), to add to the list in one tap.
+         */
+        UsualOut: {
+            /** Food Id */
+            food_id: number;
+            /** Name */
+            name: string;
+            /**
+             * Weeks
+             * @description weeks of the last 8 it was bought in
+             */
+            weeks: number;
+            /**
+             * Last Bought
+             * Format: date
+             */
+            last_bought: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -6014,6 +6055,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listShoppingUsuals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsualOut"][];
                 };
             };
         };
