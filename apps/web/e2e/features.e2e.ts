@@ -13,6 +13,10 @@ test.setTimeout(240_000);
 
 const API = process.env.E2E_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 type ClerkWindow = { Clerk: { session: { getToken(): Promise<string | null> } | null } };
 
 async function api(page: Page, method: string, path: string, data?: unknown) {
@@ -262,6 +266,26 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       const replanned = page.waitForResponse((r) => r.url().endsWith("/plans/replan"));
       await page.getByRole("button", { name: "Use these meals" }).click();
       expect((await replanned).ok()).toBe(true);
+    });
+
+    await test.step("swap a meal for one found by searching", async () => {
+      await page.goto("/plan");
+      await page.getByRole("tablist", { name: "Day" }).getByRole("tab").nth(1).click();
+      const day = page.getByRole("list", { name: /^Meals on / }).first();
+      await day.getByRole("button", { name: "Dinner options" }).click();
+      const options = page.getByRole("group", { name: "Dinner options" });
+      await options.getByRole("button", { name: "Swap for something else" }).click();
+      await options.getByRole("searchbox", { name: "Search recipes" }).fill("chicken");
+      const found = page.waitForResponse(
+        (r) => r.url().includes("/alternatives") && r.url().includes("q=chicken"),
+      );
+      expect((await found).ok()).toBe(true);
+      const pick = options.getByRole("button", { name: /kcal$/ }).first();
+      const name = (await pick.locator("span").first().textContent())!.trim();
+      const replanned = page.waitForResponse((r) => r.url().endsWith("/plans/replan"));
+      await pick.click();
+      expect((await replanned).ok()).toBe(true);
+      await expect(day.getByRole("link", { name: new RegExp(escapeRegExp(name)) })).toBeVisible();
     });
 
     await test.step("lunch sorted out by me: a new plan keeps room for it", async () => {
