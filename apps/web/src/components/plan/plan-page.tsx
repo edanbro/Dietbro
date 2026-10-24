@@ -590,7 +590,7 @@ function PlanView({
                           }}
                         />
                       ) : row.own ? (
-                        <OwnCard own={row.own} />
+                        <OwnCard own={row.own} today={d.date === today} />
                       ) : (
                         <LoggedCard entry={row.entry} />
                       )}

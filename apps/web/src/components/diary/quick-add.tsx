@@ -104,9 +104,16 @@ export function gramsEach(
  * Log food you ate that wasn't on the plan: search or scan, say how much, pick the meal. The
  * rest of that day's plan rebalances around it, exactly as when you tell the chat.
  */
-export function QuickAdd({ onDone }: { onDone?: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [slot, setSlot] = useState<Slot>(() => slotNow());
+/** `initialSlot`: start open, logging for that meal (a link asked for it). */
+export function QuickAdd({
+  onDone,
+  initialSlot = null,
+}: {
+  onDone?: () => void;
+  initialSlot?: Slot | null;
+}) {
+  const [open, setOpen] = useState(initialSlot !== null);
+  const [slot, setSlot] = useState<Slot>(() => initialSlot ?? slotNow());
   const [picked, setPicked] = useState<Picked[]>([]);
   const log = useLogFood();
   const recent = useRecentFoods(open);

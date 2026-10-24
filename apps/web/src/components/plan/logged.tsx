@@ -98,7 +98,7 @@ export function LoggedCard({ entry }: { entry: LoggedEntry }) {
 }
 
 /** A meal the user sorts out themselves: the room kept for it in the day. */
-export function OwnCard({ own }: { own: OwnMeal }) {
+export function OwnCard({ own, today = false }: { own: OwnMeal; today?: boolean }) {
   const SlotIcon = SLOT_ICON[own.slot];
   return (
     <div className="flex items-center gap-3 rounded-xl border border-dashed p-2.5">
@@ -113,6 +113,17 @@ export function OwnCard({ own }: { own: OwnMeal }) {
         <span className="leading-snug font-medium">Your own</span>
         <span className="text-xs text-muted-foreground">
           About {formatNumber(own.kcal)} kcal kept for it.{" "}
+          {today ? (
+            <>
+              <Link
+                href={`/diary?add=${own.slot}`}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Log what you had
+              </Link>
+              {" · "}
+            </>
+          ) : null}
           <Link href="/profile#meals" className="underline underline-offset-4">
             Change
           </Link>
