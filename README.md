@@ -94,8 +94,8 @@ flowchart LR
 | What | Result | Source |
 |---|---|---|
 | Plans with a safety violation (allergen, diet, avoided food, calorie floor) | **0 of 200** | [evals/REPORT.md](evals/REPORT.md) |
-| Plans with no hard violation at all | 94% (100% where a valid plan is known to exist) | [evals/REPORT.md](evals/REPORT.md) |
-| Plan a week, end to end (p95) | 66 ms | [evals/REPORT.md](evals/REPORT.md) |
+| Plans with no hard violation at all | 92% (94% where a valid plan is known to exist: the rest go 1-7% over a tight budget) | [evals/REPORT.md](evals/REPORT.md) |
+| Plan a week, end to end (p95) | 109 ms | [evals/REPORT.md](evals/REPORT.md) |
 | Replan through the API (p95) | 319 ms | [docs/replan-bench-greedy.md](docs/replan-bench-greedy.md) |
 | Receipt lines read correctly, end to end (pasted text) | 98.1% | [docs/receipt-accuracy.md](docs/receipt-accuracy.md) |
 
