@@ -163,6 +163,25 @@ describe("RecipeBrowser", () => {
     );
   });
 
+  it("starts a search from ?q= (food that's about to go off)", async () => {
+    resetNavigation("/recipes?pantry=1&q=spinach%20milk");
+    const urls: URL[] = [];
+    mockApi({
+      "GET /recipes": (req: Request) => {
+        urls.push(new URL(req.url));
+        return Response.json({ items: [], total: 0 });
+      },
+    });
+    renderWithClient(<RecipeBrowser />);
+
+    expect(await screen.findByRole("textbox", { name: "Search recipes" })).toHaveValue(
+      "spinach milk",
+    );
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+    expect(urls[0]!.searchParams.get("q")).toBe("spinach milk");
+    expect(urls[0]!.searchParams.get("pantry")).toBe("true");
+  });
+
   it("shows what a serving costs on each recipe", async () => {
     mockApi({
       "GET /recipes": json({

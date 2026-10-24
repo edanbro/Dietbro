@@ -56,6 +56,12 @@ describe("ExpiryAlerts", () => {
     ]);
     const url = new URL(`http://x${calls[0].path}`);
     expect(url.pathname).toBe("/pantry/expiring");
+    // Recipes that use them, from the pantry (no AI needed).
+    const recipes = within(region).getByRole("link", { name: "What can I make?" });
+    const href = new URL(recipes.getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/recipes");
+    expect(href.searchParams.get("pantry")).toBe("1");
+    expect(href.searchParams.get("q")).toBe("milk tomatoes");
   });
 
   it("asks for the user's local date", async () => {

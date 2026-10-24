@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { foodName, pantryUse, stillNeeded } from "./food-name";
+import { foodName, foodNoun, pantryUse, stillNeeded } from "./food-name";
 
 describe("foodName", () => {
   it.each([
@@ -90,5 +90,14 @@ describe("stillNeeded", () => {
     expect(stillNeeded(["Carrots, raw", "Onions, raw", "Garlic, raw", "Leeks, raw"])).toBe(
       "Need carrots, onions +2",
     );
+  });
+});
+
+describe("foodNoun", () => {
+  it("is the food without its adjectives or detail", () => {
+    expect(foodNoun("Tomatoes, red, ripe, canned")).toBe("tomatoes");
+    expect(foodNoun("Oil, olive, salad or cooking")).toBe("olive oil");
+    expect(foodNoun("Spices, paprika")).toBe("paprika");
+    expect(foodNoun("Kerrygold Butter")).toBe("kerrygold butter");
   });
 });

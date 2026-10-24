@@ -91,13 +91,17 @@ function capitalise(s: string): string {
   return s ? s[0]!.toUpperCase() + s.slice(1) : s;
 }
 
-export function foodName(description: string): FoodName {
+type Parsed = { head: string; adjectives: string[]; rest: string[] };
+
+/** The food's noun, the adjectives that go before it and the remaining detail; null for a
+ * product name (no commas). */
+function parse(description: string): Parsed | null {
   const parts = description
     .replace(/\s*\(includes foods for usda[^)]*\)/gi, "")
     .split(/,(?![^(]*\))/) // not the commas inside brackets
     .map((p) => p.trim())
     .filter(Boolean);
-  if (parts.length < 2) return { name: description.trim(), detail: null };
+  if (parts.length < 2) return null;
 
   let [head, ...rest] = parts;
   rest = rest.filter((p) => !NOISE.some((re) => re.test(p.toLowerCase())));
@@ -134,8 +138,21 @@ export function foodName(description: string): FoodName {
   while (rest.length && ADJECTIVES.has(rest[0]!.toLowerCase())) {
     adjectives.push(rest.shift()!.toLowerCase());
   }
-  const name = capitalise([...adjectives, head!.toLowerCase()].join(" "));
+  return { head: head!.toLowerCase(), adjectives, rest };
+}
+
+export function foodName(description: string): FoodName {
+  const parsed = parse(description);
+  if (!parsed) return { name: description.trim(), detail: null };
+  const { head, adjectives, rest } = parsed;
+  const name = capitalise([...adjectives, head].join(" "));
   return { name, detail: rest.length ? rest.join(", ").toLowerCase() : null };
+}
+
+/** The food itself, without adjectives or detail: "Tomatoes, red, canned" -> "tomatoes",
+ * "Oil, olive" -> "olive oil" (for searching recipes that use it). */
+export function foodNoun(description: string): string {
+  return parse(description)?.head ?? description.trim().toLowerCase();
 }
 
 /**

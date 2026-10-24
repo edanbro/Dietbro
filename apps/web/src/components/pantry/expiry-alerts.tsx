@@ -1,13 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { CalendarSyncIcon, ClockAlertIcon, MessageCircleIcon } from "lucide-react";
+import { CalendarSyncIcon, ChefHatIcon, ClockAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useCreatePlan, useExpiring } from "@/lib/api/hooks";
+import { foodNoun } from "@/lib/food-name";
 
 /** "expired 2 days ago", "expired yesterday", "use today", "expires tomorrow", "expires in 2 days". */
 export function expiryText(daysLeft: number): string {
@@ -62,20 +63,20 @@ export function ExpiryAlerts() {
   );
 }
 
-/** Ask the chat what to cook with them, or re-plan the week from today around them (the
- * planner already favours food that expires soon). */
+/** The recipes that use them (a search for their names among what the pantry can make; it
+ * works without the AI too), or re-plan the week from today around them (the planner already
+ * favours food that expires soon). */
 function ExpiryActions({ names }: { names: string[] }) {
   const router = useRouter();
   const create = useCreatePlan();
-  const list = names.slice(0, 5).map(shortName).join(", ");
-  const prompt = `What can I make with ${list} before they go off?`;
+  const words = [...new Set(names.slice(0, 5).map(foodNoun))].join(" ");
   return (
     <div className="flex flex-wrap gap-2 pt-1">
       <Link
-        href={`/chat?prompt=${encodeURIComponent(prompt)}`}
+        href={`/recipes?pantry=1&q=${encodeURIComponent(words)}`}
         className={buttonVariants({ size: "sm", variant: "outline" })}
       >
-        <MessageCircleIcon aria-hidden />
+        <ChefHatIcon aria-hidden />
         What can I make?
       </Link>
       <Button
@@ -96,9 +97,4 @@ function ExpiryActions({ names }: { names: string[] }) {
       </Button>
     </div>
   );
-}
-
-/** "Spinach, raw" -> "spinach". */
-function shortName(description: string): string {
-  return description.split(",")[0].trim().toLowerCase();
 }
