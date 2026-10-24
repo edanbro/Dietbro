@@ -18,6 +18,7 @@ import {
   useSaveAllergies,
 } from "@/lib/api/hooks";
 import { APP_NAME } from "@/lib/brand";
+import { displayName } from "@/lib/food-name";
 
 type Allergen = NonNullable<AllergiesIn["allergens"]>[number];
 
@@ -84,7 +85,7 @@ export function AllergiesForm({ onSaved }: { onSaved?: () => void }) {
         <div className="flex flex-wrap gap-2">
           {avoided.map((f) => (
             <Badge key={f.id} variant="secondary" className="gap-1">
-              {f.description}
+              {displayName(f.description, f.brand)}
               <button
                 type="button"
                 className="relative after:absolute after:-inset-3 after:content-['']"

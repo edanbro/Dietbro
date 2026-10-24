@@ -149,6 +149,14 @@ export function foodName(description: string): FoodName {
   return { name, detail: rest.length ? rest.join(", ").toLowerCase() : null };
 }
 
+/** How a food is named on screen: a product by its brand and name, a database food by its
+ * readable name and detail ("Chicken · breast, skinless, boneless"). */
+export function displayName(description: string, brand?: string | null): string {
+  if (brand) return `${brand} ${description}`;
+  const { name, detail } = foodName(description);
+  return detail ? `${name} · ${detail}` : name;
+}
+
 /** The food itself, without adjectives or detail: "Tomatoes, red, canned" -> "tomatoes",
  * "Oil, olive" -> "olive oil" (for searching recipes that use it). */
 export function foodNoun(description: string): string {

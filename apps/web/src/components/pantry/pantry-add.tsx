@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/hooks";
 import { allergenLabel } from "@/lib/format";
 import { formatWeight } from "@/lib/units";
+import { displayName } from "@/lib/food-name";
 
 const MASS = ["g", "kg", "oz", "lb"];
 const VOLUME = ["ml", "l", "tsp", "tbsp", "cup"];
@@ -76,7 +77,9 @@ export function PantryAdd({
     };
     add.mutate(payload, {
       onSuccess: (item) => {
-        toast.success(`Added ${food.description} (${formatWeight(item.grams, system)})`);
+        toast.success(
+          `Added ${displayName(food.description, food.brand)} (${formatWeight(item.grams, system)})`,
+        );
         reset();
         onAdded?.();
       },
@@ -169,7 +172,8 @@ function FoodFacts({ detail }: { detail: FoodDetail }) {
       <GradeBadge grade={detail.grade} />
       {detail.counts_as ? (
         <p>
-          Counts as <span className="text-foreground">{detail.counts_as.description}</span> when
+          Counts as{" "}
+          <span className="text-foreground">{displayName(detail.counts_as.description)}</span> when
           planning.
         </p>
       ) : null}

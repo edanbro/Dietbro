@@ -216,7 +216,7 @@ describe("ReceiptReview: review", () => {
     fireEvent.change(screen.getByLabelText('Search foods for "mystery snack"'), {
       target: { value: "banana" },
     });
-    fireEvent.click(await screen.findByRole("button", { name: /Bananas, raw/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Bananas/ }));
 
     expect(await screen.findByText("3 items will be added")).toBeInTheDocument();
     expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ food_id: BANANA.id });

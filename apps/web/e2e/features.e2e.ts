@@ -76,7 +76,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       await page.getByRole("button", { name: "Add food" }).click();
       await page.getByLabel("Search foods, e.g. banana").fill("banana");
       await page
-        .getByRole("button", { name: /Bananas, raw/i })
+        .getByRole("button", { name: /^Bananas(?! ·)/ })
         .first()
         .click();
       // A snack, whatever the time: the meal defaults to the time of day, and logging over
