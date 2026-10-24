@@ -20,13 +20,43 @@ export type Timers = {
   active: [string, Countdown][];
 };
 
+// One audio context for the page, made (and woken) when a timer starts: browsers only let a
+// page play sound after the user did something.
+let audio: AudioContext | null = null;
+
+function wakeAudio(): void {
+  try {
+    audio ??= new AudioContext();
+    if (audio.state === "suspended") void audio.resume();
+  } catch {
+    audio = null; // no Web Audio here: the vibration and the message still say it
+  }
+}
+
+/** Three short beeps, made on the spot (no sound file). */
+export function chime(): void {
+  if (!audio) return;
+  const start = audio.currentTime;
+  for (let i = 0; i < 3; i++) {
+    const tone = audio.createOscillator();
+    const gain = audio.createGain();
+    tone.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, start + i * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.3, start + i * 0.35 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + i * 0.35 + 0.25);
+    tone.connect(gain).connect(audio.destination);
+    tone.start(start + i * 0.35);
+    tone.stop(start + i * 0.35 + 0.3);
+  }
+}
+
 function remaining(c: Countdown, now: number): number {
   return c.endsAt === null ? c.left : Math.max(0, Math.round((c.endsAt - now) / 1000));
 }
 
 /**
  * Every timer on the page in one place, so they keep counting while you scroll and can be shown
- * together (the bar at the bottom). Finishing buzzes the phone and says so.
+ * together (the bar at the bottom). Finishing chimes, buzzes the phone and says so.
  */
 export function useTimers(): Timers {
   const [timers, setTimers] = useState<Record<string, Countdown>>({});
@@ -46,11 +76,16 @@ export function useTimers(): Timers {
         ([, c]) => c.endsAt !== null && remaining(c, t) === 0,
       );
       if (!finished.length) return;
+      // Marked at once, so a tick before the next render can't announce them again.
+      const marked = { ...latest.current };
+      for (const [key, c] of finished) marked[key] = { ...c, left: 0, endsAt: null };
+      latest.current = marked;
       setTimers((all) => {
         const next = { ...all };
         for (const [key, c] of finished) next[key] = { ...c, left: 0, endsAt: null };
         return next;
       });
+      chime();
       navigator.vibrate?.([300, 150, 300]);
       for (const [, c] of finished) toast.success(`Timer done: ${c.label}`);
     }, 250);
@@ -68,6 +103,7 @@ export function useTimers(): Timers {
   );
 
   const toggle = useCallback((id: string, timer: StepTimer) => {
+    wakeAudio();
     const t = Date.now();
     setNow(t);
     setTimers((all) => {
