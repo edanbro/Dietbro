@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import {
   ArrowLeftIcon,
   ArrowLeftRightIcon,
@@ -10,7 +11,7 @@ import {
   RefreshCwIcon,
   Undo2Icon,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,11 +25,12 @@ import {
   type PantryChange,
   type PlanChange,
   type PlanDay,
+  type SwapFilters,
   useAlternatives,
 } from "@/lib/api/hooks";
 import { dayOfMonth, weekday } from "@/lib/dates";
 import { foodName } from "@/lib/food-name";
-import { formatNumber } from "@/lib/format";
+import { formatMinutes, formatNumber } from "@/lib/format";
 import { formatWeight, type Units } from "@/lib/units";
 
 import { SLOT_LABEL } from "./slots";
@@ -121,6 +123,13 @@ export function MealActions({
 }: MealActionsProps & { id: string; meal: Meal; onDone: () => void }) {
   const [mode, setMode] = useState<Mode>("menu");
   const [other, setOther] = useState("");
+  // The swap picker's search (sent once typing pauses) and filters.
+  const [typed, setTyped] = useState("");
+  const [filters, setFilters] = useState<SwapFilters>({ q: "", quick: false, pantry: false });
+  useEffect(() => {
+    const wait = setTimeout(() => setFilters((f) => ({ ...f, q: typed.trim() })), 300);
+    return () => clearTimeout(wait);
+  }, [typed]);
   const inputId = useId();
   const slot = meal.slot;
   const name = SLOT_LABEL[slot];
@@ -133,7 +142,8 @@ export function MealActions({
     action.then(onDone, () => undefined);
   };
   const replan = (change: PlanChange) => run(onReplan([change]));
-  const options = useAlternatives(planId, date, slot, mode === "swap");
+  const options = useAlternatives(planId, date, slot, mode === "swap", filters);
+  const searching = Boolean(filters.q || filters.quick || filters.pantry);
   const trades = past ? [] : tradesFor(week, date, meal, today);
   // Each meal goes to the other's day: two swaps, made (and checked) as one change.
   const trade = (t: Trade) =>
@@ -250,13 +260,43 @@ export function MealActions({
       {mode === "swap" ? (
         <fieldset className="flex flex-col gap-2" disabled={busy}>
           <legend className="mb-2 text-sm font-medium">Swap {name.toLowerCase()} for:</legend>
+          <Input
+            type="search"
+            aria-label="Search recipes"
+            placeholder="Search, e.g. curry"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["quick", "Quick"],
+                ["pantry", "Uses my pantry"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filters[key]}
+                onClick={() => setFilters((f) => ({ ...f, [key]: !f[key] }))}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full border px-3 text-xs transition-colors",
+                  filters[key]
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "hover:bg-muted",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {options.isPending ? (
             <>
               <Skeleton className="h-10" />
               <Skeleton className="h-10" />
             </>
-          ) : (
-            (options.data ?? []).map((o) => (
+          ) : options.data?.length ? (
+            options.data.map((o) => (
               <Button
                 key={o.id}
                 variant="outline"
@@ -265,10 +305,15 @@ export function MealActions({
               >
                 <span className="min-w-0 truncate">{o.name}</span>
                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  {o.minutes ? `${formatMinutes(o.minutes)} · ` : ""}
                   {formatNumber(o.kcal_per_serving)} kcal
                 </span>
               </Button>
             ))
+          ) : (
+            <p className="text-sm text-muted-foreground" role="status">
+              {searching ? "Nothing safe for you matches. Try other words." : "No suggestions."}
+            </p>
           )}
           <Button variant="outline" onClick={() => replan({ intent: "swap", when })}>
             Anything else - you pick
