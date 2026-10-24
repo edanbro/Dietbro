@@ -1076,6 +1076,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/diary/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent Foods
+         * @description Food logged off-plan over the last RECENT_DAYS days with exact foods and amounts, newest
+         *     first, each mix once (at most RECENT_SHOWN): what quick-add offers to log again.
+         */
+        get: operations["listRecentFoods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/weights": {
         parameters: {
             query?: never;
@@ -3181,6 +3202,30 @@ export interface components {
             text: string;
             /** Purchased On */
             purchased_on?: string | null;
+        };
+        /** RecentFoodItemOut */
+        RecentFoodItemOut: {
+            food: components["schemas"]["FoodSummary"];
+            /** Grams */
+            grams: number;
+        };
+        /**
+         * RecentFoodOut
+         * @description Food logged lately (diary quick-add or the chat), to log again: each mix of foods and
+         *     amounts once, as the diary named it.
+         */
+        RecentFoodOut: {
+            /** Description */
+            description: string;
+            /** Kcal */
+            kcal: number;
+            /**
+             * Last Eaten On
+             * Format: date
+             */
+            last_eaten_on: string;
+            /** Items */
+            items: components["schemas"]["RecentFoodItemOut"][];
         };
         /** RecipeCard */
         RecipeCard: {
@@ -6458,6 +6503,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listRecentFoods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentFoodOut"][];
                 };
             };
         };

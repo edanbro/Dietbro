@@ -12,8 +12,9 @@ import { SLOT_LABEL } from "@/components/plan/slots";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type Slot, useFood, useLogFood } from "@/lib/api/hooks";
+import { type RecentFood, type Slot, useFood, useLogFood, useRecentFoods } from "@/lib/api/hooks";
 import { foodName } from "@/lib/food-name";
+import { formatNumber } from "@/lib/format";
 
 type Picked = {
   key: string;
@@ -27,6 +28,7 @@ type Picked = {
 };
 
 const SLOTS: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+const RECENT = 6; // recent mixes offered to log again
 
 /** The meal a log most likely belongs to, by the clock. */
 export function slotNow(d: Date = new Date()): Slot {
@@ -107,6 +109,7 @@ export function QuickAdd({ onDone }: { onDone?: () => void }) {
   const [slot, setSlot] = useState<Slot>(() => slotNow());
   const [picked, setPicked] = useState<Picked[]>([]);
   const log = useLogFood();
+  const recent = useRecentFoods(open);
 
   function add(f: { id: number; description: string; brand?: string | null; image_url?: string | null }) {
     setPicked((p) => [
@@ -122,6 +125,22 @@ export function QuickAdd({ onDone }: { onDone?: () => void }) {
         each: 1,
       },
     ]);
+  }
+
+  /** A recent mix back in the form, at its amounts, to log as is or change first. */
+  function again(r: RecentFood) {
+    setPicked(
+      r.items.map(({ food, grams }) => ({
+        key: crypto.randomUUID(),
+        id: food.id,
+        description: food.description,
+        brand: food.brand,
+        image_url: food.image_url,
+        quantity: String(grams),
+        unit: "g",
+        each: 1,
+      })),
+    );
   }
 
   function close() {
@@ -184,6 +203,31 @@ export function QuickAdd({ onDone }: { onDone?: () => void }) {
           ))}
         </NativeSelect>
       </div>
+      {!picked.length && recent.data?.length ? (
+        <section aria-labelledby="quick-add-recent" className="flex flex-col gap-1.5">
+          <h3 id="quick-add-recent" className="text-sm font-medium">
+            Recent
+          </h3>
+          <ul className="flex flex-wrap gap-1.5">
+            {recent.data.slice(0, RECENT).map((r) => (
+              <li key={r.items.map((i) => `${i.food.id}x${i.grams}`).join(",")}>
+                <button
+                  type="button"
+                  onClick={() => again(r)}
+                  className="inline-flex h-9 max-w-64 items-center gap-1 rounded-full border px-3 text-sm hover:bg-muted"
+                >
+                  <span className="truncate">
+                    {r.items.map((i) => foodName(i.food.description).name).join(" + ")}
+                  </span>{" "}
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    · {formatNumber(r.kcal)} kcal
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <FoodPicker id="quick-add-search" placeholder="Search foods, e.g. banana" onPick={add} />
       <BarcodeScan onFound={add} />
       {picked.length ? (

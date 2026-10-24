@@ -66,4 +66,41 @@ describe("QuickAdd", () => {
     expect(sent).toMatchObject({ slot: "snack", items: [{ food_id: 9040, grams: 236 }] });
     expect(await screen.findByRole("button", { name: "Add food" })).toBeInTheDocument();
   });
+
+  it("offers recent food to log again at its amounts", async () => {
+    const yogurt = { ...BANANA, id: 1500, description: "Yogurt, Greek, plain, whole milk" };
+    const calls = mockApi({
+      "GET /diary/recent": json([
+        {
+          description: "bananas, raw and yogurt",
+          kcal: 230,
+          last_eaten_on: "2026-10-13",
+          items: [
+            { food: BANANA, grams: 118 },
+            { food: yogurt, grams: 150 },
+          ],
+        },
+      ]),
+      "GET /foods/9040": json({ ...BANANA, units: [{ unit: "g", grams_each: 1 }] }),
+      "GET /foods/1500": json({ ...yogurt, units: [{ unit: "g", grams_each: 1 }] }),
+      "POST /diary/log": json({ type: "outcome", results: [{ message: "Logged" }] }),
+    });
+    renderWithClient(<QuickAdd />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add food" }));
+    const again = await screen.findByRole("button", { name: "Bananas + Yogurt · 230 kcal" });
+    fireEvent.click(again);
+    expect(screen.queryByRole("heading", { name: "Recent" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Amount of Bananas")).toHaveValue(118);
+    fireEvent.click(screen.getByRole("button", { name: "Log it" }));
+
+    await waitFor(() => expect(calls.some((c) => c.path === "/diary/log")).toBe(true));
+    const sent = calls.find((c) => c.path === "/diary/log")!.body as Record<string, unknown>;
+    expect(sent).toMatchObject({
+      items: [
+        { food_id: 9040, grams: 118 },
+        { food_id: 1500, grams: 150 },
+      ],
+    });
+  });
 });

@@ -22,6 +22,7 @@ from larder_api.db import Session, get_sessionmaker
 from larder_api.insights import monday, weekly_recap, weekly_spending
 from larder_api.price_watch import load_lines, watch
 from larder_api.ratelimit import per_user
+from larder_api.routers.foods import summary
 from larder_api.routers.plans import REPLAN_ERRORS, get_catalog_cache, get_replan_planner
 from larder_api.schemas import (
     CheaperOut,
@@ -35,6 +36,8 @@ from larder_api.schemas import (
     PricePointOut,
     PricesOut,
     RecapOut,
+    RecentFoodItemOut,
+    RecentFoodOut,
     ReplanRequest,
     SpendingCategoryOut,
     SpendingOut,
@@ -49,6 +52,7 @@ from larder_db.models import (
     BodyWeight,
     Food,
     Goals,
+    MealLog,
     MealPlan,
     PlanMeal,
 )
@@ -151,6 +155,55 @@ async def _planned_kcal(session: Session, user_id: int, first: date, last: date)
         if owner.get(on) == plan_id:
             out[on] += kcal
     return out
+
+
+RECENT_DAYS = 60
+RECENT_SHOWN = 8
+
+
+@router.get("/diary/recent", operation_id="listRecentFoods")
+async def recent_foods(
+    user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
+) -> list[RecentFoodOut]:
+    """Food logged off-plan over the last RECENT_DAYS days with exact foods and amounts, newest
+    first, each mix once (at most RECENT_SHOWN): what quick-add offers to log again."""
+    since = local_today(user.timezone, clock()) - timedelta(days=RECENT_DAYS)
+    logs = await session.scalars(
+        select(MealLog)
+        .where(
+            MealLog.user_id == user.id,
+            MealLog.kind == "off_plan",
+            MealLog.voided_at.is_(None),
+            MealLog.eaten_on >= since,
+        )
+        .order_by(MealLog.eaten_on.desc(), MealLog.id.desc())
+        .limit(200)
+    )
+    chosen: list[tuple[MealLog, list[tuple[int, float]]]] = []
+    seen: set[tuple[tuple[int, int], ...]] = set()
+    for log in logs:
+        items = [(i.get("food_id"), i.get("grams")) for i in log.items]
+        picks = [(int(f), float(g)) for f, g in items if f is not None and g]
+        if not picks or len(picks) != len(items):
+            continue  # estimated without exact foods: nothing to log again
+        key = tuple(sorted((f, round(g)) for f, g in picks))
+        if key not in seen:
+            seen.add(key)
+            chosen.append((log, picks))
+        if len(chosen) == RECENT_SHOWN:
+            break
+    ids = {f for _, picks in chosen for f, _ in picks}
+    foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
+    return [
+        RecentFoodOut(
+            description=log.description,
+            kcal=log.kcal,
+            last_eaten_on=log.eaten_on,
+            items=[RecentFoodItemOut(food=summary(foods[f]), grams=g) for f, g in picks],
+        )
+        for log, picks in chosen
+        if all(f in foods for f, _ in picks)
+    ]
 
 
 @router.get("/me/weights", operation_id="listWeights")

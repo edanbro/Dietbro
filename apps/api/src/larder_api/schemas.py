@@ -938,6 +938,21 @@ class FoodLogItem(BaseModel):
     grams: float = Field(gt=0, le=5000)
 
 
+class RecentFoodItemOut(BaseModel):
+    food: "FoodSummary"
+    grams: float
+
+
+class RecentFoodOut(BaseModel):
+    """Food logged lately (diary quick-add or the chat), to log again: each mix of foods and
+    amounts once, as the diary named it."""
+
+    description: str
+    kcal: int
+    last_eaten_on: date
+    items: list[RecentFoodItemOut]
+
+
 class FoodLogRequest(BaseModel):
     """Food the user picked themselves (diary quick-add). Logged like food told to the chat,
     with exact amounts, so the rest of that day's plan rebalances around it."""
