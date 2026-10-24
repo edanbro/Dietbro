@@ -17,11 +17,13 @@ import {
   useDeletePantryItem,
   useFood,
   usePantry,
+  useUnits,
   useUpdatePantryItem,
 } from "@/lib/api/hooks";
 import { addDays, daysBetween, localISODate, shortDate } from "@/lib/dates";
 import { EmptyState } from "@/components/empty-state";
 import { foodName } from "@/lib/food-name";
+import { formatWeight, type Units } from "@/lib/units";
 
 function friendly(description: string): string {
   const { name, detail } = foodName(description);
@@ -42,10 +44,15 @@ export function ExpiryBadge({ date, today }: { date: string | null; today?: Date
   return <span className="text-xs text-muted-foreground">by {shortDate(date)}</span>;
 }
 
-export function formatAmount(item: Pick<PantryItem, "quantity" | "unit" | "grams" | "approx">) {
+/** "2 large · 300 g", "500 g", or "2 large · 11 oz" in US units. */
+export function formatAmount(
+  item: Pick<PantryItem, "quantity" | "unit" | "grams" | "approx">,
+  units: Units = "metric",
+) {
   const amount = `${item.quantity % 1 ? item.quantity.toFixed(1) : item.quantity} ${item.unit}`;
-  const grams = item.unit === "g" ? "" : ` · ${Math.round(item.grams)} g`;
-  return `${item.approx ? "~" : ""}${amount}${grams}`;
+  const weighed = ["g", "kg", "oz", "lb"].includes(item.unit);
+  const weight = weighed ? "" : ` · ${formatWeight(item.grams, units)}`;
+  return `${item.approx ? "~" : ""}${amount}${weight}`;
 }
 
 const PLACES = [
@@ -62,6 +69,7 @@ const UNDO_MS = 5000;
 /** `searchFrom`: show the search box once there are this many items (default: always). */
 export function PantryList({ searchFrom = 0 }: { searchFrom?: number } = {}) {
   const { data, isPending } = usePantry();
+  const units = useUnits();
   const remove = useDeletePantryItem();
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
@@ -161,7 +169,7 @@ export function PantryList({ searchFrom = 0 }: { searchFrom?: number } = {}) {
                           ? `${item.food.brand} ${item.food.description}`
                           : friendly(item.food.description)}
                       </span>
-                      <span className="text-xs text-muted-foreground">{formatAmount(item)}</span>
+                      <span className="text-xs text-muted-foreground">{formatAmount(item, units)}</span>
                     </button>
                     <ExpiryBadge date={item.expires_on ?? null} />
                     <Button

@@ -33,6 +33,7 @@ from larder_api.schemas import (
     RegionOption,
     RegionOut,
     SuggestedTargets,
+    Units,
 )
 from larder_api.settings import Settings, get_settings
 from larder_core.allergens import LABELS, Allergen
@@ -144,6 +145,13 @@ async def get_me(
     )
 
 
+def units_of(user: User) -> Units:
+    """The user's choice, else pounds and ounces in the US and metric elsewhere."""
+    if user.units in ("metric", "us"):
+        return user.units  # pyright: ignore[reportReturnType]
+    return "us" if region_for(user.country).country == "US" else "metric"
+
+
 def region_out(user: User) -> RegionOut:
     r = region_for(user.country)
     return RegionOut(
@@ -152,6 +160,7 @@ def region_out(user: User) -> RegionOut:
         currency=r.currency,
         locale=user.locale or r.locale,
         timezone=user.timezone or r.timezone,
+        units=units_of(user),
         saved=user.country is not None,
     )
 
@@ -169,6 +178,7 @@ async def put_region(body: RegionIn, user: CurrentUser, session: Session) -> Reg
     user.country = country
     user.timezone = body.timezone or user.timezone
     user.locale = body.locale or user.locale
+    user.units = body.units or user.units
     goals = await session.get(Goals, user.id)
     after = region_for(country).currency
     if goals is not None and after != before and goals.currency == before:

@@ -32,14 +32,16 @@ import {
   useShoppingExtra,
   useShoppingExtras,
   useShoppingList,
+  useUnits,
   useStockShopping,
   useTickShoppingItem,
 } from "@/lib/api/hooks";
 import { dateRange } from "@/lib/dates";
-import { formatGrams, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 import { aisle } from "@/lib/aisles";
 import { foodName } from "@/lib/food-name";
+import { formatWeight, type Units } from "@/lib/units";
 
 /** Lines grouped by aisle, groups in the order the API sorted the lines. */
 export function groupByAisle(items: ShoppingItem[]): [string, ShoppingItem[]][] {
@@ -57,16 +59,18 @@ function ItemRow({
   item,
   tick,
   currency,
+  units,
 }: {
   item: ShoppingItem;
   tick: Tick;
   currency: ShoppingList["currency"];
+  units: Units;
 }) {
   const id = `shop-${item.food_id}`;
   const { name, detail } = foodName(item.name);
   const amount = item.staple
     ? detail
-    : [formatGrams(item.grams), item.approx_units, detail].filter(Boolean).join(" · ");
+    : [formatWeight(item.grams, units), item.approx_units, detail].filter(Boolean).join(" · ");
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
       <Checkbox
@@ -136,6 +140,7 @@ function ListView({ plan }: { plan: Plan }) {
   const tick = useTickShoppingItem(plan.id);
   const stock = useStockShopping(plan.id);
   const { data: extras } = useShoppingExtras();
+  const units = useUnits();
   const [hideTicked, setHideTicked] = useState(false);
 
   if (isPending) {
@@ -215,7 +220,13 @@ function ListView({ plan }: { plan: Plan }) {
           </h2>
           <ul className="flex flex-col divide-y rounded-lg border">
             {items.map((item) => (
-              <ItemRow key={item.food_id} item={item} tick={tick} currency={list.currency} />
+              <ItemRow
+                key={item.food_id}
+                item={item}
+                tick={tick}
+                currency={list.currency}
+                units={units}
+              />
             ))}
           </ul>
         </section>
@@ -230,7 +241,13 @@ function ListView({ plan }: { plan: Plan }) {
           </p>
           <ul className="flex flex-col divide-y rounded-lg border">
             {staples.map((item) => (
-              <ItemRow key={item.food_id} item={item} tick={tick} currency={list.currency} />
+              <ItemRow
+                key={item.food_id}
+                item={item}
+                tick={tick}
+                currency={list.currency}
+                units={units}
+              />
             ))}
           </ul>
         </section>
@@ -242,12 +259,17 @@ function ListView({ plan }: { plan: Plan }) {
 }
 
 /** The list as plain text, by aisle, for messaging apps or notes. */
-export function listText(list: ShoppingList, extras: ShoppingExtra[]): string {
+export function listText(
+  list: ShoppingList,
+  extras: ShoppingExtra[],
+  units: Units = "metric",
+): string {
   const lines: string[] = [];
   for (const [name, items] of groupByAisle(list.items.filter((i) => !i.staple && !i.checked))) {
     lines.push(`${name}:`);
     for (const i of items) {
-      lines.push(`- ${i.name}${i.approx_units ? ` (${i.approx_units})` : ` (${formatGrams(i.grams)})`}`);
+      const amount = i.approx_units ?? formatWeight(i.grams, units);
+      lines.push(`- ${foodName(i.name).name} (${amount})`);
     }
   }
   const mine = extras.filter((e) => !e.checked);
@@ -259,8 +281,9 @@ export function listText(list: ShoppingList, extras: ShoppingExtra[]): string {
 }
 
 function ShareButton({ list, extras }: { list: ShoppingList; extras: ShoppingExtra[] }) {
+  const units = useUnits();
   async function share() {
-    const text = listText(list, extras);
+    const text = listText(list, extras, units);
     try {
       if (navigator.share) {
         await navigator.share({ title: "Shopping list", text });

@@ -10,10 +10,10 @@ import { EmptyState } from "@/components/empty-state";
 import { ErrorAlert } from "@/components/form-bits";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type Recipe, useRecipes } from "@/lib/api/hooks";
+import { type Recipe, useRecipes, useUnits } from "@/lib/api/hooks";
 import { scaleFactor, steps } from "@/lib/cooking";
 import { foodName } from "@/lib/food-name";
-import { formatGrams } from "@/lib/format";
+import { formatWeight, type Units } from "@/lib/units";
 import { parsePrep, type PrepEvent, schedule, totalTime } from "@/lib/prep";
 import { useWakeLock } from "@/lib/use-wake-lock";
 
@@ -35,7 +35,10 @@ type Line = { key: string; name: string; amount: string; recipes: string[] };
 
 /** What to get out: weighed ingredients added up across the recipes (by food), the rest as
  * written, each scaled to its recipe's servings. */
-export function gatherIngredients(cooking: { recipe: Recipe; servings: number }[]): Line[] {
+export function gatherIngredients(
+  cooking: { recipe: Recipe; servings: number }[],
+  units: Units = "metric",
+): Line[] {
   const byFood = new Map<
     number,
     { name: string; grams: number; measures: string[]; recipes: Set<string> }
@@ -74,7 +77,7 @@ export function gatherIngredients(cooking: { recipe: Recipe; servings: number }[
     // A pinch of pepper weighs nothing: say it as the recipe does.
     amount:
       v.grams >= 1
-        ? formatGrams(v.grams)
+        ? formatWeight(v.grams, units)
         : v.measures.length === 1 && v.measures[0]
           ? v.measures[0]
           : "a pinch",
@@ -177,6 +180,7 @@ export function MealPrep() {
   const wanted = parsePrep(useSearchParams().get("r"));
   const results = useRecipes(wanted.map((w) => w.id));
   const awake = useWakeLock();
+  const units = useUnits();
   if (!wanted.length) {
     return (
       <EmptyState
@@ -217,7 +221,7 @@ export function MealPrep() {
       minutes: recipe.minutes,
     })),
   );
-  const lines = gatherIngredients(cooking);
+  const lines = gatherIngredients(cooking, units);
 
   return (
     <article className="flex flex-col gap-5">

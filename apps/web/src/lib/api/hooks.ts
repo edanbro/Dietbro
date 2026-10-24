@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { localISODate, localTime } from "@/lib/dates";
+import type { Units } from "@/lib/units";
 import {
   dropTicks,
   isNetworkError,
@@ -144,6 +145,11 @@ export function useMe() {
       return me;
     },
   });
+}
+
+/** How the user reads weights and heights (lib/units.ts): metric until /me says otherwise. */
+export function useUnits(): Units {
+  return useMe().data?.region.units ?? "metric";
 }
 
 export function useGoals() {

@@ -16,8 +16,13 @@ import {
   useAddPantryItem,
   useAllergens,
   useFood,
+  useUnits,
 } from "@/lib/api/hooks";
 import { allergenLabel } from "@/lib/format";
+import { formatWeight } from "@/lib/units";
+
+const MASS = ["g", "kg", "oz", "lb"];
+const VOLUME = ["ml", "l", "tsp", "tbsp", "cup"];
 
 /**
  * Pick a food (or start from one, e.g. a scanned product), then how much (in any unit we can
@@ -40,9 +45,16 @@ export function PantryAdd({
   const { data: detail } = useFood(food?.id ?? null);
   const add = useAddPantryItem();
 
-  const units = detail?.units ?? [];
-  // Default to the food's own count unit ("large", "clove") when it has one, else grams.
-  const chosenUnit = unit || units.find((u) => !["g", "kg"].includes(u.unit))?.unit || "g";
+  const system = useUnits();
+  // Weights in the user's system only: grams and kilograms, or grams, ounces and pounds.
+  const hidden = system === "us" ? ["kg"] : ["oz", "lb"];
+  const units = (detail?.units ?? []).filter((u) => !hidden.includes(u.unit));
+  // Default to the product's packet or the food's own count unit ("large", "clove") when it has
+  // one, else ounces or grams.
+  const chosenUnit =
+    unit ||
+    units.find((u) => !MASS.includes(u.unit) && !VOLUME.includes(u.unit))?.unit ||
+    (system === "us" ? "oz" : "g");
 
   function reset() {
     setFood(null);
@@ -64,7 +76,7 @@ export function PantryAdd({
     };
     add.mutate(payload, {
       onSuccess: (item) => {
-        toast.success(`Added ${food.description} (${Math.round(item.grams)} g)`);
+        toast.success(`Added ${food.description} (${formatWeight(item.grams, system)})`);
         reset();
         onAdded?.();
       },
@@ -116,10 +128,12 @@ export function PantryAdd({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="unit">Unit</Label>
           <NativeSelect id="unit" value={chosenUnit} onChange={(e) => setUnit(e.target.value)}>
-            {(units.length ? units : [{ unit: "g", grams_each: 1 }]).map((u) => (
+            {(units.length ? units : [{ unit: chosenUnit, grams_each: null }]).map((u) => (
               <option key={u.unit} value={u.unit}>
                 {u.unit}
-                {u.grams_each && !["g", "kg"].includes(u.unit) ? ` (~${u.grams_each} g)` : ""}
+                {u.grams_each && !MASS.includes(u.unit)
+                  ? ` (~${formatWeight(u.grams_each, system)})`
+                  : ""}
               </option>
             ))}
           </NativeSelect>

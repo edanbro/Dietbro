@@ -34,6 +34,7 @@ export const ME: Me = {
     currency: "GBP",
     locale: "en-GB",
     timezone: "Europe/London",
+    units: "metric",
     saved: true,
   },
 };

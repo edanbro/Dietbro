@@ -21,6 +21,7 @@ from larder_llm.outcome import Logged, ReplanOutcome
 from larder_llm.schemas import MAX_CHANGES, Change
 
 Currency = Literal["GBP", "EUR", "USD"]
+Units = Literal["metric", "us"]
 
 _kcal = Field(ge=0, le=10_000)
 _grams = Field(default=None, ge=0, le=2_000)
@@ -44,6 +45,7 @@ class RegionOption(BaseModel):
 class RegionOut(RegionOption):
     locale: str  # BCP 47, for number and date formatting
     timezone: str  # IANA
+    units: Units  # weights and heights: chosen, else the region's ("us" in the US)
     saved: bool  # False: nothing saved yet, these are the defaults (GB)
 
 
@@ -51,6 +53,7 @@ class RegionIn(BaseModel):
     country: str = Field(pattern=r"^[A-Za-z]{2}$")
     timezone: str | None = Field(default=None, max_length=64)
     locale: str | None = Field(default=None, pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+    units: Units | None = None  # None: keep the saved choice
 
 
 class Me(BaseModel):
@@ -1094,6 +1097,7 @@ class SharedExtraOut(BaseModel):
 class SharedListOut(BaseModel):
     start: date
     household: int
+    units: Units = "metric"  # how the owner reads weights
     items: list[SharedItemOut]
     extras: list[SharedExtraOut] = Field(description="the owner's own items (bin bags)")
 

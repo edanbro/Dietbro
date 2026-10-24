@@ -3373,6 +3373,8 @@ export interface components {
             timezone?: string | null;
             /** Locale */
             locale?: string | null;
+            /** Units */
+            units?: ("metric" | "us") | null;
         };
         /** RegionOption */
         RegionOption: {
@@ -3401,6 +3403,11 @@ export interface components {
             locale: string;
             /** Timezone */
             timezone: string;
+            /**
+             * Units
+             * @enum {string}
+             */
+            units: "metric" | "us";
             /** Saved */
             saved: boolean;
         };
@@ -3505,6 +3512,12 @@ export interface components {
             start: string;
             /** Household */
             household: number;
+            /**
+             * Units
+             * @default metric
+             * @enum {string}
+             */
+            units: "metric" | "us";
             /** Items */
             items: components["schemas"]["SharedItemOut"][];
             /**

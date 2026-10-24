@@ -303,6 +303,7 @@ class User(Base):
     """An account. `auth_subject` is the identity provider's user id (Clerk JWT `sub`)."""
 
     __tablename__ = "users"
+    __table_args__ = (CheckConstraint("units IN ('metric', 'us')", name="units"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     auth_subject: Mapped[str] = mapped_column(String(255), unique=True)
@@ -313,6 +314,8 @@ class User(Base):
     country: Mapped[str | None] = mapped_column(String(2))
     timezone: Mapped[str | None] = mapped_column(String(64))
     locale: Mapped[str | None] = mapped_column(String(35))
+    # Weights and heights in "metric" or "us" (pounds, ounces, feet); NULL follows the region.
+    units: Mapped[str | None] = mapped_column(String(6))
     # The chat turn in progress (one per user): taken with a conditional UPDATE, released by
     # token; a lock older than the turn deadline is stale and may be taken over.
     chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

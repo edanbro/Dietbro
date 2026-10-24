@@ -37,6 +37,7 @@ import {
   useMarkEaten,
   useMe,
   useReplan,
+  useUnits,
   type Violation,
 } from "@/lib/api/hooks";
 import {
@@ -316,6 +317,7 @@ function PlanNotes({ plan }: { plan: Plan }) {
  */
 function useMealActions(plan: Plan, today: string, creating: boolean) {
   const eaten = useMarkEaten(plan.id);
+  const units = useUnits();
   const replan = useReplan();
   const undo = useUndoPlan();
   const busy = useIsMutating({ mutationKey: keys.planChange }) > 0 || creating;
@@ -338,7 +340,7 @@ function useMealActions(plan: Plan, today: string, creating: boolean) {
     busy,
     onEaten: async (cell, undo) => {
       const out = await eaten.mutateAsync({ ...cell, undo });
-      const { title, description } = eatenMessage(out, undo);
+      const { title, description } = eatenMessage(out, undo, units);
       toast.success(title, description ? { description } : undefined);
     },
     onReplan: async (changes) => {

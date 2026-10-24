@@ -2,6 +2,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime
 
 import httpx
+import pytest
 
 from larder_api.clock import get_clock
 from larder_api.jobs import get_enqueue
@@ -9,6 +10,7 @@ from larder_api.main import app
 
 Auth = Callable[..., dict[str, str]]
 
+ONION = 170000  # seeded by the `foods` fixture
 GOALS = {"kcal_min": 1800, "kcal_max": 2200, "weekly_budget_minor": 6000}
 DUBLIN = {"country": "ie", "timezone": "Europe/Dublin", "locale": "en-IE"}
 
@@ -22,6 +24,7 @@ async def test_unsaved_region_defaults_to_gb(api: httpx.AsyncClient, auth: Auth)
         "currency": "GBP",
         "locale": "en-GB",
         "timezone": "Europe/London",
+        "units": "metric",
         "saved": False,
     }
 
@@ -40,6 +43,7 @@ async def test_saving_ireland_switches_currency(api: httpx.AsyncClient, auth: Au
         "currency": "EUR",
         "locale": "en-IE",
         "timezone": "Europe/Dublin",
+        "units": "metric",
         "saved": True,
     }
     assert goals["currency"] == "EUR"
@@ -101,3 +105,31 @@ def test_planner_weights_follow_the_currency() -> None:
     assert gbp == Weights()
     assert eur.repeat == round(Weights().repeat * 1.17)
     assert (eur.cost, eur.waste) == (Weights().cost, Weights().waste)  # multipliers, unitless
+
+
+async def test_units_follow_the_region_until_chosen(api: httpx.AsyncClient, auth: Auth) -> None:
+    us = (await api.put("/me/region", json={"country": "US"}, headers=auth())).json()
+    chosen = await api.put("/me/region", json={"country": "US", "units": "metric"}, headers=auth())
+    # Saving the region again without units (setup does) keeps the choice.
+    kept = (await api.put("/me/region", json={"country": "IE"}, headers=auth())).json()
+    bad = await api.put("/me/region", json={"country": "IE", "units": "imperial"}, headers=auth())
+    exported = (await api.get("/me/export", headers=auth())).json()
+
+    assert us["units"] == "us"
+    assert chosen.json()["units"] == "metric"
+    assert kept["units"] == "metric"
+    assert bad.status_code == 422
+    assert exported["user"]["units"] == "metric"
+
+
+@pytest.mark.usefixtures("foods")
+async def test_pantry_takes_ounces_and_pounds(api: httpx.AsyncClient, auth: Auth) -> None:
+    await api.put("/me/region", json={"country": "US"}, headers=auth())
+    units = (await api.get(f"/foods/{ONION}", headers=auth())).json()["units"]
+    added = await api.post(
+        "/pantry", json={"food_id": ONION, "quantity": 1, "unit": "lb"}, headers=auth()
+    )
+
+    assert {"oz", "lb"} <= {u["unit"] for u in units}
+    assert added.status_code == 201, added.text
+    assert round(added.json()["grams"]) == 454

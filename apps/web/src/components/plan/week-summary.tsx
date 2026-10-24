@@ -1,8 +1,9 @@
 import { cn } from "cn";
 import { TriangleAlertIcon } from "lucide-react";
 
-import type { Plan } from "@/lib/api/hooks";
-import { formatBand, formatGrams, formatMoney, formatNumber } from "@/lib/format";
+import { type Plan, useUnits } from "@/lib/api/hooks";
+import { formatBand, formatMoney, formatNumber } from "@/lib/format";
+import { formatWeight } from "@/lib/units";
 
 import { PriceNote } from "@/components/price-note";
 
@@ -38,6 +39,7 @@ function Stat({
 
 /** Whole-plan numbers: energy, protein against the weekly band, cost, pantry use and waste. */
 export function WeekSummary({ plan }: { plan: Plan }) {
+  const units = useUnits();
   const days = plan.days.length || 1;
   const avgKcal = Math.round(plan.week_totals.kcal / days);
   const dailyKcal = formatBand(plan.targets.daily.kcal, "kcal");
@@ -70,12 +72,12 @@ export function WeekSummary({ plan }: { plan: Plan }) {
         />
         <Stat
           label="From your pantry"
-          value={formatGrams(plan.pantry_used_g)}
+          value={formatWeight(plan.pantry_used_g, units)}
           note="of food you already have"
         />
         <Stat
           label="Waste"
-          value={formatGrams(plan.waste_g)}
+          value={formatWeight(plan.waste_g, units)}
           note={plan.waste_g ? "pantry food expiring unused" : "nothing expires unused"}
         />
       </dl>

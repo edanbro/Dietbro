@@ -40,10 +40,14 @@ describe("formatAmount", () => {
     expect(formatAmount({ quantity: 2, unit: "large", grams: 300, approx: false })).toBe(
       "2 large · 300 g",
     );
-    expect(formatAmount({ quantity: 0.5, unit: "kg", grams: 500, approx: true })).toBe(
-      "~0.5 kg · 500 g",
-    );
+    expect(formatAmount({ quantity: 0.5, unit: "kg", grams: 500, approx: true })).toBe("~0.5 kg");
     expect(formatAmount({ quantity: 250, unit: "g", grams: 250, approx: false })).toBe("250 g");
+  });
+
+  it("weighs in ounces and pounds for US units", () => {
+    const large = { quantity: 2, unit: "large", grams: 300, approx: false };
+    expect(formatAmount(large, "us")).toBe("2 large · 11 oz");
+    expect(formatAmount({ quantity: 1, unit: "lb", grams: 454, approx: false }, "us")).toBe("1 lb");
   });
 });
 
