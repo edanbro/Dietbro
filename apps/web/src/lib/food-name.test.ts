@@ -57,6 +57,8 @@ describe("foodName", () => {
     ["Egg, white, raw, fresh", "Egg white", null],
     ["Chickpeas (garbanzo beans, bengal gram), mature seeds, raw", "Chickpeas (garbanzo beans, bengal gram)", "mature seeds"],
     ["Pork, fresh, shoulder, whole, separable lean only, raw", "Pork", "shoulder, whole"],
+    ["Pork, cured, bacon, unprepared", "Bacon", null],
+    ["Beef, cured, corned beef, canned", "Canned corned beef", null],
   ])("%s", (description, name, detail) => {
     expect(foodName(description)).toEqual({ name, detail });
   });
