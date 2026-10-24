@@ -919,28 +919,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/recipes/{recipe_id}/note": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Put Note
-         * @description The user's own note and 1-5 rating on a recipe; both empty removes it (null). Private:
-         *     never on a share link, and it doesn't steer the planner.
-         */
-        put: operations["putRecipeNote"];
-        post?: never;
-        /** Delete Note */
-        delete: operations["deleteRecipeNote"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/recipes/{recipe_id}": {
         parameters: {
             query?: never;
@@ -964,7 +942,35 @@ export interface paths {
          */
         put: operations["editRecipe"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete Recipe
+         * @description Delete a recipe of the user's own (imported, typed in or edited). One their plans have
+         *     can't go (the plans keep it): it is hidden instead, never shown in browsing or planned
+         *     again. Catalogue recipes can't be deleted ("never again" hides them).
+         */
+        delete: operations["deleteRecipe"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recipes/{recipe_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Note
+         * @description The user's own note and 1-5 rating on a recipe; both empty removes it (null). Private:
+         *     never on a share link, and it doesn't steer the planner.
+         */
+        put: operations["putRecipeNote"];
+        post?: never;
+        /** Delete Note */
+        delete: operations["deleteRecipeNote"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3305,6 +3311,15 @@ export interface components {
             recipe_id: number;
             /** Name */
             name: string;
+        };
+        /**
+         * RecipeDeletedOut
+         * @description A recipe of the user's own, gone: deleted, or (`hidden`, when a plan of theirs has it)
+         *     kept for those plans but never shown or planned again.
+         */
+        RecipeDeletedOut: {
+            /** Hidden */
+            hidden: boolean;
         };
         /** RecipeDetail */
         RecipeDetail: {
@@ -6247,84 +6262,6 @@ export interface operations {
             };
         };
     };
-    putRecipeNote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                recipe_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RecipeNoteIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RecipeNoteOut"] | null;
-                };
-            };
-            /** @description no such recipe (or another user's) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deleteRecipeNote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                recipe_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description no such recipe (or another user's) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     getRecipe: {
         parameters: {
             query?: never;
@@ -6386,6 +6323,122 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ImportResultOut"];
                 };
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteRecipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeDeletedOut"];
+                };
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putRecipeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeNoteOut"] | null;
+                };
+            };
+            /** @description no such recipe (or another user's) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteRecipeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description no such recipe (or another user's) */
             404: {

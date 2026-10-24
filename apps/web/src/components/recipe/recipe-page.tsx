@@ -8,10 +8,12 @@ import {
   ExternalLinkIcon,
   HeartIcon,
   PencilIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { GradeBadge } from "@/components/food-bits";
@@ -20,7 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/browser";
-import { type Recipe, useAllergens, useRecipe, useRecipeFeedback } from "@/lib/api/hooks";
+import {
+  type Recipe,
+  useAllergens,
+  useDeleteRecipe,
+  useRecipe,
+  useRecipeFeedback,
+} from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps } from "@/lib/cooking";
 import { allergenLabel, formatMinutes, formatMoney, formatNumber, humanize } from "@/lib/format";
 import { APP_NAME } from "@/lib/brand";
@@ -177,6 +185,48 @@ function Feedback({ recipe }: { recipe: Recipe }) {
         <PencilIcon aria-hidden />
         {recipe.generated ? "Edit" : "Edit a copy"}
       </Link>
+      {recipe.generated ? <DeleteRecipe recipe={recipe} /> : null}
+    </div>
+  );
+}
+
+/** Your own recipe only, after a second tap. */
+function DeleteRecipe({ recipe }: { recipe: Recipe }) {
+  const remove = useDeleteRecipe(recipe.id);
+  const router = useRouter();
+  const [sure, setSure] = useState(false);
+  if (!sure) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => setSure(true)}>
+        <Trash2Icon aria-hidden />
+        Delete
+      </Button>
+    );
+  }
+  return (
+    <div role="group" aria-label="Delete this recipe?" className="flex items-center gap-2">
+      <span className="text-sm">Delete this recipe?</span>
+      <Button
+        variant="destructive"
+        size="sm"
+        disabled={remove.isPending}
+        onClick={() =>
+          remove.mutate(undefined, {
+            onSuccess: (out) => {
+              toast.success(
+                out.hidden ? "Deleted. Plans you've already made keep it." : "Recipe deleted",
+              );
+              router.push("/recipes");
+            },
+            onError: () => toast.error("Couldn't delete it. Try again."),
+          })
+        }
+      >
+        Yes, delete
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => setSure(false)}>
+        Cancel
+      </Button>
     </div>
   );
 }

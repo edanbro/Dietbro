@@ -2,17 +2,20 @@
 copy, both through the same checks as a new recipe; and private notes and ratings
 (PUT/DELETE /recipes/{id}/note)."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
+from datetime import date
 from typing import Any
 
 import httpx
 from chat_support import ChatEnv
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 
 NewUser = Callable[..., Awaitable[int]]
+MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
 
 
 def body(*lines: tuple[str, str], name: str = "Chicken and rice") -> dict[str, Any]:
@@ -151,3 +154,38 @@ async def test_notes_and_ratings_are_private(
     assert (await api.delete(f"/recipes/{rid}/note", headers=h)).status_code == 204
     assert (await api.get(f"/recipes/{rid}", headers=h)).json()["note"] is None
     assert (await api.put("/recipes/999999/note", json={"note": "x"}, headers=h)).status_code == 404
+
+
+async def test_deleting_your_own_recipe(
+    api: httpx.AsyncClient,
+    chat: ChatEnv,
+    db_engine: AsyncEngine,
+    menu: dict[str, int],
+    new_user: NewUser,
+    make_plan: MakePlan,
+) -> None:
+    user_id = await new_user("user_a")
+    await new_user("user_b")
+    auth = chat.auth("user_a")
+    plan_id = await make_plan(user_id, date(2026, 10, 12))  # before: it can't plan them
+    unused, planned = await imported(api, chat), await imported(api, chat)
+    await api.put(f"/recipes/{planned}/feedback", json={"verdict": "favourite"}, headers=auth)
+    async with make_sessionmaker(db_engine)() as session:
+        meal = await session.scalar(select(db.PlanMeal).where(db.PlanMeal.plan_id == plan_id))
+        assert meal is not None
+        meal.recipe_id = planned
+        await session.commit()
+
+    not_theirs = await api.delete(f"/recipes/{unused}", headers=chat.auth("user_b"))
+    catalogue = await api.delete(f"/recipes/{menu['Porridge']}", headers=auth)
+    gone = await api.delete(f"/recipes/{unused}", headers=auth)
+    hidden = await api.delete(f"/recipes/{planned}", headers=auth)
+
+    assert (not_theirs.status_code, catalogue.status_code) == (404, 404)
+    assert gone.json() == {"hidden": False}
+    assert (await api.get(f"/recipes/{unused}", headers=auth)).status_code == 404
+    # A plan has it: kept for the plan, but never shown or planned again.
+    assert hidden.json() == {"hidden": True}
+    browse = (await api.get("/recipes", params={"limit": 60}, headers=auth)).json()
+    assert planned not in {i["id"] for i in browse["items"]}
+    assert (await api.get(f"/recipes/{planned}", headers=auth)).json()["feedback"] == "never"

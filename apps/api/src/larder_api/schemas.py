@@ -900,6 +900,13 @@ class RecipeDetail(RecipeCard):
 RecipeVerdict = Literal["favourite", "never"]
 
 
+class RecipeDeletedOut(BaseModel):
+    """A recipe of the user's own, gone: deleted, or (`hidden`, when a plan of theirs has it)
+    kept for those plans but never shown or planned again."""
+
+    hidden: bool
+
+
 class RecipeFeedbackIn(BaseModel):
     verdict: RecipeVerdict
 
