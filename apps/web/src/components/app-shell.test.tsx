@@ -61,6 +61,15 @@ describe("AppShell", () => {
     expect(current.map((a) => a.textContent)).toEqual([label]);
   });
 
+  it("starts with a skip link to the page content", () => {
+    render(<AppShell>content</AppShell>);
+
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveTextContent("Skip to content");
+    expect(links[0]).toHaveAttribute("href", "#main");
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main");
+  });
+
   it("marks nothing on a page outside the nav", () => {
     resetNavigation("/diary");
     render(<AppShell>content</AppShell>);
