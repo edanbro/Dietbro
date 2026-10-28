@@ -135,7 +135,7 @@ function TextForm({ purchasedOn, onQueued }: Form) {
           maxLength={20_000}
           rows={8}
           placeholder={`Paste an online order or e-receipt, e.g.\nSEMI SKMD MILK 2L   ${symbol}1.45`}
-          className="min-h-40 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          className="min-h-40 w-full rounded-lg border border-field bg-transparent px-2.5 py-2 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         />
       </div>
       <ErrorAlert error={submit.error} />

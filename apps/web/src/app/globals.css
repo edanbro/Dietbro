@@ -32,6 +32,7 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-field: var(--field);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -103,6 +104,8 @@
   --destructive: oklch(0.56 0.21 27);
   --border: oklch(0.91 0.01 120);
   --input: oklch(0.88 0.012 120);
+  /* Form-control borders: 3:1 against the page and cards (WCAG 1.4.11). */
+  --field: oklch(0.62 0.012 120);
   --ring: oklch(0.62 0.12 155);
   --brand-warm: oklch(0.74 0.15 62);
   --chart-1: oklch(0.5 0.12 155);
@@ -141,6 +144,7 @@
     --destructive: oklch(0.7 0.19 22);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
+    --field: oklch(1 0 0 / 40%);
     --ring: oklch(0.6 0.12 152);
     --brand-warm: oklch(0.8 0.14 70);
     --chart-1: oklch(0.76 0.14 152);

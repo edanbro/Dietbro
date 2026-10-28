@@ -3,6 +3,7 @@
 import { cn } from "cn";
 import {
   CalendarPlusIcon,
+  EllipsisIcon,
   InfoIcon,
   LoaderCircleIcon,
   PrinterIcon,
@@ -392,6 +393,7 @@ function PlanView({
   const { view, day, set, next } = useViewState();
   const plan = next && upcoming ? upcoming : current;
   const [confirming, setConfirming] = useState(false);
+  const [more, setMore] = useState(false);
   const today = localISODate();
   const { actions, outcome, setOutcome, undoLast, undoing } = useMealActions(
     plan,
@@ -434,20 +436,37 @@ function PlanView({
             size="default"
             compact
           />
-          <SaveTemplate plan={plan} />
-          <PrepPicker plan={plan} today={today} />
-          {ended || plan !== current ? null : (
-            <Button
-              variant="ghost"
-              aria-expanded={confirming}
-              aria-controls="new-plan-confirm"
-              disabled={create.isPending}
-              onClick={() => setConfirming(!confirming)}
-            >
-              <RefreshCwIcon aria-hidden />
-              New plan
-            </Button>
-          )}
+          {/* Phones show the two everyday actions; the rest wait behind "More" so today's
+              meals stay near the top. Wider screens show everything inline. */}
+          <Button
+            variant="ghost"
+            className="sm:hidden"
+            aria-expanded={more}
+            aria-controls="plan-more"
+            onClick={() => setMore(!more)}
+          >
+            <EllipsisIcon aria-hidden />
+            More
+          </Button>
+          <div
+            id="plan-more"
+            className={cn("flex w-full flex-wrap gap-2 sm:contents", !more && "max-sm:hidden")}
+          >
+            <SaveTemplate plan={plan} />
+            <PrepPicker plan={plan} today={today} />
+            {ended || plan !== current ? null : (
+              <Button
+                variant="ghost"
+                aria-expanded={confirming}
+                aria-controls="new-plan-confirm"
+                disabled={create.isPending}
+                onClick={() => setConfirming(!confirming)}
+              >
+                <RefreshCwIcon aria-hidden />
+                New plan
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       <Exclusions plan={plan} />

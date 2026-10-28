@@ -221,6 +221,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
 
     await test.step("save the week as a template and plan from it", async () => {
       await page.goto("/plan");
+      await page.getByRole("button", { name: "More", exact: true }).click(); // phone header
       await page.getByRole("button", { name: "Save as template" }).click();
       await page.getByLabel("Template name").fill("Busy weeknights");
       const saved = page.waitForResponse((r) => r.url().endsWith("/me/templates"));
@@ -238,6 +239,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
 
     await test.step("meal prep from the plan", async () => {
       await page.goto("/plan");
+      await page.getByRole("button", { name: "More", exact: true }).click(); // phone header
       await page.getByRole("button", { name: "Meal prep" }).click();
       const boxes = page.getByRole("group", { name: /Cook ahead/ }).getByRole("checkbox");
       await boxes.nth(0).check();
@@ -296,6 +298,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       await expect(page.getByText("Saved: your next plan or change follows it")).toBeVisible();
 
       await page.goto("/plan");
+      await page.getByRole("button", { name: "More", exact: true }).click(); // phone header
       await page.getByRole("button", { name: "New plan" }).click();
       const created = page.waitForResponse(
         (r) => r.url().endsWith("/plans") && r.request().method() === "POST",

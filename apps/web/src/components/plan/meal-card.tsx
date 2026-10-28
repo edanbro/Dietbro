@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { Meal } from "@/lib/api/hooks";
 import { cookServings } from "@/lib/cooking";
 import { pantryUse } from "@/lib/food-name";
-import { formatMinutes, formatNumber, formatServings, servingsLabel } from "@/lib/format";
+import { formatMinutes, formatNumber, servingsLabel } from "@/lib/format";
 
 import { MealActions, type MealActionsProps } from "./meal-actions";
 import { SLOT_ICON, SLOT_LABEL } from "./slots";
@@ -116,8 +116,7 @@ function MealLink({
         </span>
         <span className="line-clamp-2 leading-snug font-medium">{meal.recipe.name}</span>
         <span className="text-xs text-muted-foreground tabular-nums">
-          <span aria-hidden>{formatServings(meal.portions)}</span>
-          <span className="sr-only">{servingsLabel(meal.portions)}</span> ·{" "}
+          {servingsLabel(meal.portions)} ·{" "}
           {formatNumber(meal.nutrition.kcal)} kcal · {formatNumber(meal.nutrition.protein_g)} g
           protein
         </span>

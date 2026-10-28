@@ -54,6 +54,32 @@ export function eatenText(kcal: number, min?: number | null, max?: number | null
   return band ? `Eaten ${formatNumber(kcal)} of ${band} kcal` : `Eaten ${formatNumber(kcal)} kcal`;
 }
 
+/** Newest first, with each run of 2+ days that have nothing logged or planned (not today)
+ * folded into one row, so a quiet week reads as one line instead of seven. */
+export function dayRows(
+  days: DiaryDay[],
+  today: string,
+): ({ kind: "day"; day: DiaryDay } | { kind: "empty"; from: string; to: string })[] {
+  const rows: ({ kind: "day"; day: DiaryDay } | { kind: "empty"; from: string; to: string })[] =
+    [];
+  let run: DiaryDay[] = [];
+  const flush = () => {
+    if (run.length === 1) rows.push({ kind: "day", day: run[0] });
+    if (run.length > 1) rows.push({ kind: "empty", from: run.at(-1)!.date, to: run[0].date });
+    run = [];
+  };
+  for (const day of days) {
+    if (day.date !== today && !day.logged.length && !day.planned_kcal) {
+      run.push(day);
+      continue;
+    }
+    flush();
+    rows.push({ kind: "day", day });
+  }
+  flush();
+  return rows;
+}
+
 function DayRow({ day, today }: { day: DiaryDay; today: string }) {
   const [open, setOpen] = useState(false);
   const remove = useRemoveLog();
@@ -291,12 +317,21 @@ export function DiaryPage() {
               Days
             </h2>
             <ul className="flex flex-col divide-y rounded-lg border">
-              {[...diary.data.days]
-                .reverse()
-                .slice(0, allDays ? undefined : 7)
-                .map((d) => (
-                  <DayRow key={d.date} day={d} today={diary.data.today} />
-                ))}
+              {dayRows(
+                [...diary.data.days].reverse().slice(0, allDays ? undefined : 7),
+                diary.data.today,
+              ).map((r) =>
+                r.kind === "day" ? (
+                  <DayRow key={r.day.date} day={r.day} today={diary.data.today} />
+                ) : (
+                  <li key={r.from} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                    <span className="font-medium">
+                      {shortDate(r.from)} – {shortDate(r.to)}
+                    </span>
+                    <span className="text-muted-foreground">Nothing logged</span>
+                  </li>
+                ),
+              )}
             </ul>
             {diary.data.days.length > 7 ? (
               <Button
