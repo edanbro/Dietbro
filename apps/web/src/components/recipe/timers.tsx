@@ -148,7 +148,7 @@ export function TimerChip({ id, timer, timers }: { id: string; timer: StepTimer;
       className={cn(
         "inline-flex items-center gap-1 rounded-full border py-0.5 pr-0.5 pl-2.5 text-sm tabular-nums",
         c.endsAt !== null && "border-primary bg-primary/5",
-        done && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+        done && "border-emerald-500 text-success",
       )}
     >
       <TimerIcon aria-hidden className="size-3.5" />
@@ -204,7 +204,7 @@ export function RunningTimers({
             key={id}
             className={cn(
               "flex items-center gap-1 rounded-xl bg-muted py-1 pr-1 pl-3 text-sm",
-              done && "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
+              done && "bg-success-subtle text-success-subtle-foreground",
             )}
           >
             <span className="flex flex-col leading-tight">

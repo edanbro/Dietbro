@@ -108,7 +108,7 @@ function MealLink({
             </span>
           ) : null}
           {meal.status === "eaten" ? (
-            <span className="ml-1 flex items-center gap-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="ml-1 flex items-center gap-0.5 font-medium text-success">
               <CircleCheckIcon aria-hidden className="size-3" />
               Eaten
             </span>
@@ -125,10 +125,10 @@ function MealLink({
           fat
         </span>
         {note ? (
-          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{note}</span>
+          <span className="text-xs font-medium text-warning">{note}</span>
         ) : null}
         {meal.uses_pantry.length ? (
-          <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
+          <span className="line-clamp-1 text-xs text-success">
             {pantryUse(meal.uses_pantry)}
           </span>
         ) : null}

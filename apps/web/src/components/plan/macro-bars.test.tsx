@@ -33,7 +33,7 @@ describe("MacroBar", () => {
     expect(screen.getByRole("meter", { name: "Fat" })).toHaveAttribute("data-status", "above");
     const verdict = screen.getByText("8 g over");
     expect(verdict).not.toHaveClass("text-destructive");
-    expect(verdict.className).toContain("amber");
+    expect(verdict.className).toContain("text-warning");
   });
 
   it("shows only the value when there is no target", () => {
@@ -75,9 +75,9 @@ describe("MoreNutrients", () => {
     );
 
     const fibre = screen.getByText("21.5 g");
-    expect(fibre.className).toMatch(/amber/); // below the fibre guide
-    expect(screen.getByText("40.0 g").className).not.toMatch(/amber/);
-    expect(screen.getByText("24.2 g").className).toMatch(/amber/); // above the sat fat guide
+    expect(fibre.className).toMatch(/text-warning/); // below the fibre guide
+    expect(screen.getByText("40.0 g").className).not.toMatch(/text-warning/);
+    expect(screen.getByText("24.2 g").className).toMatch(/text-warning/); // above the sat fat guide
     expect(screen.getByText("–")).toBeInTheDocument(); // salt unknown
     expect(screen.getByText("aim ≥ 30 g")).toBeInTheDocument();
   });

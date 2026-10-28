@@ -75,7 +75,7 @@ function Rail({ pathname, expiring }: { pathname: string; expiring: number }) {
                   <Icon aria-hidden className="size-4" />
                   <span className="flex-1">{label}</span>
                   {href === "/pantry" && expiring ? (
-                    <span className="rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">
+                    <span className="rounded-full bg-warning-solid px-1.5 text-xs font-semibold text-white">
                       {expiring > 9 ? "9+" : expiring}
                       <span className="sr-only"> expiring soon</span>
                     </span>
@@ -102,7 +102,7 @@ function CountBadge({ n }: { n: number }) {
   return (
     <span
       aria-hidden
-      className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white"
+      className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning-solid px-1 text-[10px] font-semibold text-white"
     >
       {n > 9 ? "9+" : n}
     </span>

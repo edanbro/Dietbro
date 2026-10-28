@@ -114,7 +114,7 @@ function Wizard({ start }: { start: number }) {
                 />
                 <span
                   className={cn(
-                    "truncate text-[0.65rem]",
+                    "truncate text-xs",
                     i === index ? "font-medium text-foreground" : "text-muted-foreground",
                   )}
                 >

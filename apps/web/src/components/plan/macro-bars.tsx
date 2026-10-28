@@ -82,7 +82,7 @@ export function MacroBar({ label, value, unit, band, hard = false }: Props) {
               className={cn(
                 "flex items-center gap-1",
                 off && hard && "text-destructive",
-                off && !hard && "text-amber-700 dark:text-amber-400",
+                off && !hard && "text-warning",
               )}
             >
               <VerdictIcon aria-hidden className="size-3" />
@@ -176,7 +176,7 @@ export function MoreNutrients({
           <div key={key} className="flex flex-col items-center rounded-lg bg-muted/60 px-1 py-2">
             <dt className="text-xs text-muted-foreground">{label}</dt>
             <dd
-              className={`text-sm font-semibold tabular-nums ${off ? "text-amber-700 dark:text-amber-400" : ""}`}
+              className={`text-sm font-semibold tabular-nums ${off ? "text-warning" : ""}`}
             >
               {value === null || value === undefined ? "–" : `${value.toFixed(1)} g`}
             </dd>

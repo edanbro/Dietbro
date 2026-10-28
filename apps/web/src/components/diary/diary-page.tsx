@@ -30,14 +30,14 @@ import { SpendingSection } from "./spending";
 import { WeightChart } from "./weight-chart";
 
 const STATUS: Record<NonNullable<DiaryDay["status"]>, { label: string; className: string }> = {
-  under: { label: "Under", className: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100" },
+  under: { label: "Under", className: "bg-info-subtle text-info-subtle-foreground" },
   on: {
     label: "On target",
-    className: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
+    className: "bg-success-subtle text-success-subtle-foreground",
   },
   over: {
     label: "Over",
-    className: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100",
+    className: "bg-warning-subtle text-warning-subtle-foreground",
   },
 };
 
