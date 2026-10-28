@@ -122,6 +122,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     // Printed: the page's content only, full width, no navigation.
     <div className="flex min-h-dvh flex-col lg:pl-64 print:min-h-0 print:pl-0">
+      <a
+        href="#main"
+        className="sr-only z-30 rounded-md bg-background px-3 py-2 text-sm font-medium shadow focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >
+        Skip to content
+      </a>
       <Rail pathname={pathname} expiring={expiring} />
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden print:hidden">
         <Brand />
@@ -145,8 +151,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <OfflineBanner />
       </div>
       <main
+        id="main"
+        tabIndex={-1}
         className={cn(
-          "mx-auto w-full max-w-md flex-1 px-4 pt-4 lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12 print:max-w-none print:p-0",
+          "mx-auto w-full max-w-md flex-1 px-4 pt-4 outline-none lg:max-w-4xl lg:px-10 lg:pt-10 lg:pb-12 print:max-w-none print:p-0",
           immersive ? "pb-8 md:max-w-3xl" : "pb-24",
         )}
       >
