@@ -77,7 +77,7 @@ describe("SetupWizard", () => {
       "GET /plans/current": json(makePlan()),
     });
     renderWithClient(<SetupWizard />);
-    fireEvent.click(await screen.findByRole("button", { name: "Done" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Go to my plan" }));
     expect(nav.push).toContain("/plan");
   });
 });
