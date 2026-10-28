@@ -202,6 +202,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Hand-styled links and rows get a solid ring (the 50% default is ~1.7:1 on the page);
+     components with their own focus-visible ring override this from the utilities layer. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
   body {
     @apply bg-background text-foreground;
   }

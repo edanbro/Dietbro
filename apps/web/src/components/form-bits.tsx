@@ -33,8 +33,12 @@ export function LabeledInput({
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} {...props} />
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <Input id={id} aria-describedby={hint ? `${id}-hint` : undefined} {...props} />
+      {hint ? (
+        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
