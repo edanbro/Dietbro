@@ -121,7 +121,7 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-400">
+          <p className="mt-3 text-xs text-success">
             Uses your oats, chicken and potatoes before they go off.
           </p>
         </figure>

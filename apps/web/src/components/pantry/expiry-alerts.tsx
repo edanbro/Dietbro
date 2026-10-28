@@ -37,7 +37,7 @@ export function ExpiryAlerts() {
       className="flex flex-col gap-2 rounded-xl border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-950/30"
     >
       <div className="flex items-center gap-2">
-        <ClockAlertIcon aria-hidden className="size-4 text-amber-700 dark:text-amber-400" />
+        <ClockAlertIcon aria-hidden className="size-4 text-warning" />
         <h2 id="expiry-alerts-title" className="text-sm font-semibold">
           Use soon
         </h2>

@@ -76,7 +76,7 @@ export function Micronutrients({
               <span
                 className={cn(
                   "text-right text-xs tabular-nums",
-                  low ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground",
+                  low ? "text-warning" : "text-muted-foreground",
                 )}
               >
                 {known && some ? (

@@ -107,7 +107,7 @@ function RecipeTile({
             {formatNumber(recipe.protein_g_per_serving)} g protein
           </span>
           {recipe.uses_pantry.length ? (
-            <span className="line-clamp-1 text-xs text-emerald-700 dark:text-emerald-400">
+            <span className="line-clamp-1 text-xs text-success">
               {pantryUse(recipe.uses_pantry)}
             </span>
           ) : recipe.cuisine ? (

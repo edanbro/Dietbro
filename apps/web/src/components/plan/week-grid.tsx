@@ -109,7 +109,7 @@ function WeekColumns({ days, today, slots, onPickDay, household, own }: Props) {
                       {meal.status === "eaten" ? (
                         <CircleCheckIcon
                           aria-hidden
-                          className="mr-0.5 inline size-3 align-[-0.1em] text-emerald-700 dark:text-emerald-400"
+                          className="mr-0.5 inline size-3 align-[-0.1em] text-success"
                         />
                       ) : null}
                       {meal.recipe.name}
@@ -190,7 +190,7 @@ function WeekTable({ days, today, slots, onPickDay, household, own }: Props) {
                       {meal.status === "eaten" ? (
                         <CircleCheckIcon
                           aria-hidden
-                          className="mr-0.5 inline size-3 align-[-0.1em] text-emerald-700 dark:text-emerald-400"
+                          className="mr-0.5 inline size-3 align-[-0.1em] text-success"
                         />
                       ) : null}
                       {meal.recipe.name}

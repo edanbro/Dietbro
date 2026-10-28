@@ -75,9 +75,9 @@ function Row({
           className={cn(
             "flex w-16 items-center justify-end gap-1 text-sm tabular-nums",
             item.rise
-              ? "font-medium text-amber-700 dark:text-amber-400"
+              ? "font-medium text-warning"
               : change < 0
-                ? "text-emerald-700 dark:text-emerald-400"
+                ? "text-success"
                 : "text-muted-foreground",
           )}
         >

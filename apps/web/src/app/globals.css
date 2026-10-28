@@ -33,6 +33,15 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-field: var(--field);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-subtle-foreground: var(--success-subtle-foreground);
+  --color-warning: var(--warning);
+  --color-warning-solid: var(--warning-solid);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-subtle-foreground: var(--warning-subtle-foreground);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-subtle-foreground: var(--info-subtle-foreground);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -106,6 +115,17 @@
   --input: oklch(0.88 0.012 120);
   /* Form-control borders: 3:1 against the page and cards (WCAG 1.4.11). */
   --field: oklch(0.62 0.012 120);
+  /* Status colours (text >= 4.5:1 on the page): success = on target, warning = over or
+     expiring, info = under. "subtle" pairs are badge backgrounds with their text. */
+  --success: oklch(0.508 0.118 165.6); /* emerald-700 */
+  --success-subtle: oklch(0.95 0.052 163.1); /* emerald-100 */
+  --success-subtle-foreground: oklch(0.378 0.077 168.9); /* emerald-900 */
+  --warning: oklch(0.555 0.163 49); /* amber-700 */
+  --warning-solid: oklch(0.555 0.163 49); /* filled badges with white text: 5:1 */
+  --warning-subtle: oklch(0.962 0.059 95.6); /* amber-100 */
+  --warning-subtle-foreground: oklch(0.414 0.112 45.9); /* amber-900 */
+  --info-subtle: oklch(0.951 0.026 236.8); /* sky-100 */
+  --info-subtle-foreground: oklch(0.391 0.09 240.9); /* sky-900 */
   --ring: oklch(0.62 0.12 155);
   --brand-warm: oklch(0.74 0.15 62);
   --chart-1: oklch(0.5 0.12 155);
@@ -145,6 +165,15 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --field: oklch(1 0 0 / 40%);
+    --success: oklch(0.765 0.177 163.2); /* emerald-400 */
+    --success-subtle: oklch(0.262 0.051 172.6); /* emerald-950 */
+    --success-subtle-foreground: oklch(0.95 0.052 163.1);
+    --warning: oklch(0.828 0.189 84.4); /* amber-400 */
+    --warning-solid: oklch(0.555 0.163 49);
+    --warning-subtle: oklch(0.279 0.077 45.6); /* amber-950 */
+    --warning-subtle-foreground: oklch(0.962 0.059 95.6);
+    --info-subtle: oklch(0.293 0.066 243.2); /* sky-950 */
+    --info-subtle-foreground: oklch(0.951 0.026 236.8);
     --ring: oklch(0.6 0.12 152);
     --brand-warm: oklch(0.8 0.14 70);
     --chart-1: oklch(0.76 0.14 152);

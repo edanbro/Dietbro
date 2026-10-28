@@ -109,7 +109,7 @@ function Allergens({ recipe }: { recipe: Recipe }) {
         <p className="text-sm text-muted-foreground">None of the 14 major allergens found.</p>
       ) : null}
       {recipe.allergens_complete ? null : (
-        <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+        <p className="flex items-start gap-1.5 text-xs text-warning">
           <TriangleAlertIcon aria-hidden className="mt-0.5 size-3 shrink-0" />
           May be incomplete: some ingredients couldn&apos;t be matched to a known food.
         </p>
@@ -383,7 +383,7 @@ export function RecipePage({ id }: { id: number }) {
               </span>
               <span className="min-w-0 flex-1">{ing.name}</span>
               {ing.in_pantry ? (
-                <span className="shrink-0 text-xs text-emerald-700 dark:text-emerald-400">
+                <span className="shrink-0 text-xs text-success">
                   In your pantry
                 </span>
               ) : null}
