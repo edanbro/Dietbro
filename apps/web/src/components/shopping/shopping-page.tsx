@@ -311,7 +311,7 @@ function ShareButton({ list, extras }: { list: ShoppingList; extras: ShoppingExt
       toast.success("Shopping list copied");
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return; // closed the share sheet
-      toast.error("Couldn't share the list");
+      toast.error("Couldn't share the list. Try again.");
     }
   }
   return (

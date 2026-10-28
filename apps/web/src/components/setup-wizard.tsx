@@ -61,7 +61,7 @@ function Finish() {
   const create = useCreatePlan();
   if (plan.isPending) return <Skeleton className="h-10" />;
   if (plan.data) {
-    return <Button onClick={() => router.push("/plan")}>Done</Button>;
+    return <Button onClick={() => router.push("/plan")}>Go to my plan</Button>;
   }
   return (
     <div className="flex flex-col gap-2">

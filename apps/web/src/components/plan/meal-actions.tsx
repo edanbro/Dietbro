@@ -329,7 +329,7 @@ export function MealActions({
             ))
           ) : (
             <p className="text-sm text-muted-foreground" role="status">
-              {searching ? "Nothing safe for you matches. Try other words." : "No suggestions."}
+              {searching ? "Nothing safe for you matches. Try other words." : "No close matches. Search above, or let the planner pick."}
             </p>
           )}
           <Button variant="outline" onClick={() => replan({ intent: "swap", when })}>

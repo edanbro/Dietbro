@@ -156,7 +156,7 @@ export function CalendarForm() {
           variant="ghost"
           size="sm"
           disabled={change.isPending}
-          onClick={() => change.mutate("reset", { onSuccess: () => toast.success("New address made; the old one stopped working") })}
+          onClick={() => change.mutate("reset", { onSuccess: () => toast.success("New calendar address ready. The old one no longer works.") })}
         >
           Reset address
         </Button>

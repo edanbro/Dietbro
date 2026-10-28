@@ -423,7 +423,7 @@ function Failed({ receipt }: { receipt: Receipt }) {
       <Alert variant="destructive" role="alert">
         <CircleAlertIcon />
         <AlertTitle>Couldn&apos;t read this receipt</AlertTitle>
-        <AlertDescription>{receipt.error ?? "Something went wrong reading it."}</AlertDescription>
+        <AlertDescription>{receipt.error ?? "Check the photo is sharp and shows the whole receipt, then try again."}</AlertDescription>
       </Alert>
       <div className="flex gap-2">
         <Link
