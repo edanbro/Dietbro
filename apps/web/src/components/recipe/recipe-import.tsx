@@ -186,7 +186,7 @@ export function DraftForm({
           rows={8}
           maxLength={4000}
           required
-          className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-md border border-field bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           value={draft.instructions}
           onChange={(e) => setDraft({ ...draft, instructions: e.target.value })}
         />

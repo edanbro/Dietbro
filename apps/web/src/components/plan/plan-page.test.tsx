@@ -164,7 +164,7 @@ describe("loaded plan", () => {
     ]);
     expect(links[0]).toHaveTextContent("Breakfast");
     expect(links[0]).toHaveTextContent("Breakfast 2");
-    expect(links[0]).toHaveTextContent("×1½");
+    expect(links[0]).toHaveTextContent("1½ servings");
     expect(links[0]).toHaveTextContent("600 kcal · 30 g protein");
     expect(within(meals).getAllByTestId("recipe-art")).toHaveLength(3);
 
@@ -194,7 +194,7 @@ describe("loaded plan", () => {
     const meals = await screen.findByRole("list", { name: "Meals on Friday 9 October" });
     const links = within(meals).getAllByRole("link");
     expect(links[0]).toHaveAttribute("href", "/recipes/100?servings=4.5"); // 1½ each x 3
-    expect(links[0]).toHaveTextContent("×1½"); // the user's own serving, as before
+    expect(links[0]).toHaveTextContent("1½ servings"); // the user's own serving, as before
 
     fireEvent.click(screen.getByRole("tab", { name: "Week" }));
     const grid = await screen.findByRole("table", { name: "Meals this week" });
@@ -338,6 +338,20 @@ describe("violations and planner notes", () => {
     const note = screen.getByTestId("planner-note");
     expect(note).toHaveTextContent("quick planner");
     expect(note).toHaveTextContent("The optimiser timed out.");
+  });
+
+  it("keeps the less used week actions behind More on phones", async () => {
+    setup({ "GET /plans/current": json(makePlan()) });
+
+    const more = await screen.findByRole("button", { name: "More" });
+    const rest = document.getElementById("plan-more")!;
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(rest.className).toContain("max-sm:hidden");
+    expect(within(rest).getByRole("button", { name: "New plan" })).toBeInTheDocument();
+
+    fireEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(rest.className).not.toContain("max-sm:hidden");
   });
 
   it("says why the quick planner stepped in, once", async () => {

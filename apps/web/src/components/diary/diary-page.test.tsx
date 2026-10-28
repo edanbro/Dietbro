@@ -6,7 +6,7 @@ import { json, mockApi, renderWithClient } from "@/test/api";
 import { ME } from "@/test/fixtures";
 import { resetNavigation } from "@/test/navigation";
 
-import { DiaryPage, eatenText } from "./diary-page";
+import { DiaryPage, dayRows, eatenText } from "./diary-page";
 import { WeightChart } from "./weight-chart";
 
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
@@ -52,6 +52,27 @@ describe("eatenText", () => {
   it("states the goal band when there is one", () => {
     expect(eatenText(1450, 1800, 2200)).toBe("Eaten 1,450 of 1,800–2,200 kcal");
     expect(eatenText(1450, null, null)).toBe("Eaten 1,450 kcal");
+  });
+});
+
+describe("dayRows", () => {
+  it("folds runs of empty days into one row, but never today or a planned day", () => {
+    const empty = (date: string): DiaryDay => ({ ...day(date, 0, null), planned_kcal: null });
+    const days = [
+      day("2026-10-14", 600, "under"),
+      empty("2026-10-13"),
+      empty("2026-10-12"),
+      empty("2026-10-11"),
+      day("2026-10-10", 0, null), // planned: its own row
+      empty("2026-10-09"), // a run of one stays a day
+    ];
+    expect(dayRows(days, "2026-10-14").map((r) => (r.kind === "day" ? r.day.date : r))).toEqual([
+      "2026-10-14",
+      { kind: "empty", from: "2026-10-11", to: "2026-10-13" },
+      "2026-10-10",
+      "2026-10-09",
+    ]);
+    expect(dayRows([empty("2026-10-14"), empty("2026-10-13")], "2026-10-14")).toHaveLength(2);
   });
 });
 

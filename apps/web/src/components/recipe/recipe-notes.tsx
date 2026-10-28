@@ -94,7 +94,7 @@ export function RecipeNotes({ recipe }: { recipe: Recipe }) {
           placeholder="e.g. More chilli next time; 10 minutes less in our oven"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-md border border-field bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
         {changed ? (
           <Button type="submit" size="sm" className="self-start" disabled={save.isPending}>
