@@ -146,7 +146,7 @@ Demo GIF/video, architecture diagram, headline metrics (constraint satisfaction 
 ## 11. Working agreement for Claude Code
 
 - Eduard must be able to explain every design decision in an interview.
-- **Solver core (section 6) and the validator:** explain the modelling approach and review Eduard's code; don't write the CP-SAT model wholesale unless asked. Scaffolding, tests, CI, UI, importers: write freely.
+- **Claude is the main coder, solver included** (Eduard, 2026-10-24: "you are the main coder here"). Explain the modelling choices in the PR and the docs so Eduard can defend them.
 - Small PRs per milestone sub-task; conventional commits.
 - Write tests first for solver, validator, units, normaliser.
 - Add an ADR whenever choosing between real alternatives.

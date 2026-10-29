@@ -3,6 +3,28 @@
 Meal planner: an LLM for language, a CP-SAT planner for the plan, and an independent validator
 that checks every plan. See README.md for the product and docs/DESIGN.md for the architecture.
 
+## Where things stand (update this when a milestone moves)
+
+- M0–M7 are done: data, accounts, the pantry, CP-SAT planning, the chat that re-plans, live
+  replans, receipt intake and evals. M0–M6 have demo notes in `docs/progress.md`; M7's numbers
+  are in `evals/REPORT.md` and the README's Measured table.
+- Since M7, small user-facing features have landed as one PR each: templates, recipe editing
+  and notes, micronutrients, price watch, the weekly recap, meal prep, shared shopping lists,
+  units, cheaper and favourite swaps. A design pass covered tokens, contrast, keyboard access
+  and copy (PRs #64 to #67).
+- Next: a security review before hosting (share and calendar tokens, the recipe-import SSRF
+  guard, rate limits), then M8 (deploy per `docs/deploy.md` and `render.yaml`, monitoring, load
+  numbers), then M9 (beta users). Check with Eduard before anything with running costs.
+- The roadmap and its done criteria are in `PLAN.md` §9, and the decisions in `docs/adr/`. Add
+  an ADR when choosing between real alternatives.
+
+## Working with Eduard
+
+- Claude is the main coder, solver included. Explain the design choices so Eduard can defend
+  them in an interview.
+- Work autonomously and don't hand him chores. Open each PR with auto-merge on.
+- Keep answers short.
+
 ## Layout
 
 - `apps/api`: FastAPI, SQLAlchemy async, Alembic (`larder_api`). Routers live in `routers/` and
