@@ -1,2 +1,6 @@
 # Shell scripts run in Linux containers and Git Bash: keep LF line ends everywhere.
 *.sh text eol=lf
+
+# Everything else: LF in the repo and in the working copy (no CRLF warnings on Windows).
+* text=auto eol=lf
+*.png binary

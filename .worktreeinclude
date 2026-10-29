@@ -1,0 +1,2 @@
+# Git-ignored files a new worktree (claude -w) needs: the local keys.
+.env
