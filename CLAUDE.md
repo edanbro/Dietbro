@@ -27,9 +27,8 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
 - Screenshots: `sh apps/web/scripts/visual.sh [--update-snapshots]`. It needs the stack up and
   runs in the Playwright container. After an update, restore the unrelated drift with
   `git checkout -- apps/web/e2e/__screenshots__/desktop/cook-dark.png`.
-- Benches: export only `DATABASE_URL` from `.env` with `@db:` replaced by `@localhost:`.
-  Sourcing the whole `.env` breaks the `cors_origins` parse. Then run `uv run larder-bench` or
-  `uv run larder-evals --catalog db --n 50`.
+- Benches: `sh scripts/dev/with-db.sh uv run larder-bench` (or `... uv run larder-evals
+  --catalog db --n 50`). It passes only `DATABASE_URL` from `.env`, pointed at localhost.
 
 ## Gotchas
 
@@ -61,8 +60,9 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
 - Match the surrounding code's comment density and naming. Comments explain why, not what.
 - UI colours come from the semantic tokens (`text-success`, `bg-warning-subtle`, `border-field`
   …), not raw Tailwind palette classes.
-- Secrets live only in the git-ignored `.env`. Ask before anything paid (LLM runs, services) or
-  any heavy dependency.
+- Secrets live only in the git-ignored `.env`, which `.claude/settings.json` denies reading or
+  editing; scripts that need a value read it themselves (see `with-db.sh`).
+- Ask before anything paid (LLM runs, services) or any heavy dependency.
 
 ## Compact instructions
 
