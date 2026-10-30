@@ -24,7 +24,7 @@ import { RecipeArt } from "@/components/recipe/recipe-art";
 /**
  * A planned meal: photo (or the slot's icon), name, servings and the numbers that matter; a
  * check when it was marked eaten. With `actions`, an options button opens the meal's actions
- * under the card.
+ * under the card, and a meal that's due has a one-tap "eaten": it's what people do here daily.
  */
 export function MealCard({
   meal,
@@ -51,6 +51,20 @@ export function MealCard({
     >
       <div className="flex items-center">
         <MealLink meal={meal} chevron={!actions} note={note} household={household} />
+        {actions && meal.status === "planned" && actions.date <= actions.today ? (
+          <Button
+            variant="ghost"
+            className="size-11 text-muted-foreground"
+            aria-label={`Mark ${SLOT_LABEL[meal.slot].toLowerCase()} eaten`}
+            disabled={actions.busy}
+            // A failure is already shown: the plan-change handlers toast it.
+            onClick={() =>
+              void actions.onEaten({ date: actions.date, slot: meal.slot }, false).catch(() => {})
+            }
+          >
+            <CircleCheckIcon aria-hidden className="size-5" />
+          </Button>
+        ) : null}
         {actions ? (
           <Button
             variant="ghost"

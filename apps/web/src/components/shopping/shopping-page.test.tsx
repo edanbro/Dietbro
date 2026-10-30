@@ -334,7 +334,7 @@ describe("what each line is for", () => {
     expect(usedFor(undefined)).toBeNull();
   });
 
-  it("describes each box with its meals", async () => {
+  it("describes each box with its meals, once asked to", async () => {
     setup({
       "GET /plans/7/shopping": json(
         makeShoppingList({
@@ -343,9 +343,12 @@ describe("what each line is for", () => {
       ),
     });
 
-    expect(await screen.findByRole("checkbox", { name: "Onions" })).toHaveAccessibleDescription(
-      /For Chilli \(Mon, Thu\) \+1/,
-    );
+    const box = await screen.findByRole("checkbox", { name: "Onions" });
+    expect(screen.queryByText(/For Chilli/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("switch", { name: "Show meals" }));
+
+    expect(box).toHaveAccessibleDescription(/For Chilli \(Mon, Thu\) \+1/);
   });
 
   it("buys food sold in packs as whole packs, priced at the till", async () => {

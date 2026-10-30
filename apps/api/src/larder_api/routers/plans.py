@@ -768,6 +768,9 @@ async def used_in(session: AsyncSession, plan: MealPlan) -> dict[int, list[UsedI
     return {f: sorted(uses, key=lambda u: order.index(u.recipe_id)) for f, uses in out.items()}
 
 
+TINY_SHARE_OF_PACK = 0.05
+
+
 async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut:
     """A plan's shopping list (`plan.shopping` loaded) as the API shows it."""
     food_ids = [s.food_id for s in plan.shopping]
@@ -781,8 +784,12 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
     def item(s: ShoppingItem) -> ShoppingItemOut:
         food = foods[s.food_id]
         pack = None if s.staple else pack_grams(food.id, food.description, food.category)
+        # 2 g of oil isn't a reason to buy a litre: ask whether they have some, like the salt.
+        staple = s.staple or bool(pack and s.grams < TINY_SHARE_OF_PACK * pack)
+        if staple:
+            pack = None
         packs = packs_for(s.grams, pack) if pack and s.grams > 0 else None
-        till = s.cost_minor
+        till = 0 if staple and not s.staple else s.cost_minor
         if pack and packs and s.grams > 0:
             till = round(s.cost_minor * packs * pack / s.grams)
         return ShoppingItemOut(
@@ -793,8 +800,8 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
             cost_minor=s.cost_minor,
             checked=s.checked,
             stocked=s.stocked_at is not None,
-            staple=s.staple,
-            approx_units=None if s.staple else approx_units(s.grams, portions.get(s.food_id, [])),
+            staple=staple,
+            approx_units=None if staple else approx_units(s.grams, portions.get(s.food_id, [])),
             pack_g=pack if packs else None,
             packs=packs,
             till_minor=till,

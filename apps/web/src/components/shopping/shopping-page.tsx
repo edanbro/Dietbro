@@ -92,16 +92,18 @@ function ItemRow({
   tick,
   currency,
   units,
+  showMeals,
 }: {
   item: ShoppingItem;
   tick: Tick;
   currency: ShoppingList["currency"];
   units: Units;
+  showMeals: boolean;
 }) {
   const id = `shop-${item.food_id}`;
   const { name, detail } = foodName(item.name);
   const amount = [buyText(item, units), usesText(item, units), detail].filter(Boolean).join(" · ");
-  const used = usedFor(item.used_in, 1);
+  const used = showMeals ? usedFor(item.used_in, 1) : null;
   const described = [amount ? `${id}-amount` : null, used ? `${id}-used` : null].filter(Boolean);
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
@@ -190,6 +192,8 @@ function ListView({ plan }: { plan: Plan }) {
   const { data: extras } = useShoppingExtras();
   const units = useUnits();
   const [hideTicked, setHideTicked] = useState(false);
+  // In the aisle a row is a name and an amount: which meal needs it is for planning at home.
+  const [showMeals, setShowMeals] = useState(false);
 
   if (isPending) {
     return (
@@ -216,11 +220,19 @@ function ListView({ plan }: { plan: Plan }) {
             <p className="text-xs text-muted-foreground" aria-live="polite">
               {ticked} of {toBuy.length} ticked
             </p>
-            <div className="flex items-center gap-2">
-              <Switch id="hide-ticked" checked={hideTicked} onCheckedChange={setHideTicked} />
-              <Label htmlFor="hide-ticked" className="text-xs font-normal">
-                Hide ticked
-              </Label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Switch id="show-meals" checked={showMeals} onCheckedChange={setShowMeals} />
+                <Label htmlFor="show-meals" className="text-xs font-normal">
+                  Show meals
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="hide-ticked" checked={hideTicked} onCheckedChange={setHideTicked} />
+                <Label htmlFor="hide-ticked" className="text-xs font-normal">
+                  Hide ticked
+                </Label>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 print:hidden">
@@ -274,6 +286,7 @@ function ListView({ plan }: { plan: Plan }) {
                 tick={tick}
                 currency={list.currency}
                 units={units}
+                showMeals={showMeals}
               />
             ))}
           </ul>
@@ -285,7 +298,7 @@ function ListView({ plan }: { plan: Plan }) {
             Check you have
           </h2>
           <p className="text-xs text-muted-foreground">
-            Store-cupboard items the recipes use a little of.
+            The recipes use only a little of these. Buy them if you&apos;ve run out.
           </p>
           <ul className="flex flex-wrap gap-1.5">
             {staples.map((item) => (

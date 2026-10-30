@@ -1,20 +1,67 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftIcon, CheckIcon, StickyNoteIcon, SunIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  CircleCheckIcon,
+  StickyNoteIcon,
+  SunIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { ErrorAlert } from "@/components/form-bits";
-import { buttonVariants } from "@/components/ui/button";
+import { SLOT_LABEL } from "@/components/plan/slots";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type Recipe, useRecipe, useUnits } from "@/lib/api/hooks";
+import {
+  type Recipe,
+  useCurrentPlan,
+  useMarkEaten,
+  useRecipe,
+  useUnits,
+} from "@/lib/api/hooks";
 import { parseServings, scaledAmount, scaleFactor, steps, stepTimers } from "@/lib/cooking";
+import { localISODate } from "@/lib/dates";
 import { useWakeLock } from "@/lib/use-wake-lock";
 
 import { ServingsStepper } from "./servings-stepper";
 import { RunningTimers, TimerChip, useTimers } from "./timers";
+
+/** Every step done and this is on today's plan: the one moment nobody has to remember to log. */
+function CookedIt({ recipeId }: { recipeId: number }) {
+  const { data: plan } = useCurrentPlan();
+  const eaten = useMarkEaten(plan?.id ?? 0);
+  const today = localISODate();
+  const meal = plan?.days
+    .find((d) => d.date === today)
+    ?.meals.find((m) => m.recipe.id === recipeId && m.status === "planned");
+  if (!meal) return null;
+  const name = SLOT_LABEL[meal.slot].toLowerCase();
+  return (
+    <section
+      aria-label="Finished cooking"
+      className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-success-subtle p-3 text-success-subtle-foreground"
+    >
+      <p className="font-medium">All done. Enjoy!</p>
+      <Button
+        disabled={eaten.isPending}
+        onClick={() =>
+          eaten.mutate(
+            { date: today, slot: meal.slot, undo: false },
+            { onSuccess: () => toast.success(`${SLOT_LABEL[meal.slot]} marked eaten`) },
+          )
+        }
+      >
+        <CircleCheckIcon aria-hidden />
+        Mark {name} eaten
+      </Button>
+    </section>
+  );
+}
 
 function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
   const [servings, setServings] = useState(initial);
@@ -187,6 +234,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
               );
             })}
           </ol>
+          {current === -1 ? <CookedIt recipeId={recipe.id} /> : null}
           {method.length && current === -1 ? (
             <p className="rounded-xl bg-muted p-3 text-sm font-medium" role="status">
               All done. Enjoy!

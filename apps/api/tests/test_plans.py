@@ -13,7 +13,16 @@ from larder_api import planning
 from larder_api.main import app
 from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_db.engine import make_sessionmaker
-from larder_db.models import Food, Goals, MealLog, MealPlan, Recipe, RecipeIngredient, User
+from larder_db.models import (
+    Food,
+    Goals,
+    MealLog,
+    MealPlan,
+    Recipe,
+    RecipeIngredient,
+    ShoppingItem,
+    User,
+)
 from larder_solver import Band, Macros, Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
 from larder_solver.scenarios import planted
 
@@ -635,6 +644,28 @@ async def test_lines_sold_in_packs_are_bought_as_whole_packs(
     assert all(i["till_minor"] == i["cost_minor"] for i in loose)
     assert shopping["till_minor"] == sum(i["till_minor"] for i in shopping["items"])
     assert shopping["till_minor"] >= shopping["total_minor"]
+
+
+async def test_a_sliver_of_a_pack_is_a_check_not_a_purchase(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    await set_up(api, auth)
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+    async with make_sessionmaker(db_engine)() as session:
+        await session.execute(
+            update(ShoppingItem)
+            .where(ShoppingItem.plan_id == plan["id"], ShoppingItem.food_id == RICE)
+            .values(grams=10)  # of a 1 kg bag
+        )
+        await session.commit()
+
+    shopping = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
+
+    rice = next(i for i in shopping["items"] if i["food_id"] == RICE)
+    assert rice["staple"] is True
+    assert rice["pack_g"] is None
+    assert rice["till_minor"] == 0
+    assert shopping["till_minor"] == sum(i["till_minor"] for i in shopping["items"])
 
 
 async def test_ticked_lines_move_into_the_pantry_once(api: httpx.AsyncClient, auth: Auth) -> None:
