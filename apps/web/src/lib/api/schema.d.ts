@@ -1718,6 +1718,16 @@ export interface components {
              * @default 16:00
              */
             snack: string;
+            /**
+             * Morning Snack
+             * @default 10:30
+             */
+            morning_snack: string;
+            /**
+             * Evening Snack
+             * @default 21:00
+             */
+            evening_snack: string;
         };
         /**
          * ChangeProblem
@@ -2496,7 +2506,7 @@ export interface components {
          * MealsIn
          * @description Which meals the planner plans: "plan" it, "own" (the user sorts it out, and about its
          *     share of the day's targets is kept free for it) or "skip" (not eaten: the planned meals
-         *     cover the day). Snacks are planned (when they help) or skipped.
+         *     cover the day). The same goes for up to three snacks; `snack` is the afternoon one.
          */
         MealsIn: {
             /**
@@ -2518,11 +2528,23 @@ export interface components {
              */
             dinner: "plan" | "own" | "skip";
             /**
+             * Morning Snack
+             * @default skip
+             * @enum {string}
+             */
+            morning_snack: "plan" | "own" | "skip";
+            /**
              * Snack
              * @default plan
              * @enum {string}
              */
-            snack: "plan" | "skip";
+            snack: "plan" | "own" | "skip";
+            /**
+             * Evening Snack
+             * @default skip
+             * @enum {string}
+             */
+            evening_snack: "plan" | "own" | "skip";
         };
         /** NutrientBands */
         NutrientBands: {
@@ -3805,7 +3827,7 @@ export interface components {
          * @description A meal of the day, in eating order.
          * @enum {string}
          */
-        Slot: "breakfast" | "lunch" | "dinner" | "snack";
+        Slot: "breakfast" | "morning_snack" | "lunch" | "snack" | "dinner" | "evening_snack";
         /**
          * SlotChange
          * @description One meal that differs between the parent and the new plan version (recipe or size).

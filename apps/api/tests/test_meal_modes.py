@@ -14,7 +14,7 @@ from test_plans import Auth, set_up
 from larder_api import planning
 from larder_core.meals import Slot, meals_problem, own_shares
 from larder_db.engine import make_sessionmaker
-from larder_db.models import Allergies, Goals, MealLog, Preferences, User
+from larder_db.models import Allergies, Goals, MealLog, Preferences, Recipe, User
 from larder_solver import Band
 
 # test_plans' fixtures: its recipe catalogue, and the greedy planner (autouse there and here).
@@ -66,7 +66,14 @@ async def test_meals_are_saved_and_checked(api: httpx.AsyncClient, auth: Auth) -
 
     assert before_setup.status_code == 409
     assert saved.status_code == 200, saved.text
-    want = {"breakfast": "skip", "lunch": "own", "dinner": "plan", "snack": "skip"}
+    want = {
+        "breakfast": "skip",
+        "lunch": "own",
+        "dinner": "plan",
+        "morning_snack": "skip",
+        "snack": "skip",
+        "evening_snack": "skip",
+    }
     assert saved.json()["meals"] == want
     assert again.status_code == 200
     assert read["meals"] == want  # saving the other preferences keeps them
@@ -178,11 +185,76 @@ def test_meal_sizes_follow_the_day_and_the_meals_eaten() -> None:
         prefs = Preferences(meal_modes=meals)
         return planning.meal_sizes(planning.UserInputs(goals, allergies, prefs))
 
+    # 2,000 kcal less the afternoon snack's tenth, which is planned by default
     assert sizes() == {
-        Slot.BREAKFAST: Band(325, 675),
-        Slot.LUNCH: Band(455, 945),
-        Slot.DINNER: Band(520, 1080),
+        Slot.BREAKFAST: Band(292, 608),
+        Slot.LUNCH: Band(410, 850),
+        Slot.DINNER: Band(468, 972),
     }
     # With no breakfast the rest of the day gets bigger, and nothing is asked of an "own" lunch.
-    skipped = sizes(breakfast="skip", lunch="own")
+    skipped = sizes(breakfast="skip", lunch="own", snack="skip")
     assert skipped == {Slot.DINNER: Band(693, 1440)}
+    # More snacks, smaller meals.
+    assert sizes(morning_snack="plan", evening_snack="plan")[Slot.DINNER] == Band(364, 756)
+
+
+async def test_snacks_come_every_day_at_the_times_the_user_chose(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    await set_up(api, auth)
+    await put_meals(api, auth, morning_snack="plan", snack="skip", evening_snack="plan")
+
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+
+    for day in plan["days"]:
+        assert [m["slot"] for m in day["meals"]] == [
+            "breakfast",
+            "morning_snack",
+            "lunch",
+            "dinner",
+            "evening_snack",
+        ]
+    assert plan["skipped_meals"] == ["snack"]  # the ones nobody asked for aren't "skipped"
+
+
+async def test_an_own_snack_keeps_room_and_is_never_planned(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    await set_up(api, auth)
+    await put_meals(api, auth, snack="own")
+
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+
+    assert "snack" not in slots_planned(plan)
+    assert [o["slot"] for o in plan["own_meals"]] == ["snack"]
+    assert plan["own_meals"][0]["kcal"] > 0
+
+
+@pytest.fixture
+async def one_snack(catalog_db: None, db_engine: AsyncEngine) -> None:
+    async with make_sessionmaker(db_engine)() as session:
+        others = await session.scalars(
+            select(Recipe).where(
+                Recipe.name.in_(["Apple slices 1", "Apple slices 2", "Apple slices 3"])
+            )
+        )
+        for recipe in others:
+            await session.delete(recipe)
+        await session.commit()
+
+
+async def test_one_safe_snack_is_had_every_day_rather_than_refusing_the_week(
+    api: httpx.AsyncClient, auth: Auth, one_snack: None
+) -> None:
+    await set_up(api, auth)
+
+    response = await api.post("/plans", json={}, headers=auth())
+
+    assert response.status_code == 201, response.text
+    planned = [m["recipe"]["name"] for d in response.json()["days"] for m in d["meals"]]
+    assert planned.count("Apple slices 0") == 7
+
+    # Two snacks a day from one recipe is too much to insist on, and still no reason to refuse.
+    await put_meals(api, auth, morning_snack="plan")
+    response = await api.post("/plans", json={}, headers=auth())
+    assert response.status_code == 201, response.text

@@ -24,7 +24,7 @@ describe("slotNow", () => {
     expect(slotNow(new Date(2026, 9, 14, 8))).toBe("breakfast");
     expect(slotNow(new Date(2026, 9, 14, 13))).toBe("lunch");
     expect(slotNow(new Date(2026, 9, 14, 19))).toBe("dinner");
-    expect(slotNow(new Date(2026, 9, 14, 22))).toBe("snack");
+    expect(slotNow(new Date(2026, 9, 14, 22))).toBe("evening_snack");
   });
 });
 

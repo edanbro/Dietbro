@@ -100,7 +100,7 @@ from larder_api import eaten, planning
 from larder_api.changes import offplan, search
 from larder_api.changes.scope import ChangeScope
 from larder_api.schemas import MacrosOut
-from larder_core.meals import SLOT_ORDER, Slot
+from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot
 from larder_db import models as db
 from larder_llm.outcome import (
     ChangeReason,
@@ -126,19 +126,25 @@ from larder_solver import (
 
 logger = logging.getLogger(__name__)
 
-# When a meal of the day is over (the user's local time). Snack: after dinner.
+# When a meal of the day is over (the user's local time).
 SLOT_START: dict[Slot, time] = {
     Slot.BREAKFAST: time(5, 0),
+    Slot.MORNING_SNACK: time(10, 30),
     Slot.LUNCH: time(11, 30),
     Slot.SNACK: time(15, 0),
     Slot.DINNER: time(17, 30),
+    Slot.EVENING_SNACK: time(20, 30),
 }
 SLOT_END: dict[Slot, time] = {
     Slot.BREAKFAST: time(10, 30),
+    Slot.MORNING_SNACK: time(11, 30),
     Slot.LUNCH: time(14, 30),
-    Slot.DINNER: time(20, 30),
     Slot.SNACK: time(20, 30),
+    Slot.DINNER: time(20, 30),
+    Slot.EVENING_SNACK: time(23, 59),
 }
+# Food logged without a meal goes to one everyone has: the morning and evening snacks are opt-in.
+UNNAMED_FOOD_SLOTS = (Slot.BREAKFAST, Slot.LUNCH, Slot.SNACK, Slot.DINNER)
 
 MAX_HITS = 5  # recipes a craving or swap by words may become
 REVIEW_GOALS = "Please review your goals in your profile before I change your plan."
@@ -157,7 +163,7 @@ def change_key(change: Change) -> str:
 def missing_slot(change: Change, today: date, local_time: time | None) -> Slot:
     """Food eaten today without a meal: the latest meal that has begun; anything else: dinner."""
     if isinstance(change, AteOffPlan) and change.when.date == today and local_time is not None:
-        begun = [s for s in SLOT_ORDER if local_time >= SLOT_START[s]]
+        begun = [s for s in UNNAMED_FOOD_SLOTS if local_time >= SLOT_START[s]]
         if begun:
             return max(begun, key=lambda s: SLOT_START[s])
     return Slot.DINNER
@@ -583,7 +589,7 @@ async def _estimates(
             item.macros = item.estimate.macros
         elif isinstance(change, Skip) and change.eating_elsewhere:
             planned = rows.get(item.cell)
-            typical = offplan.TYPICAL_SNACK if item.slot == Slot.SNACK else offplan.TYPICAL_MAIN
+            typical = offplan.TYPICAL_SNACK if item.slot in SNACK_SLOTS else offplan.TYPICAL_MAIN
             item.macros = (
                 Macros(planned.kcal, planned.protein_g, planned.fat_g, planned.carbs_g)
                 if planned is not None

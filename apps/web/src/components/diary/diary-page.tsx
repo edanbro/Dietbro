@@ -8,6 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ErrorAlert, LabeledInput } from "@/components/form-bits";
+import { SLOT_ORDER } from "@/components/plan/slots";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -261,7 +262,7 @@ function Weights() {
 }
 
 /** The last two weeks of what was eaten against the goals, and weigh-ins with their trend. */
-const SLOTS = new Set(["breakfast", "lunch", "dinner", "snack"]);
+const SLOTS = new Set<string>(SLOT_ORDER);
 
 export function DiaryPage() {
   const diary = useDiary(14);

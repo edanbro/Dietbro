@@ -214,7 +214,7 @@ async def test_create_plan_fills_every_required_slot(api: httpx.AsyncClient, aut
     assert len(plan["days"]) == 7
     for day in plan["days"]:
         slots = [m["slot"] for m in day["meals"]]
-        assert slots[:3] == ["breakfast", "lunch", "dinner"]
+        assert slots == ["breakfast", "lunch", "snack", "dinner"]  # eating order
         assert day["totals"]["kcal"] == sum(m["nutrition"]["kcal"] for m in day["meals"])
         assert day["totals"]["kcal"] >= plan["targets"]["calorie_floor"]
     assert plan["excluded_allergens"] == []
@@ -278,7 +278,7 @@ async def test_a_new_plan_counts_food_already_logged(
 
     assert response.status_code == 201, response.text
     day = response.json()["days"][0]
-    assert [m["slot"] for m in day["meals"]][:2] == ["breakfast", "dinner"]
+    assert [m["slot"] for m in day["meals"]] == ["breakfast", "snack", "dinner"]
     assert [e["description"] for e in day["logged"]] == ["a burrito"]
     assert day["totals"]["kcal"] == sum(m["nutrition"]["kcal"] for m in day["meals"]) + 900
 

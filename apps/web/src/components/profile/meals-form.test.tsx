@@ -28,19 +28,25 @@ describe("MealsForm", () => {
     renderWithClient(<MealsForm />);
 
     await screen.findByRole("group", { name: "Lunch" });
-    expect(screen.getByRole("radio", { name: "I'll sort it", checked: true })).toBeInTheDocument();
+    expect(screen.getAllByRole("radio", { name: "I'll sort it", checked: true })).toHaveLength(1);
+    expect(screen.getByRole("group", { name: "Morning snack" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Afternoon snack" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Evening snack" })).toBeInTheDocument();
     const save = screen.getByRole("button", { name: "Save meals" });
     expect(save).toBeDisabled();
     fireEvent.click(screen.getAllByRole("radio", { name: "Skip it" })[0]!); // breakfast
-    fireEvent.click(screen.getByRole("radio", { name: "Never" }));
+    fireEvent.click(screen.getAllByRole("radio", { name: "Plan it" })[3]!); // morning snack
+    fireEvent.click(screen.getAllByRole("radio", { name: "I'll sort it" })[5]!); // evening snack
     fireEvent.click(save);
 
     await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
     expect(calls.find((c) => c.method === "PUT")?.body).toEqual({
       breakfast: "skip",
+      morning_snack: "plan",
       lunch: "own",
+      snack: "plan",
       dinner: "plan",
-      snack: "skip",
+      evening_snack: "own",
     });
   });
 

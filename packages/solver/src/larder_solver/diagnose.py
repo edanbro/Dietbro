@@ -61,13 +61,17 @@ _SINGULAR = {
     Slot.BREAKFAST: "breakfast",
     Slot.LUNCH: "lunch",
     Slot.DINNER: "dinner",
+    Slot.MORNING_SNACK: "morning snack",
     Slot.SNACK: "snack",
+    Slot.EVENING_SNACK: "evening snack",
 }
 _PLURAL = {
     Slot.BREAKFAST: "breakfasts",
     Slot.LUNCH: "lunches",
     Slot.DINNER: "dinners",
+    Slot.MORNING_SNACK: "morning snacks",
     Slot.SNACK: "snacks",
+    Slot.EVENING_SNACK: "evening snacks",
 }
 _WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 _MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")

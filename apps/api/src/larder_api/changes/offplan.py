@@ -12,7 +12,7 @@ from sqlalchemy import select
 from larder_api import planning
 from larder_api.changes import foods
 from larder_api.changes.scope import ChangeScope
-from larder_core.meals import Slot
+from larder_core.meals import SNACK_SLOTS, Slot
 from larder_db import models as db
 from larder_llm.schemas import AteOffPlan, OffPlanItem
 from larder_solver import Macros
@@ -96,7 +96,7 @@ async def _fallback(scope: ChangeScope, change: AteOffPlan, unmatched: list[str]
         name, macros = planned
         note = f"Estimated as your planned {slot} ({name}) - tell me what was in it to be precise."
         return Estimate(macros, [], unmatched, note)
-    typical = TYPICAL_SNACK if slot == Slot.SNACK else TYPICAL_MAIN
+    typical = TYPICAL_SNACK if slot in SNACK_SLOTS else TYPICAL_MAIN
     note = f"Estimated as a typical {slot} - tell me what was in it to be precise."
     return Estimate(typical, [], unmatched, note)
 

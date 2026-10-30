@@ -255,7 +255,7 @@ describe("loaded plan", () => {
       within(grid)
         .getAllByRole("columnheader")
         .map((th) => th.textContent),
-    ).toEqual(["Day", "Breakfast", "Lunch", "Dinner", "Snack"]);
+    ).toEqual(["Day", "Breakfast", "Lunch", "Snack", "Dinner"]);
     const rows = within(grid).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(7);
     expect(within(rows[2]).getByRole("link", { name: "Hummus and carrots" })).toHaveAttribute(

@@ -8,7 +8,7 @@ import { ProductThumb } from "@/components/food-bits";
 import { FoodPicker } from "@/components/food-picker";
 import { ErrorAlert, NativeSelect } from "@/components/form-bits";
 import { BarcodeScan } from "@/components/pantry/barcode-scan";
-import { SLOT_LABEL } from "@/components/plan/slots";
+import { SLOT_LABEL, SLOT_ORDER } from "@/components/plan/slots";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,13 +34,13 @@ type Picked = {
   each: number; // grams per unit
 };
 
-const SLOTS: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+const SLOTS = SLOT_ORDER;
 const RECENT = 6; // recent mixes offered to log again
 
 /** The meal a log most likely belongs to, by the clock. */
 export function slotNow(d: Date = new Date()): Slot {
   const h = d.getHours();
-  return h < 11 ? "breakfast" : h < 15 ? "lunch" : h < 21 ? "dinner" : "snack";
+  return h < 11 ? "breakfast" : h < 15 ? "lunch" : h < 21 ? "dinner" : "evening_snack";
 }
 
 function label(f: Pick<Picked, "description" | "brand">): string {

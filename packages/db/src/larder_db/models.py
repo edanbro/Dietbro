@@ -416,8 +416,8 @@ class Preferences(Base):
         ARRAY(SmallInteger), default=list, server_default=text("'{}'")
     )
     quick_minutes: Mapped[int] = mapped_column(SmallInteger, default=30, server_default="30")
-    # Which meals are planned: slot -> "plan" (the default), "own" (the user sorts it out; its
-    # share of the day is kept free) or "skip" (not eaten). larder_api.planning.meal_modes.
+    # Which meals are planned: slot -> "plan", "own" (the user sorts it out; its share of the day
+    # is kept free) or "skip" (not eaten). Slots not listed have larder_core.meals.default_mode.
     meal_modes: Mapped[dict[str, str]] = mapped_column(
         JSONB, default=dict, server_default=text("'{}'")
     )
@@ -521,7 +521,7 @@ class PlanMeal(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     plan_id: Mapped[int] = mapped_column(ForeignKey("meal_plans.id", ondelete="CASCADE"))
     day: Mapped[int] = mapped_column(SmallInteger)
-    slot: Mapped[str] = mapped_column(String(16))  # breakfast | lunch | dinner | snack
+    slot: Mapped[str] = mapped_column(String(16))  # larder_core.meals.Slot
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id"))
     portions: Mapped[int] = mapped_column(SmallInteger)
     kcal: Mapped[int] = mapped_column(Integer)

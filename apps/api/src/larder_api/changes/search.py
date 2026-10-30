@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from larder_api import planning
 from larder_api.changes.foods import tokens
 from larder_api.changes.scope import ChangeScope
-from larder_core.meals import SLOT_ORDER, Slot
+from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot
 from larder_db import models as db
 from larder_solver import Profile, Recipe
 from larder_solver.candidates import TastePrefs, allowed, preference
@@ -317,7 +317,7 @@ def rank_recipes(
             if words
             else (
                 unusual,
-                recipe.meal_types <= {Slot.SNACK},
+                recipe.meal_types <= SNACK_SLOTS,
                 minutes is None or minutes > SLOW_MINUTES,
             )
         )

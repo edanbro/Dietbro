@@ -50,7 +50,9 @@ CATEGORY: dict[Slot, str] = {
     Slot.BREAKFAST: "Breakfast",
     Slot.LUNCH: "Miscellaneous",  # lunch or dinner
     Slot.DINNER: "Miscellaneous",
+    Slot.MORNING_SNACK: "Snack",
     Slot.SNACK: "Snack",
+    Slot.EVENING_SNACK: "Snack",
 }
 
 

@@ -144,12 +144,14 @@ MealStyle = Literal["everyday", "mix", "adventurous"]
 class MealsIn(BaseModel):
     """Which meals the planner plans: "plan" it, "own" (the user sorts it out, and about its
     share of the day's targets is kept free for it) or "skip" (not eaten: the planned meals
-    cover the day). Snacks are planned (when they help) or skipped."""
+    cover the day). The same goes for up to three snacks; `snack` is the afternoon one."""
 
     breakfast: MealMode = "plan"
     lunch: MealMode = "plan"
     dinner: MealMode = "plan"
-    snack: Literal["plan", "skip"] = "plan"
+    morning_snack: MealMode = "skip"
+    snack: MealMode = "plan"
+    evening_snack: MealMode = "skip"
 
 
 class MealStyleIn(BaseModel):
@@ -1136,6 +1138,8 @@ class CalendarTimes(BaseModel):
     lunch: str = Field(default="13:00", pattern=_HHMM)
     dinner: str = Field(default="19:00", pattern=_HHMM)
     snack: str = Field(default="16:00", pattern=_HHMM)
+    morning_snack: str = Field(default="10:30", pattern=_HHMM)
+    evening_snack: str = Field(default="21:00", pattern=_HHMM)
 
 
 class CalendarOut(BaseModel):

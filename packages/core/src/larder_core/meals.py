@@ -12,12 +12,15 @@ class Slot(StrEnum):
     """A meal of the day, in eating order."""
 
     BREAKFAST = "breakfast"
+    MORNING_SNACK = "morning_snack"
     LUNCH = "lunch"
+    SNACK = "snack"  # the afternoon one, and the only one before there were three
     DINNER = "dinner"
-    SNACK = "snack"
+    EVENING_SNACK = "evening_snack"
 
 
 SLOT_ORDER: tuple[Slot, ...] = tuple(Slot)
+SNACK_SLOTS = frozenset({Slot.MORNING_SNACK, Slot.SNACK, Slot.EVENING_SNACK})
 
 # TheMealDB categories (plus our curated "Snack" and "Light meal") -> the slots a recipe can fill.
 # Sides are not a meal on their own; starters are light enough for lunch only.
@@ -36,8 +39,8 @@ CATEGORY_SLOTS: dict[str, frozenset[Slot]] = {
     "Vegetarian": _MAINS,
     "Starter": frozenset({Slot.LUNCH}),
     "Light meal": frozenset({Slot.LUNCH}),
-    "Dessert": frozenset({Slot.SNACK}),
-    "Snack": frozenset({Slot.SNACK}),
+    "Dessert": SNACK_SLOTS,
+    "Snack": SNACK_SLOTS,
     "Side": frozenset(),
 }
 
@@ -52,6 +55,14 @@ def meal_types(category: str | None) -> frozenset[Slot]:
 # MAX_MEAL_SHARE of the day on average (portion limits make more impractical).
 MEAL_SHARE: dict[Slot, float] = {Slot.BREAKFAST: 0.25, Slot.LUNCH: 0.35, Slot.DINNER: 0.40}
 MAX_MEAL_SHARE = 0.55
+# A snack's share of the day: snacks come to about a fifth of the day across national surveys, at
+# one or two a day (docs/research/normal-meals.md).
+SNACK_SHARE = 0.10
+
+
+def default_mode(slot: Slot) -> str:
+    """What happens to a meal the user hasn't chosen for: one snack a day, in the afternoon."""
+    return "skip" if slot in (Slot.MORNING_SNACK, Slot.EVENING_SNACK) else "plan"
 
 
 def meals_problem(modes: Mapping[Slot, str]) -> str | None:
@@ -70,15 +81,18 @@ def meals_problem(modes: Mapping[Slot, str]) -> str | None:
 
 
 def day_shares(modes: Mapping[Slot, str]) -> dict[Slot, float]:
-    """Each planned main meal as a fraction of the day they eat."""
+    """Each planned main meal as a fraction of the day they eat, less what their snacks take."""
     eaten = sum(MEAL_SHARE[s] for s in MEAL_SHARE if modes[s] != "skip")
-    return {s: MEAL_SHARE[s] / eaten for s in MEAL_SHARE if modes[s] == "plan"}
+    snacks = sum(modes.get(s, default_mode(s)) != "skip" for s in SNACK_SLOTS)
+    left = 1 - SNACK_SHARE * snacks
+    return {s: left * MEAL_SHARE[s] / eaten for s in MEAL_SHARE if modes[s] == "plan"}
 
 
 def own_shares(modes: Mapping[Slot, str]) -> dict[Slot, float]:
-    """Each meal the user sorts out themselves, as a fraction of the day they eat."""
+    """Each meal or snack the user sorts out themselves, as a fraction of the day they eat."""
     eaten = sum(MEAL_SHARE[s] for s in MEAL_SHARE if modes[s] != "skip")
-    return {s: MEAL_SHARE[s] / eaten for s in MEAL_SHARE if modes[s] == "own"}
+    shares = {s: MEAL_SHARE[s] / eaten for s in MEAL_SHARE if modes[s] == "own"}
+    return shares | {s: SNACK_SHARE for s in SNACK_SLOTS if modes.get(s) == "own"}
 
 
 # Data-quality limits for planning (docs/adr/0010-meal-slots-and-curated-recipes.md): a serving
@@ -105,6 +119,14 @@ class Override:
     note: str
 
 
+def _parse_slots(text: str) -> frozenset[Slot]:
+    """'none' or pipe-separated slot names; "snack" means any snack."""
+    if text.strip() == "none":
+        return frozenset()
+    slots = frozenset(Slot(s.strip()) for s in text.split("|"))
+    return slots | SNACK_SLOTS if Slot.SNACK in slots else slots
+
+
 @cache
 def load_overrides() -> dict[tuple[str, str], Override]:
     """Reviewed reclassifications (data/recipe_overrides.csv): source, source_id, slots
@@ -115,9 +137,7 @@ def load_overrides() -> dict[tuple[str, str], Override]:
             Override(
                 r["source"],
                 r["source_id"],
-                frozenset()
-                if r["slots"].strip() == "none"
-                else frozenset(Slot(s.strip()) for s in r["slots"].split("|")),
+                _parse_slots(r["slots"]),
                 r["note"],
             )
             for r in csv.DictReader(f)
@@ -157,7 +177,7 @@ def recipe_slots(
     if kcal_per_serving < MIN_BREAKFAST_KCAL:
         slots -= {Slot.BREAKFAST}
     if kcal_per_serving > MAX_SNACK_KCAL:
-        slots -= {Slot.SNACK}
+        slots -= SNACK_SLOTS
     return slots
 
 
@@ -167,12 +187,7 @@ def load_everyday() -> dict[tuple[str, str], frozenset[Slot]]:
     pipe-separated slot names), note."""
     path = resources.files("larder_core") / "data" / "everyday_recipes.csv"
     with path.open(encoding="utf-8") as f:
-        return {
-            (r["source"], r["source_id"]): frozenset()
-            if r["slots"].strip() == "none"
-            else frozenset(Slot(s.strip()) for s in r["slots"].split("|"))
-            for r in csv.DictReader(f)
-        }
+        return {(r["source"], r["source_id"]): _parse_slots(r["slots"]) for r in csv.DictReader(f)}
 
 
 def everyday_slots(source: str, source_id: str, slots: frozenset[Slot]) -> frozenset[Slot]:

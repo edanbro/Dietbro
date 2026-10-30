@@ -18,7 +18,7 @@ PRODID = "-//Mealwright//Meal plan//EN"
 @dataclass(frozen=True, slots=True)
 class CalendarMeal:
     on: date
-    slot: str  # breakfast | lunch | dinner | snack
+    slot: str  # larder_core.meals.Slot
     starts: time
     minutes: int
     title: str  # "Dinner: Irish stew"

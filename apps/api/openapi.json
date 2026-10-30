@@ -5298,6 +5298,18 @@
             "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
             "title": "Snack",
             "default": "16:00"
+          },
+          "morning_snack": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Morning Snack",
+            "default": "10:30"
+          },
+          "evening_snack": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Evening Snack",
+            "default": "21:00"
           }
         },
         "type": "object",
@@ -7252,19 +7264,40 @@
             "title": "Dinner",
             "default": "plan"
           },
+          "morning_snack": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "own",
+              "skip"
+            ],
+            "title": "Morning Snack",
+            "default": "skip"
+          },
           "snack": {
             "type": "string",
             "enum": [
               "plan",
+              "own",
               "skip"
             ],
             "title": "Snack",
             "default": "plan"
+          },
+          "evening_snack": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "own",
+              "skip"
+            ],
+            "title": "Evening Snack",
+            "default": "skip"
           }
         },
         "type": "object",
         "title": "MealsIn",
-        "description": "Which meals the planner plans: \"plan\" it, \"own\" (the user sorts it out, and about its\nshare of the day's targets is kept free for it) or \"skip\" (not eaten: the planned meals\ncover the day). Snacks are planned (when they help) or skipped."
+        "description": "Which meals the planner plans: \"plan\" it, \"own\" (the user sorts it out, and about its\nshare of the day's targets is kept free for it) or \"skip\" (not eaten: the planned meals\ncover the day). The same goes for up to three snacks; `snack` is the afternoon one."
       },
       "NutrientBands": {
         "properties": {
@@ -10590,9 +10623,11 @@
         "type": "string",
         "enum": [
           "breakfast",
+          "morning_snack",
           "lunch",
+          "snack",
           "dinner",
-          "snack"
+          "evening_snack"
         ],
         "title": "Slot",
         "description": "A meal of the day, in eating order."
