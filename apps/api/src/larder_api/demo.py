@@ -4,8 +4,8 @@ known, tidy starting point again every night: profile, goals, an Irish region an
 food expiring over the next days. No plan is made in advance: planning the week is the first
 thing a visitor tries.
 
-Guard rails: the demo account can't be deleted through the API, and its chat runs offline (the
-rule-based parser), so visitors never spend model credit.
+Guard rails: the demo account can't be deleted through the API, and it never calls a model (the
+offline matchers stand in), so visitors never spend model credit.
 """
 
 from datetime import UTC, date, datetime, timedelta

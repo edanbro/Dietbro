@@ -25,7 +25,7 @@ import {
 
 import { ApiError, unwrap, useApi } from "./browser";
 import type { components } from "./schema";
-import { ChatProblemError, isChatProblem } from "./sse";
+import { ChangeProblemError, isChangeProblem } from "./problems";
 
 export type Schemas = components["schemas"];
 export type Me = Schemas["Me"];
@@ -58,15 +58,12 @@ export type ShoppingExtra = Schemas["ShoppingExtraOut"];
 export type Recipe = Schemas["RecipeDetail"];
 export type OwnMeal = Schemas["OwnMealOut"];
 export type LoggedEntry = Schemas["MealLogOut"];
-export type ChatThread = Schemas["ThreadOut"];
-export type ChatMessage = Schemas["ChatMessageOut"];
-export type ChatAttachment = ChatMessage["attachments"][number];
-export type ChatOutcome = Schemas["OutcomeOut"];
+/** What a plan change did: results per change, changed meals, logged food, off-target days. */
+export type PlanOutcome = Schemas["OutcomeOut"];
 export type SlotChange = Schemas["SlotChange"];
-export type OfflineReason = NonNullable<ChatThread["offline_reason"]>;
 export type Eaten = Schemas["EatenOut"];
 export type PantryChange = Schemas["PantryChangeOut"];
-/** A typed plan change (skip, swap, off-plan food, craving), as the chat's executor takes it. */
+/** A typed plan change (skip, swap, off-plan food, craving), as the replan executor takes it. */
 export type PlanChange = Schemas["ReplanRequest"]["changes"][number];
 export type PlanTemplate = Schemas["TemplateOut"];
 export type DayMeal = Schemas["DayMealOut"];
@@ -123,9 +120,9 @@ export const keys = {
   recipe: (id: number) => ["recipes", id] as const,
   /** Under `recipes`: feedback on any recipe refreshes every list and the detail. */
   recipeList: (query: RecipeQuery) => ["recipes", "list", query] as const,
-  /** Every plan query (current plan, shopping lists): what a chat replan makes stale. */
+  /** Every plan query (current plan, shopping lists): what a replan makes stale. */
   plans: ["plans"] as const,
-  /** Under `plans`: marking meals eaten and chat logs change it. */
+  /** Under `plans`: marking meals eaten and logged food change it. */
   diary: (days: number) => ["plans", "diary", days] as const,
   /** Under `plans`: logging food (a plan change) adds to it. */
   recentFoods: ["plans", "recent-foods"] as const,
@@ -135,7 +132,6 @@ export const keys = {
   mealsOn: (date: string) => ["plans", "meals", date] as const,
   /** Under `plans`: tomorrow's prep follows plan changes (and refetches on the plan page). */
   prepAhead: ["plans", "ahead"] as const,
-  chatThread: ["chat", "thread"] as const,
   /** Mutations that change the current plan from the plan screen (one at a time). */
   planChange: ["plan-change"] as const,
 };
@@ -751,7 +747,7 @@ export type MealCell = { date: string; slot: Slot };
 
 /** What a plan conflict (409) means for the user; the plan is reloaded either way. */
 function conflictMessage(error: ApiError): string {
-  const code = error instanceof ChatProblemError ? error.code : null;
+  const code = error instanceof ChangeProblemError ? error.code : null;
   if (code === "busy") {
     return "Another change to your plan is still running. Try again in a moment.";
   }
@@ -812,14 +808,14 @@ export function useMarkEaten(planId: number) {
 }
 
 /**
- * Re-plan around typed changes without the chat. Each call gets its own client id (the API
+ * Re-plan around typed changes. Each call gets its own client id (the API
  * answers a resend with 409 duplicate); `today` and the local time come from this device.
  */
 export function useReplan() {
   const api = useApi();
   return useMutation({
     mutationKey: keys.planChange,
-    mutationFn: async (changes: PlanChange[]): Promise<ChatOutcome> => {
+    mutationFn: async (changes: PlanChange[]): Promise<PlanOutcome> => {
       const result = await api.POST("/plans/replan", {
         body: {
           changes,
@@ -828,9 +824,9 @@ export function useReplan() {
           local_time: localTime(),
         },
       });
-      // busy / duplicate / bad_today come as the chat's problems, with a code.
-      if (isChatProblem(result.error)) {
-        throw new ChatProblemError(result.response.status, result.error);
+      // busy / duplicate / bad_today come as problems with a code.
+      if (isChangeProblem(result.error)) {
+        throw new ChangeProblemError(result.response.status, result.error);
       }
       return unwrap(result);
     },
@@ -842,7 +838,7 @@ export type FoodLogItem = { food_id: number; grams: number };
 
 /**
  * Log food picked from search or a barcode, with exact grams (diary quick-add). The API runs it
- * through the same executor as the chat, so the rest of that day's plan rebalances.
+ * through the replan executor as food eaten off-plan, so the rest of that day's plan rebalances.
  */
 export function useLogFood() {
   const api = useApi();
@@ -856,7 +852,7 @@ export function useLogFood() {
       items: FoodLogItem[];
       slot: Slot | null;
       date?: string;
-    }): Promise<ChatOutcome> => {
+    }): Promise<PlanOutcome> => {
       const result = await api.POST("/diary/log", {
         body: {
           eaten_on: date,
@@ -867,8 +863,8 @@ export function useLogFood() {
           local_time: localTime(),
         },
       });
-      if (isChatProblem(result.error)) {
-        throw new ChatProblemError(result.response.status, result.error);
+      if (isChangeProblem(result.error)) {
+        throw new ChangeProblemError(result.response.status, result.error);
       }
       return unwrap(result);
     },

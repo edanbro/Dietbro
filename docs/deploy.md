@@ -43,7 +43,7 @@ Create a Redis database (region: eu-west-1) and copy the `rediss://` URL (TLS).
    - `REDIS_URL`: from step 2.
    - `CORS_ORIGINS`: `["https://YOUR-APP.vercel.app"]` (the web app's address; JSON list).
    - `CLERK_PUBLISHABLE_KEY`: from Clerk.
-   - Optional: `ANTHROPIC_API_KEY` (AI chat; per-user monthly cap $1 by default),
+   - Optional: `ANTHROPIC_API_KEY` (food matching; per-user monthly cap $1 by default),
      `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (reminders; `uv run larder-vapid`),
      `OFF_USER_AGENT` (barcode lookups), `DEMO_AUTH_SUBJECT` (step 5).
 3. Deploy. Migrations run when the container starts. Check `https://YOUR-API.onrender.com/readyz`.
@@ -70,7 +70,7 @@ the header is then ignored, since anyone can send it. A limit can be raised by n
 
 "Try the demo, no sign-up" on the landing page signs visitors into one shared account with a
 two-minute, one-use Clerk sign-in ticket (no public password). Its data resets every night at
-03:00 UTC, its chat runs offline (no model spend) and it can't be deleted.
+03:00 UTC, it never calls a model (no spend) and it can't be deleted.
 
 1. In Clerk, create a user (any email you control) and copy its **user id** (`user_...`).
 2. Set `DEMO_CLERK_USER_ID` (Vercel) and `DEMO_AUTH_SUBJECT` (Render) to that id, and

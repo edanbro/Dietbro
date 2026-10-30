@@ -1,6 +1,5 @@
-"""What applying plan changes did, in plain values: the API's executor returns this, the agent
-sees it as a tool result (JSON), the client gets it as an `outcome` event and the offline path
-turns it into a reply with `larder_llm.reply`. No database or solver types here."""
+"""What applying plan changes did, in plain values: the API's executor returns this and the
+client gets it as the replan response. No database or solver types here."""
 
 from datetime import date
 from typing import Literal

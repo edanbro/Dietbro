@@ -2,9 +2,9 @@
 changes from the plan screen (POST /plans/replan, larder_api.replans) and meals marked eaten
 (larder_api.eaten).
 
-A new plan is made around food already logged in its dates (active meal_logs, from the chat):
-a logged meal stays empty, every log counts on its day (with the replan day bands) and shows
-in the plan's `logged`, like a chat replan's version.
+A new plan is made around food already logged in its dates (active meal_logs): a logged meal
+stays empty, every log counts on its day (with the replan day bands) and shows in the plan's
+`logged`, like a replan's version.
 
 Every query is filtered by the signed-in user; other users' plans are 404s.
 """
@@ -24,7 +24,7 @@ from sqlalchemy.orm import selectinload
 
 from larder_api import eaten, planning, replans
 from larder_api.auth import CurrentUser
-from larder_api.chat import search
+from larder_api.changes import search
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.planning import plan_limiter
@@ -33,7 +33,7 @@ from larder_api.ratelimit import per_user
 from larder_api.routers.pantry import out as pantry_out
 from larder_api.schemas import (
     AheadOut,
-    ChatProblem,
+    ChangeProblem,
     DayMealOut,
     DayOut,
     EatenIn,
@@ -109,10 +109,10 @@ _EATEN_ERRORS: dict[int | str, dict[str, Any]] = {
     },
 }
 REPLAN_ERRORS: dict[int | str, dict[str, Any]] = {
-    status.HTTP_400_BAD_REQUEST: {"model": ChatProblem, "description": "bad_today"},
+    status.HTTP_400_BAD_REQUEST: {"model": ChangeProblem, "description": "bad_today"},
     status.HTTP_409_CONFLICT: {
-        "model": ChatProblem,
-        "description": "busy: a plan change (chat or plan screen) is running; duplicate: this "
+        "model": ChangeProblem,
+        "description": "busy: another plan change is running; duplicate: this "
         "client_id was already applied (reload the plan)",
     },
 }
@@ -138,8 +138,8 @@ def get_planner(settings: Annotated[Settings, Depends(get_settings)]) -> plannin
 
 
 def get_replan_planner(settings: Annotated[Settings, Depends(get_settings)]) -> planning.Planner:
-    """The planner chat replans use: the same one with a shorter budget per run (at most three
-    runs per request, docs/adr/0014-chat-replans.md)."""
+    """The planner replans use: the same one with a shorter budget per run (at most three runs
+    per request, docs/adr/0014-chat-replans.md)."""
     return partial(
         planning.run_planner,
         mode=settings.planner,
@@ -288,7 +288,7 @@ async def create_plan(
             repeat_notes.append(await planning.left_out_note(session, dropped))
     # Busy nights: quick dinners on the user's chosen weekdays (a repeated meal wins its cell).
     quick = planning.quick_choices(fresh, inputs, pool)
-    # Food already logged in these dates (chat) keeps its meal empty and counts on its day.
+    # Food already logged in these dates keeps its meal empty and counts on its day.
     logs = await planning.active_logs(session, user.id, start, fresh.days)
     currency = inputs.goals.currency
     # Release the DB connection while the solver runs.
@@ -345,7 +345,7 @@ async def create_plan(
     stats.total_ms = round((time.perf_counter() - started) * 1000)
     stats.logged = planning.logged_by_day(logs, start, problem.days)
 
-    # One save at a time per user (chat replans take the same lock): the version and the
+    # One save at a time per user (replans take the same lock): the version and the
     # parent are read under it.
     await planning.lock_user_plans(session, user.id)
     latest = await planning.plan_for(session, user.id, start)
@@ -411,9 +411,9 @@ async def replan_plan(
     settings: Annotated[Settings, Depends(get_settings)],
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> OutcomeOut:
-    """Apply plan changes (skip, swap, craving, food eaten off-plan) without the chat: the
-    chat's executor, so the same rules, results and new plan version. Server-Timing has the
-    replan's wall time."""
+    """Apply plan changes (skip, swap, craving, food eaten off-plan) through the executor
+    (larder_api.changes.replan): a new plan version. Server-Timing has the replan's wall
+    time."""
     timed = await replans.run(
         session,
         user.id,
@@ -620,7 +620,7 @@ async def undo_plan_change(plan_id: int, user: CurrentUser, session: Session) ->
             status.HTTP_409_CONFLICT,
             [
                 "Food was logged or a meal marked eaten since that change, so it can't be "
-                "undone. Ask the chat to change it back instead."
+                "undone. Swap the meal back from its menu instead."
             ],
         )
     restored = MealPlan(

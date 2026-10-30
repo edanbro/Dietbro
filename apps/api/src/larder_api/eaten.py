@@ -11,7 +11,7 @@ plan lock (`planning.lock_user_plans`, which replans and POST /plans take too):
   kind="eaten", source "app", with the planned meal's macros (not an estimate) and recipe, is
   linked to the plan; the meal row's `status` becomes "eaten" in place (no new version: the
   meal and the day's totals are unchanged). Replans count the log as fixed intake and keep the
-  slot empty (chat/replan.py), carrying the eaten row over.
+  slot empty (changes/replan.py), carrying the eaten row over.
 - Pantry: per food, the planner's grams per portion (`planning.portion_grams`: staples and
   unresolved lines take nothing) x the row's portions are taken from the user's pantry items
   of that food whose quantity converts to grams (larder_core.units/quantities; others are
@@ -266,7 +266,7 @@ async def give_back_logs(
     voided: Iterable[db.MealLog],
     latest: db.MealPlan | None,
 ) -> None:
-    """Eaten logs a replan voided (the user reported that meal otherwise in the chat): their
+    """Eaten logs a replan voided (the user reported that meal otherwise): their
     pantry food goes back, and the latest plan's row is no longer shown eaten. The caller sets
     `voided_at` and commits."""
     for log in voided:

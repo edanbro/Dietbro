@@ -37,8 +37,6 @@ EXPORTED: dict[str, Rows] = {
     "pantry_items": lambda e: e["pantry"],
     "shopping_extras": lambda e: e["shopping_extras"],
     "meal_plans": lambda e: e["plans"],
-    "chat_threads": lambda e: e["threads"],
-    "chat_messages": lambda e: [m for t in e["threads"] for m in t["messages"]],
     "cravings": lambda e: e["cravings"],
     "meal_logs": lambda e: e["meal_logs"],
     "llm_calls": lambda e: e["llm_calls"],
@@ -81,7 +79,6 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         currency="GBP",
         stats={},
     )
-    thread = db.ChatThread(user_id=uid)
     session.add_all(
         [
             db.Goals(
@@ -104,7 +101,6 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
             db.Allergies(user_id=uid, allergens=["peanuts"]),
             recipe,
             plan,
-            thread,
         ]
     )
     await session.flush()
@@ -120,14 +116,6 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         carbs_g=40,
     )
     line = db.ShoppingItem(plan_id=plan.id, food_id=ONION, grams=300, cost_minor=30)
-    message = db.ChatMessage(
-        thread_id=thread.id,
-        user_id=uid,
-        role="user",
-        client_id=uuid.uuid4(),
-        text="had a pizza",
-        api_messages=[{"role": "user", "content": "had a pizza"}],
-    )
     pantry = db.PantryItem(user_id=uid, food_id=ONION, grams=500, quantity=500, unit="g")
     extra = db.ShoppingExtra(user_id=uid, name="bin bags", checked=False)
     push = db.PushSubscription(
@@ -136,13 +124,12 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         p256dh="p" * 20,
         auth="a" * 16,
     )
-    session.add_all([meal, line, message, pantry, extra, push])
+    session.add_all([meal, line, pantry, extra, push])
     await session.flush()
     craving = db.Craving(
         user_id=uid,
-        message_id=message.id,
+        client_id=uuid.uuid4(),
         intent="ate_off_plan",
-        raw_text="had a pizza",
         parsed={"intent": "ate_off_plan"},
         change_key="k",
         status="applied",
@@ -159,14 +146,13 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         protein_g=30,
         fat_g=30,
         carbs_g=90,
-        source="chat",
+        source="app",
         craving_id=craving.id,
         plan_id=plan.id,
     )
     call = db.LlmCall(
         user_id=uid,
-        thread_id=thread.id,
-        purpose="chat",
+        purpose="choose_food",
         model="claude-sonnet-5-5",
         input_tokens=10,
         output_tokens=5,
@@ -217,8 +203,6 @@ async def seed(session: AsyncSession, sub: str) -> dict[str, int]:
         "plan_templates": template.id,
         "recipe_notes": uid,
         "meal_plans": plan.id,
-        "chat_threads": thread.id,
-        "chat_messages": message.id,
         "cravings": craving.id,
         "meal_logs": log.id,
         "llm_calls": call.id,
@@ -254,9 +238,7 @@ async def test_export_covers_every_table_and_delete_removes_only_that_user(
         if "id" in USER_TABLES[table].columns:
             assert mine[table] in ids, table
             assert theirs[table] not in ids, table
-    assert export["threads"][0]["messages"][0]["api_messages"] == [
-        {"role": "user", "content": "had a pizza"}
-    ]
+    assert export["meal_logs"][0]["description"] == "pizza"
     assert export["recipes"][0]["ingredients"][0]["raw_name"] == "onion"
     assert export["plans"][0]["meals"][0]["recipe_id"] == mine["recipes"]
     assert export["receipts"][0]["lines"][0]["raw_text"] == "ONIONS 1KG 0.95"

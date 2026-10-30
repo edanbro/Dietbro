@@ -9,15 +9,13 @@ import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from fastapi import Request
 from jwt.algorithms import RSAAlgorithm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_api import planning
 from larder_api.auth import JWKSCache, TokenVerifier, get_verifier
-from larder_api.chat.models import get_models
-from larder_api.chat.tasks import ChatTurns, get_chat_turns
+from larder_api.changes.models import get_models
 from larder_api.clock import get_clock
 from larder_api.db import get_sessionmaker
 from larder_api.main import app
@@ -37,9 +35,9 @@ from larder_db.models import (
 )
 from larder_solver import greedy
 
-# Test helpers next to this file (safety.py, chat_support.py) are imported by name.
+# Test helpers next to this file (safety.py, app_support.py) are imported by name.
 sys.path.insert(0, str(Path(__file__).parent))
-from chat_support import CHAT_PLANNER, ChatEnv
+from app_support import TEST_PLANNER, AppEnv
 from safety import assert_user_safe
 
 ISSUER = "https://test.clerk.accounts.dev"
@@ -149,7 +147,7 @@ async def foods(db_engine: AsyncEngine) -> None:
         await session.commit()
 
 
-# --- a small catalogue for planning and chat tests --------------------------------------------
+# --- a small catalogue for planning tests --------------------------------------------
 # Real FDC ids with curated aliases, so every recipe line is an exact match (reviewed tags).
 RICE, BROCCOLI, CHICKEN, PEANUTS, APPLE, LENTILS = 168877, 321900, 171447, 2515376, 171688, 172420
 OATS, CHILLI, CURRY_POWDER, PASTA, CHEESE = 173904, 170106, 170924, 169736, 328637
@@ -476,33 +474,24 @@ def add_recipe(db_engine: AsyncEngine) -> AddRecipe:
     return add
 
 
-# --- chat ---------------------------------------------------------------------------------------
+# --- the app's seams ----------------------------------------------------------------------------
 
 
 @pytest.fixture
-async def chat(api: httpx.AsyncClient, db_engine: AsyncEngine) -> AsyncIterator[ChatEnv]:
-    """The chat API with its seams pinned for one test (chat_support.ChatEnv). Afterwards every
-    user in the database must still be safe (DESIGN §9.6): nothing planned or owned conflicts
-    with their allergies, diet or avoided foods."""
-    env = ChatEnv(turns=ChatTurns(deadline_s=30), auth=auth_header)
-
-    def chat_turns(request: Request) -> ChatTurns:
-        request.app.state.chat_turns = env.turns  # the test's own (it may replace them)
-        return get_chat_turns(request)
-
+async def env(api: httpx.AsyncClient, db_engine: AsyncEngine) -> AsyncIterator[AppEnv]:
+    """The app with its seams pinned for one test (app_support.AppEnv). Afterwards every user
+    in the database must still be safe (DESIGN §9.6): nothing planned or owned conflicts with
+    their allergies, diet or avoided foods."""
+    env = AppEnv(auth=auth_header)
     overrides: dict[Callable[..., Any], Callable[..., Any]] = {
         get_models: lambda: env.models,
         get_clock: lambda: env.clock,
         get_settings: lambda: env.settings,
         get_catalog_cache: lambda: env.cache,
-        get_replan_planner: lambda: CHAT_PLANNER,
-        get_chat_turns: chat_turns,
+        get_replan_planner: lambda: TEST_PLANNER,
     }
     app.dependency_overrides.update(overrides)
-    await env.turns.open()
     yield env
-    await env.turns.close()
-    app.state.chat_turns = None
     for dependency in overrides:
         app.dependency_overrides.pop(dependency, None)
     async with make_sessionmaker(db_engine)() as session:

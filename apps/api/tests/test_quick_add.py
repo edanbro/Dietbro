@@ -1,6 +1,6 @@
 """Diary quick-add (POST /diary/log): food the user picked, logged with exact amounts through the
 plan-change executor. This week's plan runs Monday 12 to Sunday 18 Oct 2026; it is Wednesday
-14 Oct, 12:00 UTC (chat_support)."""
+14 Oct, 12:00 UTC (app_support)."""
 
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from typing import Any
 
 import httpx
-from chat_support import ChatEnv
+from app_support import AppEnv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -43,7 +43,7 @@ async def logs(engine: AsyncEngine, user_id: int) -> list[db.MealLog]:
 
 async def test_logs_exact_food_and_rebalances_the_day(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -53,7 +53,7 @@ async def test_logs_exact_food_and_rebalances_the_day(
     plan_id = await make_plan(user_id, MON)
 
     response = await api.post(
-        "/diary/log", json=body((BROCCOLI, 200), (RICE, 100)), headers=chat.auth("user_a")
+        "/diary/log", json=body((BROCCOLI, 200), (RICE, 100)), headers=env.auth("user_a")
     )
 
     assert response.status_code == 200, response.text
@@ -68,26 +68,26 @@ async def test_logs_exact_food_and_rebalances_the_day(
     assert [(i["food_id"], i["grams"]) for i in log.items] == [(BROCCOLI, 200), (RICE, 100)]
     assert log.description == "Broccoli, rice"
 
-    diary = await api.get("/diary", headers=chat.auth("user_a"))
+    diary = await api.get("/diary", headers=env.auth("user_a"))
     today = next(d for d in diary.json()["days"] if d["date"] == WED.isoformat())
     assert today["eaten"]["kcal"] == 433
 
 
 async def test_unknown_food_is_refused(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     response = await api.post(
-        "/diary/log", json=body((BROCCOLI, 100), (999_999_999, 50)), headers=chat.auth("user_a")
+        "/diary/log", json=body((BROCCOLI, 100), (999_999_999, 50)), headers=env.auth("user_a")
     )
     assert response.status_code == 404
 
 
 async def test_amounts_must_be_positive(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
-    response = await api.post("/diary/log", json=body((BROCCOLI, 0)), headers=chat.auth("user_a"))
+    response = await api.post("/diary/log", json=body((BROCCOLI, 0)), headers=env.auth("user_a"))
     assert response.status_code == 422
 
 
@@ -98,7 +98,7 @@ async def test_needs_sign_in(api: httpx.AsyncClient) -> None:
 
 async def test_food_logged_by_mistake_can_be_removed(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -106,7 +106,7 @@ async def test_food_logged_by_mistake_can_be_removed(
 ) -> None:
     user_id = await new_user("user_a")
     await make_plan(user_id, MON)
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     logged = await api.post("/diary/log", json=body((RICE, 100)), headers=auth)
     assert logged.status_code == 200, logged.text
     past = await api.post("/diary/log", json=body((RICE, 50), on=MON), headers=auth)
@@ -118,7 +118,7 @@ async def test_food_logged_by_mistake_can_be_removed(
 
     removed = await api.delete(f"/diary/logs/{tonight['id']}", headers=auth)
     again = await api.delete(f"/diary/logs/{tonight['id']}", headers=auth)
-    gone_past = await api.delete(f"/diary/logs/{monday['id']}", headers=chat.auth("user_b"))
+    gone_past = await api.delete(f"/diary/logs/{monday['id']}", headers=env.auth("user_b"))
     past_removed = await api.delete(f"/diary/logs/{monday['id']}", headers=auth)
 
     assert removed.status_code == 200, removed.text

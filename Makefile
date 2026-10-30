@@ -1,4 +1,4 @@
-.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker llm-smoke up down visual visual-update
+.PHONY: install check check-py check-web gen-api migrate seed foods data bench bench-replan evals receipt-eval worker up down visual visual-update
 
 install: ## Install Python + web deps and git hooks
 	uv sync
@@ -58,9 +58,6 @@ receipt-eval: ## Receipt line-item accuracy, pasted text and photos (OCR), on th
 
 worker: ## Run the background worker locally (receipts; needs Redis and Postgres)
 	uv run arq larder_worker.main.WorkerSettings
-
-llm-smoke: ## Real chat turns against Claude (needs ANTHROPIC_API_KEY and a seeded DB; costs cents)
-	uv run larder-llm-smoke
 
 up: ## Build and start the full stack (web :3000, api :8000)
 	docker compose up --build

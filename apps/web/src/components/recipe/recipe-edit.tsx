@@ -28,7 +28,7 @@ export function draftOf(recipe: Recipe): ImportDraft {
 }
 
 /**
- * Change a recipe. The user's own (imported, typed in, drafted by the chat) changes in place;
+ * Change a recipe. The user's own (imported or typed in) changes in place;
  * a catalogue recipe is saved as their own copy, so nobody else's changes.
  */
 export function RecipeEdit({ id }: { id: number }) {

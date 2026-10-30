@@ -5,7 +5,6 @@ import { cn } from "cn";
 import {
   BookOpenIcon,
   CalendarDaysIcon,
-  MessageCircleIcon,
   NotebookPenIcon,
   RefrigeratorIcon,
   ShoppingCartIcon,
@@ -21,24 +20,26 @@ import { buttonVariants } from "@/components/ui/button";
 import { useMe, useOfflineSync } from "@/lib/api/hooks";
 import { Logo } from "@/components/logo";
 
-const NAV = [
+/** The everyday loop: plan, shop, cook, keep the kitchen and log what was eaten. `also`: pages
+ * reached from a tab that keep it marked (the week in review opens from the diary). */
+const NAV: { href: string; label: string; icon: typeof UserIcon; also?: string[] }[] = [
   { href: "/plan", label: "Plan", icon: CalendarDaysIcon },
   { href: "/plan/shopping", label: "Shopping", icon: ShoppingCartIcon },
   { href: "/recipes", label: "Recipes", icon: BookOpenIcon },
-  { href: "/chat", label: "Chat", icon: MessageCircleIcon },
   { href: "/pantry", label: "Pantry", icon: RefrigeratorIcon },
-  { href: "/profile", label: "Profile", icon: UserIcon },
+  { href: "/diary", label: "Diary", icon: NotebookPenIcon, also: ["/recap"] },
 ];
 
 /** The tab for a path: the longest matching href ("/plan/shopping" is Shopping, not Plan). */
 export function activeTab(pathname: string): string | undefined {
-  return NAV.map((n) => n.href)
-    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+  const under = (base: string) => pathname === base || pathname.startsWith(`${base}/`);
+  return NAV.filter((n) => under(n.href) || n.also?.some(under))
+    .map((n) => n.href)
     .sort((a, b) => b.length - a.length)[0];
 }
 
-/** Desktop only: places that don't fit the phone's bottom bar. */
-const MORE = [{ href: "/diary", label: "Diary", icon: NotebookPenIcon }];
+/** Settings, set up once and rarely visited: the header (phone) and the rail's foot (desktop). */
+const PROFILE = { href: "/profile", label: "Profile", icon: UserIcon };
 
 /** The app's mark and name. */
 function Brand() {
@@ -49,17 +50,17 @@ function Brand() {
   );
 }
 
-/** Desktop side rail: the same places as the bottom bar, plus the diary and the theme. */
+/** Desktop side rail: the same places as the bottom bar, then the profile and the theme. */
 function Rail({ pathname, expiring }: { pathname: string; expiring: number }) {
   const current = activeTab(pathname);
-  const links = [...NAV, ...MORE];
+  const links = [...NAV, PROFILE];
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r bg-sidebar px-4 py-5 text-sidebar-foreground lg:flex print:hidden">
       <Brand />
       <nav aria-label="Sidebar" className="mt-8 flex-1">
         <ul className="flex flex-col gap-1">
           {links.map(({ href, label, icon: Icon }) => {
-            const active = current === href || pathname === href;
+            const active = href === PROFILE.href ? pathname.startsWith(href) : current === href;
             return (
               <li key={href}>
                 <Link
@@ -132,17 +133,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden print:hidden">
         <Brand />
         <div className="flex items-center gap-1">
-          {/* The diary isn't one of the tabs: a tap away from everywhere on a phone. */}
+          {/* Settings aren't one of the tabs: a tap away from everywhere on a phone. */}
           <Link
-            href="/diary"
-            aria-label="Diary"
-            aria-current={pathname.startsWith("/diary") ? "page" : undefined}
+            href="/profile"
+            aria-label="Profile"
+            aria-current={pathname.startsWith("/profile") ? "page" : undefined}
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon" }),
-              pathname.startsWith("/diary") && "text-primary",
+              pathname.startsWith("/profile") && "text-primary",
             )}
           >
-            <NotebookPenIcon aria-hidden />
+            <UserIcon aria-hidden />
           </Link>
           <UserButton />
         </div>

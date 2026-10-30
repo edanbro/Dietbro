@@ -13,9 +13,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_api import planning
-from larder_api.chat.handlers import guard_recipe
-from larder_api.chat.scope import ChatScope, Models
-from larder_api.chat.search import search_recipes
+from larder_api.changes.scope import ChangeScope, Models
+from larder_api.changes.search import guard_recipe, search_recipes
 from larder_api.main import app
 from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_api.settings import Settings
@@ -66,24 +65,20 @@ async def secret(
     return a, b, recipe
 
 
-def scope(engine: AsyncEngine, user_id: int) -> ChatScope:
+def scope(engine: AsyncEngine, user_id: int) -> ChangeScope:
     async def nothing(_: object) -> None:
         return None
 
-    return ChatScope(
+    return ChangeScope(
         user_id=user_id,
         today=date(2026, 10, 14),
         local_time=time(12),
         now=datetime(2026, 10, 14, 12, tzinfo=UTC),
-        thread_id=0,
-        message_id=0,
-        raw_text="",
         sessionmaker=make_sessionmaker(engine),
         catalog=planning.CatalogCache(),
         planner=partial(planning.run_planner, mode="greedy", time_limit_ms=2000, workers=1),
         settings=Settings(),
         models=Models(),
-        emit=nothing,
         log_call=nothing,
     )
 

@@ -4,9 +4,9 @@ import { cn } from "cn";
 import { CalendarCheckIcon, TriangleAlertIcon, Undo2Icon, XIcon } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 
-import { changeText, dayName, loggedText, RESULT } from "@/components/chat/outcome-card";
+import { changeText, dayName, loggedText, RESULT } from "@/components/plan/outcome-text";
 import { Button } from "@/components/ui/button";
-import type { ChatOutcome, SlotChange } from "@/lib/api/hooks";
+import type { PlanOutcome, SlotChange } from "@/lib/api/hooks";
 import { formatBand, formatNumber } from "@/lib/format";
 
 function capitalize(s: string): string {
@@ -48,7 +48,7 @@ export function WhatChanged({
   onUndo,
   undoing = false,
 }: {
-  outcome: ChatOutcome;
+  outcome: PlanOutcome;
   today: string;
   onDismiss: () => void;
   /** Shown when the change saved a version of an existing plan. */

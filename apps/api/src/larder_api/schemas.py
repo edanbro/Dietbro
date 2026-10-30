@@ -447,7 +447,7 @@ class AheadOut(BaseModel):
 
 
 class MealLogOut(Logged):
-    """Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten
+    """Food eaten off-plan, a planned meal skipped (eating elsewhere), or a meal marked eaten
     that this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =
     its meals + these. A meal marked eaten that the version still plans shows as that meal
     (`MealOut.status` eaten), not here."""
@@ -932,37 +932,18 @@ class RecipeListOut(BaseModel):
     currency: Currency | None = None  # of the items' costs
 
 
-# --- chat (M4) --------------------------------------------------------------------------------
+# --- plan changes (M4, M5) -------------------------------------------------------------------
 
 
-class ChatMessageIn(BaseModel):
-    text: str = Field(min_length=1, max_length=1000)
-    client_id: UUID = Field(description="the client's id for this message: resending is safe")
-    thread_id: int | None = Field(default=None, description="omit to continue the latest thread")
-    today: date = Field(description="the user's local date (dates like 'tonight' resolve to it)")
-    local_time: time | None = Field(
-        default=None,
-        description="the user's local time: today's meals whose time has passed count as eaten",
-    )
-
-
-class ChatProblem(BaseModel):
-    """Body of the chat gate's 400/404/409/429 answers."""
+class ChangeProblem(BaseModel):
+    """Body of a refused replan (400 bad_today, 409 busy / duplicate)."""
 
     detail: list[str]
-    code: Literal["bad_today", "thread_not_found", "busy", "duplicate", "daily_limit"]
-    retry_at: datetime | None = None  # daily_limit: when sending works again
-    message_id: int | None = None  # busy / duplicate: the message being (or already) answered
-
-
-class RecipeCreatedOut(BaseModel):
-    type: Literal["recipe"] = "recipe"
-    recipe_id: int
-    name: str
+    code: Literal["bad_today", "busy", "duplicate"]
 
 
 class OutcomeOut(ReplanOutcome):
-    """What one plan change request did (also sent live as the `outcome` event)."""
+    """What one plan change request did."""
 
     type: Literal["outcome"] = "outcome"
 
@@ -978,8 +959,8 @@ class RecentFoodItemOut(BaseModel):
 
 
 class RecentFoodOut(BaseModel):
-    """Food logged lately (diary quick-add or the chat), to log again: each mix of foods and
-    amounts once, as the diary named it."""
+    """Food logged lately (diary quick-add), to log again: each mix of foods and amounts once,
+    as the diary named it."""
 
     description: str
     kcal: int
@@ -988,8 +969,8 @@ class RecentFoodOut(BaseModel):
 
 
 class FoodLogRequest(BaseModel):
-    """Food the user picked themselves (diary quick-add). Logged like food told to the chat,
-    with exact amounts, so the rest of that day's plan rebalances around it."""
+    """Food the user picked themselves (diary quick-add). Logged as food eaten off-plan, with
+    exact amounts, so the rest of that day's plan rebalances around it."""
 
     eaten_on: date = Field(description="the day it was eaten (the user's local date)")
     slot: Slot | None = Field(default=None, description="default: the next meal by local time")
@@ -1000,8 +981,8 @@ class FoodLogRequest(BaseModel):
 
 
 class ReplanRequest(BaseModel):
-    """Plan changes made from the plan screen (no chat): the same typed changes the chat's
-    model and offline parser produce, applied by the same executor."""
+    """Typed plan changes (larder_llm.schemas) from the plan screen or the diary, applied by
+    the executor (larder_api.changes.replan)."""
 
     changes: list[Change] = Field(min_length=1, max_length=MAX_CHANGES)
     client_id: UUID = Field(description="the client's id for this request: resending is safe")
@@ -1010,99 +991,6 @@ class ReplanRequest(BaseModel):
         default=None,
         description="the user's local time: today's meals whose time has passed count as eaten",
     )
-
-
-Attachment = Annotated[OutcomeOut | RecipeCreatedOut, Field(discriminator="type")]
-OfflineReason = Literal["no_key", "budget", "model_error"]
-
-
-class ChatMessageOut(BaseModel):
-    id: int
-    role: Literal["user", "assistant"]
-    text: str
-    created_at: datetime
-    plan_id: int | None = Field(description="last plan version this turn created")
-    mode: Literal["llm", "offline"] | None
-    offline_reason: OfflineReason | None
-    attachments: list[Attachment]
-    suggestions: list[str] = Field(description="tap-to-send replies")
-
-
-class PendingTurn(BaseModel):
-    message_id: int
-    started_at: datetime
-
-
-class ThreadOut(BaseModel):
-    thread_id: int | None
-    messages: list[ChatMessageOut] = Field(description="oldest first")
-    has_more: bool = Field(description="older messages exist (page with before_id)")
-    pending: PendingTurn | None = Field(description="a reply is still being worked on")
-    llm_available: bool = Field(description="false: replies come from the offline parser")
-    offline_reason: OfflineReason | None
-    llm_resets_at: datetime | None = Field(description="when model replies come back (budget)")
-    messages_today: int
-    daily_limit: int
-
-
-# Server-sent events of POST /chat/messages, in order: thread, then any of status / text /
-# text_reset / outcome / recipe, then exactly one of done / error. Each is one `data:` line.
-
-
-class ThreadEvent(BaseModel):
-    type: Literal["thread"] = "thread"
-    thread_id: int
-    message_id: int  # the user's message
-    mode: Literal["llm", "offline"]
-    offline_reason: OfflineReason | None
-
-
-class StatusEvent(BaseModel):
-    type: Literal["status"] = "status"
-    text: str  # "Looking for spicy dinners…"
-
-
-class TextEvent(BaseModel):
-    type: Literal["text"] = "text"
-    delta: str
-
-
-class TextResetEvent(BaseModel):
-    """Discard the reply text streamed so far (a declined or dropped model response)."""
-
-    type: Literal["text_reset"] = "text_reset"
-
-
-class OutcomeEvent(OutcomeOut):
-    pass
-
-
-class RecipeEvent(RecipeCreatedOut):
-    pass
-
-
-class DoneEvent(BaseModel):
-    type: Literal["done"] = "done"
-    message: ChatMessageOut  # the assistant's message as stored (replaces streamed text)
-    messages_today: int
-
-
-class ErrorEvent(BaseModel):
-    type: Literal["error"] = "error"
-    message: str
-
-
-ChatEvent = Annotated[
-    ThreadEvent
-    | StatusEvent
-    | TextEvent
-    | TextResetEvent
-    | OutcomeEvent
-    | RecipeEvent
-    | DoneEvent
-    | ErrorEvent,
-    Field(discriminator="type"),
-]
 
 
 class ShareIn(BaseModel):

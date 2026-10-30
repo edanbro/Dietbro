@@ -101,7 +101,7 @@ function MealLink({
             </span>
           ) : null}
           {meal.locked ? (
-            // Pinned by the user through the chat (a craving or swap): replans keep it.
+            // Pinned by the user (a swap they picked): replans keep it.
             <span className="ml-1 flex items-center gap-0.5 font-medium text-foreground">
               <PinIcon aria-hidden className="size-3" />
               Pinned

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ChatOutcome, Eaten, Plan } from "@/lib/api/hooks";
+import type { PlanOutcome, Eaten, Plan } from "@/lib/api/hooks";
 import { deferred, json, mockApi, renderWithClient, type Routes } from "@/test/api";
 import { makePlan, ME } from "@/test/fixtures";
 import { resetNavigation } from "@/test/navigation";
@@ -267,7 +267,7 @@ describe("meal options", () => {
 });
 
 describe("replans from the plan", () => {
-  const outcome: ChatOutcome = {
+  const outcome: PlanOutcome = {
     type: "outcome",
     plan_id: 8,
     version: 2,

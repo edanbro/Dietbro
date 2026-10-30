@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import {
   CalendarDaysIcon,
   ChefHatIcon,
-  MessageCircleIcon,
+  RefreshCwIcon,
   RefrigeratorIcon,
   ScanBarcodeIcon,
   ShieldCheckIcon,
@@ -33,9 +33,9 @@ const FEATURES = [
     text: "Calories, protein, fat, carbs and a weekly budget, priced from your own receipts.",
   },
   {
-    icon: MessageCircleIcon,
+    icon: RefreshCwIcon,
     title: "Re-plans when life happens",
-    text: "Skipped dinner or had pizza for lunch? Say so and the rest of the week adjusts.",
+    text: "Skipping dinner, or had pizza for lunch? Tap the meal and the rest of the week adjusts.",
   },
   {
     icon: ScanBarcodeIcon,

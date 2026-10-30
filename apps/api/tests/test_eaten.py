@@ -1,6 +1,6 @@
 """Meals marked eaten (POST/DELETE /plans/{id}/meals/eaten) and plan changes from the plan
 screen (POST /plans/replan), through the API. The plan runs Monday 12 to Sunday 18 Oct 2026;
-it is Wednesday 14 Oct, 12:00 UTC (chat_support)."""
+it is Wednesday 14 Oct, 12:00 UTC (app_support)."""
 
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
@@ -9,13 +9,13 @@ from typing import Any
 
 import httpx
 import pytest
-from chat_support import ChatEnv
+from app_support import AppEnv
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.orm import selectinload
 
 from larder_api import planning
-from larder_api.chat import limits
+from larder_api.changes import limits
 from larder_db import models as db
 from larder_db.engine import make_sessionmaker
 
@@ -112,21 +112,21 @@ def mark_body(on: date, slot: str, today: date = WED) -> dict[str, str]:
 
 
 async def mark(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, on: date, slot: str, **kw: Any
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, on: date, slot: str, **kw: Any
 ) -> httpx.Response:
     user = kw.pop("user", "user_a")
     return await api.post(
-        f"/plans/{plan_id}/meals/eaten", json=mark_body(on, slot, **kw), headers=chat.auth(user)
+        f"/plans/{plan_id}/meals/eaten", json=mark_body(on, slot, **kw), headers=env.auth(user)
     )
 
 
 async def unmark(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, on: date, slot: str, user: str = "user_a"
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, on: date, slot: str, user: str = "user_a"
 ) -> httpx.Response:
     return await api.delete(
         f"/plans/{plan_id}/meals/eaten",
         params={"date": on.isoformat(), "slot": slot},
-        headers=chat.auth(user),
+        headers=env.auth(user),
     )
 
 
@@ -134,7 +134,7 @@ async def unmark(
 
 
 async def test_marking_a_meal_eaten_logs_it_and_takes_its_food_from_the_pantry(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     meal = cell(v1, TUE, "lunch")
@@ -142,7 +142,7 @@ async def test_marking_a_meal_eaten_logs_it_and_takes_its_food_from_the_pantry(
     sooner = await add_pantry(db_engine, v1.user_id, food, 10, 10, "g", WED)
     later = await add_pantry(db_engine, v1.user_id, food, 5000, 5, "kg")
 
-    response = await mark(api, chat, plan_id, TUE, "lunch")
+    response = await mark(api, env, plan_id, TUE, "lunch")
 
     assert response.status_code == 200, response.text
     out = response.json()
@@ -169,7 +169,7 @@ async def test_marking_a_meal_eaten_logs_it_and_takes_its_food_from_the_pantry(
     assert [t["pantry_item_id"] for t in log.pantry_taken] == [sooner, later]
     # No new version; the plan shows the meal eaten, its day's totals unchanged.
     assert await count(db_engine, db.MealPlan) == 1
-    plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
+    plan = (await api.get("/plans/current", headers=env.auth("user_a"))).json()
     tuesday = plan["days"][1]
     assert {m["slot"]: m["status"] for m in tuesday["meals"]}["lunch"] == "eaten"
     assert tuesday["logged"] == []
@@ -179,15 +179,15 @@ async def test_marking_a_meal_eaten_logs_it_and_takes_its_food_from_the_pantry(
 
 
 async def test_marking_twice_changes_nothing(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     food, _ = main_food(cell(v1, WED, "breakfast"))
     item = await add_pantry(db_engine, v1.user_id, food, 5000, 5000, "g")
-    first = (await mark(api, chat, plan_id, WED, "breakfast")).json()
+    first = (await mark(api, env, plan_id, WED, "breakfast")).json()
     after_first = await pantry(db_engine)
 
-    again = await mark(api, chat, plan_id, WED, "breakfast")
+    again = await mark(api, env, plan_id, WED, "breakfast")
 
     assert again.status_code == 200
     assert (again.json()["status"], again.json()["changed"]) == ("eaten", False)
@@ -198,7 +198,7 @@ async def test_marking_twice_changes_nothing(
 
 
 async def test_marking_eaten_replaces_an_earlier_log_for_that_meal(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     async with make_sessionmaker(db_engine)() as session:
@@ -213,12 +213,12 @@ async def test_marking_eaten_replaces_an_earlier_log_for_that_meal(
                 protein_g=0,
                 fat_g=0,
                 carbs_g=0,
-                source="chat",
+                source="app",
             )
         )
         await session.commit()
 
-    assert (await mark(api, chat, plan_id, TUE, "dinner")).status_code == 200
+    assert (await mark(api, env, plan_id, TUE, "dinner")).status_code == 200
 
     skipped, eaten = await logs(db_engine)
     assert skipped.voided_at is not None
@@ -226,7 +226,7 @@ async def test_marking_eaten_replaces_an_earlier_log_for_that_meal(
 
 
 async def test_pantry_items_that_dont_convert_or_are_approximate(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     """A quantity that no longer converts to grams is skipped; an approximate one is used like
     any other (the planner counts its grams as stock)."""
@@ -235,7 +235,7 @@ async def test_pantry_items_that_dont_convert_or_are_approximate(
     vague = await add_pantry(db_engine, v1.user_id, food, 500, 2, "handful", MON)
     approx = await add_pantry(db_engine, v1.user_id, food, 5000, 5000, "g", approx=True)
 
-    out = (await mark(api, chat, plan_id, TUE, "dinner")).json()
+    out = (await mark(api, env, plan_id, TUE, "dinner")).json()
 
     assert [p["pantry_item_id"] for p in out["pantry"]] == [approx]
     items = await pantry(db_engine)
@@ -253,7 +253,7 @@ async def test_pantry_items_that_dont_convert_or_are_approximate(
 )
 async def test_marking_refuses_bad_dates(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     plan_id: int,
     db_engine: AsyncEngine,
     on: date,
@@ -261,14 +261,14 @@ async def test_marking_refuses_bad_dates(
     today: date,
     code: int,
 ) -> None:
-    response = await mark(api, chat, plan_id, on, slot, today=today)
+    response = await mark(api, env, plan_id, on, slot, today=today)
 
     assert response.status_code == code, response.text
     assert await logs(db_engine) == []
 
 
 async def test_marking_a_cell_without_a_meal_is_404(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     async with make_sessionmaker(db_engine)() as session:
@@ -277,7 +277,7 @@ async def test_marking_a_cell_without_a_meal_is_404(
         await session.delete(meal)
         await session.commit()
 
-    response = await mark(api, chat, plan_id, TUE, "lunch")
+    response = await mark(api, env, plan_id, TUE, "lunch")
 
     assert response.status_code == 404
     assert "no meal planned" in response.text
@@ -285,7 +285,7 @@ async def test_marking_a_cell_without_a_meal_is_404(
 
 async def test_only_the_latest_version_can_be_marked(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     plan_id: int,
     db_engine: AsyncEngine,
     make_plan: MakePlan,
@@ -293,13 +293,13 @@ async def test_only_the_latest_version_can_be_marked(
     v1 = await plan_row(db_engine, plan_id)
     await make_plan(v1.user_id, MON)
 
-    assert (await mark(api, chat, plan_id, TUE, "lunch")).status_code == 409
-    assert (await unmark(api, chat, plan_id, TUE, "lunch")).status_code == 409
+    assert (await mark(api, env, plan_id, TUE, "lunch")).status_code == 409
+    assert (await unmark(api, env, plan_id, TUE, "lunch")).status_code == 409
 
 
 async def test_another_user_cannot_mark_or_undo_your_meal(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     plan_id: int,
     db_engine: AsyncEngine,
     new_user: NewUser,
@@ -308,10 +308,10 @@ async def test_another_user_cannot_mark_or_undo_your_meal(
     food, _ = main_food(cell(v1, TUE, "lunch"))
     other = await new_user("user_b")
     theirs = await add_pantry(db_engine, other, food, 5000, 5000, "g")
-    assert (await mark(api, chat, plan_id, TUE, "lunch")).status_code == 200
+    assert (await mark(api, env, plan_id, TUE, "lunch")).status_code == 200
 
-    assert (await mark(api, chat, plan_id, TUE, "dinner", user="user_b")).status_code == 404
-    assert (await unmark(api, chat, plan_id, TUE, "lunch", user="user_b")).status_code == 404
+    assert (await mark(api, env, plan_id, TUE, "dinner", user="user_b")).status_code == 404
+    assert (await unmark(api, env, plan_id, TUE, "lunch", user="user_b")).status_code == 404
 
     assert [log.voided_at for log in await logs(db_engine)] == [None]
     assert (await pantry(db_engine))[theirs] == (5000, 5000)  # never someone else's food
@@ -321,16 +321,16 @@ async def test_another_user_cannot_mark_or_undo_your_meal(
 
 
 async def test_undo_gives_back_exactly_what_was_taken(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     food, _ = main_food(cell(v1, TUE, "lunch"))
     await add_pantry(db_engine, v1.user_id, food, 30, 30, "g", TUE)
     await add_pantry(db_engine, v1.user_id, food, 2500, 2.5, "kg")
     before = await pantry(db_engine)
-    await mark(api, chat, plan_id, TUE, "lunch")
+    await mark(api, env, plan_id, TUE, "lunch")
 
-    response = await unmark(api, chat, plan_id, TUE, "lunch")
+    response = await unmark(api, env, plan_id, TUE, "lunch")
 
     assert response.status_code == 200
     out = response.json()
@@ -344,22 +344,22 @@ async def test_undo_gives_back_exactly_what_was_taken(
     assert log.voided_at is not None
     assert cell(await plan_row(db_engine, plan_id), TUE, "lunch").status == "planned"
 
-    again = await unmark(api, chat, plan_id, TUE, "lunch")
+    again = await unmark(api, env, plan_id, TUE, "lunch")
 
     assert (again.status_code, again.json()["changed"]) == (200, False)
     assert await pantry(db_engine) == after
 
 
 async def test_undo_never_recreates_a_deleted_pantry_item(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     food, _ = main_food(cell(v1, TUE, "lunch"))
     item = await add_pantry(db_engine, v1.user_id, food, 5000, 5000, "g")
-    await mark(api, chat, plan_id, TUE, "lunch")
-    assert (await api.delete(f"/pantry/{item}", headers=chat.auth("user_a"))).status_code == 204
+    await mark(api, env, plan_id, TUE, "lunch")
+    assert (await api.delete(f"/pantry/{item}", headers=env.auth("user_a"))).status_code == 204
 
-    out = (await unmark(api, chat, plan_id, TUE, "lunch")).json()
+    out = (await unmark(api, env, plan_id, TUE, "lunch")).json()
 
     assert out["changed"] is True
     assert [p["remaining_quantity"] for p in out["pantry"]] == [None]
@@ -368,18 +368,18 @@ async def test_undo_never_recreates_a_deleted_pantry_item(
 
 
 async def test_undo_after_the_unit_changed_keeps_the_items_grams_per_unit(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     food, need = main_food(cell(v1, TUE, "lunch"))
     item = await add_pantry(db_engine, v1.user_id, food, 5000, 5000, "g")
-    await mark(api, chat, plan_id, TUE, "lunch")
+    await mark(api, env, plan_id, TUE, "lunch")
     left = 5000 - need
     patch = {"quantity": left / 1000, "unit": "kg"}
-    response = await api.patch(f"/pantry/{item}", json=patch, headers=chat.auth("user_a"))
+    response = await api.patch(f"/pantry/{item}", json=patch, headers=env.auth("user_a"))
     assert response.status_code == 200, response.text
 
-    await unmark(api, chat, plan_id, TUE, "lunch")
+    await unmark(api, env, plan_id, TUE, "lunch")
 
     assert (await pantry(db_engine))[item] == (pytest.approx(5000), pytest.approx(5))
 
@@ -388,15 +388,15 @@ async def test_undo_after_the_unit_changed_keeps_the_items_grams_per_unit(
 
 
 async def test_a_replan_keeps_meals_marked_eaten_and_counts_them_once(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     totals = planning.PlanStats.model_validate(v1.stats).day_totals
     tue_lunch, wed_breakfast = cell(v1, TUE, "lunch"), cell(v1, WED, "breakfast")
-    await mark(api, chat, plan_id, TUE, "lunch")
-    await mark(api, chat, plan_id, WED, "breakfast")
+    await mark(api, env, plan_id, TUE, "lunch")
+    await mark(api, env, plan_id, WED, "breakfast")
 
-    response = await replan(api, chat, [skip(FRI, "dinner")])
+    response = await replan(api, env, [skip(FRI, "dinner")])
 
     assert response.status_code == 200, response.text
     v2 = await plan_row(db_engine)
@@ -420,29 +420,29 @@ async def test_a_replan_keeps_meals_marked_eaten_and_counts_them_once(
     ]
 
     # Undo on the new version still finds the mark.
-    assert (await unmark(api, chat, v2.id, WED, "breakfast")).json()["changed"] is True
+    assert (await unmark(api, env, v2.id, WED, "breakfast")).json()["changed"] is True
 
 
 async def test_a_wish_for_a_meal_marked_eaten_fails(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    await mark(api, chat, plan_id, WED, "lunch")  # lunch isn't over at noon
+    await mark(api, env, plan_id, WED, "lunch")  # lunch isn't over at noon
 
-    out = (await replan(api, chat, [swap(WED, "lunch")])).json()
+    out = (await replan(api, env, [swap(WED, "lunch")])).json()
 
     assert out["results"][0]["status"] == "failed"
     assert "already marked" in out["results"][0]["message"]
 
 
 async def test_reporting_a_meal_marked_eaten_otherwise_gives_its_food_back(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     v1 = await plan_row(db_engine, plan_id)
     food, _ = main_food(cell(v1, TUE, "dinner"))
     item = await add_pantry(db_engine, v1.user_id, food, 5000, 5000, "g")
-    await mark(api, chat, plan_id, TUE, "dinner")
+    await mark(api, env, plan_id, TUE, "dinner")
 
-    out = (await replan(api, chat, [skip(TUE, "dinner")])).json()
+    out = (await replan(api, env, [skip(TUE, "dinner")])).json()
 
     assert out["results"][0]["status"] == "applied"
     eaten, skipped = await logs(db_engine)
@@ -455,13 +455,13 @@ async def test_reporting_a_meal_marked_eaten_otherwise_gives_its_food_back(
 
 
 async def test_a_new_plan_lists_a_meal_eaten_earlier(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    await mark(api, chat, plan_id, WED, "breakfast")
+    await mark(api, env, plan_id, WED, "breakfast")
 
     response = await api.post(
-        "/plans", json={"start": TUE.isoformat()}, headers=chat.auth("user_a")
-    )  # a start no earlier than yesterday (the chat clock's today is WED)
+        "/plans", json={"start": TUE.isoformat()}, headers=env.auth("user_a")
+    )  # a start no earlier than yesterday (the test clock's today is WED)
 
     assert response.status_code == 201, response.text
     wednesday = response.json()["days"][1]
@@ -486,7 +486,7 @@ def swap(on: date, slot: str) -> dict[str, Any]:
 
 async def replan(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     changes: list[dict[str, Any]],
     *,
     client_id: uuid.UUID | None = None,
@@ -499,16 +499,16 @@ async def replan(
         "today": today.isoformat(),
         "local_time": "12:00",
     }
-    return await api.post("/plans/replan", json=body, headers=chat.auth(user))
+    return await api.post("/plans/replan", json=body, headers=env.auth(user))
 
 
 async def test_replan_from_the_plan_screen_makes_a_version(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     client_id = uuid.uuid4()
 
     response = await replan(
-        api, chat, [skip(FRI, "dinner"), swap(THU, "dinner")], client_id=client_id
+        api, env, [skip(FRI, "dinner"), swap(THU, "dinner")], client_id=client_id
     )
 
     assert response.status_code == 200, response.text
@@ -523,19 +523,19 @@ async def test_replan_from_the_plan_screen_makes_a_version(
     assert (log.kind, log.source, log.craving_id is not None) == ("skipped", "app", True)
     async with make_sessionmaker(db_engine)() as session:
         cravings = list(await session.scalars(select(db.Craving).order_by(db.Craving.id)))
-    assert [(c.client_id, c.message_id, c.intent) for c in cravings] == [
-        (client_id, None, "skip"),
-        (client_id, None, "swap"),
+    assert [(c.client_id, c.intent) for c in cravings] == [
+        (client_id, "skip"),
+        (client_id, "swap"),
     ]
 
 
 async def test_replan_resent_with_the_same_client_id_is_not_applied_twice(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
     client_id = uuid.uuid4()
-    assert (await replan(api, chat, [skip(FRI, "dinner")], client_id=client_id)).status_code == 200
+    assert (await replan(api, env, [skip(FRI, "dinner")], client_id=client_id)).status_code == 200
 
-    again = await replan(api, chat, [skip(FRI, "dinner")], client_id=client_id)
+    again = await replan(api, env, [skip(FRI, "dinner")], client_id=client_id)
 
     assert again.status_code == 409
     assert again.json()["code"] == "duplicate"
@@ -544,15 +544,15 @@ async def test_replan_resent_with_the_same_client_id_is_not_applied_twice(
 
 
 async def test_replan_waits_for_no_one(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    """A chat turn (or another replan) holds the user's turn lock: busy, nothing applied."""
+    """Another replan holds the user's replan lock: busy, nothing applied."""
     v1 = await plan_row(db_engine, plan_id)
     async with make_sessionmaker(db_engine)() as session:
-        assert await limits.acquire_turn(session, v1.user_id, uuid.uuid4(), chat.settings, chat.now)
+        assert await limits.acquire_lock(session, v1.user_id, uuid.uuid4(), env.settings, env.now)
         await session.commit()
 
-    response = await replan(api, chat, [skip(FRI, "dinner")])
+    response = await replan(api, env, [skip(FRI, "dinner")])
 
     assert response.status_code == 409
     assert response.json()["code"] == "busy"
@@ -560,18 +560,16 @@ async def test_replan_waits_for_no_one(
 
 
 async def test_replan_releases_the_lock(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    assert (await replan(api, chat, [skip(FRI, "dinner")])).status_code == 200
-    assert (await replan(api, chat, [skip(THU, "dinner")])).status_code == 200
-    _, out = await chat.send(api, "skip lunch on friday")
-    assert out[-1]["type"] == "done"
+    assert (await replan(api, env, [skip(FRI, "dinner")])).status_code == 200
+    assert (await replan(api, env, [skip(THU, "dinner")])).status_code == 200
 
 
 async def test_replan_refuses_an_implausible_today(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    response = await replan(api, chat, [skip(FRI, "dinner")], today=WED + timedelta(days=5))
+    response = await replan(api, env, [skip(FRI, "dinner")], today=WED + timedelta(days=5))
 
     assert response.status_code == 400
     assert response.json()["code"] == "bad_today"
@@ -583,21 +581,21 @@ async def test_replan_refuses_an_implausible_today(
     ids=["none", "missing-field", "unknown-intent"],
 )
 async def test_replan_validates_the_changes(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, changes: list[dict[str, Any]]
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, changes: list[dict[str, Any]]
 ) -> None:
-    assert (await replan(api, chat, changes)).status_code == 422
+    assert (await replan(api, env, changes)).status_code == 422
 
 
 async def test_replan_only_ever_changes_your_own_plan(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     plan_id: int,
     db_engine: AsyncEngine,
     new_user: NewUser,
 ) -> None:
     other = await new_user("user_b")
 
-    response = await replan(api, chat, [swap(FRI, "dinner")], user="user_b")
+    response = await replan(api, env, [swap(FRI, "dinner")], user="user_b")
 
     assert response.status_code == 200
     out = response.json()
@@ -608,6 +606,6 @@ async def test_replan_only_ever_changes_your_own_plan(
     assert (await plan_row(db_engine, out["plan_id"])).parent_id is None
 
 
-async def test_replan_needs_a_session(api: httpx.AsyncClient, chat: ChatEnv) -> None:
+async def test_replan_needs_a_session(api: httpx.AsyncClient, env: AppEnv) -> None:
     body = {"changes": [skip(FRI, "dinner")], "client_id": str(uuid.uuid4()), "today": "2026-10-14"}
     assert (await api.post("/plans/replan", json=body)).status_code == 401

@@ -1,5 +1,5 @@
-"""Words -> USDA foods without a model: the offline half of the matcher, shared by the chat
-(off-plan estimates, drafted recipes; larder_api.chat.foods adds the model tiebreak) and
+"""Words -> USDA foods without a model: the offline half of the matcher, shared by plan changes
+(off-plan estimates, drafted recipes; larder_api.changes.foods adds the model tiebreak) and
 receipt intake (larder_api.receipts).
 
 alias_food(name): the curated alias table (larder_core.aliases) on the normalised name.
@@ -8,7 +8,7 @@ overlap; the top one is taken only when it is a clear winner (every word of the 
 other words than any rival that also has them all). Nothing is cached here: user text must not
 leak into ingredient_matches, which the importer's resolver reuses for the shared catalogue.
 Candidates are the generic USDA foods recipes use (Foundation, SR Legacy), never survey foods,
-CoFID or Open Food Facts products, so receipts and the chat keep their measured accuracy.
+CoFID or Open Food Facts products, so receipts and estimates keep their measured accuracy.
 """
 
 import re
@@ -54,7 +54,7 @@ _FILLER = frozenset({"a", "an", "the", "of", "with", "and", "some", "my", "fresh
 class FoodMatch:
     food_id: int
     description: str
-    method: str  # alias | trigram | llm (chat) ; receipt | partial | user (receipts)
+    method: str  # alias | trigram | llm (estimates) ; receipt | partial | user (receipts)
 
 
 @dataclass(frozen=True, slots=True)

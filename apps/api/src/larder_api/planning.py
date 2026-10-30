@@ -4,7 +4,7 @@ The rules live in pure packages (larder_solver, larder_core); this module only g
 converts units at the boundary and applies the outcome rules of docs/adr/0009-planning-contract.md:
 a plan with a safety or structural violation is never saved, whatever planner made it.
 
-Replans from the chat (docs/adr/0014-chat-replans.md) use the same pieces: `make_problem` over
+Replans (docs/adr/0014-chat-replans.md, 0015) use the same pieces: `make_problem` over
 the open horizon with the reported facts and wishes applied (`constrain`), the planner with the
 parent plan as `previous`, and `save_plan` with the parent's past rows carried over.
 """
@@ -512,7 +512,7 @@ def plan_seed(user_id: int, start: date, version: int) -> int:
 
 
 def profile_of(allergies: db.Allergies, preferences: db.Preferences) -> Profile:
-    """The hard exclusions, as the planner and every chat tool apply them."""
+    """The hard exclusions, as the planner and every search apply them."""
     return Profile(
         allergens=frozenset(Allergen(a) for a in allergies.allergens),
         avoid_food_ids=frozenset(allergies.avoid_food_ids),
@@ -1028,7 +1028,7 @@ _limiter: anyio.CapacityLimiter | None = None
 
 def plan_limiter(settings: Settings) -> anyio.CapacityLimiter:
     """Process-wide cap on concurrent solves (each uses several CPU threads), shared by
-    POST /plans and chat replans."""
+    POST /plans and replans."""
     global _limiter
     if _limiter is None:
         _limiter = anyio.CapacityLimiter(settings.plan_concurrency)
@@ -1071,7 +1071,7 @@ def check_outcome(problem: Problem, result: PlanResult) -> tuple[Plan, list[Viol
 class PlanStats(BaseModel):
     """Snapshot stored with a plan (meal_plans.stats): PlanOut never reads live goals or prices.
 
-    v2 (chat replans) adds `logged` and `outcome`; v1 rows load with both empty."""
+    v2 (replans) adds `logged` and `outcome`; v1 rows load with both empty."""
 
     v: int = 2
     targets: TargetsOut
@@ -1099,7 +1099,7 @@ class PlanStats(BaseModel):
     skipped_meals: list[Slot] = Field(default_factory=list[Slot])
     # Per day: food logged off-plan and skipped meals (active meal_logs when this was saved).
     logged: list[list[MealLogOut]] = Field(default_factory=list[list[MealLogOut]])
-    # What the chat change that made this version did (results + diff), for explain_plan_diff.
+    # What the change that made this version did (results + diff), for "what changed".
     outcome: ReplanOutcome | None = None
 
     def logged_on(self, day: int) -> list[MealLogOut]:
@@ -1320,7 +1320,7 @@ async def plan_for(session: AsyncSession, user_id: int, on: date) -> db.MealPlan
 
 
 async def lock_user_plans(session: AsyncSession, user_id: int) -> None:
-    """Serialise plan saves per user until the transaction ends (POST /plans, chat replans)."""
+    """Serialise plan saves per user until the transaction ends (POST /plans, replans)."""
     await session.execute(select(func.pg_advisory_xact_lock(user_id)))
 
 

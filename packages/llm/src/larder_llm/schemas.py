@@ -1,15 +1,12 @@
-"""The typed contract between the language model and the app.
+"""Typed plan changes: the contract between every screen that changes a plan and the executor.
 
-The model never edits a plan. It asks for *changes* (PLAN §7: craving, ate off-plan, skip, swap)
-through tools whose inputs are these models. Changes are *facts* (AteOffPlan, Skip: what the
-user did or will do; always recorded) or *wishes* (Craving, Swap: preferences; may fail).
-Deterministic code checks them (dates, slots, recipe visibility), builds a planning problem,
-runs the planner and the independent validator, and saves a new plan version. The same types
-come out of the offline rule parser (`larder_llm.rules`), so both paths share one executor.
-
-Tool schemas sent to the API are generated from these models by `larder_llm.tools.tool_schema`,
-which keeps only what strict tool use supports; Pydantic re-validates every input here
-(lengths, counts, ranges) before anything runs.
+Nothing edits a plan directly. A screen asks for *changes* (PLAN §7: craving, ate off-plan,
+skip, swap). Changes are *facts* (AteOffPlan, Skip: what the user did or will do; always
+recorded) or *wishes* (Craving, Swap: preferences; may fail). Deterministic code checks them
+(dates, slots, recipe visibility), builds a planning problem, runs the planner and the
+independent validator, and saves a new plan version. Pydantic validates every input here
+(lengths, counts, ranges) before anything runs. A model, where one is used, only ever fills
+these types (structured output) and never sees the plan.
 """
 
 from datetime import date
@@ -25,12 +22,7 @@ __all__ = [
     "Craving",
     "CreateRecipeInput",
     "DraftIngredient",
-    "EmptyInput",
-    "ExplainMealInput",
-    "ExplainPlanDiffInput",
     "OffPlanItem",
-    "ReplanInput",
-    "SearchRecipesInput",
     "Skip",
     "Swap",
     "When",
@@ -74,7 +66,7 @@ class Craving(Strict):
     )
     recipe_id: int | None = Field(
         default=None,
-        description="This exact recipe (an id returned by search_recipes or create_recipe).",
+        description="This exact recipe (its id).",
     )
     strength: Literal["hard", "soft"] = Field(
         description=(
@@ -133,32 +125,7 @@ class Swap(Strict):
 Change = Annotated[Craving | AteOffPlan | Skip | Swap, Field(discriminator="intent")]
 
 
-# --- tool inputs ------------------------------------------------------------------------------
-
-
-class EmptyInput(Strict):
-    """For tools without parameters (get_plan, get_pantry)."""
-
-
-class SearchRecipesInput(Strict):
-    query: str = Field(
-        max_length=MAX_TEXT,
-        description="Dish names and qualities, e.g. 'spicy chicken curry' or 'quick pasta'.",
-    )
-    slot: Slot | None = Field(default=None, description="Only recipes that can fill this meal.")
-    limit: int = Field(default=5, ge=1, le=10)
-
-
-class ExplainMealInput(Strict):
-    when: When
-
-
-class ReplanInput(Strict):
-    changes: list[Change] = Field(
-        min_length=1,
-        max_length=MAX_CHANGES,
-        description="Everything the user's message asks for, in the order they said it.",
-    )
+# --- recipe drafts ---------------------------------------------------------------------------
 
 
 class DraftIngredient(Strict):
@@ -169,8 +136,8 @@ class DraftIngredient(Strict):
 
 
 class CreateRecipeInput(Strict):
-    """A recipe the model drafts. Only names and quantities are taken from it: nutrition,
-    allergens and diet suitability are computed by the app from USDA data."""
+    """A recipe typed in or read from a web page. Only names and quantities are taken from it:
+    nutrition, allergens and diet suitability are computed by the app from USDA data."""
 
     name: str = Field(max_length=120)
     slot: Slot
@@ -178,9 +145,3 @@ class CreateRecipeInput(Strict):
     cuisine: str | None = Field(default=None, max_length=40)
     ingredients: list[DraftIngredient] = Field(min_length=2, max_length=25)
     instructions: str = Field(max_length=4000)
-
-
-class ExplainPlanDiffInput(Strict):
-    plan_id: int | None = Field(
-        default=None, description="A plan version; default the current one (vs. its parent)."
-    )

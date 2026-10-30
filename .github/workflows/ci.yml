@@ -149,7 +149,7 @@ jobs:
             case "$location" in http://localhost:3000/sign-in*) ;; *) exit 1 ;; esac
           done
       - name: Planner dependencies are in the API image
-        run: docker compose exec -T api python -c "import ortools, anthropic, larder_solver.problem, larder_llm.agent"
+        run: docker compose exec -T api python -c "import ortools, anthropic, larder_solver.problem, larder_llm.client"
       - name: OCR stays out of the API image
         run: docker compose exec -T api python -c "import importlib.util as u, sys; sys.exit(u.find_spec('rapidocr') is not None)"
       - name: Worker reads a pasted and a photographed receipt (queue, OCR, parse)
@@ -189,7 +189,7 @@ jobs:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
       NEXT_PUBLIC_API_URL: http://localhost:8000
       PLAN_TIME_LIMIT_MS: "2000"
-      # The chat e2e runs the offline path (no model calls, no key needed in CI).
+      # e2e makes no model calls, so CI needs no key.
       LLM_MODE: offline
     steps:
       - name: Check for Clerk keys

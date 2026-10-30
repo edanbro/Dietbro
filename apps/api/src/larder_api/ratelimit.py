@@ -1,8 +1,9 @@
 """Rate limits for routes that cost something to serve or are open to anyone.
 
-Chat, receipts and barcode lookups have their own limits (larder_api.chat.limits, the receipt
-routes, larder_api.barcodes). These cover the rest: outbound page fetches (recipe import), the
-solver (new plans and replans), quick-add, and the public share pages and calendar feeds.
+Model calls, receipts and barcode lookups have their own limits (larder_api.changes.limits,
+the receipt routes, larder_api.barcodes). These cover the rest: outbound page fetches (recipe
+import), the solver (new plans and replans), quick-add, and the public share pages and calendar
+feeds.
 
 Each limit is a fixed window counted in Redis in one round trip: INCR, then EXPIRE NX so the
 window's first hit sets its end. Over the limit the request gets 429 with Retry-After. If Redis

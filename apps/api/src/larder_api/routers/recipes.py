@@ -13,8 +13,8 @@ from sqlalchemy.orm import selectinload
 
 from larder_api import planning, recipe_import, replans
 from larder_api.auth import AuthError, CurrentUser, TokenVerifier
-from larder_api.chat.create import create_recipe
-from larder_api.chat.search import query_words, rank_recipes, time_limit, viewer_of
+from larder_api.changes.create import create_recipe
+from larder_api.changes.search import query_words, rank_recipes, time_limit, viewer_of
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.ratelimit import per_user
@@ -109,7 +109,7 @@ async def list_recipes(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RecipeListOut:
     """Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
-    blocked), matching `q` if given, ranked like the chat's search: match, then preference
+    blocked), matching `q` if given, ranked like the swap search: match, then preference
     (favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest
     foods still to get first, each with those foods (`missing`). `cheapest`: the lowest cost a
     serving first (in the user's prices), those without a price last."""
@@ -495,9 +495,9 @@ async def import_recipe(
     settings: Annotated[Settings, Depends(get_settings)],
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> ImportResultOut:
-    """Check and save a draft as the user's own recipe: the same path as recipes the chat
-    drafts (ingredients matched to foods, amounts weighed, nutrition from food data, the
-    planner's allergy and diet checks). Problems come back to fix instead of a recipe."""
+    """Check and save a draft as the user's own recipe (changes.create: ingredients matched to
+    foods, amounts weighed, nutrition from food data, the planner's allergy and diet checks).
+    Problems come back to fix instead of a recipe."""
     now = clock()
     scope = replans.app_scope(
         user.id,

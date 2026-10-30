@@ -1,7 +1,7 @@
 """Planner benchmark on the real catalog: `make bench` / `uv run larder-bench --help`.
 
 Generates planted (a valid plan is known to exist), realistic (user-like) and replan (mid-week
-chat changes) problems from the seeded recipes, runs a planner on each, checks every plan with
+changes) problems from the seeded recipes, runs a planner on each, checks every plan with
 the independent validator and reports validity and latency. The M3 gate: no hard violations,
 end-to-end p95 < 5 s.
 
@@ -10,8 +10,8 @@ Replan mode (`make bench-replan`, M5: replan p95 < 1 s at the API, average churn
 - `replan-scenarios`: `scenarios.replan` problems over the seeded recipes, planned with the plan
   before the change as `previous`; latency of plan + validate, churn = slots changed vs
   `previous` (`metrics.changed_slots`) next to the forced churn (cells the change emptied).
-- `replan-api`: the executor itself (`chat.replan.apply_changes`, what POST /plans/replan and
-  the chat run) against the database: throwaway users (the ten PROFILES) each get a plan made
+- `replan-api`: the executor itself (`changes.replan.apply_changes`, what POST /plans/replan
+  runs) against the database: throwaway users (the ten PROFILES) each get a plan made
   like POST /plans, then a seeded mix of skips, swaps, cravings and off-plan meals on Wednesday
   noon; latency per call (reads, prefilter, planner runs, validation, save), churn = meals that
   changed recipe vs the parent version from today on, and how many of those nobody asked for
@@ -38,8 +38,8 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning
-from larder_api.chat.replan import apply_changes
-from larder_api.chat.scope import ChatScope, Models
+from larder_api.changes.replan import apply_changes
+from larder_api.changes.scope import ChangeScope, Models
 from larder_api.planning import (
     PlanningCatalog,
     UserInputs,
@@ -339,9 +339,6 @@ async def api_replans(
     users: list[int] = []
     runs: list[ReplanRun] = []
 
-    async def nothing(_: object) -> None:
-        return None
-
     async def no_calls(_: ModelCall) -> None:
         raise AssertionError("offline")
 
@@ -360,25 +357,21 @@ async def api_replans(
                 run_seed = seed * 10_000 + u * 100 + j
                 rng = Random(run_seed)
                 changes = [random_change(rng) for _ in range(rng.choice([1, 1, 1, 2]))]
-                scope = ChatScope(
+                scope = ChangeScope(
                     user_id=user_id,
                     today=BENCH_TODAY,
                     local_time=BENCH_NOON,
                     now=datetime.combine(BENCH_TODAY, BENCH_NOON, UTC),
-                    thread_id=None,
-                    message_id=None,
-                    raw_text="",
                     sessionmaker=maker,
                     catalog=cache,
                     planner=planner,
                     settings=settings,
-                    models=Models(offline_reason="no_key"),
-                    emit=nothing,
+                    models=Models(),
                     log_call=no_calls,
                     client_id=uuid.uuid4(),
                 )
                 t0 = time.perf_counter()
-                outcome = await apply_changes(scope, changes, source="app")
+                outcome = await apply_changes(scope, changes)
                 ms = (time.perf_counter() - t0) * 1000
                 moved = [c for c in outcome.changes if c.reason != "resize"]
                 runs.append(
@@ -471,7 +464,7 @@ def main(argv: list[str] | None = None) -> None:
         "planted": lambda s: planted(s, catalog),
         "realistic": lambda s: realistic(s, catalog),
         "profiles": lambda s: profile_scenario(s, full),
-        # Mid-week chat replans (ADR-0014): logged intake, per-day kcal bands, chosen meals.
+        # Mid-week replans (ADR-0014): logged intake, per-day kcal bands, chosen meals.
         "replans": lambda s: replan(s, catalog),
     }
 

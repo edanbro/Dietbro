@@ -32,7 +32,7 @@ services:
         sync: false
       - key: CLERK_PUBLISHABLE_KEY
         sync: false
-      - key: ANTHROPIC_API_KEY # optional: without it the chat runs offline
+      - key: ANTHROPIC_API_KEY # optional: without it no model is called
         sync: false
       - key: VAPID_PUBLIC_KEY # optional: expiry reminders (uv run larder-vapid)
         sync: false

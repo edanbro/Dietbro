@@ -102,7 +102,7 @@ export function gramsEach(
 
 /**
  * Log food you ate that wasn't on the plan: search or scan, say how much, pick the meal. The
- * rest of that day's plan rebalances around it, exactly as when you tell the chat.
+ * rest of that day's plan rebalances around it.
  */
 /** `initialSlot`: start open, logging for that meal (a link asked for it). */
 export function QuickAdd({

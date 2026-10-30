@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning, replans
 from larder_api.auth import CurrentUser
-from larder_api.chat import offplan
-from larder_api.chat.context import short_name
+from larder_api.changes import offplan
+from larder_api.changes.foods import short_name
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
 from larder_api.insights import monday, weekly_recap, weekly_spending
@@ -307,7 +307,7 @@ async def log_food(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> OutcomeOut:
     """Log food the user picked (search or barcode) with exact grams. It goes through the same
-    executor as "I had X" in the chat, so it counts toward the day and the rest of that day's
+    executor as food eaten off-plan, so it counts toward the day and the rest of that day's
     plan rebalances around it; nutrition comes from the food data, never a guess."""
     ids = {i.food_id for i in body.items}
     found = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}

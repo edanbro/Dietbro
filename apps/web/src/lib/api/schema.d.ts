@@ -556,9 +556,9 @@ export interface paths {
         put?: never;
         /**
          * Replan Plan
-         * @description Apply plan changes (skip, swap, craving, food eaten off-plan) without the chat: the
-         *     chat's executor, so the same rules, results and new plan version. Server-Timing has the
-         *     replan's wall time.
+         * @description Apply plan changes (skip, swap, craving, food eaten off-plan) through the executor
+         *     (larder_api.changes.replan): a new plan version. Server-Timing has the replan's wall
+         *     time.
          */
         post: operations["replanPlan"];
         delete?: never;
@@ -885,7 +885,7 @@ export interface paths {
         /**
          * List Recipes
          * @description Plannable recipes safe for the user (allergies, diet, avoided foods; never ones they
-         *     blocked), matching `q` if given, ranked like the chat's search: match, then preference
+         *     blocked), matching `q` if given, ranked like the swap search: match, then preference
          *     (favourites first), then pantry use. `pantry`: what can be cooked from the pantry, fewest
          *     foods still to get first, each with those foods (`missing`). `cheapest`: the lowest cost a
          *     serving first (in the user's prices), those without a price last.
@@ -1010,76 +1010,11 @@ export interface paths {
         put?: never;
         /**
          * Import Recipe
-         * @description Check and save a draft as the user's own recipe: the same path as recipes the chat
-         *     drafts (ingredients matched to foods, amounts weighed, nutrition from food data, the
-         *     planner's allergy and diet checks). Problems come back to fix instead of a recipe.
+         * @description Check and save a draft as the user's own recipe (changes.create: ingredients matched to
+         *     foods, amounts weighed, nutrition from food data, the planner's allergy and diet checks).
+         *     Problems come back to fix instead of a recipe.
          */
         post: operations["importRecipe"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/chat/thread": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Thread
-         * @description The latest thread's messages (oldest first, `limit` before `before_id`), whether a reply
-         *     is pending, and the user's model availability (key, budget) and message count.
-         */
-        get: operations["getChatThread"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/chat/threads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * New Thread
-         * @description Start a fresh conversation (earlier ones are kept for export).
-         */
-        post: operations["newChatThread"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/chat/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send Message
-         * @description Stream the reply as server-sent events (each `data:` is one ChatEvent as JSON).
-         *
-         *     The turn runs detached (larder_api.chat.tasks): this only relays its events, so a dropped
-         *     connection doesn't stop the turn; the client reloads GET /chat/thread (pending) instead of
-         *     resending.
-         */
-        post: operations["sendChatMessage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1180,7 +1115,7 @@ export interface paths {
         /**
          * Log Food
          * @description Log food the user picked (search or barcode) with exact grams. It goes through the same
-         *     executor as "I had X" in the chat, so it counts toward the day and the rest of that day's
+         *     executor as food eaten off-plan, so it counts toward the day and the rest of that day's
          *     plan rebalances around it; nutrition comes from the food data, never a guess.
          */
         post: operations["logFood"];
@@ -1720,6 +1655,19 @@ export interface components {
              */
             snack: string;
         };
+        /**
+         * ChangeProblem
+         * @description Body of a refused replan (400 bad_today, 409 busy / duplicate).
+         */
+        ChangeProblem: {
+            /** Detail */
+            detail: string[];
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "bad_today" | "busy" | "duplicate";
+        };
         /** @enum {string} */
         ChangeReason: "craving" | "swap" | "skip" | "ate_off_plan" | "rebalance" | "resize";
         /**
@@ -1750,83 +1698,6 @@ export interface components {
         };
         /** @enum {string} */
         ChangeStatus: "applied" | "unchanged" | "failed";
-        /** ChatMessageIn */
-        ChatMessageIn: {
-            /** Text */
-            text: string;
-            /**
-             * Client Id
-             * Format: uuid
-             * @description the client's id for this message: resending is safe
-             */
-            client_id: string;
-            /**
-             * Thread Id
-             * @description omit to continue the latest thread
-             */
-            thread_id?: number | null;
-            /**
-             * Today
-             * Format: date
-             * @description the user's local date (dates like 'tonight' resolve to it)
-             */
-            today: string;
-            /**
-             * Local Time
-             * @description the user's local time: today's meals whose time has passed count as eaten
-             */
-            local_time?: string | null;
-        };
-        /** ChatMessageOut */
-        ChatMessageOut: {
-            /** Id */
-            id: number;
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "user" | "assistant";
-            /** Text */
-            text: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Plan Id
-             * @description last plan version this turn created
-             */
-            plan_id: number | null;
-            /** Mode */
-            mode: ("llm" | "offline") | null;
-            /** Offline Reason */
-            offline_reason: ("no_key" | "budget" | "model_error") | null;
-            /** Attachments */
-            attachments: (components["schemas"]["OutcomeOut"] | components["schemas"]["RecipeCreatedOut"])[];
-            /**
-             * Suggestions
-             * @description tap-to-send replies
-             */
-            suggestions: string[];
-        };
-        /**
-         * ChatProblem
-         * @description Body of the chat gate's 400/404/409/429 answers.
-         */
-        ChatProblem: {
-            /** Detail */
-            detail: string[];
-            /**
-             * Code
-             * @enum {string}
-             */
-            code: "bad_today" | "thread_not_found" | "busy" | "duplicate" | "daily_limit";
-            /** Retry At */
-            retry_at?: string | null;
-            /** Message Id */
-            message_id?: number | null;
-        };
         /** CheaperOut */
         CheaperOut: {
             /**
@@ -1865,7 +1736,7 @@ export interface components {
             tags?: string[];
             /**
              * Recipe Id
-             * @description This exact recipe (an id returned by search_recipes or create_recipe).
+             * @description This exact recipe (its id).
              */
             recipe_id?: number | null;
             /**
@@ -1975,17 +1846,6 @@ export interface components {
          * @enum {string}
          */
         Diet: "vegetarian" | "vegan" | "pescatarian";
-        /** DoneEvent */
-        DoneEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "done";
-            message: components["schemas"]["ChatMessageOut"];
-            /** Messages Today */
-            messages_today: number;
-        };
         /**
          * EatenIn
          * @description Mark a planned meal eaten: a meal of the plan, on or before the user's today.
@@ -2037,16 +1897,6 @@ export interface components {
             pantry: components["schemas"]["PantryChangeOut"][];
             /** Notes */
             notes: string[];
-        };
-        /** ErrorEvent */
-        ErrorEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "error";
-            /** Message */
-            message: string;
         };
         /** ExpiringItem */
         ExpiringItem: {
@@ -2151,8 +2001,8 @@ export interface components {
         };
         /**
          * FoodLogRequest
-         * @description Food the user picked themselves (diary quick-add). Logged like food told to the chat,
-         *     with exact amounts, so the rest of that day's plan rebalances around it.
+         * @description Food the user picked themselves (diary quick-add). Logged as food eaten off-plan, with
+         *     exact amounts, so the rest of that day's plan rebalances around it.
          */
         FoodLogRequest: {
             /**
@@ -2464,7 +2314,7 @@ export interface components {
         };
         /**
          * MealLogOut
-         * @description Food eaten off-plan, a planned meal skipped (told to the chat), or a meal marked eaten
+         * @description Food eaten off-plan, a planned meal skipped (eating elsewhere), or a meal marked eaten
          *     that this version no longer plans, as snapshotted with the plan version: `DayOut.totals` =
          *     its meals + these. A meal marked eaten that the version still plans shows as that meal
          *     (`MealOut.status` eaten), not here.
@@ -2585,38 +2435,9 @@ export interface components {
              */
             quantity?: string | null;
         };
-        /** OutcomeEvent */
-        OutcomeEvent: {
-            /** Plan Id */
-            plan_id?: number | null;
-            /** Version */
-            version?: number | null;
-            /**
-             * Fresh
-             * @default false
-             */
-            fresh: boolean;
-            /** Results */
-            results?: components["schemas"]["ChangeResult"][];
-            /** Changes */
-            changes?: components["schemas"]["SlotChange"][];
-            /** Logged */
-            logged?: components["schemas"]["Logged"][];
-            /** Days */
-            days?: components["schemas"]["DayKcal"][];
-            /** Warnings */
-            warnings?: string[];
-            /** Notes */
-            notes?: string[];
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "outcome";
-        };
         /**
          * OutcomeOut
-         * @description What one plan change request did (also sent live as the `outcome` event).
+         * @description What one plan change request did.
          */
         OutcomeOut: {
             /** Plan Id */
@@ -2641,8 +2462,9 @@ export interface components {
             /** Notes */
             notes?: string[];
             /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
+             * Type
+             * @default outcome
+             * @constant
              */
             type: "outcome";
         };
@@ -2736,16 +2558,6 @@ export interface components {
             expires_on?: string | null;
             /** Storage */
             storage?: ("fridge" | "freezer" | "cupboard") | null;
-        };
-        /** PendingTurn */
-        PendingTurn: {
-            /** Message Id */
-            message_id: number;
-            /**
-             * Started At
-             * Format: date-time
-             */
-            started_at: string;
         };
         /** PlanOut */
         PlanOut: {
@@ -3268,8 +3080,8 @@ export interface components {
         };
         /**
          * RecentFoodOut
-         * @description Food logged lately (diary quick-add or the chat), to log again: each mix of foods and
-         *     amounts once, as the diary named it.
+         * @description Food logged lately (diary quick-add), to log again: each mix of foods and amounts once,
+         *     as the diary named it.
          */
         RecentFoodOut: {
             /** Description */
@@ -3301,18 +3113,6 @@ export interface components {
              * @description about how long it takes, estimated from the method
              */
             minutes?: number | null;
-        };
-        /** RecipeCreatedOut */
-        RecipeCreatedOut: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "recipe";
-            /** Recipe Id */
-            recipe_id: number;
-            /** Name */
-            name: string;
         };
         /**
          * RecipeDeletedOut
@@ -3372,18 +3172,6 @@ export interface components {
             /** Feedback */
             feedback?: ("favourite" | "never") | null;
             note?: components["schemas"]["RecipeNoteOut"] | null;
-        };
-        /** RecipeEvent */
-        RecipeEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "recipe";
-            /** Recipe Id */
-            recipe_id: number;
-            /** Name */
-            name: string;
         };
         /** RecipeFeedbackIn */
         RecipeFeedbackIn: {
@@ -3602,8 +3390,8 @@ export interface components {
         };
         /**
          * ReplanRequest
-         * @description Plan changes made from the plan screen (no chat): the same typed changes the chat's
-         *     model and offline parser produce, applied by the same executor.
+         * @description Typed plan changes (larder_llm.schemas) from the plan screen or the diary, applied by
+         *     the executor (larder_api.changes.replan).
          */
         ReplanRequest: {
             /** Changes */
@@ -3930,16 +3718,6 @@ export interface components {
              */
             planned_minor: number | null;
         };
-        /** StatusEvent */
-        StatusEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "status";
-            /** Text */
-            text: string;
-        };
         /**
          * StockIn
          * @description Lines to move into the pantry; default: every ticked line not moved yet.
@@ -4020,79 +3798,6 @@ export interface components {
         TemplatePatch: {
             /** Name */
             name: string;
-        };
-        /** TextEvent */
-        TextEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "text";
-            /** Delta */
-            delta: string;
-        };
-        /**
-         * TextResetEvent
-         * @description Discard the reply text streamed so far (a declined or dropped model response).
-         */
-        TextResetEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "text_reset";
-        };
-        /** ThreadEvent */
-        ThreadEvent: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "thread";
-            /** Thread Id */
-            thread_id: number;
-            /** Message Id */
-            message_id: number;
-            /**
-             * Mode
-             * @enum {string}
-             */
-            mode: "llm" | "offline";
-            /** Offline Reason */
-            offline_reason: ("no_key" | "budget" | "model_error") | null;
-        };
-        /** ThreadOut */
-        ThreadOut: {
-            /** Thread Id */
-            thread_id: number | null;
-            /**
-             * Messages
-             * @description oldest first
-             */
-            messages: components["schemas"]["ChatMessageOut"][];
-            /**
-             * Has More
-             * @description older messages exist (page with before_id)
-             */
-            has_more: boolean;
-            /** @description a reply is still being worked on */
-            pending: components["schemas"]["PendingTurn"] | null;
-            /**
-             * Llm Available
-             * @description false: replies come from the offline parser
-             */
-            llm_available: boolean;
-            /** Offline Reason */
-            offline_reason: ("no_key" | "budget" | "model_error") | null;
-            /**
-             * Llm Resets At
-             * @description when model replies come back (budget)
-             */
-            llm_resets_at: string | null;
-            /** Messages Today */
-            messages_today: number;
-            /** Daily Limit */
-            daily_limit: number;
         };
         /**
          * UsedInOut
@@ -5419,16 +5124,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatProblem"];
+                    "application/json": components["schemas"]["ChangeProblem"];
                 };
             };
-            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            /** @description busy: another plan change is running; duplicate: this client_id was already applied (reload the plan) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatProblem"];
+                    "application/json": components["schemas"]["ChangeProblem"];
                 };
             };
             /** @description Validation Error */
@@ -6527,127 +6232,6 @@ export interface operations {
             };
         };
     };
-    getChatThread: {
-        parameters: {
-            query?: {
-                before_id?: number | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThreadOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    newChatThread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThreadOut"];
-                };
-            };
-        };
-    };
-    sendChatMessage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChatMessageIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": unknown;
-                };
-            };
-            /** @description bad_today: `today` is implausible */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ChatProblem"];
-                };
-            };
-            /** @description thread_not_found: no such thread (or not yours) */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ChatProblem"];
-                };
-            };
-            /** @description busy: still answering a message; duplicate: this client_id was already answered */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ChatProblem"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description daily_limit: try again at retry_at */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ChatProblem"];
-                };
-            };
-        };
-    };
     getDiary: {
         parameters: {
             query?: {
@@ -6829,7 +6413,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatProblem"];
+                    "application/json": components["schemas"]["ChangeProblem"];
                 };
             };
             /** @description a food doesn't exist */
@@ -6839,13 +6423,13 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            /** @description busy: another plan change is running; duplicate: this client_id was already applied (reload the plan) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatProblem"];
+                    "application/json": components["schemas"]["ChangeProblem"];
                 };
             };
             /** @description Validation Error */
@@ -6893,13 +6477,13 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description busy: a plan change (chat or plan screen) is running; duplicate: this client_id was already applied (reload the plan) */
+            /** @description busy: another plan change is running; duplicate: this client_id was already applied (reload the plan) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatProblem"];
+                    "application/json": components["schemas"]["ChangeProblem"];
                 };
             };
             /** @description Validation Error */
