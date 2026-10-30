@@ -1,8 +1,10 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Recipe } from "@/lib/api/hooks";
+import { localISODate } from "@/lib/dates";
 import { json, mockApi, renderWithClient } from "@/test/api";
+import { makePlan, makeRecipe } from "@/test/fixtures";
 import { resetNavigation } from "@/test/navigation";
 
 import { CookMode } from "./cook-mode";
@@ -96,5 +98,28 @@ describe("CookMode", () => {
     steps.forEach((s) => fireEvent.click(s));
     expect(screen.getByRole("status")).toHaveTextContent("All done");
     expect(screen.queryByLabelText("90 minutes timer")).not.toBeInTheDocument();
+  });
+});
+
+describe("finishing", () => {
+  it("offers to mark today's planned meal eaten once every step is done", async () => {
+    const recipe = makeRecipe({ instructions: "Boil it." });
+    const today = localISODate();
+    const plan = makePlan({ start: today });
+    plan.days[0].meals[1].recipe = { ...plan.days[0].meals[1].recipe, id: recipe.id };
+    const calls = mockApi({
+      [`GET /recipes/${recipe.id}`]: json(recipe),
+      "GET /plans/current": json(plan),
+      [`POST /plans/${plan.id}/meals/eaten`]: json({ applied: true }),
+    });
+    renderWithClient(<CookMode id={recipe.id} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Step 1 done" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Mark lunch eaten" }));
+
+    await waitFor(() => {
+      const sent = calls.find((c) => c.path === `/plans/${plan.id}/meals/eaten`);
+      expect(sent?.body).toMatchObject({ date: today, slot: "lunch" });
+    });
   });
 });
