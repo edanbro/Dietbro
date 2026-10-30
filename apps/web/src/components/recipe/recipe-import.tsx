@@ -193,7 +193,7 @@ export function DraftForm({
       </div>
 
       {problems.length ? (
-        <Alert role="alert" className="border-amber-500/50">
+        <Alert role="alert" className="border-warning/50">
           <TriangleAlertIcon aria-hidden />
           <AlertTitle>Fix these and save again</AlertTitle>
           <AlertDescription>

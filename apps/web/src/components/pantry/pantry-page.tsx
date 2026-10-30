@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHatIcon, ReceiptTextIcon } from "lucide-react";
+import { ChefHatIcon, PlusIcon, ReceiptTextIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -10,7 +10,7 @@ import { PantryAdd } from "@/components/pantry/pantry-add";
 import { PantryList } from "@/components/pantry/pantry-list";
 import { StillThere } from "@/components/pantry/still-there";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type FoodSummary, useMe, usePantry } from "@/lib/api/hooks";
 import { APP_NAME } from "@/lib/brand";
@@ -19,6 +19,9 @@ export function PantryPage() {
   const { data: me } = useMe();
   const { data: pantry } = usePantry();
   const [scanned, setScanned] = useState<FoodSummary | null>(null);
+  const [adding, setAdding] = useState(false);
+  // An empty pantry has nothing else to show; a full one leads with what's in it.
+  const showAdd = adding || pantry?.length === 0;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
@@ -41,29 +44,36 @@ export function PantryPage() {
       <ExpiryAlerts />
       <StillThere />
       {pantry?.length ? (
-        <Link
-          href="/recipes?pantry=1"
-          className={buttonVariants({ variant: "outline", className: "self-start" })}
-        >
-          <ChefHatIcon aria-hidden />
-          What can I cook?
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/recipes?pantry=1" className={buttonVariants({ variant: "outline" })}>
+            <ChefHatIcon aria-hidden />
+            What can I cook?
+          </Link>
+          {showAdd ? null : (
+            <Button variant="outline" onClick={() => setAdding(true)}>
+              <PlusIcon aria-hidden />
+              Add food
+            </Button>
+          )}
+        </div>
       ) : null}
-      <Card>
-        <CardHeader>
-          <CardTitle>Add food</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {/* A scanned product starts a fresh form (the key remounts it). */}
-          <PantryAdd
-            key={scanned?.id ?? "search"}
-            initialFood={scanned}
-            onAdded={() => setScanned(null)}
-            onCleared={() => setScanned(null)}
-          />
-          {scanned ? null : <BarcodeScan onFound={setScanned} />}
-        </CardContent>
-      </Card>
+      {showAdd ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add food</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {/* A scanned product starts a fresh form (the key remounts it). */}
+            <PantryAdd
+              key={scanned?.id ?? "search"}
+              initialFood={scanned}
+              onAdded={() => setScanned(null)}
+              onCleared={() => setScanned(null)}
+            />
+            {scanned ? null : <BarcodeScan onFound={setScanned} />}
+          </CardContent>
+        </Card>
+      ) : null}
       <PantryList />
     </div>
   );

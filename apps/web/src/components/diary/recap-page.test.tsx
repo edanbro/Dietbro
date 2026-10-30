@@ -44,6 +44,33 @@ const RECAP: Recap = {
 };
 
 describe("RecapPage", () => {
+  it("isn't blank for a week with one weigh-in and nothing else", async () => {
+    mockApi({
+      "GET /insights/recap": json({
+        ...RECAP,
+        planned_meals: 0,
+        eaten_meals: 0,
+        skipped_meals: 0,
+        off_plan: 0,
+        logged_days: 0,
+        avg_kcal: null,
+        protein_days: 0,
+        spent_minor: 0,
+        planned_cost_minor: null,
+        weight_change_kg: null,
+        weight_kg: 77.5,
+        top_recipes: [],
+        price_rises: [],
+        empty: false,
+      }),
+    });
+    renderWithClient(<RecapPage />);
+
+    const weight = await screen.findByRole("region", { name: "Weight" });
+    expect(weight).toHaveTextContent("77.5 kg");
+    expect(weight).toHaveTextContent("your only weigh-in this week");
+  });
+
   it("looks back on the week", async () => {
     const calls = mockApi({ "GET /insights/recap": json(RECAP) });
     renderWithClient(<RecapPage />);
@@ -60,7 +87,7 @@ describe("RecapPage", () => {
     expect(screen.getByRole("region", { name: "Weight" })).toHaveTextContent("-0.6 kg");
     expect(screen.getByRole("link", { name: "Irish stew" })).toHaveAttribute("href", "/recipes/5");
     expect(screen.getByRole("region", { name: "Prices up" })).toHaveTextContent("Salted butter+18%");
-    expect(calls[0]?.path).toBe("/insights/recap");
+    expect(calls.some((c) => c.path === "/insights/recap")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Week before" }));
     expect(nav.replace.at(-1)).toBe("/recap?week=2026-10-05");

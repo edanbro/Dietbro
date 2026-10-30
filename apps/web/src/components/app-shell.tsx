@@ -110,7 +110,7 @@ function CountBadge({ n }: { n: number }) {
   );
 }
 
-const IMMERSIVE = /^\/(recipes\/\d+\/cook|prep)/;
+const IMMERSIVE = /^\/(recipes\/\d+\/cook|prep|setup)/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -118,7 +118,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useRegionSync(me, pathname.startsWith("/setup"));
   useOfflineSync();
   const expiring = me?.profile.expiring_soon ?? 0;
-  // Cooking: the whole phone screen is the recipe, no tab bar to tap by accident.
+  // Cooking: the whole phone screen is the recipe, no tab bar to tap by accident. Setup:
+  // nothing behind those tabs works until there's a first plan.
   const immersive = IMMERSIVE.test(pathname);
   return (
     // Printed: the page's content only, full width, no navigation.

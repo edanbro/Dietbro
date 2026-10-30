@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { json, mockApi, renderWithClient } from "@/test/api";
@@ -32,6 +32,23 @@ describe("PantryPage", () => {
       "href",
       "/recipes?pantry=1",
     );
+  });
+
+  it("leads with the food, and opens the add form on request", async () => {
+    mockApi({ "GET /pantry": json([item(1, 500)]) });
+    renderWithClient(<PantryPage />);
+
+    const add = await screen.findByRole("button", { name: "Add food" });
+    expect(screen.queryByPlaceholderText("Add food, e.g. onions")).not.toBeInTheDocument();
+    fireEvent.click(add);
+    expect(screen.getByPlaceholderText("Add food, e.g. onions")).toBeInTheDocument();
+  });
+
+  it("opens the add form straight away with an empty pantry", async () => {
+    mockApi({ "GET /pantry": json([]) });
+    renderWithClient(<PantryPage />);
+
+    expect(await screen.findByPlaceholderText("Add food, e.g. onions")).toBeInTheDocument();
   });
 
   it("doesn't ask with an empty pantry", async () => {

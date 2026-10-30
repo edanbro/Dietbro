@@ -25,8 +25,6 @@ import { formatNumber, humanize } from "@/lib/format";
 import { bodyUnit, formatBodyWeight, kgFrom } from "@/lib/units";
 
 import { QuickAdd } from "./quick-add";
-import { PriceWatch } from "./price-watch";
-import { SpendingSection } from "./spending";
 import { WeightChart } from "./weight-chart";
 
 const STATUS: Record<NonNullable<DiaryDay["status"]>, { label: string; className: string }> = {
@@ -228,25 +226,30 @@ function Weights() {
         <>
           <WeightChart weights={weights.data} units={units} />
           {weights.data.length ? (
-            <ul className="flex flex-col divide-y rounded-lg border text-sm">
-              {weights.data
-                .slice(-5)
-                .reverse()
-                .map((w) => (
-                  <li key={w.measured_on} className="flex items-center gap-3 px-3 py-1">
-                    <span className="flex-1">{shortDate(w.measured_on)}</span>
-                    <span className="tabular-nums">{formatBodyWeight(w.weight_kg, units)}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Delete the weigh-in of ${shortDate(w.measured_on)}`}
-                      onClick={() => save.mutate({ kind: "delete", measured_on: w.measured_on })}
-                    >
-                      <Trash2Icon />
-                    </Button>
-                  </li>
-                ))}
-            </ul>
+            <details className="text-sm">
+              <summary className="cursor-pointer py-1 text-muted-foreground">
+                Recent weigh-ins
+              </summary>
+              <ul className="mt-1 flex flex-col divide-y rounded-lg border">
+                {weights.data
+                  .slice(-5)
+                  .reverse()
+                  .map((w) => (
+                    <li key={w.measured_on} className="flex items-center gap-3 px-3 py-1">
+                      <span className="flex-1">{shortDate(w.measured_on)}</span>
+                      <span className="tabular-nums">{formatBodyWeight(w.weight_kg, units)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete the weigh-in of ${shortDate(w.measured_on)}`}
+                        onClick={() => save.mutate({ kind: "delete", measured_on: w.measured_on })}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </li>
+                  ))}
+              </ul>
+            </details>
           ) : null}
           <p className="text-xs text-muted-foreground">
             Your newest weigh-in also updates your profile, so calorie suggestions follow it.
@@ -348,8 +351,6 @@ export function DiaryPage() {
         </>
       )}
       <Weights />
-      <SpendingSection />
-      <PriceWatch />
     </div>
   );
 }
