@@ -1,8 +1,6 @@
 /** API-shaped sample data for component tests. */
 import type {
-  ChatMessage,
-  ChatOutcome,
-  ChatThread,
+  PlanOutcome,
   Me,
   Meal,
   Plan,
@@ -217,45 +215,10 @@ export function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
   };
 }
 
-// --- chat -------------------------------------------------------------------------------------
-
-export function chatMessage(
-  id: number,
-  role: ChatMessage["role"],
-  text: string,
-  overrides: Partial<ChatMessage> = {},
-): ChatMessage {
-  return {
-    id,
-    role,
-    text,
-    created_at: "2026-10-09T09:00:00Z",
-    plan_id: null,
-    mode: role === "assistant" ? "offline" : null,
-    offline_reason: null,
-    attachments: [],
-    suggestions: [],
-    ...overrides,
-  };
-}
-
-export function makeThread(overrides: Partial<ChatThread> = {}): ChatThread {
-  return {
-    thread_id: 3,
-    messages: [],
-    has_more: false,
-    pending: null,
-    llm_available: true,
-    offline_reason: null,
-    llm_resets_at: null,
-    messages_today: 0,
-    daily_limit: 60,
-    ...overrides,
-  };
-}
+// --- plan changes ---------------------------------------------------------------------------
 
 /** Skipping Friday's dinner (2026-10-09) in plan 7 made version 2 (plan 8). */
-export function makeOutcome(overrides: Partial<ChatOutcome> = {}): ChatOutcome {
+export function makeOutcome(overrides: Partial<PlanOutcome> = {}): PlanOutcome {
   return {
     type: "outcome",
     plan_id: 8,

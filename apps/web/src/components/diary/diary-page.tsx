@@ -307,7 +307,7 @@ export function DiaryPage() {
                   logged days in the last two weeks.
                 </>
               ) : (
-                "Mark meals eaten on your plan, or tell the chat what you had, and they show up here."
+                "Mark meals eaten on your plan, or add food you had, and they show up here."
               )}
             </p>
           </section>

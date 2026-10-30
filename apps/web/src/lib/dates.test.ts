@@ -69,7 +69,7 @@ describe("labels", () => {
   });
 });
 
-describe("chat times", () => {
+describe("local times", () => {
   it("sends the local wall-clock time", () => {
     expect(localTime(new Date(2026, 9, 9, 7, 5, 3))).toBe("07:05:03");
     process.env.TZ = "Pacific/Auckland";

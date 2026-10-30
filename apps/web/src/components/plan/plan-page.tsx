@@ -29,7 +29,7 @@ import { ApiError } from "@/lib/api/browser";
 import {
   useUndoPlan,
   useUpcomingPlan,
-  type ChatOutcome,
+  type PlanOutcome,
   keys,
   type Plan,
   useAllergens,
@@ -323,7 +323,7 @@ function useMealActions(plan: Plan, today: string, creating: boolean) {
   const replan = useReplan();
   const undo = useUndoPlan();
   const busy = useIsMutating({ mutationKey: keys.planChange }) > 0 || creating;
-  const [outcome, setOutcome] = useState<ChatOutcome | null>(null);
+  const [outcome, setOutcome] = useState<PlanOutcome | null>(null);
   const undoLast = () => {
     if (outcome?.plan_id == null) return;
     undo.mutate(outcome.plan_id, {

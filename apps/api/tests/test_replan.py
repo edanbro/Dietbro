@@ -1,8 +1,9 @@
-"""The replan executor (larder_api.chat.replan.apply_changes) against the database, with fixed
+"""The replan executor (larder_api.changes.replan.apply_changes) against the database, with fixed
 dates: the plan runs Monday 12 to Sunday 18 Oct 2026 and it is Wednesday 14 Oct, 12:00 (so
 today's breakfast is over). The planner is the greedy baseline, or `strict`: the same plans with
 CP-SAT semantics (any hard miss - a kcal band included - means no plan)."""
 
+import uuid
 from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
@@ -18,8 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from larder_api import eaten, planning
-from larder_api.chat.replan import apply_changes
-from larder_api.chat.scope import ChatScope, Models
+from larder_api.changes.replan import apply_changes
+from larder_api.changes.scope import ChangeScope, Models
 from larder_api.settings import Settings
 from larder_core.meals import Slot
 from larder_db import models as db
@@ -109,39 +110,29 @@ PIZZA_SLICES = ate(TODAY, L, "2 slices of pizza", ("pizza", "2 slices"))
 PIZZA_SLICES_KCAL = round(268 * 2 * 63 / 100)
 
 
-# --- the world: a user, a plan, a chat thread ------------------------------------------------
+# --- the world: a user and a plan ------------------------------------------------------------
 
 
 @dataclass
 class World:
     maker: async_sessionmaker[AsyncSession]
     user_id: int
-    thread_id: int
     recipes: dict[str, int]
     v1: int  # the first plan's id
     planner: planning.Planner = GREEDY
     cache: planning.CatalogCache = field(default_factory=planning.CatalogCache)
     runs: list[int] = field(default_factory=list[int])  # planner runs per apply_changes
 
-    async def message(self, text: str = "(chat message)") -> int:
-        async with self.maker() as session:
-            row = db.ChatMessage(
-                thread_id=self.thread_id, user_id=self.user_id, role="user", text=text
-            )
-            session.add(row)
-            await session.commit()
-            return row.id
-
     def scope(
         self,
-        message_id: int,
+        client_id: uuid.UUID,
         *,
         today: date = TODAY,
         local_time: time | None = NOON,
         planner: planning.Planner | None = None,
         models: Models | None = None,
         calls: list[int] | None = None,
-    ) -> ChatScope:
+    ) -> ChangeScope:
         base = planner or self.planner
 
         def counted(problem: Problem, previous: Plan | None) -> PlanResult:
@@ -152,21 +143,18 @@ class World:
         async def nothing(_: object) -> None:
             return None
 
-        return ChatScope(
+        return ChangeScope(
             user_id=self.user_id,
             today=today,
             local_time=local_time,
             now=datetime.combine(today, local_time or time(12), UTC),
-            thread_id=self.thread_id,
-            message_id=message_id,
-            raw_text="(chat message)",
             sessionmaker=self.maker,
             catalog=self.cache,
             planner=counted,
             settings=Settings(),
             models=models or Models(),
-            emit=nothing,
             log_call=nothing,
+            client_id=client_id,
         )
 
     async def say(
@@ -175,12 +163,17 @@ class World:
         today: date = TODAY,
         local_time: time | None = NOON,
         planner: planning.Planner | None = None,
-        message_id: int | None = None,
+        request: uuid.UUID | None = None,
     ) -> ReplanOutcome:
-        mid = message_id or await self.message()
         calls: list[int] = []
-        scope = self.scope(mid, today=today, local_time=local_time, planner=planner, calls=calls)
-        out = await apply_changes(scope, list(changes), source="chat")
+        scope = self.scope(
+            request or uuid.uuid4(),
+            today=today,
+            local_time=local_time,
+            planner=planner,
+            calls=calls,
+        )
+        out = await apply_changes(scope, list(changes))
         self.runs.append(len(calls))
         assert len(calls) <= 3
         async with self.maker() as session:
@@ -241,12 +234,7 @@ def make_world(
     async def make(*, start: date = MON, sub: str = "user_a", **profile: Any) -> World:
         user_id = await new_user(sub, **profile)
         plan_id = await make_plan(user_id, start)
-        maker = make_sessionmaker(db_engine)
-        async with maker() as session:
-            thread = db.ChatThread(user_id=user_id)
-            session.add(thread)
-            await session.commit()
-        return World(maker, user_id, thread.id, menu, plan_id)
+        return World(make_sessionmaker(db_engine), user_id, menu, plan_id)
 
     return make
 
@@ -466,7 +454,7 @@ async def test_skip_eating_elsewhere_counts_the_planned_meal(world: World) -> No
     assert meal(v2, FRI, D) is None
     [log] = await world.logs()
     assert (log.kind, log.slot, log.eaten_on, log.kcal) == ("skipped", "dinner", FRI, planned.kcal)
-    assert (log.plan_id, log.voided_at, log.source) == (v2.id, None, "chat")
+    assert (log.plan_id, log.voided_at, log.source) == (v2.id, None, "app")
     assert total(v2, FRI) == meals_kcal(v2, FRI) + planned.kcal
     assert len(logged(v2, FRI)) == 1
     assert [(e.kind, e.kcal) for e in out.logged] == [("skipped", planned.kcal)]
@@ -669,7 +657,7 @@ async def test_a_logged_meal_is_never_also_carried_over(world: World, replans: b
                     protein_g=20,
                     fat_g=20,
                     carbs_g=60,
-                    source="chat",
+                    source="app",
                     plan_id=world.v1,
                 )
             )
@@ -775,11 +763,11 @@ async def test_shopping_ticks_made_while_replanning_survive(
 
 
 async def test_the_same_change_twice_for_one_message_is_applied_once(world: World) -> None:
-    mid = await world.message()
+    mid = uuid.uuid4()
     lasagne = craving(FRI, D, "lasagne")
 
-    first = await world.say(lasagne, lasagne, message_id=mid)
-    again = await world.say(lasagne, message_id=mid)
+    first = await world.say(lasagne, lasagne, request=mid)
+    again = await world.say(lasagne, request=mid)
 
     assert [r.status for r in first.results] == ["applied", "unchanged"]
     assert [r.status for r in again.results] == ["unchanged"]
@@ -787,9 +775,9 @@ async def test_the_same_change_twice_for_one_message_is_applied_once(world: Worl
     assert await world.versions() == 2
     assert len(await world.cravings()) == 1
 
-    pizza_mid = await world.message()
-    await world.say(PIZZA_SLICES, message_id=pizza_mid)
-    await world.say(PIZZA_SLICES, message_id=pizza_mid)
+    pizza_mid = uuid.uuid4()
+    await world.say(PIZZA_SLICES, request=pizza_mid)
+    await world.say(PIZZA_SLICES, request=pizza_mid)
     assert len(await world.logs()) == 1
 
 
@@ -1105,7 +1093,7 @@ async def test_the_plan_api_shows_logged_food_and_the_parent(
     assert all(d["logged"] == [] for i, d in enumerate(plan["days"]) if i != 2)
 
 
-async def test_plans_saved_before_chat_still_load(world: World) -> None:
+async def test_plans_saved_before_replans_still_load(world: World) -> None:
     v1 = await world.plan()
     old = dict(v1.stats) | {"v": 1}
     old.pop("logged", None)

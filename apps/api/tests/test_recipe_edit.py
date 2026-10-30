@@ -7,7 +7,7 @@ from datetime import date
 from typing import Any
 
 import httpx
-from chat_support import ChatEnv
+from app_support import AppEnv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -31,26 +31,26 @@ def body(*lines: tuple[str, str], name: str = "Chicken and rice") -> dict[str, A
 ORIGINAL = body(("chicken", "300 g"), ("rice", "150 g"), ("broccoli", "200 g"))
 
 
-async def imported(api: httpx.AsyncClient, chat: ChatEnv, sub: str = "user_a") -> int:
-    response = await api.post("/recipes/import", json=ORIGINAL, headers=chat.auth(sub))
+async def imported(api: httpx.AsyncClient, env: AppEnv, sub: str = "user_a") -> int:
+    response = await api.post("/recipes/import", json=ORIGINAL, headers=env.auth(sub))
     assert response.json()["problems"] == [], response.text
     return response.json()["recipe_id"]
 
 
 async def test_editing_your_own_recipe_changes_it_in_place(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
-    rid = await imported(api, chat)
-    before = (await api.get(f"/recipes/{rid}", headers=chat.auth("user_a"))).json()
+    rid = await imported(api, env)
+    before = (await api.get(f"/recipes/{rid}", headers=env.auth("user_a"))).json()
 
     edited = body(("chicken", "300 g"), ("rice", "250 g"), name="Chicken and more rice")
     edited["instructions"] = "Cook the rice for 15 minutes. Fry the chicken for 10 minutes."
-    response = await api.put(f"/recipes/{rid}", json=edited, headers=chat.auth("user_a"))
+    response = await api.put(f"/recipes/{rid}", json=edited, headers=env.auth("user_a"))
 
     assert response.status_code == 200, response.text
     assert response.json() == {"recipe_id": rid, "problems": [], "copied": False}
-    after = (await api.get(f"/recipes/{rid}", headers=chat.auth("user_a"))).json()
+    after = (await api.get(f"/recipes/{rid}", headers=env.auth("user_a"))).json()
     assert after["name"] == "Chicken and more rice"
     assert [i["name"] for i in after["ingredients"]] == ["chicken", "rice"]
     assert after["per_serving"]["kcal"] != before["per_serving"]["kcal"]
@@ -59,25 +59,25 @@ async def test_editing_your_own_recipe_changes_it_in_place(
 
 
 async def test_an_unsafe_edit_is_refused_and_changes_nothing(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a", allergens=["peanuts"])
-    rid = await imported(api, chat)
+    rid = await imported(api, env)
 
     unsafe = body(("chicken", "300 g"), ("rice", "150 g"), ("peanuts", "50 g"))
-    response = await api.put(f"/recipes/{rid}", json=unsafe, headers=chat.auth("user_a"))
+    response = await api.put(f"/recipes/{rid}", json=unsafe, headers=env.auth("user_a"))
 
     assert response.status_code == 200
     result = response.json()
     assert result["recipe_id"] is None
     assert result["problems"]
-    after = (await api.get(f"/recipes/{rid}", headers=chat.auth("user_a"))).json()
+    after = (await api.get(f"/recipes/{rid}", headers=env.auth("user_a"))).json()
     assert [i["name"] for i in after["ingredients"]] == ["chicken", "rice", "broccoli"]
 
 
 async def test_editing_a_catalogue_recipe_saves_your_own_copy(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     db_engine: AsyncEngine,
@@ -88,7 +88,7 @@ async def test_editing_a_catalogue_recipe_saves_your_own_copy(
     response = await api.put(
         f"/recipes/{original}",
         json=body(("chicken", "300 g"), ("broccoli", "300 g"), name="My chicken and broccoli"),
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
 
     assert response.status_code == 200, response.text
@@ -106,24 +106,24 @@ async def test_editing_a_catalogue_recipe_saves_your_own_copy(
 
 
 async def test_someone_elses_recipe_cannot_be_edited(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     await new_user("user_b")
-    rid = await imported(api, chat, "user_a")
+    rid = await imported(api, env, "user_a")
 
-    response = await api.put(f"/recipes/{rid}", json=ORIGINAL, headers=chat.auth("user_b"))
+    response = await api.put(f"/recipes/{rid}", json=ORIGINAL, headers=env.auth("user_b"))
 
     assert response.status_code == 404
 
 
 async def test_notes_and_ratings_are_private(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     await new_user("user_b")
     rid = menu["Chicken and broccoli rice"]
-    h = chat.auth("user_a")
+    h = env.auth("user_a")
 
     saved = await api.put(
         f"/recipes/{rid}/note", json={"note": " More chilli ", "rating": 4}, headers=h
@@ -133,7 +133,7 @@ async def test_notes_and_ratings_are_private(
 
     mine = (await api.get(f"/recipes/{rid}", headers=h)).json()
     assert mine["note"]["note"] == "More chilli"
-    theirs = (await api.get(f"/recipes/{rid}", headers=chat.auth("user_b"))).json()
+    theirs = (await api.get(f"/recipes/{rid}", headers=env.auth("user_b"))).json()
     assert theirs["note"] is None
     link = (await api.post("/share", json={"kind": "recipe", "recipe_id": rid}, headers=h)).json()
     public = (await api.get(f"/public/share/{link['token']}")).json()
@@ -158,7 +158,7 @@ async def test_notes_and_ratings_are_private(
 
 async def test_deleting_your_own_recipe(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -166,9 +166,9 @@ async def test_deleting_your_own_recipe(
 ) -> None:
     user_id = await new_user("user_a")
     await new_user("user_b")
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     plan_id = await make_plan(user_id, date(2026, 10, 12))  # before: it can't plan them
-    unused, planned = await imported(api, chat), await imported(api, chat)
+    unused, planned = await imported(api, env), await imported(api, env)
     await api.put(f"/recipes/{planned}/feedback", json={"verdict": "favourite"}, headers=auth)
     async with make_sessionmaker(db_engine)() as session:
         meal = await session.scalar(select(db.PlanMeal).where(db.PlanMeal.plan_id == plan_id))
@@ -176,7 +176,7 @@ async def test_deleting_your_own_recipe(
         meal.recipe_id = planned
         await session.commit()
 
-    not_theirs = await api.delete(f"/recipes/{unused}", headers=chat.auth("user_b"))
+    not_theirs = await api.delete(f"/recipes/{unused}", headers=env.auth("user_b"))
     catalogue = await api.delete(f"/recipes/{menu['Porridge']}", headers=auth)
     gone = await api.delete(f"/recipes/{unused}", headers=auth)
     hidden = await api.delete(f"/recipes/{planned}", headers=auth)

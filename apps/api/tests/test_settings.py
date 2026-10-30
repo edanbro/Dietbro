@@ -1,6 +1,6 @@
 import pytest
 
-from larder_api.chat.models import get_models
+from larder_api.changes.models import get_models
 from larder_api.settings import Settings, issuer_from_publishable_key
 
 
@@ -39,8 +39,7 @@ def test_blank_anthropic_key_means_offline(monkeypatch: pytest.MonkeyPatch) -> N
     s = Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
     assert s.anthropic_api_key is None
     assert not s.llm_enabled
-    assert get_models(s).offline_reason == "no_key"
-    assert get_models(s).chat is None
+    assert get_models(s).fast is None
 
 
 def test_blank_clerk_values_are_unset() -> None:

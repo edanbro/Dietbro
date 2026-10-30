@@ -5,8 +5,8 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
 
 ## Where things stand (update this when a milestone moves)
 
-- M0–M7 are done: data, accounts, the pantry, CP-SAT planning, the chat that re-plans, live
-  replans, receipt intake and evals. M0–M6 have demo notes in `docs/progress.md`; M7's numbers
+- M0–M7 are done: data, accounts, the pantry, CP-SAT planning, the chat that re-plans (since
+  removed, ADR-0018), live replans, receipt intake and evals. M0–M6 have demo notes in `docs/progress.md`; M7's numbers
   are in `evals/REPORT.md` and the README's Measured table.
 - Since M7, small user-facing features have landed as one PR each: templates, recipe editing
   and notes, micronutrients, price watch, the weekly recap, meal prep, shared shopping lists,
@@ -28,7 +28,8 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
 ## Layout
 
 - `apps/api`: FastAPI, SQLAlchemy async, Alembic (`larder_api`). Routers live in `routers/` and
-  chat in `chat/`; `planning.py` runs the planner and falls back to greedy.
+  plan changes (the replan executor, recipe search, the model budget) in `changes/`;
+  `planning.py` runs the planner and falls back to greedy.
 - `apps/web`: Next.js 16, TanStack Query, Tailwind v4 (tokens in `src/app/globals.css`), Clerk.
   The API client types in `src/lib/api/schema.d.ts` are generated, so never edit them by hand.
 - `apps/worker`: arq worker (receipt OCR, reminders).

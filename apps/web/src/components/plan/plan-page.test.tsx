@@ -433,7 +433,7 @@ describe("New plan", () => {
   });
 });
 
-describe("food logged in the chat", () => {
+describe("food logged off the plan", () => {
   function planWithLogs() {
     const plan = makePlan();
     const fri = plan.days[0];

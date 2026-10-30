@@ -32,19 +32,12 @@ class Settings(BaseSettings):
     plan_concurrency: int = 2  # plans solved at once per process
     plan_candidates: int = 40  # recipes per slot after the prefilter
 
-    # LLM layer (docs/adr/0013-llm-layer.md). Without a key (or with llm_mode=offline) the chat
-    # still works: a rule-based parser and templated replies, same plan changes.
+    # LLM layer (docs/adr/0013-llm-layer.md, 0018). Without a key (or with llm_mode=offline)
+    # everything still works: the offline matchers stand in for the small structured calls.
     anthropic_api_key: SecretStr | None = None
     llm_mode: Literal["auto", "offline"] = "auto"
-    llm_chat_model: str = "claude-sonnet-5-5"  # the conversational agent
     llm_fast_model: str = "claude-haiku-5-5"  # small structured choices (which USDA food?)
-    llm_chat_effort: Literal["low", "medium", "high"] = "low"
-    llm_max_rounds: int = 6  # model responses per chat turn
     llm_timeout_s: float = 30.0  # per request (connect 5 s); the SDK retries once
-    # Per-user limits (costs from llm_calls). Messages: 60 per rolling 24 h (HTTP 429), offline
-    # turns included (they run the planner). Model budget: $1 per calendar month (UTC), paced -
-    # the model is used while today's spend is under what's left of the month divided by the
-    # days left - and at most $0.10 per turn; otherwise the turn runs offline.
     # Expiry reminders (Web Push, larder_api.reminders). Off unless both VAPID keys are set:
     # generate them with `uv run larder-vapid` and keep them in .env only.
     vapid_public_key: str | None = None  # base64url, uncompressed P-256 point (for browsers)
@@ -57,20 +50,17 @@ class Settings(BaseSettings):
     # Hosting without a separate worker (free tiers, larder_api.inline): pasted receipts are read
     # in the API process and periodic jobs run on a minute ticker; receipt photos are refused.
     worker_in_api: bool = False
-    # The public demo account (larder_api.demo): its Clerk user id. Reset nightly, chat offline,
+    # The public demo account (larder_api.demo): its Clerk user id. Reset nightly, models off,
     # can't be deleted. The web app needs the same id (DEMO_CLERK_USER_ID) to sign visitors in.
     demo_auth_subject: str | None = None
 
+    # Model budget per user (costs from llm_calls): $1 per calendar month (UTC), paced - the
+    # model is used while today's spend is under what's left of the month divided by the days
+    # left; otherwise the offline path runs.
     llm_monthly_cap_usd: float = 1.0
-    llm_turn_cap_usd: float = 0.10
-    llm_daily_messages: int = 60
-    # A chat turn runs detached from the HTTP stream, under this deadline (and the turn lock
-    # expires after deadline + 30 s).
-    chat_turn_deadline_s: float = 90.0
-    # Transcript epochs: replay the thread's current epoch only while its last message is newer
-    # than this and the epoch is under the token estimate; otherwise start a new epoch.
-    chat_epoch_idle_min: int = 30
-    chat_epoch_max_tokens: int = 12_000
+    # The replan lock (changes.limits) is stale after this + 30 s: a replan is at most three
+    # planner runs of replan_time_limit_ms, so this is generous.
+    replan_deadline_s: float = 30.0
     replan_time_limit_ms: int = 1_000  # per planner run in a replan (at most 3 runs)
 
     # Pantry intake (docs/adr/0016-receipt-intake.md). The API stores the upload and enqueues
@@ -107,7 +97,7 @@ class Settings(BaseSettings):
     @classmethod
     def _blank_is_unset(cls, value: object) -> object:
         """Compose passes optional variables as "" when they aren't set (`${VAR:-}`): treat that
-        as unset, not as an empty key (the chat would try Claude without one)."""
+        as unset, not as an empty key (the app would try Claude without one)."""
         return None if isinstance(value, str) and not value.strip() else value
 
     @property

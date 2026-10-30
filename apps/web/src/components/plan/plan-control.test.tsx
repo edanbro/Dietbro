@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ChatOutcome } from "@/lib/api/hooks";
+import type { PlanOutcome } from "@/lib/api/hooks";
 import { json, mockApi, renderWithClient, type Routes } from "@/test/api";
 import { makePlan, ME } from "@/test/fixtures";
 import { resetNavigation } from "@/test/navigation";
@@ -24,7 +24,7 @@ function setup(routes: Routes) {
   return calls;
 }
 
-const outcome: ChatOutcome = {
+const outcome: PlanOutcome = {
   type: "outcome",
   plan_id: 8,
   version: 2,

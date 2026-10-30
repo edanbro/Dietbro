@@ -54,7 +54,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: '["http://localhost:3000"]'
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY in .env (see README)}
-      # Optional: without it the chat runs offline (rule parser, templated replies).
+      # Optional: without it the offline matchers settle ambiguous food names.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Optional: barcode lookups of products not imported yet (Open Food Facts).
       OFF_USER_AGENT: ${OFF_USER_AGENT:-}

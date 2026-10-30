@@ -23,7 +23,6 @@ dependencies = [
 
 [project.scripts]
 larder-bench = "larder_api.bench:main"
-larder-llm-smoke = "larder_api.smoke:main"
 larder-vapid = "larder_api.reminders:vapid_main"
 
 [tool.uv.sources]

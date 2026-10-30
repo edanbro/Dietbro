@@ -57,7 +57,6 @@ from larder_db.models import (
     Base,
     BodyProfile,
     BodyWeight,
-    ChatThread,
     Craving,
     Food,
     Goals,
@@ -223,12 +222,6 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
         .order_by(MealPlan.created_at)
         .options(selectinload(MealPlan.meals), selectinload(MealPlan.shopping))
     )
-    threads = await session.scalars(
-        select(ChatThread)
-        .where(ChatThread.user_id == user.id)
-        .order_by(ChatThread.created_at)
-        .options(selectinload(ChatThread.messages))
-    )
     recipes = await session.scalars(
         select(Recipe)
         .where(Recipe.owner_user_id == user.id)
@@ -317,12 +310,8 @@ async def export_me(user: CurrentUser, session: Session, response: Response) -> 
             | {"meals": rows(p.meals, "plan_id"), "shopping": rows(p.shopping, "plan_id")}
             for p in plans
         ],
-        # Chat (M4): what was said (including the exact model transcript), the changes asked
-        # for, food logged, model calls, and recipes drafted for the user.
-        "threads": [
-            (row(t, "user_id") or {}) | {"messages": rows(t.messages, "user_id", "thread_id")}
-            for t in threads
-        ],
+        # Plan changes (M4): the changes asked for, food logged, model calls, and the user's
+        # own recipes.
         "cravings": rows(cravings, "user_id"),
         "meal_logs": rows(logs, "user_id"),
         "llm_calls": rows(calls, "user_id"),

@@ -22,7 +22,7 @@ afterEach(() => vi.unstubAllGlobals());
 const render = renderWithClient;
 
 describe("AppShell", () => {
-  it("puts Plan and Shopping first in the bottom nav, and the logo opens the plan", () => {
+  it("has the everyday places in the bottom nav, Plan and Shopping first; the logo opens the plan", () => {
     render(<AppShell>content</AppShell>);
 
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -34,9 +34,8 @@ describe("AppShell", () => {
       ["Plan", "/plan"],
       ["Shopping", "/plan/shopping"],
       ["Recipes", "/recipes"],
-      ["Chat", "/chat"],
       ["Pantry", "/pantry"],
-      ["Profile", "/profile"],
+      ["Diary", "/diary"],
     ]);
     for (const logo of screen.getAllByRole("link", { name: "Mealwright" })) {
       expect(logo).toHaveAttribute("href", "/plan"); // header (phone) and rail (desktop)
@@ -47,9 +46,9 @@ describe("AppShell", () => {
     ["/plan", "Plan"],
     ["/plan/shopping", "Shopping"],
     ["/recipes/12", "Recipes"],
-    ["/chat", "Chat"],
     ["/pantry", "Pantry"],
-    ["/profile", "Profile"],
+    ["/diary", "Diary"],
+    ["/recap", "Diary"],
   ])("marks %s as %s", (path, label) => {
     resetNavigation(path);
     render(<AppShell>content</AppShell>);
@@ -70,22 +69,24 @@ describe("AppShell", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
   });
 
-  it("marks nothing on a page outside the nav", () => {
-    resetNavigation("/diary");
+  it("keeps the profile out of the tabs: in the phone's header and the desktop rail", () => {
+    resetNavigation("/profile");
     render(<AppShell>content</AppShell>);
 
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(within(nav).getAllByRole("link").filter((a) => a.getAttribute("aria-current"))).toEqual(
       [],
     );
-    // The desktop rail has the diary, and so does the phone's header.
     const rail = screen.getByRole("navigation", { name: "Sidebar" });
-    expect(within(rail).getByRole("link", { name: "Diary" })).toHaveAttribute(
+    expect(within(rail).getByRole("link", { name: "Profile" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     const header = screen.getByRole("banner");
-    expect(within(header).getByRole("link", { name: "Diary" })).toHaveAttribute("href", "/diary");
+    expect(within(header).getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
   });
 
   it("badges the Pantry tab with how much food expires soon", async () => {

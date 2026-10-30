@@ -1,6 +1,6 @@
 """Plan control from the plan screen: next week's plan beside this week's, swap alternatives and
 undo. This week's plan runs Monday 12 to Sunday 18 Oct 2026; it is Wednesday 14 Oct, 12:00 UTC
-(chat_support)."""
+(app_support)."""
 
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 import pytest
-from chat_support import ChatEnv
+from app_support import AppEnv
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -38,14 +38,14 @@ def meal_at(plan: dict[str, Any], on: date, slot: str) -> dict[str, Any] | None:
     return next((m for m in day["meals"] if m["slot"] == slot), None)
 
 
-async def replan(api: httpx.AsyncClient, chat: ChatEnv, *changes: dict[str, Any]) -> Any:
+async def replan(api: httpx.AsyncClient, env: AppEnv, *changes: dict[str, Any]) -> Any:
     body = {
         "changes": list(changes),
         "client_id": str(uuid.uuid4()),
         "today": WED.isoformat(),
         "local_time": "12:00",
     }
-    response = await api.post("/plans/replan", json=body, headers=chat.auth("user_a"))
+    response = await api.post("/plans/replan", json=body, headers=env.auth("user_a"))
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -66,9 +66,9 @@ async def plan_count(engine: AsyncEngine) -> int:
 
 
 async def test_next_weeks_plan_leaves_this_weeks_in_force(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     created = await api.post("/plans", json={"start": NEXT_MON.isoformat()}, headers=auth)
     assert created.status_code == 201, created.text
     next_id = created.json()["id"]
@@ -86,7 +86,7 @@ async def test_next_weeks_plan_leaves_this_weeks_in_force(
         headers=auth,
     )
     assert eaten.status_code == 200, eaten.text
-    outcome = await replan(api, chat, swap(WED, "dinner"))
+    outcome = await replan(api, env, swap(WED, "dinner"))
     assert outcome["results"][0]["status"] == "applied"
     new_version = (await api.get("/plans/current", headers=auth)).json()
     assert new_version["start"] == MON.isoformat()
@@ -94,9 +94,9 @@ async def test_next_weeks_plan_leaves_this_weeks_in_force(
 
 
 async def test_no_upcoming_plan_by_default(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    response = await api.get("/plans/upcoming", headers=chat.auth("user_a"))
+    response = await api.get("/plans/upcoming", headers=env.auth("user_a"))
     assert response.status_code == 200
     assert response.json() is None
 
@@ -105,9 +105,9 @@ async def test_no_upcoming_plan_by_default(
 
 
 async def test_alternatives_are_safe_and_new_for_the_day(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     plan = (await api.get(f"/plans/{plan_id}", headers=auth)).json()
 
     response = await api.get(
@@ -127,16 +127,16 @@ async def test_alternatives_are_safe_and_new_for_the_day(
     assert all("dinner" in o["slots"] for o in options)
 
     # Picking one goes through the ordinary replan.
-    outcome = await replan(api, chat, swap(WED, "dinner", options[0]["id"]))
+    outcome = await replan(api, env, swap(WED, "dinner", options[0]["id"]))
     assert outcome["results"][0]["status"] == "applied"
     now = (await api.get("/plans/current", headers=auth)).json()
     assert meal_at(now, WED, "dinner")["recipe"]["id"] == options[0]["id"]  # type: ignore[index]
 
 
 async def test_alternatives_can_be_searched_and_filtered(
-    api: httpx.AsyncClient, chat: ChatEnv, db_engine: AsyncEngine, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, db_engine: AsyncEngine, plan_id: int
 ) -> None:
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     async with make_sessionmaker(db_engine)() as session:
         await session.execute(update(db.Recipe).values(minutes=60))
         await session.execute(
@@ -181,12 +181,12 @@ async def test_alternatives_can_be_searched_and_filtered(
 
 
 async def test_alternatives_for_a_day_outside_the_plan_404(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
     response = await api.get(
         f"/plans/{plan_id}/alternatives",
         params={"date": "2026-11-01", "slot": "dinner"},
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
     assert response.status_code == 404
 
@@ -195,11 +195,11 @@ async def test_alternatives_for_a_day_outside_the_plan_404(
 
 
 async def test_undo_brings_back_the_previous_version(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     before = (await api.get(f"/plans/{plan_id}", headers=auth)).json()
-    await replan(api, chat, swap(WED, "dinner"))
+    await replan(api, env, swap(WED, "dinner"))
     changed = (await api.get("/plans/current", headers=auth)).json()
     assert meal_at(changed, WED, "dinner") != meal_at(before, WED, "dinner")
 
@@ -222,19 +222,19 @@ async def test_undo_brings_back_the_previous_version(
 
 
 async def test_nothing_to_undo_on_a_new_plan(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    response = await api.post(f"/plans/{plan_id}/undo", headers=chat.auth("user_a"))
+    response = await api.post(f"/plans/{plan_id}/undo", headers=env.auth("user_a"))
     assert response.status_code == 409
 
 
 async def test_no_undo_after_eating(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int, db_engine: AsyncEngine
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int, db_engine: AsyncEngine
 ) -> None:
-    auth = chat.auth("user_a")
-    await replan(api, chat, swap(WED, "dinner"))
+    auth = env.auth("user_a")
+    await replan(api, env, swap(WED, "dinner"))
     changed = (await api.get("/plans/current", headers=auth)).json()
-    chat.advance(seconds=1)  # the mark is made after the change
+    env.advance(seconds=1)  # the mark is made after the change
     eaten = await api.post(
         f"/plans/{changed['id']}/meals/eaten",
         json={"date": WED.isoformat(), "slot": "lunch", "today": WED.isoformat()},
@@ -251,9 +251,9 @@ async def test_no_undo_after_eating(
 
 
 async def test_meals_say_what_they_use_from_the_pantry(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     plan = (await api.get("/plans/current", headers=auth)).json()
     meal = plan["days"][3]["meals"][0]
     recipe = (await api.get(f"/recipes/{meal['recipe']['id']}", headers=auth)).json()
@@ -270,10 +270,10 @@ async def test_meals_say_what_they_use_from_the_pantry(
 
 
 async def test_two_days_trade_dinners_in_one_change(
-    api: httpx.AsyncClient, chat: ChatEnv, plan_id: int
+    api: httpx.AsyncClient, env: AppEnv, plan_id: int
 ) -> None:
     """The plan screen's "Swap with another day": two swaps, each to the other day's recipe."""
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     before = (await api.get("/plans/current", headers=auth)).json()
     thu, sat = WED + timedelta(days=1), WED + timedelta(days=3)
     thursday, saturday = meal_at(before, thu, "dinner"), meal_at(before, sat, "dinner")
@@ -284,7 +284,7 @@ async def test_two_days_trade_dinners_in_one_change(
 
     outcome = await replan(
         api,
-        chat,
+        env,
         swap(thu, "dinner", saturday["recipe"]["id"]),
         swap(sat, "dinner", thursday["recipe"]["id"]),
     )
@@ -301,7 +301,7 @@ async def test_two_days_trade_dinners_in_one_change(
 
 async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -317,9 +317,9 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
     when = {"date": THU.isoformat(), "slot": "lunch"}
     skip = {"intent": "skip", "when": when, "eating_elsewhere": False}
 
-    out = await replan(api, chat, swap(THU, "lunch"), swap(THU, "dinner"), skip)
+    out = await replan(api, env, swap(THU, "lunch"), swap(THU, "dinner"), skip)
 
-    plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
+    plan = (await api.get("/plans/current", headers=env.auth("user_a"))).json()
     assert [(r["status"], r["message"]) for r in out["results"]] == [
         (
             "failed",
@@ -335,7 +335,7 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
 
 async def test_an_own_lunch_that_is_over_still_counts_for_the_day(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -355,10 +355,10 @@ async def test_an_own_lunch_that_is_over_still_counts_for_the_day(
         "local_time": "16:00",  # lunch is over
     }
 
-    response = await api.post("/plans/replan", json=body, headers=chat.auth("user_a"))
+    response = await api.post("/plans/replan", json=body, headers=env.auth("user_a"))
 
     assert response.status_code == 200, response.text
-    plan = (await api.get("/plans/current", headers=chat.auth("user_a"))).json()
+    plan = (await api.get("/plans/current", headers=env.auth("user_a"))).json()
     kept = plan["own_meals"][0]["kcal"]
     wed = next(d for d in plan["days"] if d["date"] == WED.isoformat())
     planned = sum(m["nutrition"]["kcal"] for m in wed["meals"])

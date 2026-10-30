@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/dev/format_hook.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/scripts/dev/format_hook.py\"",
             "timeout": 30
           }
         ]

@@ -6,25 +6,25 @@ from typing import Any
 
 import httpx
 import pytest
-from chat_support import ChatEnv
+from app_support import AppEnv
 
 NewUser = Callable[..., Awaitable[int]]
 MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
 MON = date(2026, 10, 12)
 
 
-async def share(api: httpx.AsyncClient, chat: ChatEnv, sub: str, **body: Any) -> httpx.Response:
-    return await api.post("/share", json=body, headers=chat.auth(sub))
+async def share(api: httpx.AsyncClient, env: AppEnv, sub: str, **body: Any) -> httpx.Response:
+    return await api.post("/share", json=body, headers=env.auth(sub))
 
 
 async def test_a_recipe_link_shows_the_recipe_until_revoked(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     recipe_id = next(iter(menu.values()))
 
-    first = await share(api, chat, "user_a", kind="recipe", recipe_id=recipe_id)
-    again = await share(api, chat, "user_a", kind="recipe", recipe_id=recipe_id)
+    first = await share(api, env, "user_a", kind="recipe", recipe_id=recipe_id)
+    again = await share(api, env, "user_a", kind="recipe", recipe_id=recipe_id)
     assert first.status_code == 200, first.text
     token = first.json()["token"]
     assert again.json()["token"] == token  # asking twice gives the same link
@@ -40,16 +40,16 @@ async def test_a_recipe_link_shows_the_recipe_until_revoked(
     assert shared["recipe"]["feedback"] is None
     assert not any(i["in_pantry"] for i in shared["recipe"]["ingredients"])
 
-    revoked = await api.delete(f"/share/{token}", headers=chat.auth("user_a"))
+    revoked = await api.delete(f"/share/{token}", headers=env.auth("user_a"))
     assert revoked.status_code == 204
     assert (await api.get(f"/public/share/{token}")).status_code == 404
-    fresh = await share(api, chat, "user_a", kind="recipe", recipe_id=recipe_id)
+    fresh = await share(api, env, "user_a", kind="recipe", recipe_id=recipe_id)
     assert fresh.json()["token"] != token
 
 
 async def test_a_week_link_shows_only_the_meals(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
@@ -57,7 +57,7 @@ async def test_a_week_link_shows_only_the_meals(
     user_id = await new_user("user_a", allergens=["peanuts"])
     await make_plan(user_id, MON)
 
-    created = await share(api, chat, "user_a", kind="week", start=MON.isoformat())
+    created = await share(api, env, "user_a", kind="week", start=MON.isoformat())
     assert created.status_code == 200, created.text
     shared = (await api.get(f"/public/share/{created.json()['token']}")).json()
 
@@ -74,21 +74,21 @@ async def test_a_week_link_shows_only_the_meals(
 
 
 async def test_only_your_own_things_can_be_shared(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     await new_user("user_b")
-    no_plan = await share(api, chat, "user_a", kind="week", start=MON.isoformat())
+    no_plan = await share(api, env, "user_a", kind="week", start=MON.isoformat())
     assert no_plan.status_code == 404
-    missing = await share(api, chat, "user_a", kind="recipe", recipe_id=999_999)
+    missing = await share(api, env, "user_a", kind="recipe", recipe_id=999_999)
     assert missing.status_code == 404
-    bad = await share(api, chat, "user_a", kind="recipe")
+    bad = await share(api, env, "user_a", kind="recipe")
     assert bad.status_code == 422
 
     token = (
-        await share(api, chat, "user_a", kind="recipe", recipe_id=next(iter(menu.values())))
+        await share(api, env, "user_a", kind="recipe", recipe_id=next(iter(menu.values())))
     ).json()["token"]
-    stolen = await api.delete(f"/share/{token}", headers=chat.auth("user_b"))
+    stolen = await api.delete(f"/share/{token}", headers=env.auth("user_b"))
     assert stolen.status_code == 404  # only the owner revokes
 
 
@@ -101,15 +101,15 @@ async def test_sharing_needs_sign_in(api: httpx.AsyncClient) -> None:
     assert (await api.post("/share", json={"kind": "recipe", "recipe_id": 1})).status_code == 401
 
 
-async def list_link(api: httpx.AsyncClient, chat: ChatEnv, sub: str = "user_a") -> str:
-    created = await share(api, chat, sub, kind="list", start=MON.isoformat())
+async def list_link(api: httpx.AsyncClient, env: AppEnv, sub: str = "user_a") -> str:
+    created = await share(api, env, sub, kind="list", start=MON.isoformat())
     assert created.status_code == 200, created.text
     return created.json()["token"]
 
 
 async def test_a_shopping_list_link_can_be_ticked_without_signing_in(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
@@ -117,9 +117,9 @@ async def test_a_shopping_list_link_can_be_ticked_without_signing_in(
     user_id = await new_user("user_a", allergens=["peanuts"])
     plan_id = await make_plan(user_id, MON)
     extra = await api.post(
-        "/shopping/extras", json={"name": "Bin bags"}, headers=chat.auth("user_a")
+        "/shopping/extras", json={"name": "Bin bags"}, headers=env.auth("user_a")
     )
-    token = await list_link(api, chat)
+    token = await list_link(api, env)
 
     public = await api.get(f"/public/share/{token}")
     shared = public.json()
@@ -146,8 +146,8 @@ async def test_a_shopping_list_link_can_be_ticked_without_signing_in(
     bagged = await api.patch(
         f"/public/share/{token}/extras/{extra.json()['id']}", json={"checked": True}
     )
-    own = (await api.get(f"/plans/{plan_id}/shopping", headers=chat.auth("user_a"))).json()
-    extras = (await api.get("/shopping/extras", headers=chat.auth("user_a"))).json()
+    own = (await api.get(f"/plans/{plan_id}/shopping", headers=env.auth("user_a"))).json()
+    extras = (await api.get("/shopping/extras", headers=env.auth("user_a"))).json()
 
     assert ticked.status_code == 200, ticked.text
     assert next(i for i in ticked.json()["items"] if i["food_id"] == food)["checked"] is True
@@ -156,34 +156,34 @@ async def test_a_shopping_list_link_can_be_ticked_without_signing_in(
     assert next(i for i in own["items"] if i["food_id"] == food)["checked"] is True
     assert extras[0]["checked"] is True
 
-    await api.delete(f"/share/{token}", headers=chat.auth("user_a"))
+    await api.delete(f"/share/{token}", headers=env.auth("user_a"))
     again = await api.patch(f"/public/share/{token}/items/{food}", json={"checked": False})
     assert again.status_code == 404
 
 
 async def test_a_shopping_list_link_follows_the_newest_plan(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
 ) -> None:
     user_id = await new_user("user_a")
     await make_plan(user_id, MON)
-    token = await list_link(api, chat)
+    token = await list_link(api, env)
     newer = await make_plan(user_id, MON)
 
-    own = (await api.get(f"/plans/{newer}/shopping", headers=chat.auth("user_a"))).json()
+    own = (await api.get(f"/plans/{newer}/shopping", headers=env.auth("user_a"))).json()
     food = next(i["food_id"] for i in own["items"] if not i["staple"])
     await api.patch(f"/public/share/{token}/items/{food}", json={"checked": True})
-    after = (await api.get(f"/plans/{newer}/shopping", headers=chat.auth("user_a"))).json()
+    after = (await api.get(f"/plans/{newer}/shopping", headers=env.auth("user_a"))).json()
 
     assert next(i for i in after["items"] if i["food_id"] == food)["checked"] is True
 
 
 async def test_a_shopping_list_link_ticks_only_its_own_list(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
@@ -191,9 +191,9 @@ async def test_a_shopping_list_link_ticks_only_its_own_list(
     a = await new_user("user_a")
     await new_user("user_b")
     await make_plan(a, MON)
-    token = await list_link(api, chat)
-    week = (await share(api, chat, "user_a", kind="week", start=MON.isoformat())).json()["token"]
-    theirs = await api.post("/shopping/extras", json={"name": "Milk"}, headers=chat.auth("user_b"))
+    token = await list_link(api, env)
+    week = (await share(api, env, "user_a", kind="week", start=MON.isoformat())).json()["token"]
+    theirs = await api.post("/shopping/extras", json={"name": "Milk"}, headers=env.auth("user_b"))
     food = next(
         i["food_id"]
         for i in (await api.get(f"/public/share/{token}")).json()["shopping"]["items"]
@@ -205,11 +205,11 @@ async def test_a_shopping_list_link_ticks_only_its_own_list(
     )
     not_listed = await api.patch(f"/public/share/{token}/items/999999", json={"checked": True})
     read_only = await api.patch(f"/public/share/{week}/items/{food}", json={"checked": True})
-    no_plan = await share(api, chat, "user_b", kind="list", start=MON.isoformat())
+    no_plan = await share(api, env, "user_b", kind="list", start=MON.isoformat())
 
     assert other_extra.status_code == 404
     assert not_listed.status_code == 404
     assert read_only.status_code == 404  # a week's link shows meals; it ticks nothing
     assert no_plan.status_code == 404
-    mine = (await api.get("/shopping/extras", headers=chat.auth("user_b"))).json()
+    mine = (await api.get("/shopping/extras", headers=env.auth("user_b"))).json()
     assert mine[0]["checked"] is False

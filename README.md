@@ -20,8 +20,9 @@ Ask a language model to plan a week and it will happily return something that *l
 it may also put peanuts in a peanut-allergic person's lunch, invent a recipe, or land 600 kcal
 off target. Mealwright splits the job:
 
-- **Claude handles language**: "had pizza for lunch", "something spicy tonight", "skip
-  Thursday dinner" become typed plan changes, and recipes are explained in plain words.
+- **Claude handles language, only where typing beats tapping**: it picks which food an
+  ambiguous name means, among foods from the database. Plan changes are typed (skip, swap,
+  "had something else") and come from one tap on a meal.
 - **A planner handles the plan**: hard rules (allergens, diet, avoided foods, calorie floor,
   daily kcal bands, portions, repeats, budget) and soft goals (pantry use, waste, cost,
   preferences, little churn on a replan).
@@ -31,7 +32,7 @@ off target. Mealwright splits the job:
 ```mermaid
 flowchart LR
     U([Phone / browser<br/>Next.js PWA]) -->|REST + SSE| API[FastAPI]
-    API -->|typed changes| LLM[Claude<br/>chat + parsing]
+    API -->|typed inputs| LLM[Claude<br/>food matching]
     API --> PF[Prefilter<br/>safe candidates]
     PF --> S[Planner<br/>CP-SAT · greedy baseline]
     S --> V{Validator}
@@ -45,8 +46,8 @@ flowchart LR
 
 - **Plans a week** of breakfast, lunch, dinner (and snacks) for your calories, protein, fat,
   carbs and budget, using up what's in your pantry before it expires.
-- **Re-plans when life happens**, from the chat or one tap on a meal: skip, swap (pick from
-  safe options), trade meals between two days, "had something else", rebuild a day, undo.
+- **Re-plans when life happens**, from one tap on a meal: skip, swap (pick from safe options),
+  trade meals between two days, "had something else", rebuild a day, undo.
   Replans keep the rest of the week calm (churn is penalised).
 - **Stocks the pantry fast**: scan a barcode, paste or photograph a receipt (offline OCR), or
   search 200,000+ foods sold in Ireland and the UK. Product photos and nutrition grades
@@ -108,7 +109,7 @@ runs on request.
 
 Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind v4 · TanStack Query ·
 FastAPI · SQLAlchemy 2 · Alembic · Postgres + pgvector · Redis + arq · OR-Tools CP-SAT ·
-Claude (Sonnet for chat, Haiku for small structured calls) · Clerk · Docker Compose · uv ·
+Claude (Haiku for small structured calls) · Clerk · Docker Compose · uv ·
 pnpm · pytest + Hypothesis · Vitest + Testing Library · Playwright.
 
 Design: [docs/DESIGN.md](docs/DESIGN.md) and the [architecture decision records](docs/adr).
@@ -125,8 +126,8 @@ Requires Docker and a free [Clerk](https://clerk.com) development instance (for 
 1. In the Clerk dashboard, create an application and copy its **Publishable key** and
    **Secret key**.
 2. `cp .env.example .env` and paste them into `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`.
-   Optionally add `ANTHROPIC_API_KEY` for the AI chat; without it the chat still changes your
-   plan from plain requests ("skip dinner tonight", "had pizza for lunch").
+   Optionally add `ANTHROPIC_API_KEY`: it settles ambiguous food names; without it the offline
+   matcher decides.
 3. Start everything (migrations run automatically), then load foods and recipes:
 
 ```sh
@@ -177,7 +178,6 @@ make migrate          # apply DB migrations
 make data             # import USDA + TheMealDB + curated recipes, resolve, write report (~4 min)
 make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
 uv run larder-evals --catalog db --n 50   # evals/REPORT.md (add --llm --yes for the paid baseline)
-make llm-smoke        # four real chat turns against Claude (needs ANTHROPIC_API_KEY; ~5 cents)
 uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec
 ```
 
@@ -189,7 +189,7 @@ apps/web        Next.js app
 packages/core   units, measure parsing, nutrition math, allergen/diet tags, prices (pure)
 packages/db     SQLAlchemy models + Alembic migrations
 packages/data   importers, ingredient normaliser, embeddings, curated recipes (CLI: larder-data)
-packages/llm    Claude clients, typed plan changes and tools, agent loop, offline rule parser
+packages/llm    Claude structured-output client, typed plan changes, replan outcomes
 packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT solve() (pure)
                 — modelling guide: packages/solver/README.md
 evals           seeded scenarios, LLM-only baseline, report (CLI: larder-evals)

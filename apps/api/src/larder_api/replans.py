@@ -1,15 +1,14 @@
-"""Plan changes from the plan screen, without the chat (POST /plans/replan, ADR-0015).
+"""Plan changes from the plan screen and the diary (POST /plans/replan, ADR-0015).
 
-The same typed changes the chat's model and offline parser produce (larder_llm.schemas), applied
-by the same executor (`chat.replan.apply_changes`, source "app") in a scope with no thread,
-message or models. In front of it, in one short transaction:
+Typed changes (larder_llm.schemas) applied by the executor (`changes.replan.apply_changes`).
+In front of it, in one short transaction:
 
 1. `today` within a day of the clock's UTC date -> else 400 bad_today.
 2. A change request already stored with this `client_id` (cravings.client_id) -> 409
    duplicate: it was applied; the client reloads the plan instead of resending.
-3. The user's turn lock (chat.limits.acquire_turn, shared with chat turns) -> else 409 busy.
-   One plan change per user at a time, chat or plan screen; solves still queue behind the
-   process-wide `planning.plan_limiter`. The lock is released when the replan ends.
+3. The user's replan lock (changes.limits.acquire_lock) -> else 409 busy. One plan change per
+   user at a time; solves still queue behind the process-wide `planning.plan_limiter`. The
+   lock is released when the replan ends.
 
 The response carries the wall time as `Server-Timing: replan;dur=<ms>` and it is logged with
 the number of meals changed (churn); the saved version's stats keep it as `total_ms`.
@@ -21,17 +20,18 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from datetime import time as wall_time
+from typing import Literal
 
-from fastapi import status
+from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning
-from larder_api.chat import limits, replan
-from larder_api.chat.gate import BAD_TODAY, BUSY, ChatRefused, Code
-from larder_api.chat.offplan import Estimate
-from larder_api.chat.scope import ChatScope, Models
-from larder_api.schemas import ChatProblem, ReplanRequest
+from larder_api.changes import limits, replan
+from larder_api.changes.offplan import Estimate
+from larder_api.changes.scope import ChangeScope, Models
+from larder_api.schemas import ChangeProblem, ReplanRequest
 from larder_api.settings import Settings
 from larder_db import models as db
 from larder_llm.client import ModelCall
@@ -39,7 +39,22 @@ from larder_llm.outcome import ReplanOutcome
 
 logger = logging.getLogger(__name__)
 
+BAD_TODAY = "Your device's date looks wrong - please check it and try again."
+BUSY = "Still working on your last change."
 DUPLICATE = "Those changes were already made - reload your plan."
+
+
+class ChangeRefused(HTTPException):
+    """A refused replan; sent as a JSON ChangeProblem (see `problem_response`)."""
+
+    def __init__(self, status_code: int, problem: ChangeProblem) -> None:
+        super().__init__(status_code, problem.detail)
+        self.problem = problem
+
+
+async def problem_response(_: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, ChangeRefused)
+    return JSONResponse(exc.problem.model_dump(mode="json"), status_code=exc.status_code)
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,10 +69,9 @@ class Timed:
 
 
 def _refuse(
-    code: Code, detail: str, status_code: int, message_id: int | None = None
-) -> ChatRefused:
-    problem = ChatProblem(detail=[detail], code=code, message_id=message_id)
-    return ChatRefused(status_code, problem)
+    code: Literal["bad_today", "busy", "duplicate"], detail: str, status_code: int
+) -> ChangeRefused:
+    return ChangeRefused(status_code, ChangeProblem(detail=[detail], code=code))
 
 
 async def _gate(
@@ -75,10 +89,8 @@ async def _gate(
         if seen is not None:
             raise _refuse("duplicate", DUPLICATE, status.HTTP_409_CONFLICT)
         token = uuid.uuid4()
-        if not await limits.acquire_turn(session, user_id, token, settings, now):
-            running = await limits.turn_in_progress(session, user_id, settings, now)
-            pending = running[0] if running else None
-            raise _refuse("busy", BUSY, status.HTTP_409_CONFLICT, pending)
+        if not await limits.acquire_lock(session, user_id, token, settings, now):
+            raise _refuse("busy", BUSY, status.HTTP_409_CONFLICT)
         await session.commit()
         return token
     except Exception:
@@ -97,29 +109,22 @@ def app_scope(
     planner: planning.Planner,
     settings: Settings,
     client_id: uuid.UUID | None = None,
-) -> ChatScope:
-    """A scope for work started from the app's own screens: no thread, message or models."""
-
-    async def nothing(_: object) -> None:
-        return None
+) -> ChangeScope:
+    """A scope for work started from the app's own screens, without models."""
 
     async def no_calls(_: ModelCall) -> None:
         raise AssertionError("app screens never call a model")
 
-    return ChatScope(
+    return ChangeScope(
         user_id=user_id,
         today=today,
         local_time=local_time,
         now=now,
-        thread_id=None,
-        message_id=None,
-        raw_text="",
         sessionmaker=sessionmaker,
         catalog=catalog,
         planner=planner,
         settings=settings,
-        models=Models(offline_reason="no_key"),
-        emit=nothing,
+        models=Models(),
         log_call=no_calls,
         client_id=client_id,
     )
@@ -152,9 +157,9 @@ async def run(
         client_id=body.client_id,
     )
     try:
-        outcome = await replan.apply_changes(scope, body.changes, source="app", estimates=estimates)
+        outcome = await replan.apply_changes(scope, body.changes, estimates=estimates)
     finally:
-        await limits.release_turn(sessionmaker, user_id, token)
+        await limits.release_lock(sessionmaker, user_id, token)
     timed = Timed(
         outcome,
         (time.perf_counter() - started) * 1000,

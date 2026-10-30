@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ChatOutcome, SlotChange } from "@/lib/api/hooks";
+import type { PlanOutcome, SlotChange } from "@/lib/api/hooks";
 
 import { changeLine, WhatChanged } from "./what-changed";
 
@@ -47,7 +47,7 @@ describe("changeLine", () => {
 });
 
 describe("WhatChanged", () => {
-  const outcome: ChatOutcome = {
+  const outcome: PlanOutcome = {
     type: "outcome",
     plan_id: 8,
     version: 3,

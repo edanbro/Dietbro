@@ -1,12 +1,12 @@
 """The private calendar feed (/me/calendar, /calendar/{token}.ics). This week's plan starts
-Monday 12 Oct 2026; it is Wednesday 14 Oct, 12:00 UTC (chat_support)."""
+Monday 12 Oct 2026; it is Wednesday 14 Oct, 12:00 UTC (app_support)."""
 
 from collections.abc import Awaitable, Callable, Coroutine
 from datetime import date
 from typing import Any
 
 import httpx
-from chat_support import ChatEnv
+from app_support import AppEnv
 
 NewUser = Callable[..., Awaitable[int]]
 MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
@@ -15,14 +15,14 @@ MON = date(2026, 10, 12)
 
 async def test_feed_lists_the_planned_meals(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
 ) -> None:
     user_id = await new_user("user_a")
     await make_plan(user_id, MON)
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
 
     off = (await api.get("/me/calendar", headers=auth)).json()
     assert off == {
@@ -50,13 +50,13 @@ async def test_feed_lists_the_planned_meals(
 
 async def test_times_can_change_and_reset_retires_the_old_address(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     menu: dict[str, int],
     new_user: NewUser,
     make_plan: MakePlan,
 ) -> None:
     await make_plan(await new_user("user_a"), MON)
-    auth = chat.auth("user_a")
+    auth = env.auth("user_a")
     first = (await api.post("/me/calendar", headers=auth)).json()["path"]
 
     times = {"breakfast": "07:15", "lunch": "12:30", "dinner": "18:45", "snack": "15:00"}

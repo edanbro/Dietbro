@@ -8,7 +8,7 @@ from typing import cast
 
 import httpx
 import pytest
-from chat_support import ChatEnv
+from app_support import AppEnv
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_api import recipe_import
@@ -183,7 +183,7 @@ async def test_pages_without_a_recipe_or_not_html() -> None:
 
 
 async def test_read_route_returns_an_editable_draft(
-    api: httpx.AsyncClient, chat: ChatEnv, new_user: NewUser, monkeypatch: pytest.MonkeyPatch
+    api: httpx.AsyncClient, env: AppEnv, new_user: NewUser, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await new_user("user_a")
     real = recipe_import.fetch_recipe
@@ -196,7 +196,7 @@ async def test_read_route_returns_an_editable_draft(
     response = await api.post(
         "/recipes/import/read",
         json={"url": "https://example.com/recipe"},
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
     assert response.status_code == 200, response.text
     draft = response.json()
@@ -211,7 +211,7 @@ async def test_read_route_returns_an_editable_draft(
     refused = await api.post(
         "/recipes/import/read",
         json={"url": "https://internal.test/x"},
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
     assert refused.status_code == 422
     assert "can't be used" in refused.json()["detail"]
@@ -231,7 +231,7 @@ def body(*lines: tuple[str, str]) -> dict[str, object]:
 
 async def test_import_saves_a_private_checked_recipe(
     api: httpx.AsyncClient,
-    chat: ChatEnv,
+    env: AppEnv,
     db_engine: AsyncEngine,
     menu: dict[str, int],
     new_user: NewUser,
@@ -242,7 +242,7 @@ async def test_import_saves_a_private_checked_recipe(
     response = await api.post(
         "/recipes/import",
         json=body(("chicken", "300 g"), ("rice", "150 g"), ("broccoli", "200 g")),
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
 
     assert response.status_code == 200, response.text
@@ -255,19 +255,19 @@ async def test_import_saves_a_private_checked_recipe(
         assert row.source_url == "https://example.com/recipe"
         assert row.image_url == "https://example.com/dish.jpg"
         assert row.minutes == 30  # "Roast the chicken." implies half an hour
-    mine = await api.get(f"/recipes/{result['recipe_id']}", headers=chat.auth("user_a"))
-    theirs = await api.get(f"/recipes/{result['recipe_id']}", headers=chat.auth("user_b"))
+    mine = await api.get(f"/recipes/{result['recipe_id']}", headers=env.auth("user_a"))
+    theirs = await api.get(f"/recipes/{result['recipe_id']}", headers=env.auth("user_b"))
     assert (mine.status_code, theirs.status_code) == (200, 404)
 
 
 async def test_import_reports_what_to_fix(
-    api: httpx.AsyncClient, chat: ChatEnv, menu: dict[str, int], new_user: NewUser
+    api: httpx.AsyncClient, env: AppEnv, menu: dict[str, int], new_user: NewUser
 ) -> None:
     await new_user("user_a")
     response = await api.post(
         "/recipes/import",
         json=body(("zorblax", "200 g"), ("rice", "150 g")),
-        headers=chat.auth("user_a"),
+        headers=env.auth("user_a"),
     )
     assert response.status_code == 200
     result = response.json()

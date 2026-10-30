@@ -72,7 +72,7 @@ export function dateRange(first: string, last: string): string {
   return first === last ? shortDate(first) : `${shortDate(first)} – ${shortDate(last)}`;
 }
 
-/** The local wall-clock time of `d` as HH:MM:SS (what the chat sends as `local_time`). */
+/** The local wall-clock time of `d` as HH:MM:SS (what plan changes send as `local_time`). */
 export function localTime(d: Date = new Date()): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }

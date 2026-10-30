@@ -246,7 +246,7 @@ async def test_a_new_plan_counts_food_already_logged(
                     protein_g=40,
                     fat_g=30,
                     carbs_g=110,
-                    source="chat",
+                    source="app",
                 ),
                 MealLog(  # voided: replaced by a later log, never counted
                     user_id=user_id,
@@ -258,7 +258,7 @@ async def test_a_new_plan_counts_food_already_logged(
                     protein_g=0,
                     fat_g=0,
                     carbs_g=0,
-                    source="chat",
+                    source="app",
                     voided_at=datetime.now(UTC),
                 ),
             ]

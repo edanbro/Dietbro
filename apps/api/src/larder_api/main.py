@@ -4,11 +4,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from larder_api import __version__, health
-from larder_api.chat.gate import ChatRefused, problem_response
+from larder_api.replans import ChangeRefused, problem_response
 from larder_api.resources import lifespan
 from larder_api.routers import (
     calendar,
-    chat,
     diary,
     foods,
     pantry,
@@ -54,7 +53,7 @@ def create_app() -> FastAPI:
             response.headers.setdefault(key, value)
         return response
 
-    app.add_exception_handler(ChatRefused, problem_response)  # the chat gate's JSON 4xx
+    app.add_exception_handler(ChangeRefused, problem_response)  # replan refusals as JSON
     app.include_router(health.router)
     app.include_router(profile.router)
     app.include_router(profile.allergens_router)
@@ -65,7 +64,6 @@ def create_app() -> FastAPI:
     app.include_router(shopping.router)
     app.include_router(usuals.router)
     app.include_router(recipes.router)
-    app.include_router(chat.router)
     app.include_router(diary.router)
     app.include_router(push.router)
     app.include_router(share.router)

@@ -44,7 +44,6 @@ const PAGES = (recipeId: number): [string, string][] => [
   ["prep", `/prep?r=${recipeId}x2`],
   ["diary", "/diary"],
   ["recap", "/recap"],
-  ["chat", "/chat"],
   ["profile", "/profile"],
   ["setup", "/setup"],
 ];

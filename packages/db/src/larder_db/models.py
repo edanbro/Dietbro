@@ -2,9 +2,10 @@
 
 Data (M1): foods, recipes, embeddings. Users (M2): profile, goals, allergies, pantry; every user
 table is keyed or filtered by `user_id`. Plans (M3): versioned weekly plans and shopping lists.
-Chat (M4): threads and messages, requested changes, meals logged off-plan, LLM calls; recipes the
-assistant drafts are private to their owner. Replans (M5): planned meals marked eaten (a meal log
-that records the pantry food it used) and plan changes made from the plan screen (`client_id`).
+Plan changes (M4): requested changes, meals logged off-plan, LLM calls; recipes a user drafts
+are private to their owner (the M4 chat is gone, docs/adr/0018). Replans (M5): planned meals
+marked eaten (a meal log that records the pantry food it used) and plan changes made from the
+plan screen (`client_id`).
 Pantry intake (M6): receipt uploads (photo or pasted text) and the item lines read from them,
 reviewed by the user before they become pantry items.
 """
@@ -35,7 +36,7 @@ from sqlalchemy import (
     text,
     true,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, deferred, mapped_column, relationship
 
 # bge-small-en-v1.5 (see docs/adr/0005-local-embeddings.md).
@@ -316,11 +317,10 @@ class User(Base):
     locale: Mapped[str | None] = mapped_column(String(35))
     # Weights and heights in "metric" or "us" (pounds, ounces, feet); NULL follows the region.
     units: Mapped[str | None] = mapped_column(String(6))
-    # The chat turn in progress (one per user): taken with a conditional UPDATE, released by
-    # token; a lock older than the turn deadline is stale and may be taken over.
-    chat_turn_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
-    chat_turn_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    chat_turn_message_id: Mapped[int | None] = mapped_column(Integer)  # the user's message
+    # The plan change in progress (one per user): taken with a conditional UPDATE, released by
+    # token; a lock older than the replan deadline is stale and may be taken over.
+    replan_lock_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    replan_lock_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The private calendar feed (/calendar/<token>.ics): NULL when off. Meal times for it as
     # {"breakfast": "08:00", ...}; NULL means the defaults.
     calendar_token: Mapped[str | None] = mapped_column(
@@ -639,94 +639,26 @@ class ShoppingExtra(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-# --- chat and LLM layer (M4) ------------------------------------------------------------------
-
-
-class ChatThread(Base):
-    """A conversation. The client shows the latest thread; "new chat" starts another."""
-
-    __tablename__ = "chat_threads"
-    __table_args__ = (Index("ix_chat_threads_user_updated", "user_id", "updated_at"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = _now()
-
-    messages: Mapped[list["ChatMessage"]] = relationship(
-        back_populates="thread", cascade="all, delete-orphan", order_by="ChatMessage.id"
-    )
-
-
-class ChatMessage(Base):
-    """One side of a chat turn. `text` is what the user saw; `api_messages` is the exact Messages
-    API transcript this row added (the user message with its context block; or the assistant
-    responses and tool results), replayed append-only on the next turn of the same `api_epoch`.
-    It is JSON, not JSONB, so the replayed bytes (key order) match what was sent and cached.
-    Refused turns and turns that never reached the model store `[]` (never replayed); offline
-    replies store a plain assistant text message. `attachments` holds the outcome / recipe cards
-    shown with the reply, so a reloaded thread looks like the live one."""
-
-    __tablename__ = "chat_messages"
-    __table_args__ = (
-        Index("ix_chat_messages_thread_id_id", "thread_id", "id"),
-        Index(
-            "ix_chat_messages_user_created_user_role",
-            "user_id",
-            "created_at",
-            postgresql_where=text("role = 'user'"),
-        ),
-        Index("ix_chat_messages_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
-        UniqueConstraint("user_id", "client_id"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    thread_id: Mapped[int] = mapped_column(ForeignKey("chat_threads.id", ondelete="CASCADE"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    role: Mapped[str] = mapped_column(String(16))  # user | assistant
-    # The client's id for a user message (idempotent resend); NULL on assistant rows.
-    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
-    # The user's local date when they sent it (user rows): a later message may not go back.
-    today: Mapped[date | None] = mapped_column(Date)
-    text: Mapped[str] = mapped_column(Text)
-    api_messages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
-    # Transcript segment: replay covers only rows of the thread's current epoch. A new epoch
-    # starts after an idle gap or when the segment gets long, or after a rejected replay.
-    api_epoch: Mapped[int] = mapped_column(Integer, default=0)
-    mode: Mapped[str | None] = mapped_column(String(16))  # llm | offline (assistant rows)
-    offline_reason: Mapped[str | None] = mapped_column(String(16))  # no_key | budget | model_error
-    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
-    suggestions: Mapped[list[str]] = mapped_column(JSONB, default=list)
-    # The last plan version this turn created, if any.
-    plan_id: Mapped[int | None] = mapped_column(ForeignKey("meal_plans.id", ondelete="SET NULL"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    thread: Mapped[ChatThread] = relationship(back_populates="messages")
+# --- plan changes and the LLM layer (M4) -----------------------------------------------------
 
 
 class Craving(Base):
     """A plan change the user asked for (PLAN §5 "cravings"): any intent - craving, off-plan,
-    skip, swap - as typed by the model or the offline parser, and what became of it.
-    (message_id, change_key) is unique: the same change applied twice for one message (a
-    repeated tool call) returns the first result instead of applying it again."""
+    skip, swap - and what became of it. (user_id, client_id, change_key) is unique: the same
+    request sent twice is applied once."""
 
     __tablename__ = "cravings"
     __table_args__ = (
         Index("ix_cravings_user_created", "user_id", "created_at"),
         Index("ix_cravings_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
-        UniqueConstraint("message_id", "change_key"),
         UniqueConstraint("user_id", "client_id", "change_key"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    message_id: Mapped[int | None] = mapped_column(
-        ForeignKey("chat_messages.id", ondelete="SET NULL")
-    )
     # A change made from the plan screen (POST /plans/replan): the request's client id.
     client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     intent: Mapped[str] = mapped_column(String(16))  # craving | ate_off_plan | skip | swap
-    raw_text: Mapped[str] = mapped_column(Text)  # the user's message
     parsed: Mapped[dict[str, Any]] = mapped_column(JSONB)  # larder_llm.schemas.Change
     change_key: Mapped[str] = mapped_column(String(64))  # sha256 of the canonical change JSON
     status: Mapped[str] = mapped_column(String(16))  # applied | failed | unchanged
@@ -770,7 +702,7 @@ class MealLog(Base):
     estimated: Mapped[bool] = mapped_column(Boolean, default=True)
     # How the estimate was made: [{"name", "food_id", "food", "grams"}].
     items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
-    source: Mapped[str] = mapped_column(String(16))  # chat | offline | app
+    source: Mapped[str] = mapped_column(String(16))  # app (chat | offline before ADR-0018)
     recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id", ondelete="SET NULL"))
     # eaten: [{"pantry_item_id", "food_id", "grams", "quantity", "unit"}], amounts taken.
     pantry_taken: Mapped[list[dict[str, Any]]] = mapped_column(
@@ -787,19 +719,11 @@ class LlmCall(Base):
     cost cap and the M7/M8 cost-per-plan numbers."""
 
     __tablename__ = "llm_calls"
-    __table_args__ = (
-        Index("ix_llm_calls_user_created", "user_id", "created_at"),
-        Index(
-            "ix_llm_calls_thread_id", "thread_id", postgresql_where=text("thread_id IS NOT NULL")
-        ),
-    )
+    __table_args__ = (Index("ix_llm_calls_user_created", "user_id", "created_at"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    thread_id: Mapped[int | None] = mapped_column(
-        ForeignKey("chat_threads.id", ondelete="SET NULL")
-    )
-    purpose: Mapped[str] = mapped_column(String(32))  # chat | choose_food | ...
+    purpose: Mapped[str] = mapped_column(String(32))  # choose_food | parse_meal | ...
     model: Mapped[str] = mapped_column(String(64))
     input_tokens: Mapped[int] = mapped_column(Integer)
     output_tokens: Mapped[int] = mapped_column(Integer)
