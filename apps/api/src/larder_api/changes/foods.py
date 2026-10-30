@@ -8,8 +8,9 @@ cached: user input must not leak into ingredient_matches, which the importer's r
 for the shared catalogue (and which has no user to export or delete).
 
 grams_for(food, quantity): larder_core.units / quantities with the food's USDA portions
-("2 slices", "300 g", "1 large"); no quantity -> one typical portion (the food's first portion,
-else 100 g), flagged as estimated, as is a count the food's portions don't weigh.
+("2 slices", "300 g", "1 large"); no quantity -> one typical portion (the food's first portion
+that isn't a feast, else its smallest, else 100 g), flagged as estimated, as is a count the
+food's portions don't weigh.
 """
 
 import logging
@@ -30,6 +31,8 @@ __all__ = ["FoodMatch", "FoodPick", "food_portions", "grams_for", "match_food", 
 logger = logging.getLogger(__name__)
 
 TYPICAL_G = 100.0  # one "portion" of a food USDA gives no portions for
+# USDA often lists the cup first: a "typical portion" of honey would be 1,000 kcal.
+TYPICAL_MAX_KCAL = 400
 
 _SYSTEM = (
     "You match a food someone ate to one entry of the USDA food database. You are given the "
@@ -106,5 +109,9 @@ async def grams_for(scope: ChangeScope, food_id: int, quantity: str | None) -> t
                 and all(p.unit != measure.unit for p in portions)
             )
             return grams, measure.vague or generic
-    first = next((p for p in portions if p.grams > 0), None)
-    return (first.grams if first else TYPICAL_G), True
+    weighed = [p.grams for p in portions if p.grams > 0]
+    if not weighed:
+        return TYPICAL_G, True
+    kcal = (food.kcal or 0) if food else 0
+    usual = next((g for g in weighed if g * kcal / 100 <= TYPICAL_MAX_KCAL), min(weighed))
+    return usual, True

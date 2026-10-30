@@ -67,6 +67,7 @@ RULES: dict[str, Rule] = {
     "calendar_feed_ip": Rule(300, HOUR),
     "plan": Rule(120, HOUR),  # new plans and replans (solver time)
     "diary_log": Rule(300, DAY),
+    "diary_parse": Rule(100, DAY),  # may call a model; each user's spend has its own cap too
 }
 
 

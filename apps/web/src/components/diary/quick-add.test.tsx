@@ -39,6 +39,36 @@ describe("gramsEach", () => {
 });
 
 describe("QuickAdd", () => {
+  it("turns typed words into foods to check, and logs only on the second step", async () => {
+    const calls = mockApi({
+      "GET /foods/9040": json({ ...BANANA, units: [{ unit: "g", grams_each: 1 }] }),
+      "POST /diary/parse": json({
+        items: [{ name: "banana", food: BANANA, grams: 118, estimated: true }],
+        unmatched: ["moon rock"],
+      }),
+      "POST /diary/log": json({ type: "outcome", results: [{ message: "Logged bananas" }] }),
+    });
+    renderWithClient(<QuickAdd />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add food" }));
+    const typed = screen.getByLabelText("Type what you had");
+    fireEvent.change(typed, { target: { value: "a banana and a moon rock" } });
+    fireEvent.keyDown(typed, { key: "Enter" });
+
+    const amount = await screen.findByLabelText("Amount of Bananas");
+    expect(amount).toHaveValue(118);
+    expect(typed).toHaveValue("");
+    expect(screen.getByText(/typical portion/)).toBeInTheDocument();
+    expect(screen.getByText(/find moon rock/)).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/diary/parse")?.body).toMatchObject({
+      text: "a banana and a moon rock",
+    });
+    expect(calls.some((c) => c.path === "/diary/log")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Log it" }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/diary/log")).toBe(true));
+  });
+
   it("logs a picked food in its own unit for the chosen meal", async () => {
     const calls = mockApi({
       "GET /foods/search": json([BANANA]),

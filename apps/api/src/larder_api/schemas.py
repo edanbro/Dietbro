@@ -967,6 +967,27 @@ class FoodLogItem(BaseModel):
     grams: float = Field(gt=0, le=5000)
 
 
+class FoodTextRequest(BaseModel):
+    """What someone typed that they ate: "two eggs, toast and a coffee"."""
+
+    text: str = Field(min_length=1, max_length=300)
+    today: date = Field(description="the user's local date")
+
+
+class ParsedFoodOut(BaseModel):
+    name: str = Field(description="the user's words for it")
+    food: "FoodSummary"
+    grams: float
+    estimated: bool = Field(description="the amount is a typical portion, not what they said")
+
+
+class FoodTextOut(BaseModel):
+    """Foods to check and then log (POST /diary/log); nothing has been logged yet."""
+
+    items: list[ParsedFoodOut]
+    unmatched: list[str] = Field(description="names that matched no food")
+
+
 class RecentFoodItemOut(BaseModel):
     food: "FoodSummary"
     grams: float

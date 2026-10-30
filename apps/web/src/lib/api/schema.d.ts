@@ -1147,6 +1147,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/diary/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse Food Text
+         * @description Turn what someone typed into foods and grams for them to check. Logs nothing. Uses the
+         *     model while the user's budget allows (never for the shared demo account), else a plain
+         *     split on commas and "and"; either way foods and weights come from the food data.
+         */
+        post: operations["parseFoodText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/diary/logs/{log_id}": {
         parameters: {
             query?: never;
@@ -2085,6 +2107,33 @@ export interface components {
             image_url?: string | null;
         };
         /**
+         * FoodTextOut
+         * @description Foods to check and then log (POST /diary/log); nothing has been logged yet.
+         */
+        FoodTextOut: {
+            /** Items */
+            items: components["schemas"]["ParsedFoodOut"][];
+            /**
+             * Unmatched
+             * @description names that matched no food
+             */
+            unmatched: string[];
+        };
+        /**
+         * FoodTextRequest
+         * @description What someone typed that they ate: "two eggs, toast and a coffee".
+         */
+        FoodTextRequest: {
+            /** Text */
+            text: string;
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date
+             */
+            today: string;
+        };
+        /**
          * FoodUnit
          * @description A unit the user can enter for this food, with its weight when one unit is known.
          */
@@ -2592,6 +2641,22 @@ export interface components {
             expires_on?: string | null;
             /** Storage */
             storage?: ("fridge" | "freezer" | "cupboard") | null;
+        };
+        /** ParsedFoodOut */
+        ParsedFoodOut: {
+            /**
+             * Name
+             * @description the user's words for it
+             */
+            name: string;
+            food: components["schemas"]["FoodSummary"];
+            /** Grams */
+            grams: number;
+            /**
+             * Estimated
+             * @description the amount is a typical portion, not what they said
+             */
+            estimated: boolean;
         };
         /** PlanOut */
         PlanOut: {
@@ -6517,6 +6582,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChangeProblem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parseFoodText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodTextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodTextOut"];
                 };
             };
             /** @description Validation Error */

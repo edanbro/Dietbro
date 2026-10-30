@@ -881,6 +881,15 @@ export function useLogFood() {
   });
 }
 
+/** Foods and grams from what the user typed, for them to check; nothing is logged yet. */
+export function useParseFoodText() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (text: string) =>
+      unwrap(await api.POST("/diary/parse", { body: { text, today: localISODate() } })),
+  });
+}
+
 // --- pantry intake (M6) -----------------------------------------------------------------------
 
 /** Pantry items expired or expiring within `days` of the user's local today, soonest first. */

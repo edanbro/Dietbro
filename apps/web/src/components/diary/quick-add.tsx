@@ -12,7 +12,14 @@ import { SLOT_LABEL } from "@/components/plan/slots";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type RecentFood, type Slot, useFood, useLogFood, useRecentFoods } from "@/lib/api/hooks";
+import {
+  type RecentFood,
+  type Slot,
+  useFood,
+  useLogFood,
+  useParseFoodText,
+  useRecentFoods,
+} from "@/lib/api/hooks";
 import { foodName } from "@/lib/food-name";
 import { formatNumber } from "@/lib/format";
 
@@ -115,7 +122,9 @@ export function QuickAdd({
   const [open, setOpen] = useState(initialSlot !== null);
   const [slot, setSlot] = useState<Slot>(() => initialSlot ?? slotNow());
   const [picked, setPicked] = useState<Picked[]>([]);
+  const [typed, setTyped] = useState("");
   const log = useLogFood();
+  const parse = useParseFoodText();
   const recent = useRecentFoods(open);
 
   function add(f: { id: number; description: string; brand?: string | null; image_url?: string | null }) {
@@ -150,10 +159,36 @@ export function QuickAdd({
     );
   }
 
+  /** What they typed, as foods in the form: to check and change before anything is logged. */
+  function findTyped() {
+    const text = typed.trim();
+    if (!text) return;
+    parse.mutate(text, {
+      onSuccess: ({ items }) => {
+        setPicked((p) => [
+          ...p,
+          ...items.map(({ food, grams }) => ({
+            key: crypto.randomUUID(),
+            id: food.id,
+            description: food.description,
+            brand: food.brand,
+            image_url: food.image_url,
+            quantity: String(grams),
+            unit: "g",
+            each: 1,
+          })),
+        ]);
+        setTyped("");
+      },
+    });
+  }
+
   function close() {
     setOpen(false);
     setPicked([]);
+    setTyped("");
     log.reset();
+    parse.reset();
   }
 
   if (!open) {
@@ -209,6 +244,43 @@ export function QuickAdd({
             </option>
           ))}
         </NativeSelect>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="quick-add-typed">Type what you had</Label>
+        <div className="flex gap-2">
+          <Input
+            id="quick-add-typed"
+            placeholder="2 eggs, toast and a coffee"
+            maxLength={300}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); // find the foods, don't log the form
+                findTyped();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!typed.trim() || parse.isPending}
+            onClick={findTyped}
+          >
+            {parse.isPending ? "Finding…" : "Find"}
+          </Button>
+        </div>
+        <ErrorAlert error={parse.error} />
+        {parse.data?.items.some((i) => i.estimated) ? (
+          <p className="text-xs text-muted-foreground">
+            Where you gave no amount, that&apos;s a typical portion. Change any that look wrong.
+          </p>
+        ) : null}
+        {parse.data?.unmatched.length ? (
+          <p className="text-xs text-muted-foreground">
+            Couldn&apos;t find {parse.data.unmatched.join(", ")}. Try searching below.
+          </p>
+        ) : null}
       </div>
       {!picked.length && recent.data?.length ? (
         <section aria-labelledby="quick-add-recent" className="flex flex-col gap-1.5">
