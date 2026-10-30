@@ -224,3 +224,27 @@ async def test_cheapest_first(api: httpx.AsyncClient, auth: Auth, new_user: NewU
     assert priced, "the menu has priced recipes"
     assert priced == sorted(priced)
     assert costs[: len(priced)] == priced  # unpriced ones come last
+
+
+async def test_browsing_puts_everyday_meals_before_slow_ones_and_snacks(
+    api: httpx.AsyncClient,
+    auth: Auth,
+    new_user: NewUser,
+    menu: dict[str, int],
+    db_engine: AsyncEngine,
+) -> None:
+    await new_user("user_a")
+    quick = {"Porridge": 10, "Chicken traybake": 50, "Lentil stew": 40, "Apple slices": 5}
+    async with make_sessionmaker(db_engine)() as session:
+        await session.execute(update(Recipe).values(minutes=240))  # everything else is slow
+        for name, minutes in quick.items():
+            await session.execute(
+                update(Recipe).where(Recipe.id == menu[name]).values(minutes=minutes)
+            )
+        await session.commit()
+
+    order = names(await browse(api, auth, limit=60))
+
+    first = set(order[:3])
+    assert first == {"Porridge", "Chicken traybake", "Lentil stew"}  # quick meals
+    assert order.index("Lasagne") < order.index("Apple slices")  # a slow meal before a snack

@@ -227,6 +227,10 @@ def match(
     return total, tuple(matched)
 
 
+# Browsing without words: recipes slower than this (or untimed) come after quicker ones.
+SLOW_MINUTES = 60
+
+
 def rank_recipes(
     pool: planning.PlanningCatalog,
     viewer: Viewer,
@@ -240,7 +244,9 @@ def rank_recipes(
 ) -> list[RecipeHit]:
     """Recipes safe for the viewer (never ones they blocked), best first: by how well they
     match `words` (all of them when there are no words), then preference (favourites rank
-    up), then pantry use, then id. `max_minutes` keeps those known to take at most that long.
+    up), then pantry use, then id. Without words, everyday meals come first: recipes that fill
+    a meal before snack-only ones (cakes, desserts), and those ready within SLOW_MINUTES before
+    slower or untimed ones. `max_minutes` keeps those known to take at most that long.
     `from_pantry` keeps those using something in the pantry, fewest foods still to get first
     (store-cupboard staples and tap water never count), then most pantry foods used.
     `pricer` adds each one's cost a serving. Shared by swaps, cravings and recipe browsing."""
@@ -302,10 +308,18 @@ def rank_recipes(
                 planning.recipe_cost(recipe, pool.catalog.foods, pricer) if pricer else None
             ),
         )
+        everyday = (
+            (0, 0)
+            if words
+            else (
+                recipe.meal_types <= {Slot.SNACK},
+                minutes is None or minutes > SLOW_MINUTES,
+            )
+        )
         key = (
             (-points, len(missing), -len(uses), -preference(recipe, taste), recipe.id)
             if missing is not None
-            else (-points, -preference(recipe, taste), -len(uses), recipe.id)
+            else (-points, *everyday, -preference(recipe, taste), -len(uses), recipe.id)
         )
         ranked.append((key, hit))
     ranked.sort(key=lambda pair: pair[0])
@@ -323,7 +337,7 @@ async def search_recipes(
     return rank_recipes(pool, viewer, words, slot, max_minutes=minutes)[: max(limit, 0)]
 
 
-# --- one recipe the model names (handlers.visible_recipe / guard_recipe; also the executor) ----
+# --- one recipe a change names (the executor and the recipe routes) ---------------------------
 
 CANT_USE = "I can't use that recipe."
 

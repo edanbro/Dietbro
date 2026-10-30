@@ -340,7 +340,7 @@ export function RecipePage({ id }: { id: number }) {
         Start cooking{servings ? ` (${servings} ${servings === 1 ? "serving" : "servings"})` : ""}
       </Link>
       <Feedback recipe={recipe} />
-      <RecipeNotes key={recipe.note?.updated_at ?? "none"} recipe={recipe} />
+      <Allergens recipe={recipe} />
 
       <section aria-labelledby="recipe-nutrition" className="flex flex-col gap-2">
         <h2 id="recipe-nutrition" className="text-base font-semibold">
@@ -348,17 +348,6 @@ export function RecipePage({ id }: { id: number }) {
         </h2>
         <Nutrition recipe={recipe} />
       </section>
-
-      {recipe.per_serving ? (
-        <section aria-labelledby="recipe-micros" className="flex flex-col gap-2">
-          <h2 id="recipe-micros" className="text-base font-semibold">
-            Vitamins and minerals
-          </h2>
-          <Micronutrients values={recipe.per_serving} mode="serving" />
-        </section>
-      ) : null}
-
-      <Allergens recipe={recipe} />
 
       <section aria-labelledby="recipe-ingredients" className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -405,6 +394,18 @@ export function RecipePage({ id }: { id: number }) {
           ))}
         </div>
       </section>
+
+      {/* What you cook from comes first; the finer detail and your own notes after it. */}
+      {recipe.per_serving ? (
+        <section aria-labelledby="recipe-micros" className="flex flex-col gap-2">
+          <h2 id="recipe-micros" className="text-base font-semibold">
+            Vitamins and minerals
+          </h2>
+          <Micronutrients values={recipe.per_serving} mode="serving" />
+        </section>
+      ) : null}
+
+      <RecipeNotes key={recipe.note?.updated_at ?? "none"} recipe={recipe} />
 
       <Credit recipe={recipe} />
     </article>
