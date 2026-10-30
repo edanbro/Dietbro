@@ -1,5 +1,6 @@
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import date
 from fractions import Fraction
 
@@ -7,7 +8,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from larder_solver.candidates import TastePrefs, allowed, preference, select
+from larder_solver.candidates import MIN_EVERYDAY, TastePrefs, allowed, preference, select
 from larder_solver.problem import (
     Allergen,
     AnimalTag,
@@ -401,3 +402,73 @@ def test_favourites_rank_up_and_blocked_recipes_are_never_candidates() -> None:
         [(s, True) for s in recipe.meal_types],
     )
     assert recipe.id not in chosen
+
+
+# --- how far from everyday meals to go ---------------------------------------------------------
+
+
+def styled(n_everyday: int, n_other: int) -> Catalog:
+    recipes = [
+        replace(rec(i, slots=frozenset({L})), everyday=frozenset({L}))
+        for i in range(1, n_everyday + 1)
+    ]
+    recipes += [rec(1000 + i, slots=frozenset({L})) for i in range(n_other)]
+    return catalog(recipes)
+
+
+def lunch_ids(cat: Catalog, prefs: TastePrefs, k: int = 40) -> set[int]:
+    (spec,), _ = select(cat, OPEN, prefs, (), [(L, True)], k=k)
+    return set(spec.candidates)
+
+
+def test_everyday_keeps_to_everyday_meals_when_there_are_enough() -> None:
+    ids = lunch_ids(styled(MIN_EVERYDAY + 5, 30), TastePrefs(meal_style="everyday"))
+    assert ids == set(range(1, MIN_EVERYDAY + 6))
+
+
+def test_everyday_tops_up_when_allergies_leave_too_few() -> None:
+    ids = lunch_ids(styled(5, 30), TastePrefs(meal_style="everyday"))
+    assert len(ids) == MIN_EVERYDAY
+    assert set(range(1, 6)) <= ids
+
+
+def test_everyday_only_counts_the_slot_it_is_everyday_in() -> None:
+    dinner_only = [
+        replace(rec(i, slots=MAINS), everyday=frozenset({D})) for i in range(1, MIN_EVERYDAY + 1)
+    ]
+    other = [
+        replace(rec(100 + i, slots=MAINS), everyday=frozenset({L})) for i in range(MIN_EVERYDAY)
+    ]
+    ids = lunch_ids(catalog([*dinner_only, *other]), TastePrefs(meal_style="everyday"))
+    assert ids == {100 + i for i in range(MIN_EVERYDAY)}
+
+
+def test_everyday_still_offers_favourites_and_liked_cuisines() -> None:
+    cat = catalog(
+        [
+            *[
+                replace(rec(i, slots=frozenset({L})), everyday=frozenset({L}))
+                for i in range(1, MIN_EVERYDAY + 1)
+            ],
+            rec(500, slots=frozenset({L})),
+            replace(rec(501, slots=frozenset({L})), cuisine="Thai"),
+            rec(502, slots=frozenset({L})),
+        ]
+    )
+    prefs = TastePrefs(
+        meal_style="everyday",
+        favourite_recipe_ids=frozenset({500}),
+        liked_cuisines=frozenset({"thai"}),
+    )
+    assert lunch_ids(cat, prefs) == {*range(1, MIN_EVERYDAY + 1), 500, 501}
+
+
+def test_mix_gives_other_meals_at_most_half_the_candidates() -> None:
+    ids = lunch_ids(styled(30, 60), TastePrefs(meal_style="mix"), k=20)
+    assert len(ids) == 20
+    assert 0 < sum(i >= 1000 for i in ids) <= 10
+
+
+def test_adventurous_draws_on_the_whole_pool() -> None:
+    ids = lunch_ids(styled(10, 300), TastePrefs(meal_style="adventurous"), k=40)
+    assert sum(i >= 1000 for i in ids) > 25

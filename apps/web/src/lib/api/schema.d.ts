@@ -206,6 +206,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/preferences/meal-style": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Meal Style
+         * @description How far from everyday meals the planner goes. Applies from the next plan or change.
+         */
+        put: operations["putMealStyle"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/allergies": {
         parameters: {
             query?: never;
@@ -2461,6 +2481,18 @@ export interface components {
             uses_pantry: string[];
         };
         /**
+         * MealStyleIn
+         * @description How far from everyday meals the planner goes: "everyday" (familiar meals, plus favourites
+         *     and liked cuisines), "mix" (about half and half) or "adventurous" (the whole catalogue).
+         */
+        MealStyleIn: {
+            /**
+             * Meal Style
+             * @enum {string}
+             */
+            meal_style: "everyday" | "mix" | "adventurous";
+        };
+        /**
          * MealsIn
          * @description Which meals the planner plans: "plan" it, "own" (the user sorts it out, and about its
          *     share of the day's targets is kept free for it) or "skip" (not eaten: the planned meals
@@ -2781,6 +2813,12 @@ export interface components {
              */
             quick_minutes: number;
             meals?: components["schemas"]["MealsIn"];
+            /**
+             * Meal Style
+             * @default everyday
+             * @enum {string}
+             */
+            meal_style: "everyday" | "mix" | "adventurous";
         };
         /** PriceItemOut */
         PriceItemOut: {
@@ -4443,6 +4481,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description preferences not set up yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    putMealStyle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealStyleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
                 };
             };
             /** @description preferences not set up yet */

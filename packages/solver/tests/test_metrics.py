@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from larder_solver.metrics import (
     allocate,
+    balance_distance,
     changed_slots,
     cost_millipence,
     day_totals,
@@ -323,6 +324,7 @@ def test_score_terms_on_a_hand_case() -> None:
         "repeat": -150_000 * 2,  # recipes 1 and 2 twice each
         "optional": -120_000 * 1,  # one snack
         "macro": -20_000 * (8 + 12),  # day 1 protein 42 < 50; week protein 112 > 100
+        "balance": 0,
         "churn": -200_000 * 2,  # (0, L) changed recipe, (1, B) is new
     }
     assert list(s.terms) == [
@@ -333,6 +335,7 @@ def test_score_terms_on_a_hand_case() -> None:
         "repeat",
         "optional",
         "macro",
+        "balance",
         "churn",
     ]
     assert s.total == sum(s.terms.values()) == -1_495_000
@@ -368,3 +371,13 @@ def test_score_ignores_choices_and_day_bands() -> None:
     )
     assert score(replanned, plan, previous) == score(p, plan, previous)
     assert macro_distance(replanned, plan) == macro_distance(p, plan) > 0
+
+
+def test_balance_counts_the_kcal_outside_a_slots_band() -> None:
+    recipe = Recipe(1, "Stew", frozenset({Slot.LUNCH}), Macros(kcal=300))
+    spec = SlotSpec(Slot.LUNCH, True, (1,), 1, 4, kcal=Band(500, 700))
+    problem = Problem(date(2026, 1, 5), 3, (spec,), {1: recipe}, {}, Targets({}))
+    # 600 is inside, 300 is 200 short and 900 is 200 over
+    plan = Plan(tuple(Meal(d, Slot.LUNCH, 1, q) for d, q in enumerate((2, 1, 3))))
+    assert balance_distance(problem, plan) == 400
+    assert score(problem, plan).terms["balance"] == -1_000 * 400

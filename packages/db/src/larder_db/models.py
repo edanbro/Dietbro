@@ -421,6 +421,11 @@ class Preferences(Base):
     meal_modes: Mapped[dict[str, str]] = mapped_column(
         JSONB, default=dict, server_default=text("'{}'")
     )
+    # How far from everyday meals the planner goes: everyday | mix | adventurous
+    # (larder_solver.candidates).
+    meal_style: Mapped[str] = mapped_column(
+        String(16), default="everyday", server_default="everyday"
+    )
     updated_at: Mapped[datetime] = _now()
 
 

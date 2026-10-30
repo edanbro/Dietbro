@@ -130,12 +130,15 @@ class PreferencesOut(PreferencesIn):
     quick_minutes: int = 30
     # Which meals are planned (PUT /me/preferences/meals), every slot listed.
     meals: "MealsIn" = Field(default_factory=lambda: MealsIn())
+    # How far from everyday meals to go (PUT /me/preferences/meal-style).
+    meal_style: "MealStyle" = "everyday"
 
 
 QuickMinutes = Literal[20, 30, 45]
 
 
 MealMode = Literal["plan", "own", "skip"]
+MealStyle = Literal["everyday", "mix", "adventurous"]
 
 
 class MealsIn(BaseModel):
@@ -147,6 +150,13 @@ class MealsIn(BaseModel):
     lunch: MealMode = "plan"
     dinner: MealMode = "plan"
     snack: Literal["plan", "skip"] = "plan"
+
+
+class MealStyleIn(BaseModel):
+    """How far from everyday meals the planner goes: "everyday" (familiar meals, plus favourites
+    and liked cuisines), "mix" (about half and half) or "adventurous" (the whole catalogue)."""
+
+    meal_style: MealStyle
 
 
 class QuickNightsIn(BaseModel):

@@ -31,3 +31,8 @@ fdc_id,add_allergens,add_animal,remove_allergens,remove_animal,note
 175083,,honey,,,Graham crackers are sweetened with honey
 171646,tree_nuts,honey,,,homemade granola is usually made with nuts and honey
 172688,soy,,,,UK sliced wholemeal bread usually contains soya flour
+2710175,milk|tree_nuts,dairy,,,Pesto has parmesan and pine nuts
+2708453,gluten,,,,UK cornflakes are made with barley malt
+174195,gluten,,,,Fish fingers are breaded
+2708219,,,milk,dairy,Air-popped with no butter: the description only says so
+169063,milk|soy|tree_nuts|peanuts,dairy,,,Cereal bars vary: assume the common ones

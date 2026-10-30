@@ -146,12 +146,16 @@ class Recipe:
     text_animal: frozenset[AnimalTag] = frozenset()
     cuisine: str | None = None
     preference: int = 0  # how much this user should like it, -100..100 (set by the prefilter)
+    # The slots in which this is a normal, familiar meal (larder_core.meals.everyday_slots). Only
+    # the prefilter reads it: the planner and the validator go by `meal_types`.
+    everyday: frozenset[Slot] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
 class SlotSpec:
     """A slot planned every day. `candidates` are recipe ids (best first) the planner may use;
-    an optional slot may be left empty. None fields fall back to the Problem defaults."""
+    an optional slot may be left empty. None fields fall back to the Problem defaults. `kcal` is
+    the size a meal here should be: going outside it costs `Weights.balance` per kcal."""
 
     slot: Slot
     required: bool
@@ -159,6 +163,7 @@ class SlotSpec:
     min_portions: int | None = None
     max_portions: int | None = None
     max_repeats: int | None = None
+    kcal: Band | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +220,7 @@ class Weights:
         - repeat        * meals that repeat a recipe already in the plan
         - optional_meal * meals in optional slots (a snack has to earn its place)
         - macro         * grams outside the protein/fat/carbs bands (daily and weekly)
+        - balance       * kcal a meal is outside its slot's `SlotSpec.kcal`
         - churn         * slots whose recipe differs from the previous plan (replans)
 
     All weights are >= 0. `larder_solver.metrics.score` computes exactly this.
@@ -227,6 +233,7 @@ class Weights:
     repeat: int = 150_000  # £1.50 per repeat
     optional_meal: int = 120_000  # £1.20 per snack
     macro: int = 20_000  # 20p per gram outside a macro band
+    balance: int = 1_000  # 1p per kcal outside a meal's size: lopsided days cost real money
     churn: int = 200_000  # £2 per changed slot
 
 
