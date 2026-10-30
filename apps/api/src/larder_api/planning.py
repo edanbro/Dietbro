@@ -110,6 +110,10 @@ DAYS = 7
 # whole serving: nobody cooks half a recipe's serving for lunch. A snack is one whole serving, and
 # planned every day when the user asks for it (docs/adr/0020-snacks-through-the-day.md).
 SNACK_RULE: tuple[bool, int, int, int | None] = (True, 2, 2, 4)
+# Candidates each snack needs before they are dealt between the slots. With fewer, a small eater
+# needs the light ones again and again (a vegan on 1,200-1,400 kcal with three snacks a day): a
+# snack twice in a day is the lesser evil.
+MIN_SNACKS_PER_SLOT = 8
 SLOT_RULES: dict[Slot, tuple[bool, int, int, int | None]] = {
     Slot.BREAKFAST: (True, 2, 3, 4),
     Slot.MORNING_SNACK: SNACK_RULE,
@@ -719,6 +723,32 @@ def timed(pool: PlanningCatalog, profile: Profile) -> dict[int, Recipe]:
     return recipes
 
 
+def _deal_snacks(
+    specs: Sequence[SlotSpec],
+    modes: Mapping[Slot, MealMode],
+    days: int,
+    recipes: Mapping[int, Recipe],
+) -> tuple[dict[Slot, tuple[int, ...]], int]:
+    """The candidates of each planned snack, and the repeat cap for every snack slot. Several
+    snacks a day get the candidates dealt between them, smallest first so a small eater finds a
+    light one in every slot, and so the same snack can't come twice in a day. Too few to deal,
+    they share; too few for a day, there's nothing to insist on ({}). The cap rises above
+    SLOT_RULES when it must: one safe snack had daily beats no plan."""
+    planned = [s for s in specs if s.slot in SNACK_SLOTS and modes[s.slot] == "plan"]
+    cap = SNACK_RULE[3] or days
+    if not planned:
+        return {}, cap
+    pool, n = planned[0].candidates, len(planned)
+    if len(pool) < n:
+        return {s.slot: () for s in planned}, cap
+    if len(pool) >= MIN_SNACKS_PER_SLOT * n:
+        by_size = sorted(pool, key=lambda rid: recipes[rid].per_portion.kcal)
+        return {s.slot: tuple(by_size[i::n]) for i, s in enumerate(planned)}, max(
+            cap, math.ceil(days / (len(pool) // n))
+        )
+    return {s.slot: pool for s in planned}, max(cap * n, math.ceil(days * n / len(pool)))
+
+
 def make_problem(
     inputs: UserInputs,
     catalog: PlanningCatalog,
@@ -772,29 +802,16 @@ def make_problem(
     sizes = meal_sizes(inputs)
     # A meal the user sorts out or skips keeps its slot, never filled (`constrain` keeps its
     # share of the day free for an "own" one).
-    # A cap meant for one snack a day would run out with several, or with allergies that leave
-    # one safe snack: having it every day beats refusing the week. The repeat weight still
-    # favours variety.
-    snacks_a_day = max(sum(modes[s] == "plan" for s in SNACK_SLOTS), 1)
-
-    def repeats(spec: SlotSpec) -> int | None:
-        cap = SLOT_RULES[spec.slot][3]
-        if cap is None or spec.slot not in SNACK_SLOTS:
-            return cap
-        return max(
-            cap * snacks_a_day, math.ceil(days * snacks_a_day / max(len(spec.candidates), 1))
-        )
-
+    snack_options, snack_cap = _deal_snacks(specs, modes, days, recipes)
     slots = tuple(
         replace(
             s,
-            candidates=s.candidates if modes[s.slot] == "plan" else (),
+            candidates=snack_options.get(s.slot, s.candidates) if modes[s.slot] == "plan" else (),
             # Allergies can leave too few snacks for a day: no reason to refuse the whole week.
-            required=s.required
-            and (s.slot not in SNACK_SLOTS or len(s.candidates) >= snacks_a_day),
+            required=s.required and (s.slot not in SNACK_SLOTS or bool(snack_options.get(s.slot))),
             min_portions=SLOT_RULES[s.slot][1],
             max_portions=SLOT_RULES[s.slot][2],
-            max_repeats=repeats(s),
+            max_repeats=snack_cap if s.slot in SNACK_SLOTS else SLOT_RULES[s.slot][3],
             kcal=sizes.get(s.slot),
         )
         for s in specs

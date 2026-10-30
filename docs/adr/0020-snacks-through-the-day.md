@@ -35,8 +35,13 @@ Option 2: morning, afternoon and evening snack slots.
 - **Each snack is a whole serving.** Half an apple with peanut butter isn't what anyone has.
 - **Meals shrink to make room.** Each snack takes `SNACK_SHARE` off the day before the meal sizes
   of ADR-0019 are worked out.
-- **The repeat cap grows with the snacks**, 4 a week per snack a day, so three snacks a day don't
-  run out of allowed recipes. The repeat weight still favours variety.
+- **Not the same snack twice in a day, when there's choice.** With at least
+  `MIN_SNACKS_PER_SLOT` (8) candidates per slot, they are dealt between the planned snacks by size
+  (`_deal_snacks`), so popcorn can't turn up three times and every slot has a light option. That
+  took no new solver constraint: disjoint candidates can't clash. With fewer they share and the
+  repeat cap grows with the snacks: a vegan on 1,200-1,400 kcal with three snacks a day needs the
+  light ones again and again, and a repeat is the lesser evil. One safe snack had daily likewise
+  beats refusing the week.
 - **Unnamed food still goes to a meal everyone has.** Logged food with no meal never lands in an
   opt-in slot (`UNNAMED_FOOD_SLOTS`).
 

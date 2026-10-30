@@ -12,10 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from test_plans import Auth, set_up
 
 from larder_api import planning
+from larder_api.schemas import MealMode
 from larder_core.meals import Slot, meals_problem, own_shares
 from larder_db.engine import make_sessionmaker
 from larder_db.models import Allergies, Goals, MealLog, Preferences, Recipe, User
-from larder_solver import Band
+from larder_solver import Band, Macros, SlotSpec
+from larder_solver import Recipe as Recipe_
 
 # test_plans' fixtures: its recipe catalogue, and the greedy planner (autouse there and here).
 catalog_db = test_plans.catalog_db
@@ -258,3 +260,38 @@ async def test_one_safe_snack_is_had_every_day_rather_than_refusing_the_week(
     await put_meals(api, auth, morning_snack="plan")
     response = await api.post("/plans", json={}, headers=auth())
     assert response.status_code == 201, response.text
+
+
+def snack_spec(slot: Slot, candidates: tuple[int, ...]) -> SlotSpec:
+    return SlotSpec(slot, True, candidates)
+
+
+@pytest.mark.parametrize(
+    ("pool", "morning", "afternoon", "cap"),
+    [
+        (tuple(range(1, 17)), tuple(range(1, 17, 2)), tuple(range(2, 17, 2)), 4),  # dealt
+        ((1, 2, 3), (1, 2, 3), (1, 2, 3), 8),  # too few to deal: shared, and the cap rises
+        ((1,), (), (), 4),  # one can't fill two a day: nothing to insist on
+    ],
+)
+def test_snacks_are_dealt_between_the_slots(
+    pool: tuple[int, ...], morning: tuple[int, ...], afternoon: tuple[int, ...], cap: int
+) -> None:
+    specs = [snack_spec(s, pool) for s in (Slot.MORNING_SNACK, Slot.SNACK, Slot.EVENING_SNACK)]
+    modes: dict[Slot, MealMode] = {
+        Slot.MORNING_SNACK: "plan",
+        Slot.SNACK: "plan",
+        Slot.EVENING_SNACK: "skip",
+    }
+    # Ids and sizes run the same way here, so the deal goes in id order.
+    sizes = {rid: Recipe_(rid, "Snack", frozenset({Slot.SNACK}), Macros(kcal=rid)) for rid in pool}
+    options, got = planning._deal_snacks(specs, modes, 7, sizes)  # pyright: ignore[reportPrivateUsage]
+    assert options == {Slot.MORNING_SNACK: morning, Slot.SNACK: afternoon}
+    assert got == cap
+
+
+def test_one_safe_snack_a_day_raises_the_cap_to_every_day() -> None:
+    specs = [snack_spec(Slot.SNACK, (1,))]
+    options, cap = planning._deal_snacks(specs, {Slot.SNACK: "plan"}, 7, {})  # pyright: ignore[reportPrivateUsage]
+    assert options == {Slot.SNACK: (1,)}
+    assert cap == 7
