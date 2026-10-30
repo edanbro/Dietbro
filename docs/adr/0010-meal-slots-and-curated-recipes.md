@@ -49,3 +49,16 @@ Breakfast and Snack. 24 Irish and everyday mains and lunches were added (Irish s
 bacon and cabbage, shepherd's and cottage pie, chowder, fish pie, soups, toasties, curries,
 bolognese...). The same rules apply: every ingredient is an exact curated alias, servings are
 explicit, and tags must be complete.
+
+## Addendum (2026-10-30): whole servings, a protein ceiling
+
+Breakfast and lunch now start at one serving (breakfast 1–1.5, lunch 1–2, dinner 1–2, snack
+0.5–1). The half-serving floor let the planner trim a day's calories by serving half a kebab
+recipe for lunch (226 kcal) next to a one-and-a-half-serving dinner: right on paper, not a meal
+anyone cooks. Small eaters still fit: the catalogue has light breakfasts, soups and salads, and
+the kcal band picks them.
+
+Protein had only a floor, so plans overshot it freely (216 g a day against "at least 88 g" was
+shown as on target). Without a maximum of the user's own, protein is now capped softly at 35%
+of the calorie maximum (the upper end of the adult reference range, at 4 kcal a gram), with
+the usual macro penalty beyond it. The plan shows the band, so the overshoot is visible.

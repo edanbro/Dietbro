@@ -331,9 +331,9 @@ async def test_craving_with_no_safe_match_fails_and_keeps_the_plan(make_world: M
 
 
 async def test_soft_craving_that_cannot_fit_fails_with_the_reason(make_world: MakeWorld) -> None:
-    # A 1,400 kcal day can't hold a 1,000 kcal dinner (2 portions at least) plus the lightest
+    # A 1,700 kcal day can't hold a 1,000 kcal dinner (a serving at least) plus the lightest
     # breakfast and lunch: CP-SAT semantics find no plan, so the wish is dropped.
-    world = await make_world(kcal=(1300, 1400), protein=None)
+    world = await make_world(kcal=(1500, 1700), protein=None)
 
     out = await world.say(craving(THU, D, "feast", strength="soft"), planner=strict)
 
@@ -922,7 +922,7 @@ async def test_goals_needing_review_fail_every_change_but_log_the_facts(
 
 async def test_at_most_three_planner_runs(make_world: MakeWorld) -> None:
     # (a) everything and (b) without the soft wish both fail on Thursday; (c) facts only works.
-    world = await make_world(kcal=(1300, 1400), protein=None)
+    world = await make_world(kcal=(1500, 1700), protein=None)
 
     out = await world.say(
         craving(THU, D, "feast"),
@@ -1027,7 +1027,7 @@ async def test_pinned_meals_stay_through_later_changes(world: World) -> None:
 async def test_a_pinned_meal_outlives_a_soft_wish_for_it_that_fails(
     make_world: MakeWorld,
 ) -> None:
-    world = await make_world(kcal=(1300, 1400), protein=None)
+    world = await make_world(kcal=(1500, 1700), protein=None)
     async with world.maker() as session:
         await session.execute(
             update(db.PlanMeal)

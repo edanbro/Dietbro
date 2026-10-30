@@ -96,10 +96,11 @@ from larder_solver.shopping import ShoppingLine
 logger = logging.getLogger(__name__)
 
 DAYS = 7
-# Per-slot portion ranges (half-servings) and repeat caps: docs/adr/0010.
+# Per-slot portion ranges (half-servings) and repeat caps: docs/adr/0010. Breakfast, lunch and
+# dinner are at least a whole serving: nobody cooks half a recipe's serving for lunch.
 SLOT_RULES: dict[Slot, tuple[bool, int, int, int | None]] = {
-    Slot.BREAKFAST: (True, 1, 3, 4),
-    Slot.LUNCH: (True, 1, 4, None),
+    Slot.BREAKFAST: (True, 2, 3, 4),
+    Slot.LUNCH: (True, 2, 4, None),
     Slot.DINNER: (True, 2, 4, None),
     Slot.SNACK: (False, 1, 2, 4),
 }
@@ -110,6 +111,10 @@ SLOT_MINUTES: dict[Slot, int] = {Slot.BREAKFAST: 30, Slot.LUNCH: 60, Slot.SNACK:
 MIN_TIMED = 10
 # Daily macro bands are looser than the weekly budget they add up to (PLAN §6).
 DAILY_MIN_FACTOR, DAILY_MAX_FACTOR = 0.8, 1.25
+# Without a protein maximum of the user's own, protein is capped at 35% of the calorie maximum
+# (the upper end of the adult reference range, at 4 kcal a gram). Otherwise a protein minimum
+# alone is a target the planner overshoots freely: 2.5x the minimum still read "on target".
+PROTEIN_MAX_SHARE, KCAL_PER_G_PROTEIN = 0.35, 4
 CATALOG_TTL_S = 600.0
 
 # Store-cupboard foods: tagged, but not costed, bought or drawn from the pantry.
@@ -494,8 +499,13 @@ def targets_from(goals: db.Goals, days: int) -> Targets:
         Nutrient.KCAL: Band(max(round(goals.kcal_min), floor), round(goals.kcal_max))
     }
     weekly: dict[Nutrient, Band] = {}
+    protein_max = goals.protein_g_max
+    if protein_max is None:
+        protein_max = max(
+            goals.kcal_max * PROTEIN_MAX_SHARE / KCAL_PER_G_PROTEIN, goals.protein_g_min or 0
+        )
     for nutrient, lo, hi in (
-        (Nutrient.PROTEIN, goals.protein_g_min, goals.protein_g_max),
+        (Nutrient.PROTEIN, goals.protein_g_min, protein_max),
         (Nutrient.FAT, goals.fat_g_min, goals.fat_g_max),
         (Nutrient.CARBS, goals.carbs_g_min, goals.carbs_g_max),
     ):

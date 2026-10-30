@@ -14,7 +14,7 @@ from larder_api.main import app
 from larder_api.routers.plans import get_catalog_cache, get_planner
 from larder_db.engine import make_sessionmaker
 from larder_db.models import Food, Goals, MealLog, MealPlan, Recipe, RecipeIngredient, User
-from larder_solver import Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
+from larder_solver import Band, Macros, Meal, Nutrient, Plan, PlanResult, Problem, Slot, Status
 from larder_solver.scenarios import planted
 
 Auth = Callable[..., dict[str, str]]
@@ -378,9 +378,18 @@ async def test_a_plan_with_an_allergen_is_never_saved(
 
 
 async def test_a_plan_below_the_calorie_floor_is_refused(
-    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await set_up(api, auth)
+    # A buggy planner that ignores the kcal band; light recipes take it under the floor.
+    real_make = planning.make_problem
+
+    def light(*args: Any, **kwargs: Any) -> Problem:
+        problem = real_make(*args, **kwargs)
+        thin = {i: replace(r, per_portion=Macros(kcal=50)) for i, r in problem.recipes.items()}
+        return replace(problem, recipes=thin)
+
+    monkeypatch.setattr(planning, "make_problem", light)
     use_planner(lambda p: _result(_first_candidates(p), Status.FEASIBLE))
 
     response = await api.post("/plans", json={}, headers=auth())
@@ -513,6 +522,27 @@ def test_targets_round_and_widen_daily_macro_bands() -> None:
     assert t.weekly[Nutrient.PROTEIN].min == 703  # 7 x 100.4
     assert Nutrient.FAT not in t.daily
     assert t.calorie_floor == 1200
+
+
+def test_protein_is_capped_at_35_percent_of_calories_unless_the_user_sets_a_max() -> None:
+    capped = planning.targets_from(_goals(kcal_max=2300, protein_g_min=88), days=7)
+    assert capped.weekly[Nutrient.PROTEIN] == Band(616, 1409)  # 7 x 88; 7 x 2300 x 0.35 / 4
+    assert capped.daily[Nutrient.PROTEIN].max == 252  # 1.25 x 201.25
+
+    own = planning.targets_from(_goals(protein_g_min=88, protein_g_max=140), days=7)
+    assert own.weekly[Nutrient.PROTEIN].max == 980
+
+    unset = planning.targets_from(_goals(kcal_max=2000), days=7)
+    assert unset.weekly[Nutrient.PROTEIN] == Band(None, 1225)
+
+    # A minimum above the cap keeps the band the right way round.
+    high = planning.targets_from(_goals(kcal_min=1400, kcal_max=1600, protein_g_min=180), days=7)
+    assert high.weekly[Nutrient.PROTEIN] == Band(1260, 1260)
+
+
+def test_main_meals_are_at_least_a_whole_serving() -> None:
+    for slot in (Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER):
+        assert planning.SLOT_RULES[slot][1] >= 2, slot  # half-servings
 
 
 def test_kcal_band_never_starts_below_the_floor() -> None:
