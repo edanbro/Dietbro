@@ -267,7 +267,7 @@ export function QuickAdd({
             disabled={!typed.trim() || parse.isPending}
             onClick={findTyped}
           >
-            {parse.isPending ? "Finding…" : "Find"}
+            {parse.isPending ? "Findingâ€¦" : "Find"}
           </Button>
         </div>
         <ErrorAlert error={parse.error} />
