@@ -263,25 +263,23 @@ function ViolationList({ items }: { items: Violation[] }) {
   );
 }
 
-/** What the plan misses (hard: only the quick planner; soft: trade-offs) and how it was made. */
+/** What the plan misses (hard misses only happen when no plan meets every rule; soft ones are
+ * trade-offs) and the planner's notes. Which planner made the plan isn't the user's concern:
+ * notes about it, saved with older plans, are left out. */
 function PlanNotes({ plan }: { plan: Plan }) {
   const hard = plan.violations.filter((v) => v.hard);
   const soft = plan.violations.filter((v) => !v.hard);
-  const greedy = plan.planner === "greedy";
-  // The API notes the quick planner too ("Made by the quick planner."); say it once, and not
-  // at all when a note already says why it stepped in.
-  const notes = plan.notes.filter((n) => n !== "Made by the quick planner.");
-  const generic = greedy && !notes.some((n) => n.includes("quick planner"));
+  const notes = plan.notes.filter((n) => !/quick planner|optimiser/i.test(n));
   return (
     <>
       {hard.length ? (
         <Alert
           role="note"
           data-testid="hard-violations"
-          className="border-amber-500/50 bg-amber-50 text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+          className="border-warning/50 bg-warning-subtle text-warning-subtle-foreground"
         >
           <TriangleAlertIcon aria-hidden />
-          <AlertTitle>Quick planner couldn&apos;t meet:</AlertTitle>
+          <AlertTitle>This plan misses:</AlertTitle>
           <AlertDescription className="text-current">
             <ViolationList items={hard} />
           </AlertDescription>
@@ -296,14 +294,11 @@ function PlanNotes({ plan }: { plan: Plan }) {
           </AlertDescription>
         </Alert>
       ) : null}
-      {generic || notes.length ? (
+      {notes.length ? (
         <div
           data-testid="planner-note"
           className="flex flex-col gap-1 text-xs text-muted-foreground"
         >
-          {generic ? (
-            <p>Made by the quick planner: fast, but it can miss a target now and then.</p>
-          ) : null}
           {notes.map((n) => (
             <p key={n}>{n}</p>
           ))}
@@ -677,11 +672,12 @@ function PlanView({
             skipped={plan.skipped_meals}
             onPickDay={(d) => set({ day: d, view: null })}
           />
+          {/* The week's numbers live with the week: the day view is today's meals. */}
+          <WeekSummary plan={plan} />
+          <WeekMicronutrients plan={plan} />
         </TabsContent>
       </Tabs>
 
-      <WeekSummary plan={plan} />
-      <WeekMicronutrients plan={plan} />
       <PlanNotes plan={plan} />
     </div>
     <PrintWeek plan={plan} />

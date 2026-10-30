@@ -698,7 +698,8 @@ def test_auto_falls_back_to_the_quick_planner(
     monkeypatch: pytest.MonkeyPatch, status: Status
 ) -> None:
     """No CP-SAT plan (out of time, or none meets every hard rule): auto saves the baseline's
-    closest plan with a note, and cpsat mode reports the status as it is."""
+    plan, noting only when no plan meets every target, and cpsat mode reports the status as it
+    is. Which planner made it is never the note: users can't act on that."""
     problem = planted(0, k=10).problem
 
     def solve(*_: object, **__: object) -> PlanResult:
@@ -711,5 +712,7 @@ def test_auto_falls_back_to_the_quick_planner(
 
     assert auto.planner == "greedy"
     assert auto.plan is not None
-    assert "quick planner" in auto.notes[-1]
+    closest = [n for n in auto.notes if n == planning.CLOSEST]
+    assert closest == ([planning.CLOSEST] if status == Status.INFEASIBLE else [])
+    assert not [n for n in auto.notes if "planner" in n]
     assert (strict.status, strict.plan) == (status, None)

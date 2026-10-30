@@ -1013,24 +1013,23 @@ def run_planner(
     except NotImplementedError:
         if mode == "cpsat":
             raise
-        fallback = greedy(problem, previous, time_limit_ms)
-        return replace(fallback, notes=(*fallback.notes, "Made by the quick planner."))
-    if mode == "auto" and result.status in _FALL_BACK:
+        return greedy(problem, previous, time_limit_ms)
+    if mode == "auto" and result.status in (Status.UNKNOWN, Status.INFEASIBLE):
         fallback = greedy(problem, previous, time_limit_ms)
         if fallback.plan is None:  # INFEASIBLE either way: the baseline's notes say why
             return replace(fallback, wall_ms=fallback.wall_ms + result.wall_ms)
+        # Which planner made it is ours to know (`planner`), not the user's: a baseline plan
+        # that misses nothing needs no note, and its misses are listed as violations.
+        closest = (CLOSEST,) if result.status == Status.INFEASIBLE else ()
         return replace(
             fallback,
-            notes=(*fallback.notes, _FALL_BACK[result.status]),
+            notes=(*fallback.notes, *closest),
             wall_ms=fallback.wall_ms + result.wall_ms,
         )
     return result
 
 
-_FALL_BACK = {
-    Status.UNKNOWN: "The optimiser ran out of time; made by the quick planner.",
-    Status.INFEASIBLE: "No plan meets every target; the quick planner made the closest one.",
-}
+CLOSEST = "No plan meets every target this week, so this one comes as close as it can."
 
 
 _limiter: anyio.CapacityLimiter | None = None
