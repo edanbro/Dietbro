@@ -57,6 +57,27 @@ export function groupByAisle(items: ShoppingItem[]): [string, ShoppingItem[]][] 
 
 type Tick = ReturnType<typeof useTickShoppingItem>;
 
+/** "1 pack (320 g)", "2 packs of 500 g"; for loose food the weight (and "≈ 3 medium"). */
+export function buyText(item: ShoppingItem, units: Units): string {
+  if (item.pack_g && item.packs) {
+    const pack = formatWeight(item.pack_g, units);
+    return item.packs === 1 ? `1 pack (${pack})` : `${item.packs} packs of ${pack}`;
+  }
+  return [formatWeight(item.grams, units), item.approx_units].filter(Boolean).join(" · ");
+}
+
+/** What a line costs at the till. Lists saved for offline use before packs existed have no
+ * till price: their line cost stands in. */
+function tillOf(item: ShoppingItem): number {
+  return (item.till_minor as number | undefined) ?? item.cost_minor;
+}
+
+/** "uses 15 g": what the meals need, when it's clearly less than the packs bought. */
+function usesText(item: ShoppingItem, units: Units): string | null {
+  if (!item.pack_g || !item.packs) return null;
+  return item.grams < 0.9 * item.packs * item.pack_g ? `uses ${formatWeight(item.grams, units)}` : null;
+}
+
 /** "For Chilli (Mon, Thu) and Fish pie (Wed)", "For Chilli (Mon), Fish pie (Wed) +2". */
 export function usedFor(used: ShoppingItem["used_in"], shown = 2): string | null {
   if (!used?.length) return null;
@@ -79,10 +100,8 @@ function ItemRow({
 }) {
   const id = `shop-${item.food_id}`;
   const { name, detail } = foodName(item.name);
-  const amount = item.staple
-    ? detail
-    : [formatWeight(item.grams, units), item.approx_units, detail].filter(Boolean).join(" · ");
-  const used = usedFor(item.used_in);
+  const amount = [buyText(item, units), usesText(item, units), detail].filter(Boolean).join(" · ");
+  const used = usedFor(item.used_in, 1);
   const described = [amount ? `${id}-amount` : null, used ? `${id}-used` : null].filter(Boolean);
   return (
     <li className="flex items-center gap-3 px-3 py-2.5">
@@ -114,27 +133,38 @@ function ItemRow({
           </span>
         ) : null}
       </div>
-      {item.staple ? null : (
-        <span className="text-sm text-muted-foreground tabular-nums">
-          {formatMoney(item.cost_minor, currency)}
-        </span>
-      )}
+      <span className="text-sm text-muted-foreground tabular-nums">
+        {formatMoney(tillOf(item), currency)}
+      </span>
     </li>
   );
 }
 
+/** What it costs at the till (whole packs), and how much of that the week's meals use: the
+ * budget is about the meals, and the rest of each pack stays in the pantry for next week. */
 function Total({ list }: { list: ShoppingList }) {
   const budget = list.budget_minor;
   const over = budget !== null && list.total_minor > budget;
+  const till = Math.max(
+    (list.till_minor as number | undefined) ??
+      list.items.reduce((sum, i) => sum + (i.staple ? 0 : tillOf(i)), 0),
+    list.total_minor,
+  );
   return (
     <div className="flex items-end justify-between gap-3 rounded-lg bg-muted/60 p-3">
       <div className="flex flex-col">
         <span className="text-xs text-muted-foreground">
-          Estimated total{list.household > 1 ? `, for ${list.household} people` : ""}
+          At the till{list.household > 1 ? `, for ${list.household} people` : ""}
         </span>
         <span className="text-2xl font-semibold tabular-nums">
-          ≈ {formatMoney(list.total_minor, list.currency)}
+          ≈ {formatMoney(till, list.currency)}
         </span>
+        {till > list.total_minor ? (
+          <span className="text-xs text-muted-foreground">
+            The meals use ≈ {formatMoney(list.total_minor, list.currency)}; the rest stays in your
+            pantry.
+          </span>
+        ) : null}
       </div>
       <div className="flex flex-col items-end text-xs">
         {budget === null ? (
@@ -257,21 +287,19 @@ function ListView({ plan }: { plan: Plan }) {
           <p className="text-xs text-muted-foreground">
             Store-cupboard items the recipes use a little of.
           </p>
-          <ul className="flex flex-col divide-y rounded-lg border">
+          <ul className="flex flex-wrap gap-1.5">
             {staples.map((item) => (
-              <ItemRow
-                key={item.food_id}
-                item={item}
-                tick={tick}
-                currency={list.currency}
-                units={units}
-              />
+              <li key={item.food_id} className="rounded-full border px-2.5 py-1 text-xs">
+                {foodName(item.name).name}
+              </li>
             ))}
           </ul>
         </section>
       ) : null}
       <Extras listed={list.items.map((i) => i.food_id)} />
-      <PriceNote>Amounts cover the whole plan after what&apos;s in your pantry.</PriceNote>
+      <PriceNote>
+        Amounts cover the whole plan after what&apos;s in your pantry, in the packs shops sell.
+      </PriceNote>
     </div>
   );
 }
@@ -286,7 +314,7 @@ export function listText(
   for (const [name, items] of groupByAisle(list.items.filter((i) => !i.staple && !i.checked))) {
     lines.push(`${name}:`);
     for (const i of items) {
-      const amount = i.approx_units ?? formatWeight(i.grams, units);
+      const amount = i.pack_g ? buyText(i, units) : (i.approx_units ?? formatWeight(i.grams, units));
       lines.push(`- ${foodName(i.name).name} (${amount})`);
     }
   }

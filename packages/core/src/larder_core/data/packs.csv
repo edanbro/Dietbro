@@ -1,0 +1,142 @@
+kind,key,pack_g,note
+category,Spices and Herbs,40,dried spice jar
+category,Breakfast Cereals,500,box
+category,Cereal Grains and Pasta,500,bag
+category,Fats and Oils,460,500 ml bottle
+category,Legumes and Legume Products,400,can
+category,Nut and Seed Products,200,bag
+category,Soups and Sauces,500,carton or jar
+category,"Soups, Sauces, and Gravies",500,carton or jar
+category,Sweets,500,bag or jar
+category,Vegetables and Vegetable Products,0,loose
+category,Fruits and Fruit Juices,0,loose
+fdc,173468,0,salt: a staple
+fdc,173647,0,tap water
+fdc,169230,0,garlic: loose bulbs
+fdc,170000,0,onions: loose
+fdc,169655,1000,granulated sugar
+fdc,171287,300,egg box of 6
+fdc,172184,300,yolks come from a box of eggs
+fdc,172183,300,whites come from a box of eggs
+fdc,173410,250,butter block
+fdc,173430,250,unsalted butter block
+fdc,171413,460,olive oil 500 ml
+fdc,168936,1500,plain flour
+fdc,168895,1500,self-raising flour
+fdc,172336,920,vegetable or rapeseed oil 1 l
+fdc,171025,920,sunflower oil 1 l
+fdc,171016,230,sesame oil 250 ml
+fdc,171265,1000,milk 1 l
+fdc,171267,1000,milk 1 l
+fdc,170416,30,fresh parsley bunch
+fdc,169997,30,fresh coriander bunch
+fdc,173470,30,fresh thyme
+fdc,173475,30,fresh mint
+fdc,172232,30,fresh basil
+fdc,172233,30,fresh dill
+fdc,169994,30,fresh chives
+fdc,173473,30,fresh rosemary
+fdc,168833,500,brown sugar
+fdc,169656,500,icing sugar
+fdc,173471,38,vanilla extract bottle
+fdc,170859,300,double cream 300 ml
+fdc,171257,300,soured cream
+fdc,174277,150,soy sauce 150 ml
+fdc,174531,200,fish sauce
+fdc,174529,150,oyster sauce
+fdc,171610,150,worcestershire sauce
+fdc,174527,60,hot sauce
+fdc,172803,170,baking powder tub
+fdc,175043,56,yeast sachets
+fdc,169698,250,cornflour
+fdc,168877,1000,long-grain rice
+fdc,169742,250,rice noodles
+fdc,169736,500,dried pasta
+fdc,173904,1000,oats
+fdc,170459,140,tomato paste tube or tin
+fdc,170051,400,tin of tomatoes
+fdc,170054,400,tin of passata or sauce
+fdc,172884,500,chicken stock carton
+fdc,172883,500,beef stock carton
+fdc,171583,500,vegetable stock carton
+fdc,171562,80,stock cubes
+fdc,170173,400,tin of coconut milk
+fdc,170170,200,desiccated coconut
+fdc,171796,500,beef mince
+fdc,174036,500,beef mince
+fdc,174370,500,lamb mince
+fdc,167902,500,pork mince
+fdc,175179,200,prawns
+fdc,171077,500,chicken breasts
+fdc,173627,500,chicken thighs
+fdc,171447,1500,whole chicken
+fdc,168277,200,bacon rashers
+fdc,173859,200,chorizo
+fdc,171631,400,sausages
+fdc,173864,120,sliced ham
+fdc,171955,280,cod fillets
+fdc,175167,240,salmon fillets
+fdc,170848,100,parmesan
+fdc,328637,200,cheddar block
+fdc,170845,125,mozzarella ball
+fdc,173420,200,feta
+fdc,173418,180,cream cheese tub
+fdc,171304,500,greek yogurt
+fdc,171284,500,natural yogurt
+fdc,171009,400,mayonnaise jar
+fdc,172240,350,red wine vinegar
+fdc,172237,350,white vinegar
+fdc,173469,350,cider vinegar
+fdc,172234,185,mustard jar
+fdc,169640,340,honey jar
+fdc,168820,340,treacle tin
+fdc,169593,250,cocoa
+fdc,170273,100,dark chocolate bar
+fdc,171275,397,tin of condensed milk
+fdc,174837,750,bottle of wine
+fdc,174924,800,white loaf
+fdc,172688,800,wholemeal loaf
+fdc,172675,400,baguette or sourdough
+fdc,174915,300,pack of pittas
+fdc,174928,200,breadcrumbs
+fdc,172790,320,puff pastry
+fdc,170567,200,almonds
+fdc,170187,150,walnuts
+fdc,170150,100,sesame seeds
+fdc,324860,340,peanut butter jar
+fdc,2515376,200,peanuts
+fdc,173756,500,dried chickpeas
+fdc,173744,500,dried kidney beans
+fdc,168165,250,raisins
+fdc,170016,900,frozen peas
+fdc,169214,200,tin of sweetcorn (drained)
+fdc,168462,200,bag of spinach
+fdc,167747,250,lemon juice bottle
+fdc,168156,250,lime juice bottle
+fdc,170005,100,bunch of spring onions
+keyword,tortilla,320,pack of 8 wraps
+keyword,bread,800,loaf
+keyword,pasta,500,bag
+keyword,spaghetti,500,bag
+keyword,noodle,250,pack
+keyword,rice,1000,bag
+keyword,flour,1500,bag
+keyword,oil,460,bottle
+keyword,butter,250,block
+keyword,cheese,200,block or tub
+keyword,yogurt,500,pot
+keyword,milk,1000,1 l
+keyword,cream,300,pot
+keyword,egg,300,box of 6
+keyword,mince,500,pack
+keyword,ground,500,pack of mince
+keyword,bacon,200,rashers
+keyword,sausage,400,pack
+keyword,stock,500,carton
+keyword,broth,500,carton
+keyword,sauce,250,bottle or jar
+keyword,vinegar,350,bottle
+keyword,canned,400,can
+keyword,frozen,500,bag
+keyword,fresh,0,loose unless listed
+keyword,raw,0,loose unless listed

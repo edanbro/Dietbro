@@ -784,7 +784,9 @@ export interface paths {
         /**
          * Stock Shopping Items
          * @description Move bought lines into the pantry (default: every ticked line not moved yet), in grams,
-         *     with a suggested use-by date. Each line moves once; staples are never moved.
+         *     with a suggested use-by date. Each line moves once; staples are never moved. A food sold in
+         *     packs moves as the whole packs bought, so what the plan doesn't use stays in the pantry
+         *     for the next plan to use up.
          */
         post: operations["stockShoppingItems"];
         delete?: never;
@@ -3589,6 +3591,22 @@ export interface components {
             /** Approx Units */
             approx_units?: string | null;
             /**
+             * Pack G
+             * @description the usual pack (larder_core.packs); None: sold loose
+             */
+            pack_g?: number | null;
+            /**
+             * Packs
+             * @description whole packs that hold `grams`
+             */
+            packs?: number | null;
+            /**
+             * Till Minor
+             * @description what the whole packs cost (cost_minor when sold loose)
+             * @default 0
+             */
+            till_minor: number;
+            /**
              * Used In
              * @description the plan's recipes that need it, by day
              */
@@ -3613,6 +3631,12 @@ export interface components {
              * @description estimated cost of every non-staple line (= plan cost)
              */
             total_minor: number;
+            /**
+             * Till Minor
+             * @description estimated spend buying whole packs; the rest of each pack goes to the pantry
+             * @default 0
+             */
+            till_minor: number;
             /** Budget Minor */
             budget_minor: number | null;
             /**

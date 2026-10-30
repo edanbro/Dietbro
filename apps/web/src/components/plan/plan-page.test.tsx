@@ -103,8 +103,8 @@ describe("PlanPage states", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Only 3 breakfasts fit your allergies");
     expect(alert).toHaveTextContent("Try widening your calorie range");
-    const review = screen.queryByRole("link", { name: "Review your profile" });
-    if (status === 409) expect(review).toHaveAttribute("href", "/profile");
+    const review = screen.queryByRole("link", { name: "Review your goals" });
+    if (status === 409) expect(review).toHaveAttribute("href", "/profile/goals");
     else expect(review).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Plan my week" })).toBeEnabled();
   });
@@ -275,6 +275,7 @@ describe("loaded plan", () => {
   it("says the cost is everyone's when the plan is for a household", async () => {
     setup({ "GET /plans/current": json(makePlan({ household: 4 })) });
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Week" })); // the week's numbers
     const summary = await screen.findByRole("region", { name: "This plan" });
     expect(within(summary).getByText("Estimated cost for 4")).toBeInTheDocument();
   });
@@ -282,6 +283,7 @@ describe("loaded plan", () => {
   it("summarises the week: energy, protein, cost against budget, pantry and waste", async () => {
     setup({ "GET /plans/current": json(makePlan({ waste_g: 150 })) });
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Week" })); // the week's numbers
     const summary = await screen.findByRole("region", { name: "This plan" });
     expect(summary).toHaveTextContent("1,900 kcal");
     expect(summary).toHaveTextContent("≈ £42.10");
@@ -301,6 +303,7 @@ describe("loaded plan", () => {
       ),
     });
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Week" })); // the week's numbers
     const summary = await screen.findByRole("region", { name: "This plan" });
     expect(summary).toHaveTextContent("≈ €53.20");
     expect(summary).toHaveTextContent("€3.20 over your €50.00 budget");
@@ -321,23 +324,21 @@ describe("violations and planner notes", () => {
   it("separates hard misses (warning) from soft trade-offs (info)", async () => {
     setup({
       "GET /plans/current": json(
-        makePlan({ planner: "greedy", violations, notes: ["The optimiser timed out."] }),
+        makePlan({ planner: "greedy", violations, notes: ["Two dinners repeat this week."] }),
       ),
     });
 
     const hard = await screen.findByTestId("hard-violations");
-    expect(hard).toHaveTextContent("Quick planner couldn't meet:");
+    expect(hard).toHaveTextContent("This plan misses:");
     expect(hard).toHaveTextContent("Tue: 2,350 kcal is above your 2,200 kcal maximum");
     expect(hard).not.toHaveTextContent("protein");
-    expect(hard.className).toContain("amber");
+    expect(hard.className).toContain("bg-warning-subtle");
 
     const soft = screen.getByTestId("soft-violations");
     expect(soft).toHaveTextContent("Trade-offs in this plan");
     expect(soft).toHaveTextContent("Wed: 60 g protein is below 72 g");
 
-    const note = screen.getByTestId("planner-note");
-    expect(note).toHaveTextContent("quick planner");
-    expect(note).toHaveTextContent("The optimiser timed out.");
+    expect(screen.getByTestId("planner-note").textContent).toBe("Two dinners repeat this week.");
   });
 
   it("keeps the less used week actions behind More on phones", async () => {
@@ -354,16 +355,20 @@ describe("violations and planner notes", () => {
     expect(rest.className).not.toContain("max-sm:hidden");
   });
 
-  it("says why the quick planner stepped in, once", async () => {
-    const why = "No plan meets every target; the quick planner made the closest one.";
+  it("never talks about which planner made the plan", async () => {
+    const closest = "No plan meets every target this week, so this one comes as close as it can.";
     setup({
       "GET /plans/current": json(
-        makePlan({ planner: "greedy", violations, notes: ["Made by the quick planner.", why] }),
+        makePlan({
+          planner: "greedy",
+          // Notes saved with plans made before planners stopped being mentioned.
+          notes: ["Made by the quick planner.", "The optimiser ran out of time.", closest],
+        }),
       ),
     });
 
     const note = await screen.findByTestId("planner-note");
-    expect(note.textContent).toBe(why);
+    expect(note.textContent).toBe(closest);
   });
 
   it("shows no banners for a clean optimised plan", async () => {
@@ -558,7 +563,7 @@ describe("meals the user sorts out or skips", () => {
     expect(rows[0]).toHaveTextContent("LunchYour ownAbout 700 kcal kept for it.");
     expect(within(rows[0]).getByRole("link", { name: "Change" })).toHaveAttribute(
       "href",
-      "/profile#meals",
+      "/profile/meals",
     );
     expect(screen.getByText("Totals include about 700 kcal kept for your own lunch.")).toBeVisible();
     // Not today: nothing to log yet.

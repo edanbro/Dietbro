@@ -619,6 +619,24 @@ async def test_fibre_sugars_sat_fat_and_salt_are_reported(
     )
 
 
+async def test_lines_sold_in_packs_are_bought_as_whole_packs(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    await set_up(api, auth)
+    plan = (await api.post("/plans", json={}, headers=auth())).json()
+
+    shopping = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
+
+    rice = next(i for i in shopping["items"] if i["food_id"] == RICE)
+    assert rice["pack_g"] == 1000  # a 1 kg bag
+    assert rice["packs"] == -(-rice["grams"] // 1000)
+    assert rice["till_minor"] >= rice["cost_minor"]
+    loose = [i for i in shopping["items"] if i["pack_g"] is None and not i["staple"]]
+    assert all(i["till_minor"] == i["cost_minor"] for i in loose)
+    assert shopping["till_minor"] == sum(i["till_minor"] for i in shopping["items"])
+    assert shopping["till_minor"] >= shopping["total_minor"]
+
+
 async def test_ticked_lines_move_into_the_pantry_once(api: httpx.AsyncClient, auth: Auth) -> None:
     await set_up(api, auth)
     plan = (await api.post("/plans", json={}, headers=auth())).json()
@@ -632,8 +650,9 @@ async def test_ticked_lines_move_into_the_pantry_once(api: httpx.AsyncClient, au
     after = (await api.get(f"/plans/{plan['id']}/shopping", headers=auth())).json()
 
     assert moved.status_code == 201
+    # The whole bag goes in: what the plan doesn't use is there for the next one.
     assert [(i["food"]["id"], i["grams"], i["source"]) for i in moved.json()] == [
-        (RICE, rice["grams"], "shopping")
+        (RICE, rice["packs"] * rice["pack_g"], "shopping")
     ]
     assert again.json() == []  # each line moves once
     assert [i["food"]["id"] for i in pantry] == [RICE]
@@ -679,7 +698,8 @@ def test_auto_falls_back_to_the_quick_planner(
     monkeypatch: pytest.MonkeyPatch, status: Status
 ) -> None:
     """No CP-SAT plan (out of time, or none meets every hard rule): auto saves the baseline's
-    closest plan with a note, and cpsat mode reports the status as it is."""
+    plan, noting only when no plan meets every target, and cpsat mode reports the status as it
+    is. Which planner made it is never the note: users can't act on that."""
     problem = planted(0, k=10).problem
 
     def solve(*_: object, **__: object) -> PlanResult:
@@ -692,5 +712,7 @@ def test_auto_falls_back_to_the_quick_planner(
 
     assert auto.planner == "greedy"
     assert auto.plan is not None
-    assert "quick planner" in auto.notes[-1]
+    closest = [n for n in auto.notes if n == planning.CLOSEST]
+    assert closest == ([planning.CLOSEST] if status == Status.INFEASIBLE else [])
+    assert not [n for n in auto.notes if "planner" in n]
     assert (strict.status, strict.plan) == (status, None)

@@ -193,7 +193,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
     });
 
     await test.step("calendar feed", async () => {
-      await page.goto("/profile");
+      await page.goto("/profile/calendar");
       const turnedOn = page.waitForResponse(
         (r) => r.url().endsWith("/me/calendar") && r.request().method() === "POST",
       );
@@ -291,7 +291,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
     });
 
     await test.step("lunch sorted out by me: a new plan keeps room for it", async () => {
-      await page.goto("/profile#meals");
+      await page.goto("/profile/meals");
       const meals = page.getByRole("form", { name: "Meals to plan" });
       await meals.getByRole("group", { name: "Lunch" }).getByText("I'll sort it").click();
       await meals.getByRole("button", { name: "Save meals" }).click();

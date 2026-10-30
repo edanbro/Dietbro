@@ -178,7 +178,8 @@ _CONTAINER_RE = re.compile(
     r"(?:tins?|cans?|packs?|packets?|jars?|bags?|tubs?|bottles?|cartons?|pots?|blocks?)\b"
 )
 _OF_RE = re.compile(
-    r"^(?:(?:finely\s+)?grated\s+|the\s+)?(?P<u>juice|zest|rind)(?:\s+and\s+\w+)?\s+of\s+(?P<q>.+)$"
+    r"^(?:(?:finely\s+)?grated\s+|the\s+)?(?P<u>juice|zest|rind)(?:\s+and\s+(?P<v>\w+))?"
+    r"\s+of\s+(?P<q>.+)$"
 )
 # Preparation words that may sit between a quantity and its unit ("5 chopped cloves").
 _PREP_WORDS: frozenset[str] = frozenset(
@@ -265,7 +266,9 @@ def parse_measure(text: str) -> Measure:
 
     if of := _OF_RE.match(s):
         q = parse_quantity(of["q"]) or _WORD_QUANTITIES.get(of["q"].split()[0], 1.0)
-        return Measure(q, "zest" if of["u"] == "rind" else of["u"])
+        # "Zest and juice of 1" weighs as the juice: the zest is a couple of grams.
+        unit = "juice" if "juice" in (of["u"], of["v"]) else "zest"
+        return Measure(q, unit)
 
     quantity, rest = _take_quantity(s)
     rest = rest.lstrip(" -")

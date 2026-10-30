@@ -45,6 +45,7 @@ const PAGES = (recipeId: number): [string, string][] => [
   ["diary", "/diary"],
   ["recap", "/recap"],
   ["profile", "/profile"],
+  ["profile-goals", "/profile/goals"],
   ["setup", "/setup"],
 ];
 

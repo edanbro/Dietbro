@@ -112,6 +112,7 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
     await visit("diary", "/diary");
     await visit("recap", "/recap");
     await visit("profile", "/profile");
+    await visit("profile-goals", "/profile/goals");
     await visit("setup", "/setup");
 
     // Public share pages (no sign-in needed to view them).

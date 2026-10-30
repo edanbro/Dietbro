@@ -133,11 +133,19 @@ export function DayMacros({
           ))}
         </dl>
       ) : null}
-      <MoreNutrients values={totals} reference={reference} />
-      <p className="text-xs text-muted-foreground">
-        Calories are a firm range. Protein, carbs and fat are aimed for, so a day can be a little
-        off while the week balances out.
-      </p>
+      {/* The everyday view stays short: the rest of the label is a tap away. */}
+      <details className="text-sm">
+        <summary className="cursor-pointer text-xs text-muted-foreground">
+          Fibre, sugars, saturated fat and salt
+        </summary>
+        <div className="flex flex-col gap-2 pt-2">
+          <MoreNutrients values={totals} reference={reference} />
+          <p className="text-xs text-muted-foreground">
+            Calories are a firm range. Protein, carbs and fat are aimed for, so a day can be a
+            little off while the week balances out.
+          </p>
+        </div>
+      </details>
     </section>
   );
 }

@@ -155,6 +155,8 @@ def test_parse_quantity_round_trips_mixed_fractions(whole: int, frac: Fraction) 
         ("1 heaped tbsp", 1, "tbsp", None),
         ("grated zest of 2", 2, "zest", None),
         ("the juice and zest of one", 1, "juice", None),
+        ("Zest and juice of 1", 1, "juice", None),
+        ("rind and juice of 2", 2, "juice", None),
         ("1 pot", 1, "pot", None),
         ("1 large chopped", 1, None, "large"),
     ],

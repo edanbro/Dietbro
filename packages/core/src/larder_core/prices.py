@@ -44,10 +44,10 @@ def price(fdc_id: int, description: str, category: str | None) -> Price:
     table = load_prices()
     if fdc_id in table.fdc:
         return table.fdc[fdc_id]
-    words = _words(description)
+    words = description_words(description)
     best: tuple[int, Price] | None = None
     for keyword, found in table.keywords:
-        at = _find(words, keyword)
+        at = find_words(words, keyword)
         if at is not None and (best is None or at < best[0]):
             best = (at, found)
     if best is not None:
@@ -89,7 +89,7 @@ def load_prices() -> PriceTable:
                 case "fdc":
                     _put(fdc, int(key), found)
                 case "keyword":
-                    _put(keywords, _words(key), found)
+                    _put(keywords, description_words(key), found)
                 case "category":
                     _put(category, key, found)
                 case _:
@@ -104,13 +104,14 @@ def _put[K](table: dict[K, Price], key: K, found: Price) -> None:
     table[key] = found
 
 
-def _words(text: str) -> tuple[str, ...]:
+def description_words(text: str) -> tuple[str, ...]:
+    """Folded, singular words of a food description (shared with larder_core.packs)."""
     folded = unicodedata.normalize("NFKD", text.casefold())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
     return tuple(singular(w) for w in re.findall(r"[a-z0-9]+", folded))
 
 
-def _find(words: tuple[str, ...], keyword: tuple[str, ...]) -> int | None:
+def find_words(words: tuple[str, ...], keyword: tuple[str, ...]) -> int | None:
     """Index of the first occurrence of `keyword` in `words`."""
     n = len(keyword)
     return next((i for i in range(len(words) - n + 1) if words[i : i + n] == keyword), None)

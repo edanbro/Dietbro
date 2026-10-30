@@ -32,6 +32,7 @@ const MILK: ShoppingItem = {
   category: "Dairy and Egg Products",
   grams: 1000,
   cost_minor: 100,
+  till_minor: 100,
   checked: false,
   stocked: false,
   staple: false,
