@@ -552,3 +552,27 @@ def test_a_replan_is_at_least_as_good_as_keeping_the_plan(seed: int) -> None:
     plan = found(run(p, previous))
     assert score(p, plan, previous).total >= score(p, witness, previous).total
     assert changed_slots(previous, plan) >= forced_churn(scenario)
+
+
+def test_a_lopsided_day_costs_and_the_solver_avoids_it() -> None:
+    # Both days of meals hit the same total; only the balance tells them apart.
+    light = Recipe(1, "Soup", frozenset({L}), Macros(kcal=100))
+    hearty = Recipe(2, "Pie", frozenset({L}), Macros(kcal=300))
+    small = Recipe(3, "Salad", frozenset({D}), Macros(kcal=100))
+    big = Recipe(4, "Roast", frozenset({D}), Macros(kcal=300))
+    problem = Problem(
+        date(2026, 1, 5),
+        1,
+        (
+            SlotSpec(L, True, (1, 2), 2, 4, kcal=Band(500, 700)),
+            SlotSpec(D, True, (3, 4), 2, 4, kcal=Band(500, 700)),
+        ),
+        {1: light, 2: hearty, 3: small, 4: big},
+        {},
+        Targets({Nutrient.KCAL: Band(1200, 1200)}, calorie_floor=1200),
+    )
+    result = solve(problem)
+    plan = found(result)
+    kcal = [problem.recipes[m.recipe_id].per_portion.kcal * m.portions for m in plan.meals]
+    assert kcal == [600, 600]
+    assert result.objective == score(problem, plan).total

@@ -1,0 +1,117 @@
+source,source_id,slots,note
+mealdb,52770,dinner,Spaghetti bolognese
+mealdb,53006,dinner,Moussaka
+mealdb,53366,dinner,Beef and broccoli stir-fry
+mealdb,52812,dinner,Pot roast
+mealdb,52998,dinner,Corned beef and cabbage
+mealdb,52881,dinner,Steak and kidney pie
+mealdb,52873,dinner,Beef and dumpling stew
+mealdb,52952,dinner,Beef lo mein
+mealdb,52874,dinner,Beef and mustard pie
+mealdb,52876,dinner,Minced beef pie
+mealdb,52826,dinner,Braised beef chilli
+mealdb,53099,dinner,Burgers
+mealdb,53096,dinner,Corned beef hash
+mealdb,52827,dinner,Massaman curry
+mealdb,52950,dinner,Szechuan beef
+mealdb,53193,dinner,Drunken noodles
+mealdb,53229,lunch|dinner,Steak noodle salad
+mealdb,52920,dinner,Chicken marengo
+mealdb,53376,dinner,Sweet and sour chicken
+mealdb,52879,dinner,Chicken parmentier
+mealdb,52945,dinner,Kung pao chicken
+mealdb,52846,dinner,Chicken hotpot
+mealdb,52937,dinner,Jerk chicken with rice
+mealdb,52820,dinner,Katsu curry
+mealdb,52875,dinner,Chicken ham and leek pie
+mealdb,52832,dinner,Coq au vin
+mealdb,53143,dinner,Spanish chicken
+mealdb,52818,dinner,Chicken mac and cheese
+mealdb,53161,dinner,Chicken and chorizo rice
+mealdb,53367,lunch|dinner,Chicken fried rice
+mealdb,53011,lunch|dinner,Chicken quinoa salad
+mealdb,52830,dinner,Chicken tacos
+mealdb,53028,lunch|dinner,Shawarma
+mealdb,52850,dinner,Chicken couscous
+mealdb,52814,dinner,Thai green curry
+mealdb,53020,lunch,Chicken soup
+mealdb,53232,lunch|dinner,Chicken salad
+mealdb,53214,lunch,Thai chicken soup
+mealdb,53207,lunch,Tom kha gai
+mealdb,53549,lunch,Chicken and bacon salad
+mealdb,52843,dinner,Lamb tagine
+mealdb,53010,dinner,Lamb burgers
+mealdb,52877,dinner,Lamb and potato pie
+mealdb,53257,dinner,Kofta burgers
+mealdb,53383,lunch,Ramen
+mealdb,53014,dinner,Margherita pizza
+mealdb,52848,dinner,Bean and sausage hotpot
+mealdb,52845,dinner,Meatloaf
+mealdb,52963,lunch,Shakshuka
+mealdb,52839,dinner,Prawn linguine
+mealdb,52982,dinner,Carbonara
+mealdb,52835,dinner,Fettuccine alfredo
+mealdb,52777,lunch,Pasta salad
+mealdb,52783,dinner,Rigatoni with sausage
+mealdb,52771,dinner,Penne arrabiata
+mealdb,52866,dinner,Squash linguine
+mealdb,53032,dinner,Tonkatsu
+mealdb,52822,dinner,Toad in the hole
+mealdb,52999,dinner,Sausages and greens
+mealdb,53547,lunch,Cuban sandwich
+mealdb,52949,dinner,Sweet and sour pork
+mealdb,53035,dinner,Ham and colcannon
+mealdb,52847,dinner,Cassoulet
+mealdb,53159,lunch,Spanish omelette
+mealdb,53177,dinner,Spaghetti with chorizo
+mealdb,53235,dinner,Caramel pork
+mealdb,52802,dinner,Fish pie
+mealdb,52823,dinner,Salmon and prawn risotto
+mealdb,52852,lunch|dinner,Tuna nicoise
+mealdb,52960,lunch,Salmon salad
+mealdb,53191,dinner,Pad thai
+mealdb,53234,lunch|dinner,Salmon noodle soup
+mealdb,52882,dinner,Fish pie
+mealdb,53245,lunch,Noodle salad
+mealdb,53239,lunch|dinner,Prawn salad
+mealdb,53248,lunch|dinner,Salmon wraps
+mealdb,52959,dinner,Baked salmon
+mealdb,52953,dinner,Prawn chow fun
+mealdb,52946,dinner,Kung po prawns
+mealdb,53198,dinner,Prawn fried rice
+mealdb,52821,dinner,Laksa
+mealdb,52887,dinner,Kedgeree
+mealdb,53182,dinner,Seafood rice
+mealdb,53184,dinner,Prawn rice
+mealdb,53167,dinner,Seafood rice
+mealdb,52918,dinner,Fish stew
+mealdb,52840,lunch,Clam chowder
+mealdb,52841,lunch,Tomato soup
+mealdb,52842,lunch,Broccoli and stilton soup
+mealdb,53546,lunch,Black bean soup
+mealdb,53486,lunch,White bean soup
+mealdb,52784,dinner,Lentil chilli
+mealdb,52785,dinner,Dal
+mealdb,52870,lunch|dinner,Chickpea fajitas
+mealdb,53091,lunch,Falafel pitta
+mealdb,52871,dinner,Yaki udon
+mealdb,52867,dinner,Vegetable chilli
+mealdb,53240,dinner,Tofu stir-fry
+mealdb,53067,dinner,Stuffed peppers
+mealdb,53536,dinner,Black bean hotpot
+mealdb,53142,lunch|dinner,Spanish tortilla
+mealdb,53490,lunch,Stuffed peppers
+mealdb,53267,lunch,Couscous salad
+mealdb,52962,breakfast,Eggs benedict
+mealdb,53331,breakfast,Pancakes
+mealdb,52965,breakfast,Breakfast potatoes
+curated,chicken-fajita-wraps,lunch|dinner,Wraps suit lunch too
+curated,cottage-pie,dinner,Dinner
+curated,besan-pancakes,none,Unusual here
+curated,coconut-rice-porridge-mango,none,Unusual here
+curated,mango-coconut-chia-pots,none,Unusual here
+curated,chia-pudding-mango,none,Unusual here
+curated,quinoa-breakfast-bowl,none,Unusual here
+curated,quinoa-apple-porridge,none,Unusual here
+curated,red-lentil-breakfast-dhal,none,Unusual here
+curated,sweet-potato-bean-hash,none,Unusual here

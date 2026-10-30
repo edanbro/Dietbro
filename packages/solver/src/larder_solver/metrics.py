@@ -165,6 +165,16 @@ def macro_distance(problem: Problem, plan: Plan) -> int:
     )
 
 
+def balance_distance(problem: Problem, plan: Plan) -> int:
+    """Kcal the plan's meals are outside their slots' `SlotSpec.kcal` bands."""
+    bands = {s.slot: s.kcal for s in problem.slots if s.kcal is not None}
+    return sum(
+        bands[meal.slot].distance(recipe.per_portion.kcal * meal.portions)
+        for meal, recipe in _planned(problem, plan)
+        if meal.slot in bands
+    )
+
+
 def staples(problem: Problem, plan: Plan) -> set[int]:
     """Foods the plan only ever uses at 0 g: store-cupboard items to check you have."""
     zero: set[int] = set()
@@ -194,6 +204,7 @@ def score(problem: Problem, plan: Plan, previous: Plan | None = None) -> Score:
         "repeat": -w.repeat * sum(n - 1 for n in repeat_counts(plan).values()),
         "optional": -w.optional_meal * sum(m.slot not in required for m in plan.meals),
         "macro": -w.macro * macro_distance(problem, plan),
+        "balance": -w.balance * balance_distance(problem, plan),
         "churn": -w.churn * changed_slots(previous, plan),
     }
     return Score(terms, sum(terms.values()))

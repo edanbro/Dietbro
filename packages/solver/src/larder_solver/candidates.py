@@ -16,6 +16,11 @@ Recipes the user never wants again are dropped with the unsafe ones.
 Reserves (a) and (b) keep the targets reachable for new users whose ranking is otherwise only
 the seeded hash. Ties break on a hash of (seed, recipe id), so the result is deterministic per
 seed and varies across seeds.
+
+`TastePrefs.meal_style` says how far from everyday meals to go (docs/adr/0019-everyday-meals.md):
+"everyday" keeps the pool to recipes everyday in the slot, favourites and liked cuisines, topped
+up by rank to MIN_EVERYDAY when allergies or a diet leave too few; "mix" gives other recipes at
+most half of the candidates; "adventurous" draws on them all.
 """
 
 from collections import Counter
@@ -23,6 +28,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from hashlib import blake2b
+from typing import Literal
 
 from larder_core.tagging import diet_allows
 from larder_solver.problem import (
@@ -38,6 +44,9 @@ from larder_solver.problem import (
 )
 
 SOON_DAYS = 3  # grams in lots that expire before day SOON_DAYS count double in the pantry bonus
+MIN_EVERYDAY = 20  # candidates an "everyday" slot is topped up to: enough for caps and targets
+
+type MealStyle = Literal["everyday", "mix", "adventurous"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +57,7 @@ class TastePrefs:
     disliked_food_ids: frozenset[int] = frozenset()
     favourite_recipe_ids: frozenset[int] = frozenset()
     blocked_recipe_ids: frozenset[int] = frozenset()  # never planned (dropped by `select`)
+    meal_style: MealStyle = "adventurous"
 
 
 def allowed(recipe: Recipe, foods: Mapping[int, Food], profile: Profile) -> bool:
@@ -157,10 +167,25 @@ def select(
     def rank(r: Recipe) -> int:
         return -(r.preference - 30 * (r.id in novelty) + bonus[r.id])
 
+    liked = {c.casefold() for c in prefs.liked_cuisines}
+
+    def familiar(r: Recipe, slot: Slot) -> bool:
+        return (
+            slot in r.everyday
+            or r.id in prefs.favourite_recipe_ids
+            or (r.cuisine or "").casefold() in liked
+        )
+
     specs: list[SlotSpec] = []
     chosen: dict[int, Recipe] = {}
     for slot, required in slots:
         pool = [r for r in ok if slot in r.meal_types]
+        if prefs.meal_style == "everyday":
+            usual = [r for r in pool if familiar(r, slot)]
+            others = sorted(
+                (r for r in pool if not familiar(r, slot)), key=lambda r: (rank(r), *tiebreak(r))
+            )
+            pool = usual + others[: max(MIN_EVERYDAY - len(usual), 0)]
         picks: list[Recipe] = []
         if _protein_min(targets):
             picks += sorted(pool, key=lambda r: (-protein(r), *tiebreak(r)))[: -(-k // 4)]
@@ -173,12 +198,15 @@ def select(
         rest = [r for r in pool if r.id not in taken]
         waiting: list[Recipe] = []
         per_cuisine: Counter[str] = Counter()
+        unusual = 0
         for r in sorted(rest, key=lambda r: (rank(r), *tiebreak(r))):
             if len(picks) == k:
                 break
             cuisine = r.cuisine.casefold() if r.cuisine else None
-            if cuisine is None or per_cuisine[cuisine] < k // 4:
+            odd = prefs.meal_style == "mix" and not familiar(r, slot)
+            if (cuisine is None or per_cuisine[cuisine] < k // 4) and (not odd or unusual < k // 2):
                 picks.append(r)
+                unusual += odd
                 if cuisine is not None:
                     per_cuisine[cuisine] += 1
             else:

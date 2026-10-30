@@ -38,6 +38,7 @@ export type BodyOut = Schemas["BodyOut"];
 export type PreferencesIn = Schemas["PreferencesIn"];
 export type QuickNightsIn = Schemas["QuickNightsIn"];
 export type MealsIn = Schemas["MealsIn"];
+export type MealStyle = Schemas["MealStyleIn"]["meal_style"];
 export type AllergiesIn = Schemas["AllergiesIn"];
 export type FoodSummary = Schemas["FoodSummary"];
 export type FoodDetail = Schemas["FoodDetail"];
@@ -304,6 +305,15 @@ export function useSaveMeals() {
   const api = useApi();
   return useSave(
     async (body: MealsIn) => unwrap(await api.PUT("/me/preferences/meals", { body })),
+    keys.preferences,
+  );
+}
+
+export function useSaveMealStyle() {
+  const api = useApi();
+  return useSave(
+    async (meal_style: MealStyle) =>
+      unwrap(await api.PUT("/me/preferences/meal-style", { body: { meal_style } })),
     keys.preferences,
   );
 }

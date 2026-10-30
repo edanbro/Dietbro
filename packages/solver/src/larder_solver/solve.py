@@ -214,12 +214,21 @@ class _Model:
         self._food(objective)
 
         required = {s.slot for s in p.slots if s.required}
+        bands = {s.slot: s.kcal for s in p.slots if s.kcal is not None}
+
+        def off_balance(slot: Slot, rid: int, portions: int) -> int:
+            band = bands.get(slot)
+            kcal = p.recipes[rid].per_portion.kcal * portions
+            return w.balance * band.distance(kcal) if band is not None else 0
+
         for meal in self.locked:
             objective.const += w.preference * p.recipes[meal.recipe_id].preference
             objective.const -= w.optional_meal * (meal.slot not in required)
-        for (_, slot, rid, _), var in self.y.items():
+            objective.const -= off_balance(meal.slot, meal.recipe_id, meal.portions)
+        for (_, slot, rid, portions), var in self.y.items():
             value = w.preference * p.recipes[rid].preference
             value -= w.optional_meal * (slot not in required)
+            value -= off_balance(slot, rid, portions)  # a meal's size is known from its choice
             objective.add(var, value)
         self._churn(objective)
         cp.maximize(objective.expr())

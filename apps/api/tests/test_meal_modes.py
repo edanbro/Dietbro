@@ -11,9 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 from test_plans import Auth, set_up
 
+from larder_api import planning
 from larder_core.meals import Slot, meals_problem, own_shares
 from larder_db.engine import make_sessionmaker
-from larder_db.models import MealLog, User
+from larder_db.models import Allergies, Goals, MealLog, Preferences, User
+from larder_solver import Band
 
 # test_plans' fixtures: its recipe catalogue, and the greedy planner (autouse there and here).
 catalog_db = test_plans.catalog_db
@@ -147,3 +149,40 @@ async def test_food_logged_for_an_own_lunch_replaces_what_was_kept(
     planned = [sum(m["nutrition"]["kcal"] for m in d["meals"]) for d in (first, second)]
     assert first["totals"]["kcal"] == pytest.approx(planned[0] + 900, abs=1)  # not + kept
     assert second["totals"]["kcal"] == pytest.approx(planned[1] + kept, abs=1)
+
+
+async def test_meal_style_is_saved_and_checked(api: httpx.AsyncClient, auth: Auth) -> None:
+    body = {"meal_style": "mix"}
+    before_setup = await api.put("/me/preferences/meal-style", json=body, headers=auth())
+    await set_up(api, auth)
+
+    assert (await api.get("/me/preferences", headers=auth())).json()["meal_style"] == "everyday"
+    saved = await api.put("/me/preferences/meal-style", json=body, headers=auth())
+    again = await api.put("/me/preferences", json={"diet": "pescatarian"}, headers=auth())
+    read = (await api.get("/me/preferences", headers=auth())).json()
+    bad = await api.put("/me/preferences/meal-style", json={"meal_style": "odd"}, headers=auth())
+
+    assert before_setup.status_code == 409
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["meal_style"] == "mix"
+    assert again.status_code == 200
+    assert read["meal_style"] == "mix"  # saving the other preferences keeps it
+    assert bad.status_code == 422
+
+
+def test_meal_sizes_follow_the_day_and_the_meals_eaten() -> None:
+    goals = Goals(kcal_min=1800, kcal_max=2200, calorie_floor=1200)
+    allergies = Allergies(allergens=[], avoid_food_ids=[])
+
+    def sizes(**meals: str) -> dict[Slot, Band]:
+        prefs = Preferences(meal_modes=meals)
+        return planning.meal_sizes(planning.UserInputs(goals, allergies, prefs))
+
+    assert sizes() == {
+        Slot.BREAKFAST: Band(325, 675),
+        Slot.LUNCH: Band(455, 945),
+        Slot.DINNER: Band(520, 1080),
+    }
+    # With no breakfast the rest of the day gets bigger, and nothing is asked of an "own" lunch.
+    skipped = sizes(breakfast="skip", lunch="own")
+    assert skipped == {Slot.DINNER: Band(693, 1440)}

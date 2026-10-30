@@ -1108,7 +1108,7 @@ ingredients = [
   ["chilli powder", "2 tsp"],
   ["ground cumin", "1 tsp"],
   ["tinned tomato", "400g"],
-  ["kidney bean", "240g"],
+  ["tinned kidney bean", "240g"],
   ["rice", "300g"],
 ]
 
@@ -1316,4 +1316,1727 @@ ingredients = [
   ["tortilla", "8"],
   ["natural yogurt", "150g"],
   ["cheddar cheese", "80g"],
+]
+
+# --- everyday meals from the research in docs/research/normal-meals.md ------------------------
+
+[[recipe]]
+slug = "wheat-biscuits-milk-banana"
+name = "Wheat biscuits with milk and banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Put the wheat biscuits in a bowl, pour over the milk and slice the banana on top.
+"""
+ingredients = [
+  ["shredded wheat", "40g"],
+  ["semi-skimmed milk", "200ml"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "cornflakes-milk-blueberries"
+name = "Cornflakes with milk and blueberries"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Put the cornflakes in a bowl, pour over the milk and scatter over the blueberries.
+"""
+ingredients = [
+  ["corn flake", "40g"],
+  ["semi-skimmed milk", "200ml"],
+  ["blueberries", "60g"],
+]
+
+[[recipe]]
+slug = "cornflakes-soy-milk-banana"
+name = "Cornflakes with soya milk and banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Put the cornflakes in a bowl, pour over the soya milk and slice the banana on top.
+"""
+ingredients = [
+  ["corn flake", "40g"],
+  ["soy milk", "200ml"],
+  ["banana", "1"],
+]
+
+[[recipe]]
+slug = "toast-butter-marmalade"
+name = "Toast with butter and marmalade"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Toast the bread, then spread with the butter and marmalade.
+"""
+ingredients = [
+  ["wholemeal bread", "80g"],
+  ["butter", "10g"],
+  ["marmalade", "25g"],
+]
+
+[[recipe]]
+slug = "bagel-cream-cheese-tomato"
+name = "Bagel with cream cheese and tomato"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = """
+Split and toast the bagel. Spread with the cream cheese and top with sliced tomato.
+"""
+ingredients = [
+  ["bagel", "90g"],
+  ["cream cheese", "30g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "grilled-irish-breakfast"
+name = "Grilled Irish breakfast"
+category = "Breakfast"
+cuisine = "Irish"
+servings = 1
+instructions = """
+Grill the sausage and bacon for 12 minutes, turning. Grill the halved tomato and mushrooms for the
+last 5 minutes. Poach the egg for 3 minutes and serve it all with the toast.
+"""
+ingredients = [
+  ["pork sausage", "60g"],
+  ["bacon", "40g"],
+  ["egg", "1"],
+  ["tomato", "1"],
+  ["mushroom", "60g"],
+  ["wholemeal bread", "40g"],
+]
+
+[[recipe]]
+slug = "bacon-sandwich-tomato"
+name = "Bacon sandwich with tomato"
+category = "Breakfast"
+cuisine = "Irish"
+servings = 1
+instructions = """
+Grill the bacon for 6 minutes, turning once. Fill the bread with the bacon and sliced tomato.
+"""
+ingredients = [
+  ["bacon", "60g"],
+  ["wholemeal bread", "80g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "french-toast-strawberries"
+name = "French toast with strawberries"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = """
+Beat the egg with the milk and soak the bread in it. Fry in the butter for 2 minutes a side until
+golden, and top with the strawberries.
+"""
+ingredients = [
+  ["egg", "1"],
+  ["semi-skimmed milk", "50ml"],
+  ["wholemeal bread", "80g"],
+  ["butter", "5g"],
+  ["strawberry", "100g"],
+]
+
+[[recipe]]
+slug = "cheese-omelette-toast"
+name = "Cheese omelette with toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Beat the eggs and cook in the butter over a medium heat for 2 minutes. Scatter over the cheddar,
+fold and serve with the toast.
+"""
+ingredients = [
+  ["egg", "2"],
+  ["cheddar cheese", "25g"],
+  ["butter", "5g"],
+  ["wholemeal bread", "40g"],
+]
+
+[[recipe]]
+slug = "pancakes-banana-yoghurt"
+name = "Pancakes with banana and yoghurt"
+category = "Breakfast"
+cuisine = "American"
+servings = 1
+instructions = """
+Whisk the flour, egg and milk into a batter. Fry small pancakes in the oil for 2 minutes a side.
+Top with sliced banana and the yoghurt.
+"""
+ingredients = [
+  ["plain flour", "40g"],
+  ["egg", "1"],
+  ["semi-skimmed milk", "80ml"],
+  ["vegetable oil", "1 tsp"],
+  ["banana", "1"],
+  ["natural yogurt", "50g"],
+]
+
+[[recipe]]
+slug = "ham-cheese-salad-sandwich"
+name = "Ham, cheese and salad sandwich"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Butter the bread and fill with the ham, cheddar, lettuce and sliced tomato.
+"""
+ingredients = [
+  ["wholemeal bread", "80g"],
+  ["butter", "5g"],
+  ["ham", "50g"],
+  ["cheddar cheese", "25g"],
+  ["lettuce", "20g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "chicken-salad-sandwich"
+name = "Chicken salad sandwich"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the chicken in the oil for 6 minutes a side, cool and slice. Spread the bread with the
+mayonnaise and fill with the chicken, lettuce and sliced tomato.
+"""
+ingredients = [
+  ["chicken breast", "100g"],
+  ["vegetable oil", "1 tsp"],
+  ["wholemeal bread", "80g"],
+  ["mayonnaise", "15g"],
+  ["lettuce", "20g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "tuna-sweetcorn-sandwich"
+name = "Tuna and sweetcorn sandwich"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Mix the drained tuna with the sweetcorn and mayonnaise. Fill the bread with it and the sliced
+cucumber.
+"""
+ingredients = [
+  ["tinned tuna", "100g"],
+  ["sweetcorn", "40g"],
+  ["mayonnaise", "15g"],
+  ["wholemeal bread", "80g"],
+  ["cucumber", "40g"],
+]
+
+[[recipe]]
+slug = "egg-mayo-sandwich"
+name = "Egg mayonnaise sandwich"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the eggs for 9 minutes, cool, peel and mash with the mayonnaise. Fill the bread with it and
+the lettuce.
+"""
+ingredients = [
+  ["egg", "2"],
+  ["mayonnaise", "15g"],
+  ["wholemeal bread", "80g"],
+  ["lettuce", "20g"],
+]
+
+[[recipe]]
+slug = "blt-sandwich"
+name = "BLT sandwich"
+category = "Light meal"
+cuisine = "American"
+servings = 1
+instructions = """
+Grill the bacon for 6 minutes, turning once. Toast the bread, spread with the mayonnaise and fill
+with the bacon, lettuce and sliced tomato.
+"""
+ingredients = [
+  ["bacon", "50g"],
+  ["wholemeal bread", "80g"],
+  ["mayonnaise", "10g"],
+  ["lettuce", "30g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "cheese-tomato-sandwich"
+name = "Cheese and tomato sandwich"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Butter the bread and fill with the sliced cheddar and tomato. Have the apple alongside.
+"""
+ingredients = [
+  ["wholemeal bread", "80g"],
+  ["butter", "5g"],
+  ["cheddar cheese", "50g"],
+  ["tomato", "1"],
+  ["apple", "1"],
+]
+
+[[recipe]]
+slug = "ploughmans-lunch"
+name = "Ploughman's lunch"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Plate the crusty bread with the cheddar, sliced apple, lettuce and tomato.
+"""
+ingredients = [
+  ["crusty bread", "80g"],
+  ["butter", "5g"],
+  ["cheddar cheese", "50g"],
+  ["apple", "1"],
+  ["lettuce", "30g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "tuna-melt"
+name = "Tuna melt"
+category = "Light meal"
+cuisine = "American"
+servings = 1
+instructions = """
+Mix the tuna with the mayonnaise and spread over the toasted bread. Top with the cheddar and grill
+for 3 minutes until melted.
+"""
+ingredients = [
+  ["tinned tuna", "100g"],
+  ["mayonnaise", "10g"],
+  ["wholemeal bread", "80g"],
+  ["cheddar cheese", "30g"],
+]
+
+[[recipe]]
+slug = "hummus-salad-pitta"
+name = "Hummus and salad pitta"
+category = "Light meal"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Warm the pittas and fill with the hummus, grated carrot, sliced cucumber, tomato and spinach.
+"""
+ingredients = [
+  ["pita bread", "120g"],
+  ["hummus", "70g"],
+  ["carrot", "1"],
+  ["cucumber", "50g"],
+  ["tomato", "1"],
+  ["spinach", "20g"],
+]
+
+[[recipe]]
+slug = "chicken-salad-wrap"
+name = "Chicken and salad wrap"
+category = "Light meal"
+cuisine = "American"
+servings = 1
+instructions = """
+Fry the sliced chicken in the oil for 8 minutes. Spread the wrap with the mayonnaise, fill with
+the chicken, lettuce and sliced tomato, and roll up.
+"""
+ingredients = [
+  ["chicken breast", "100g"],
+  ["vegetable oil", "1 tsp"],
+  ["tortilla", "70g"],
+  ["mayonnaise", "15g"],
+  ["lettuce", "30g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "hummus-pepper-wrap"
+name = "Hummus and roasted pepper wrap"
+category = "Light meal"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Roast the sliced pepper with the oil for 20 minutes. Spread the wrap with the hummus, fill with
+the pepper, spinach and grated carrot, and roll up.
+"""
+ingredients = [
+  ["tortilla", "70g"],
+  ["hummus", "70g"],
+  ["red pepper", "1"],
+  ["olive oil", "1 tsp"],
+  ["spinach", "30g"],
+  ["carrot", "1"],
+]
+
+[[recipe]]
+slug = "bean-cheese-quesadilla"
+name = "Bean and cheese quesadilla with salsa"
+category = "Light meal"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Mash the beans and spread over a tortilla. Scatter over the cheddar, top with the second tortilla
+and toast in a dry pan for 3 minutes a side. Cut up and serve with the salsa.
+"""
+ingredients = [
+  ["tortilla", "120g"],
+  ["tinned kidney bean", "100g"],
+  ["cheddar cheese", "40g"],
+  ["salsa", "50g"],
+]
+
+[[recipe]]
+slug = "jacket-potato-tuna-sweetcorn"
+name = "Jacket potato with tuna and sweetcorn"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Microwave the potato for 10 minutes, turning once, until soft. Mix the tuna, sweetcorn and mayonnaise and pile in. Serve
+with the lettuce.
+"""
+ingredients = [
+  ["potato", "300g"],
+  ["tinned tuna", "100g"],
+  ["sweetcorn", "40g"],
+  ["mayonnaise", "15g"],
+  ["lettuce", "30g"],
+]
+
+[[recipe]]
+slug = "jacket-potato-chilli-beans"
+name = "Jacket potato with chilli beans"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Microwave the potato for 10 minutes, turning once, until soft. Simmer the beans, tomatoes and chilli powder for 10 minutes
+and spoon over.
+"""
+ingredients = [
+  ["potato", "300g"],
+  ["tinned kidney bean", "120g"],
+  ["tinned tomato", "120g"],
+  ["chilli powder", "1 tsp"],
+]
+
+[[recipe]]
+slug = "beans-on-toast-cheese"
+name = "Beans on toast with cheese"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Heat the beans. Toast and butter the bread, spoon over the beans and scatter over the cheddar.
+"""
+ingredients = [
+  ["baked bean", "200g"],
+  ["wholemeal bread", "80g"],
+  ["butter", "5g"],
+  ["cheddar cheese", "25g"],
+]
+
+[[recipe]]
+slug = "mushrooms-egg-on-toast"
+name = "Mushrooms and a poached egg on toast"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the sliced mushrooms in the butter for 5 minutes. Poach the egg for 3 minutes. Pile both onto
+the toast.
+"""
+ingredients = [
+  ["mushroom", "150g"],
+  ["butter", "10g"],
+  ["egg", "1"],
+  ["wholemeal bread", "80g"],
+]
+
+[[recipe]]
+slug = "tomato-soup-cheese-toast"
+name = "Tomato soup with cheese on toast"
+category = "Light meal"
+cuisine = "British"
+servings = 2
+instructions = """
+Soften the chopped onion in the oil, add the tomatoes and stock and simmer for 15 minutes, then
+blend. Grill the cheddar on the bread until bubbling and serve alongside.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["olive oil", "1 tbsp"],
+  ["tinned tomato", "400g"],
+  ["vegetable stock", "300ml"],
+  ["wholemeal bread", "160g"],
+  ["cheddar cheese", "80g"],
+]
+
+[[recipe]]
+slug = "chicken-noodle-soup"
+name = "Chicken noodle soup"
+category = "Light meal"
+cuisine = "American"
+servings = 2
+instructions = """
+Simmer the stock with the sliced carrot and celery for 10 minutes. Add the sliced chicken and cook
+for 8 minutes, then the noodles for 4 more.
+"""
+ingredients = [
+  ["chicken stock", "800ml"],
+  ["carrot", "2"],
+  ["celery", "1"],
+  ["chicken breast", "200g"],
+  ["noodle", "100g"],
+]
+
+[[recipe]]
+slug = "lentil-soup-bread"
+name = "Lentil soup with crusty bread"
+category = "Light meal"
+cuisine = "British"
+servings = 4
+instructions = """
+Soften the chopped onion and carrots in the oil, add the cumin, lentils and stock and simmer for
+25 minutes. Season, blend if you like, and serve with the bread.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "3"],
+  ["olive oil", "1 tbsp"],
+  ["ground cumin", "1 tsp"],
+  ["red lentil", "250g"],
+  ["vegetable stock", "1400ml"],
+  ["crusty bread", "200g"],
+]
+
+[[recipe]]
+slug = "minestrone-soup"
+name = "Minestrone soup"
+category = "Light meal"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Soften the chopped onion, carrot and celery in the oil. Add the tomatoes and stock and simmer for
+15 minutes. Add the pasta and beans and cook for 10 more. Serve with the bread.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["celery", "2"],
+  ["olive oil", "1 tbsp"],
+  ["tinned tomato", "400g"],
+  ["vegetable stock", "1000ml"],
+  ["penne rigate", "120g"],
+  ["tinned cannellini bean", "400g"],
+  ["crusty bread", "160g"],
+]
+
+[[recipe]]
+slug = "pea-ham-soup"
+name = "Pea and ham soup with bread"
+category = "Light meal"
+cuisine = "British"
+servings = 4
+instructions = """
+Soften the chopped onion and potato in the butter, add the stock and simmer for 15 minutes. Add
+the peas for 4 minutes, blend, stir in the chopped ham and serve with the bread.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["potato", "300g"],
+  ["butter", "15g"],
+  ["vegetable stock", "1000ml"],
+  ["frozen pea", "500g"],
+  ["ham", "200g"],
+  ["wholemeal bread", "160g"],
+]
+
+[[recipe]]
+slug = "chicken-caesar-salad"
+name = "Chicken Caesar salad"
+category = "Light meal"
+cuisine = "American"
+servings = 1
+instructions = """
+Fry the chicken in the oil for 6 minutes a side and slice. Toast and cube the bread. Toss the
+lettuce with the mayonnaise, lemon and parmesan, and top with the chicken and croutons.
+"""
+ingredients = [
+  ["chicken breast", "120g"],
+  ["vegetable oil", "1 tsp"],
+  ["wholemeal bread", "40g"],
+  ["lettuce", "100g"],
+  ["mayonnaise", "20g"],
+  ["lemon juice", "1 tsp"],
+  ["parmesan", "15g"],
+]
+
+[[recipe]]
+slug = "greek-salad-pitta"
+name = "Greek salad with pitta"
+category = "Light meal"
+cuisine = "Greek"
+servings = 1
+instructions = """
+Chop the cucumber, tomato and onion, and toss with the olives, oil and feta. Serve with the warm
+pitta.
+"""
+ingredients = [
+  ["cucumber", "100g"],
+  ["tomato", "2"],
+  ["red onion", "0.25"],
+  ["black olive", "30g"],
+  ["olive oil", "1 tbsp"],
+  ["feta", "70g"],
+  ["pita bread", "60g"],
+]
+
+[[recipe]]
+slug = "tuna-pasta-salad"
+name = "Tuna pasta salad"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the pasta for 10 minutes and cool under the tap. Mix with the tuna, sweetcorn, chopped pepper
+and mayonnaise.
+"""
+ingredients = [
+  ["penne rigate", "70g"],
+  ["tinned tuna", "100g"],
+  ["sweetcorn", "50g"],
+  ["red pepper", "0.5"],
+  ["mayonnaise", "20g"],
+]
+
+[[recipe]]
+slug = "chickpea-couscous-salad"
+name = "Chickpea and couscous salad"
+category = "Light meal"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Pour boiling water over the couscous, cover for 5 minutes and fluff with a fork. Mix with the
+chickpeas, chopped cucumber and tomato, lemon, oil and parsley.
+"""
+ingredients = [
+  ["couscous", "70g"],
+  ["tinned chickpea", "120g"],
+  ["cucumber", "80g"],
+  ["tomato", "1"],
+  ["lemon juice", "1 tbsp"],
+  ["olive oil", "1 tbsp"],
+  ["parsley", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "egg-potato-salad"
+name = "Egg and new potato salad"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the potatoes for 15 minutes, adding the beans for the last 4. Boil the eggs for 8 minutes.
+Halve everything and toss with the mayonnaise, mustard and lettuce.
+"""
+ingredients = [
+  ["new potato", "250g"],
+  ["green bean", "80g"],
+  ["egg", "2"],
+  ["mayonnaise", "15g"],
+  ["mustard", "1 tsp"],
+  ["lettuce", "40g"],
+]
+
+[[recipe]]
+slug = "mushroom-cheese-omelette-salad"
+name = "Mushroom and cheese omelette with salad"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the sliced mushrooms in the butter for 4 minutes. Pour over the beaten eggs and cook for 2
+minutes, scatter over the cheddar and fold. Serve with the lettuce and tomato.
+"""
+ingredients = [
+  ["mushroom", "80g"],
+  ["butter", "5g"],
+  ["egg", "3"],
+  ["cheddar cheese", "30g"],
+  ["lettuce", "50g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "egg-fried-rice"
+name = "Egg fried rice with peas"
+category = "Light meal"
+cuisine = "Chinese"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes and drain. Fry it in the oil with the peas and sliced spring onion
+for 3 minutes. Push aside, scramble the eggs in the pan, then stir through with the soy sauce.
+"""
+ingredients = [
+  ["rice", "70g"],
+  ["vegetable oil", "2 tsp"],
+  ["frozen pea", "60g"],
+  ["spring onion", "2"],
+  ["egg", "2"],
+  ["soy sauce", "2 tsp"],
+]
+
+[[recipe]]
+slug = "pesto-pasta-mozzarella"
+name = "Pesto pasta with tomato and mozzarella"
+category = "Light meal"
+cuisine = "Italian"
+servings = 1
+instructions = """
+Boil the pasta for 10 minutes and drain. Toss with the pesto, halved tomatoes and torn mozzarella.
+"""
+ingredients = [
+  ["penne rigate", "80g"],
+  ["pesto", "25g"],
+  ["cherry tomato", "100g"],
+  ["mozzarella", "40g"],
+]
+
+[[recipe]]
+slug = "bean-rice-bowl"
+name = "Black bean and rice bowl"
+category = "Light meal"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes and drain. Warm the beans and sweetcorn together, spoon over the rice
+and top with the salsa and sliced avocado.
+"""
+ingredients = [
+  ["rice", "70g"],
+  ["tinned black bean", "120g"],
+  ["sweetcorn", "50g"],
+  ["salsa", "60g"],
+  ["avocado", "0.5"],
+]
+
+[[recipe]]
+slug = "chicken-rice-bowl"
+name = "Chicken and rice bowl"
+category = "Light meal"
+cuisine = "American"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes and drain. Fry the sliced chicken and pepper in the oil for 8
+minutes. Pile over the rice with the sweetcorn and soy sauce.
+"""
+ingredients = [
+  ["rice", "70g"],
+  ["chicken breast", "120g"],
+  ["red pepper", "0.5"],
+  ["vegetable oil", "1 tsp"],
+  ["sweetcorn", "50g"],
+  ["soy sauce", "2 tsp"],
+]
+
+[[recipe]]
+slug = "tofu-veg-rice-noodles"
+name = "Tofu and vegetable rice noodles"
+category = "Light meal"
+cuisine = "Chinese"
+servings = 1
+instructions = """
+Soak the noodles in boiling water for 5 minutes and drain. Fry the tofu in the oil for 5 minutes,
+add the sliced pepper and broccoli for 4 more, then toss with the noodles and soy sauce.
+"""
+ingredients = [
+  ["rice noodle", "70g"],
+  ["tofu", "120g"],
+  ["vegetable oil", "2 tsp"],
+  ["red pepper", "0.5"],
+  ["broccoli", "80g"],
+  ["soy sauce", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "sausages-mash-peas-gravy"
+name = "Sausages and mash with peas and gravy"
+category = "Pork"
+cuisine = "British"
+servings = 2
+instructions = """
+Grill the sausages for 15 minutes, turning. Boil the potatoes for 15 minutes, drain and mash with
+the milk and butter. Soften the sliced onion in a pan, add the gravy and heat through. Cook the
+peas for 3 minutes and serve it all together.
+"""
+ingredients = [
+  ["pork sausage", "300g"],
+  ["potato", "600g"],
+  ["semi-skimmed milk", "50ml"],
+  ["butter", "15g"],
+  ["onion", "1"],
+  ["gravy", "200ml"],
+  ["frozen pea", "150g"],
+]
+
+[[recipe]]
+slug = "beef-burgers-oven-chips"
+name = "Beef burgers with oven chips"
+category = "Beef"
+cuisine = "American"
+servings = 2
+instructions = """
+Bake the chips at 200C for 25 minutes. Mix the mince with the grated onion, shape two burgers and
+fry for 5 minutes a side. Serve in the buns with the lettuce and sliced tomato.
+"""
+ingredients = [
+  ["oven chip", "300g"],
+  ["ground beef", "300g"],
+  ["onion", "0.5"],
+  ["bun", "2"],
+  ["lettuce", "40g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "oven-fish-and-chips"
+name = "Oven-baked fish and chips with peas"
+category = "Seafood"
+cuisine = "British"
+servings = 2
+instructions = """
+Bake the chips at 200C for 25 minutes. Dip the fish in the flour, beaten egg and breadcrumbs and
+bake for the last 15 minutes. Cook the peas for 3 minutes and serve with the lemon.
+"""
+ingredients = [
+  ["oven chip", "350g"],
+  ["white fish", "300g"],
+  ["plain flour", "20g"],
+  ["egg", "1"],
+  ["breadcrumb", "60g"],
+  ["frozen pea", "150g"],
+  ["lemon", "0.5"],
+]
+
+[[recipe]]
+slug = "fish-fingers-mash-peas"
+name = "Fish fingers with mash and peas"
+category = "Seafood"
+cuisine = "British"
+servings = 2
+instructions = """
+Grill the fish fingers for 12 minutes, turning. Boil the potatoes for 15 minutes, drain and mash
+with the milk and butter. Cook the peas for 3 minutes.
+"""
+ingredients = [
+  ["fish finger", "250g"],
+  ["potato", "500g"],
+  ["semi-skimmed milk", "50ml"],
+  ["butter", "10g"],
+  ["frozen pea", "160g"],
+]
+
+[[recipe]]
+slug = "roast-beef-dinner"
+name = "Roast beef with potatoes, carrots and gravy"
+category = "Beef"
+cuisine = "British"
+servings = 4
+instructions = """
+Roast the beef at 190C for 50 minutes and rest it. Toss the chopped potatoes in the oil and roast
+alongside for the last 45 minutes. Boil the carrots and broccoli for 6 minutes and heat the gravy.
+"""
+ingredients = [
+  ["sirloin steak", "700g"],
+  ["potato", "1000g"],
+  ["vegetable oil", "2 tbsp"],
+  ["carrot", "4"],
+  ["broccoli", "300g"],
+  ["gravy", "400ml"],
+]
+
+[[recipe]]
+slug = "roast-pork-dinner"
+name = "Roast pork with potatoes, cabbage and gravy"
+category = "Pork"
+cuisine = "British"
+servings = 4
+instructions = """
+Roast the pork at 180C for an hour and a half and rest it. Toss the chopped potatoes in the oil
+and roast alongside for the last 45 minutes. Boil the carrots and cabbage for 6 minutes and heat
+the gravy.
+"""
+ingredients = [
+  ["pork shoulder", "700g"],
+  ["potato", "1000g"],
+  ["vegetable oil", "2 tbsp"],
+  ["carrot", "3"],
+  ["cabbage", "300g"],
+  ["gravy", "400ml"],
+]
+
+[[recipe]]
+slug = "steak-chips-salad"
+name = "Steak and chips with salad"
+category = "Beef"
+cuisine = "American"
+servings = 2
+instructions = """
+Bake the chips at 200C for 25 minutes. Rub the steaks with the oil and fry for 3 minutes a side,
+then rest. Serve with the lettuce and sliced tomato.
+"""
+ingredients = [
+  ["oven chip", "350g"],
+  ["sirloin steak", "350g"],
+  ["vegetable oil", "1 tbsp"],
+  ["lettuce", "80g"],
+  ["tomato", "2"],
+]
+
+[[recipe]]
+slug = "beef-tacos"
+name = "Beef tacos with salsa and cheese"
+category = "Beef"
+cuisine = "Mexican"
+servings = 4
+instructions = """
+Fry the chopped onion and mince for 8 minutes, add the chilli powder and tomatoes and simmer for
+10 minutes. Fill the warmed tortillas with the beef, lettuce, salsa and cheddar.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["ground beef", "500g"],
+  ["chilli powder", "2 tsp"],
+  ["tinned tomato", "200g"],
+  ["tortilla", "320g"],
+  ["lettuce", "100g"],
+  ["salsa", "150g"],
+  ["cheddar cheese", "100g"],
+]
+
+[[recipe]]
+slug = "spaghetti-meatballs"
+name = "Spaghetti and meatballs"
+category = "Beef"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Mix the mince, breadcrumbs and egg, roll into meatballs and brown in the oil. Add the chopped
+onion and tomatoes and simmer for 20 minutes. Serve over the spaghetti, cooked according to the
+packet, with the parmesan.
+"""
+ingredients = [
+  ["ground beef", "450g"],
+  ["breadcrumb", "50g"],
+  ["egg", "1"],
+  ["olive oil", "1 tbsp"],
+  ["onion", "1"],
+  ["tinned tomato", "800g"],
+  ["spaghetti", "320g"],
+  ["parmesan", "30g"],
+]
+
+[[recipe]]
+slug = "beef-lasagne"
+name = "Beef lasagne"
+category = "Pasta"
+cuisine = "Italian"
+servings = 6
+instructions = """
+Brown the mince with the chopped onion and garlic, add the tomatoes and simmer for 20 minutes.
+Melt the butter, stir in the flour, then whisk in the milk until thick. Layer the sauces and
+lasagne sheets, top with the cheddar and bake at 180C for 35 minutes. Serve with the lettuce.
+"""
+ingredients = [
+  ["ground beef", "600g"],
+  ["onion", "1"],
+  ["garlic clove", "2"],
+  ["tinned tomato", "800g"],
+  ["butter", "40g"],
+  ["plain flour", "40g"],
+  ["semi-skimmed milk", "500ml"],
+  ["lasagne sheet", "250g"],
+  ["cheddar cheese", "100g"],
+  ["lettuce", "150g"],
+]
+
+[[recipe]]
+slug = "chicken-stir-fry-noodles"
+name = "Chicken stir-fry with noodles"
+category = "Chicken"
+cuisine = "Chinese"
+servings = 2
+instructions = """
+Boil the noodles for 4 minutes and drain. Fry the sliced chicken in the oil for 6 minutes, add the
+pepper, broccoli, garlic and ginger for 4 more, then toss with the noodles and soy sauce.
+"""
+ingredients = [
+  ["noodle", "150g"],
+  ["chicken breast", "300g"],
+  ["vegetable oil", "1 tbsp"],
+  ["red pepper", "1"],
+  ["broccoli", "150g"],
+  ["garlic clove", "2"],
+  ["ginger", "1 tsp"],
+  ["soy sauce", "2 tbsp"],
+]
+
+[[recipe]]
+slug = "chicken-tikka-masala-rice"
+name = "Chicken tikka masala with rice"
+category = "Chicken"
+cuisine = "Indian"
+servings = 4
+instructions = """
+Fry the chopped onion in the oil, add the chicken and garam masala and cook for 8 minutes. Add the
+tomatoes and simmer for 20 minutes, then stir in the cream. Serve with the rice, boiled for 12
+minutes.
+"""
+ingredients = [
+  ["onion", "2"],
+  ["vegetable oil", "1 tbsp"],
+  ["chicken breast", "600g"],
+  ["garam masala", "1 tbsp"],
+  ["tinned tomato", "400g"],
+  ["single cream", "100ml"],
+  ["basmati rice", "300g"],
+]
+
+[[recipe]]
+slug = "chicken-casserole-mash"
+name = "Chicken casserole with mash"
+category = "Chicken"
+cuisine = "British"
+servings = 4
+instructions = """
+Brown the chicken in the oil, add the chopped onion, carrots and mushrooms, pour over the stock
+and simmer for 35 minutes. Boil the potatoes for 15 minutes, drain and mash with the butter.
+"""
+ingredients = [
+  ["chicken thigh", "700g"],
+  ["vegetable oil", "1 tbsp"],
+  ["onion", "1"],
+  ["carrot", "3"],
+  ["mushroom", "200g"],
+  ["chicken stock", "500ml"],
+  ["potato", "900g"],
+  ["butter", "25g"],
+]
+
+[[recipe]]
+slug = "crispy-chicken-wedges-salad"
+name = "Crispy chicken with potato wedges and salad"
+category = "Chicken"
+cuisine = "American"
+servings = 2
+instructions = """
+Toss the potato wedges in the oil and roast at 200C for 35 minutes. Dip the chicken in the flour,
+beaten egg and breadcrumbs and bake for the last 25 minutes. Serve with the lettuce and sliced
+tomato.
+"""
+ingredients = [
+  ["potato", "500g"],
+  ["vegetable oil", "1 tbsp"],
+  ["chicken breast", "300g"],
+  ["plain flour", "20g"],
+  ["egg", "1"],
+  ["breadcrumb", "60g"],
+  ["lettuce", "80g"],
+  ["tomato", "2"],
+]
+
+[[recipe]]
+slug = "chicken-pesto-pasta"
+name = "Chicken pesto pasta with spinach"
+category = "Pasta"
+cuisine = "Italian"
+servings = 2
+instructions = """
+Boil the pasta for 10 minutes and drain. Fry the sliced chicken in the oil for 8 minutes, add the
+tomatoes and spinach to wilt, then toss with the pasta and pesto.
+"""
+ingredients = [
+  ["penne rigate", "180g"],
+  ["chicken breast", "250g"],
+  ["olive oil", "1 tsp"],
+  ["cherry tomato", "150g"],
+  ["spinach", "80g"],
+  ["pesto", "40g"],
+]
+
+[[recipe]]
+slug = "mac-and-cheese-broccoli"
+name = "Macaroni cheese with broccoli"
+category = "Vegetarian"
+cuisine = "American"
+servings = 4
+instructions = """
+Boil the macaroni for 8 minutes, adding the broccoli for the last 4, and drain. Melt the butter,
+stir in the flour, then whisk in the milk until thick and stir in most of the cheddar. Mix with
+the pasta, top with the rest of the cheese and grill until golden.
+"""
+ingredients = [
+  ["macaroni", "350g"],
+  ["broccoli", "300g"],
+  ["butter", "40g"],
+  ["plain flour", "40g"],
+  ["semi-skimmed milk", "600ml"],
+  ["cheddar cheese", "180g"],
+]
+
+[[recipe]]
+slug = "tuna-pasta-bake"
+name = "Tuna pasta bake"
+category = "Seafood"
+cuisine = "British"
+servings = 4
+instructions = """
+Boil the pasta for 8 minutes and drain. Soften the chopped onion in the oil, add the tomatoes and
+simmer for 10 minutes. Mix in the pasta, tuna and sweetcorn, top with the cheddar and bake at 200C
+for 20 minutes.
+"""
+ingredients = [
+  ["penne rigate", "320g"],
+  ["onion", "1"],
+  ["olive oil", "1 tbsp"],
+  ["tinned tomato", "800g"],
+  ["tinned tuna", "300g"],
+  ["sweetcorn", "150g"],
+  ["cheddar cheese", "100g"],
+]
+
+[[recipe]]
+slug = "margherita-pizza-salad"
+name = "Homemade margherita pizza with salad"
+category = "Vegetarian"
+cuisine = "Italian"
+servings = 2
+instructions = """
+Mix the flour, yeast, oil and 150ml warm water into a dough, knead for 5 minutes and leave for 30
+minutes. Roll out, spread with the passata, top with the torn mozzarella and bake at 240C for 12
+minutes. Serve with the lettuce and sliced tomato.
+"""
+ingredients = [
+  ["strong white flour", "250g"],
+  ["fast action yeast", "1 tsp"],
+  ["olive oil", "1 tbsp"],
+  ["passata", "150g"],
+  ["mozzarella", "150g"],
+  ["lettuce", "80g"],
+  ["tomato", "2"],
+]
+
+[[recipe]]
+slug = "tomato-veg-pasta"
+name = "Pasta with roasted vegetables and tomato sauce"
+category = "Vegan"
+cuisine = "Italian"
+servings = 2
+instructions = """
+Roast the chopped courgette and pepper with the oil at 200C for 20 minutes. Simmer the tomatoes
+and garlic for 10 minutes and stir in the vegetables. Toss with the pasta, boiled for 10 minutes.
+"""
+ingredients = [
+  ["courgette", "1"],
+  ["red pepper", "1"],
+  ["olive oil", "1 tbsp"],
+  ["tinned tomato", "400g"],
+  ["garlic clove", "2"],
+  ["penne rigate", "180g"],
+  ["tinned chickpea", "200g"],
+]
+
+[[recipe]]
+slug = "chilli-sin-carne-rice"
+name = "Bean chilli with rice"
+category = "Vegan"
+cuisine = "Mexican"
+servings = 4
+instructions = """
+Soften the chopped onion and pepper in the oil, add the chilli powder, tomatoes and beans and
+simmer for 25 minutes. Serve with the rice, boiled for 12 minutes.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["red pepper", "2"],
+  ["vegetable oil", "1 tbsp"],
+  ["chilli powder", "2 tsp"],
+  ["tinned tomato", "800g"],
+  ["tinned kidney bean", "400g"],
+  ["tinned black bean", "400g"],
+  ["rice", "300g"],
+]
+
+[[recipe]]
+slug = "vegetable-curry-rice"
+name = "Vegetable and chickpea curry with rice"
+category = "Vegan"
+cuisine = "Indian"
+servings = 4
+instructions = """
+Soften the chopped onion in the oil with the curry powder. Add the chopped potatoes and carrots,
+the coconut milk and chickpeas and simmer for 20 minutes. Add the peas for 3 minutes and serve
+with the rice, boiled for 12 minutes.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["vegetable oil", "1 tbsp"],
+  ["curry powder", "2 tbsp"],
+  ["potato", "400g"],
+  ["carrot", "2"],
+  ["coconut milk", "400ml"],
+  ["tinned chickpea", "400g"],
+  ["frozen pea", "200g"],
+  ["basmati rice", "280g"],
+]
+
+[[recipe]]
+slug = "dal-rice-spinach"
+name = "Red lentil dal with rice and spinach"
+category = "Vegan"
+cuisine = "Indian"
+servings = 4
+instructions = """
+Soften the chopped onion and garlic in the oil, add the spices, lentils and 1 litre of water and
+simmer for 20 minutes. Stir through the tomatoes and spinach. Serve with the rice, boiled for 12
+minutes.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["garlic clove", "3"],
+  ["vegetable oil", "1 tbsp"],
+  ["ground turmeric", "1 tsp"],
+  ["ground cumin", "2 tsp"],
+  ["red lentil", "300g"],
+  ["tinned tomato", "200g"],
+  ["spinach", "150g"],
+  ["basmati rice", "280g"],
+]
+
+[[recipe]]
+slug = "tofu-stir-fry-rice"
+name = "Tofu stir-fry with rice"
+category = "Vegan"
+cuisine = "Chinese"
+servings = 2
+instructions = """
+Boil the rice for 12 minutes and drain. Fry the cubed tofu in the oil for 6 minutes, add the
+broccoli, pepper and ginger for 4 more, and toss with the soy sauce.
+"""
+ingredients = [
+  ["rice", "150g"],
+  ["tofu", "280g"],
+  ["vegetable oil", "1 tbsp"],
+  ["broccoli", "200g"],
+  ["red pepper", "1"],
+  ["ginger", "1 tsp"],
+  ["soy sauce", "2 tbsp"],
+]
+
+[[recipe]]
+slug = "bean-burgers-wedges"
+name = "Bean burgers with sweet potato wedges"
+category = "Vegan"
+cuisine = "American"
+servings = 2
+instructions = """
+Toss the sweet potato wedges in half the oil and roast at 200C for 30 minutes. Mash the beans with
+the breadcrumbs and grated onion, shape two burgers and fry in the rest of the oil for 4 minutes a
+side. Serve in the buns with the lettuce and sliced tomato.
+"""
+ingredients = [
+  ["sweet potato", "500g"],
+  ["vegetable oil", "2 tbsp"],
+  ["tinned black bean", "400g"],
+  ["breadcrumb", "50g"],
+  ["onion", "0.5"],
+  ["bun", "2"],
+  ["lettuce", "40g"],
+  ["tomato", "1"],
+]
+
+[[recipe]]
+slug = "mushroom-risotto"
+name = "Mushroom risotto with parmesan"
+category = "Vegetarian"
+cuisine = "Italian"
+servings = 2
+instructions = """
+Soften the chopped onion in the butter, add the sliced mushrooms for 5 minutes, then the rice. Add
+the hot stock a ladle at a time, stirring, for 20 minutes. Stir in the parmesan.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["butter", "20g"],
+  ["mushroom", "250g"],
+  ["paella rice", "170g"],
+  ["vegetable stock", "700ml"],
+  ["parmesan", "40g"],
+]
+
+[[recipe]]
+slug = "salmon-rice-broccoli"
+name = "Honey soy salmon with rice and broccoli"
+category = "Seafood"
+cuisine = "Asian"
+servings = 2
+instructions = """
+Boil the rice for 12 minutes and drain. Brush the salmon with the honey, soy sauce and ginger and
+bake at 200C for 12 minutes. Steam the broccoli for 5 minutes.
+"""
+ingredients = [
+  ["rice", "150g"],
+  ["salmon", "260g"],
+  ["honey", "2 tsp"],
+  ["soy sauce", "1 tbsp"],
+  ["ginger", "1 tsp"],
+  ["broccoli", "250g"],
+]
+
+[[recipe]]
+slug = "baked-cod-new-potatoes"
+name = "Baked cod with new potatoes and green beans"
+category = "Seafood"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Boil the potatoes for 15 minutes and the beans for the last 5. Top the fish with the butter and
+lemon and bake at 200C for 12 minutes.
+"""
+ingredients = [
+  ["new potato", "500g"],
+  ["green bean", "200g"],
+  ["white fish", "320g"],
+  ["butter", "20g"],
+  ["lemon", "0.5"],
+]
+
+[[recipe]]
+slug = "ham-pineapple-chips-peas"
+name = "Ham steak with pineapple, chips and peas"
+category = "Pork"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Bake the chips at 200C for 25 minutes. Grill the ham for 4 minutes a side, top with the pineapple
+for the last 2. Cook the peas for 3 minutes.
+"""
+ingredients = [
+  ["oven chip", "350g"],
+  ["ham", "280g"],
+  ["pineapple", "150g"],
+  ["frozen pea", "160g"],
+]
+
+[[recipe]]
+slug = "lamb-chops-potatoes-peas"
+name = "Lamb chops with new potatoes and peas"
+category = "Lamb"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Boil the potatoes for 15 minutes and the peas for the last 3. Rub the chops with the oil and grill
+for 4 minutes a side.
+"""
+ingredients = [
+  ["new potato", "500g"],
+  ["frozen pea", "200g"],
+  ["lamb loin chop", "340g"],
+  ["vegetable oil", "1 tsp"],
+]
+
+[[recipe]]
+slug = "apple-almonds"
+name = "Apple and a few almonds"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Slice the apple and have it with the almonds.
+"""
+ingredients = [
+  ["apple", "1"],
+  ["almond", "15g"],
+]
+
+[[recipe]]
+slug = "banana-yoghurt"
+name = "Banana and a small yoghurt"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Slice the banana into the yoghurt.
+"""
+ingredients = [
+  ["banana", "1"],
+  ["natural yogurt", "100g"],
+]
+
+[[recipe]]
+slug = "orange-cashews"
+name = "Orange and a few cashews"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Peel the orange and have it with the cashews.
+"""
+ingredients = [
+  ["orange", "1"],
+  ["cashew nut", "15g"],
+]
+
+[[recipe]]
+slug = "oatcakes-cheddar"
+name = "Oatcakes with cheddar"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Top the oatcakes with the sliced cheddar.
+"""
+ingredients = [
+  ["oatcake", "30g"],
+  ["cheddar cheese", "25g"],
+]
+
+[[recipe]]
+slug = "peanut-butter-toast-snack"
+name = "Slice of toast with peanut butter"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Toast the bread and spread with the peanut butter.
+"""
+ingredients = [
+  ["wholemeal bread", "40g"],
+  ["peanut butter", "15g"],
+]
+
+[[recipe]]
+slug = "popcorn"
+name = "Bowl of popcorn"
+category = "Snack"
+cuisine = "American"
+servings = 1
+instructions = """
+Tip the popcorn into a bowl.
+"""
+ingredients = [
+  ["popcorn", "25g"],
+]
+
+[[recipe]]
+slug = "small-bag-of-crisps"
+name = "Small bag of crisps and an apple"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Have the crisps with the apple.
+"""
+ingredients = [
+  ["crisp", "25g"],
+  ["apple", "1"],
+]
+
+[[recipe]]
+slug = "biscuits-and-milk"
+name = "Two biscuits and a glass of milk"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Have the biscuits with the milk.
+"""
+ingredients = [
+  ["graham cracker", "30g"],
+  ["semi-skimmed milk", "150ml"],
+]
+
+[[recipe]]
+slug = "cereal-bar-grapes"
+name = "Cereal bar and some grapes"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Have the cereal bar with the grapes.
+"""
+ingredients = [
+  ["cereal bar", "30g"],
+  ["grape", "80g"],
+]
+
+[[recipe]]
+slug = "yoghurt-granola-pot"
+name = "Yoghurt with a spoon of granola"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Top the yoghurt with the granola.
+"""
+ingredients = [
+  ["natural yogurt", "125g"],
+  ["granola", "20g"],
+]
+
+[[recipe]]
+slug = "chocolate-orange"
+name = "Square of chocolate and an orange"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Peel the orange and have it with the chocolate.
+"""
+ingredients = [
+  ["orange", "1"],
+  ["dark chocolate", "20g"],
+]
+
+[[recipe]]
+slug = "lentil-bolognese"
+name = "Lentil bolognese with spaghetti"
+category = "Vegan"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Soften the chopped onion, carrot and garlic in the oil. Add the lentils, tomatoes, tomato puree
+and 500ml of water and simmer for 30 minutes. Serve over the spaghetti, cooked according to the
+packet.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["garlic clove", "2"],
+  ["olive oil", "1 tbsp"],
+  ["brown lentil", "250g"],
+  ["tinned tomato", "800g"],
+  ["tomato puree", "2 tbsp"],
+  ["spaghetti", "320g"],
+]
+
+[[recipe]]
+slug = "lentil-shepherds-pie"
+name = "Lentil and vegetable shepherd's pie"
+category = "Vegan"
+cuisine = "British"
+servings = 4
+instructions = """
+Boil the potatoes for 15 minutes, drain and mash with half the oil. Soften the chopped onion and
+carrots in the rest, add the lentils, tomatoes and stock and simmer for 30 minutes. Add the peas,
+spoon into a dish, top with the mash and bake at 200C for 20 minutes.
+"""
+ingredients = [
+  ["potato", "1000g"],
+  ["olive oil", "2 tbsp"],
+  ["onion", "1"],
+  ["carrot", "3"],
+  ["brown lentil", "250g"],
+  ["tinned tomato", "400g"],
+  ["vegetable stock", "500ml"],
+  ["frozen pea", "150g"],
+]
+
+[[recipe]]
+slug = "chickpea-tagine-couscous"
+name = "Chickpea and vegetable stew with couscous"
+category = "Vegan"
+cuisine = "Moroccan"
+servings = 4
+instructions = """
+Soften the chopped onion in the oil with the cumin and paprika. Add the chopped squash, pepper,
+tomatoes and chickpeas and simmer for 25 minutes. Pour boiling water over the couscous, cover for
+5 minutes and serve with the stew.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["olive oil", "1 tbsp"],
+  ["ground cumin", "2 tsp"],
+  ["paprika", "2 tsp"],
+  ["butternut squash", "400g"],
+  ["red pepper", "1"],
+  ["tinned tomato", "400g"],
+  ["tinned chickpea", "480g"],
+  ["couscous", "280g"],
+]
+
+[[recipe]]
+slug = "sweet-potato-bean-tacos"
+name = "Sweet potato and black bean tacos"
+category = "Vegan"
+cuisine = "Mexican"
+servings = 4
+instructions = """
+Toss the cubed sweet potato in the oil and chilli powder and roast at 200C for 25 minutes. Warm
+the beans. Fill the warmed tortillas with both, the lettuce, salsa and sliced avocado.
+"""
+ingredients = [
+  ["sweet potato", "600g"],
+  ["vegetable oil", "1 tbsp"],
+  ["chilli powder", "2 tsp"],
+  ["tinned black bean", "480g"],
+  ["tortilla", "320g"],
+  ["lettuce", "100g"],
+  ["salsa", "200g"],
+  ["avocado", "1"],
+]
+
+[[recipe]]
+slug = "thai-tofu-curry-rice"
+name = "Thai red tofu and vegetable curry with rice"
+category = "Vegan"
+cuisine = "Thai"
+servings = 4
+instructions = """
+Fry the cubed tofu in the oil for 6 minutes. Add the curry paste, then the coconut milk, sliced
+pepper and green beans, and simmer for 10 minutes. Serve with the rice, boiled for 12 minutes.
+"""
+ingredients = [
+  ["tofu", "400g"],
+  ["vegetable oil", "1 tbsp"],
+  ["thai red curry paste", "2 tbsp"],
+  ["coconut milk", "400ml"],
+  ["red pepper", "2"],
+  ["green bean", "200g"],
+  ["rice", "280g"],
+]
+
+[[recipe]]
+slug = "tofu-vegetable-fried-rice"
+name = "Tofu and vegetable fried rice"
+category = "Vegan"
+cuisine = "Chinese"
+servings = 2
+instructions = """
+Boil the rice for 12 minutes and drain. Fry the cubed tofu in the oil for 6 minutes, add the peas,
+sweetcorn and sliced spring onions for 3 more, then the rice and soy sauce.
+"""
+ingredients = [
+  ["rice", "150g"],
+  ["tofu", "250g"],
+  ["vegetable oil", "1 tbsp"],
+  ["frozen pea", "100g"],
+  ["sweetcorn", "100g"],
+  ["spring onion", "3"],
+  ["soy sauce", "2 tbsp"],
+]
+
+[[recipe]]
+slug = "white-bean-stew-bread"
+name = "White bean and vegetable stew with crusty bread"
+category = "Vegan"
+cuisine = "Mediterranean"
+servings = 4
+instructions = """
+Soften the chopped onion, carrot, celery and garlic in the oil. Add the tomatoes, stock and beans
+and simmer for 25 minutes. Stir in the spinach and serve with the bread.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["celery", "2"],
+  ["garlic clove", "2"],
+  ["olive oil", "2 tbsp"],
+  ["tinned tomato", "400g"],
+  ["vegetable stock", "400ml"],
+  ["tinned cannellini bean", "720g"],
+  ["spinach", "150g"],
+  ["crusty bread", "320g"],
+]
+
+[[recipe]]
+slug = "lentil-chilli-jacket-potato"
+name = "Jacket potato with lentil chilli and salad"
+category = "Vegan"
+cuisine = "British"
+servings = 2
+instructions = """
+Microwave the potatoes for 12 minutes, turning once, until soft. Soften the chopped onion in the
+oil with the chilli powder, add the lentils, tomatoes and 300ml of water and simmer for 30
+minutes. Spoon over the potatoes and serve with the lettuce.
+"""
+ingredients = [
+  ["potato", "700g"],
+  ["onion", "1"],
+  ["vegetable oil", "1 tbsp"],
+  ["chilli powder", "2 tsp"],
+  ["brown lentil", "120g"],
+  ["tinned tomato", "400g"],
+  ["lettuce", "80g"],
+]
+
+[[recipe]]
+slug = "jacket-potato-hummus-salad"
+name = "Jacket potato with hummus and salad"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Microwave the potato for 10 minutes, turning once, until soft. Split it, spoon in the hummus and
+serve with the lettuce, sliced tomato and cucumber.
+"""
+ingredients = [
+  ["potato", "350g"],
+  ["hummus", "80g"],
+  ["lettuce", "40g"],
+  ["tomato", "1"],
+  ["cucumber", "60g"],
+]
+
+[[recipe]]
+slug = "lentil-potato-soup"
+name = "Lentil and potato soup"
+category = "Light meal"
+cuisine = "Irish"
+servings = 4
+instructions = """
+Soften the chopped onion and carrots in the oil, add the cubed potatoes, lentils and stock and
+simmer for 25 minutes. Season and blend if you like.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "3"],
+  ["olive oil", "1 tbsp"],
+  ["potato", "500g"],
+  ["red lentil", "250g"],
+  ["water", "1400ml"],
+]
+
+[[recipe]]
+slug = "chickpea-rice-salad"
+name = "Chickpea and rice salad"
+category = "Light meal"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes and cool under the tap. Mix with the chickpeas, chopped cucumber,
+tomato and pepper, the lemon juice and the oil.
+"""
+ingredients = [
+  ["rice", "70g"],
+  ["tinned chickpea", "120g"],
+  ["cucumber", "80g"],
+  ["tomato", "1"],
+  ["red pepper", "0.5"],
+  ["lemon juice", "1 tbsp"],
+  ["olive oil", "1 tbsp"],
 ]

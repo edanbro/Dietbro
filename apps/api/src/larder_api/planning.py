@@ -43,7 +43,14 @@ from larder_api.settings import Settings
 from larder_core.allergens import Allergen
 from larder_core.energy import Targets as GoalTargets
 from larder_core.energy import tdee, validate_targets
-from larder_core.meals import SLOT_ORDER, Slot, own_shares, recipe_slots
+from larder_core.meals import (
+    SLOT_ORDER,
+    Slot,
+    day_shares,
+    everyday_slots,
+    own_shares,
+    recipe_slots,
+)
 from larder_core.nutrition import MICROS
 from larder_core.prices import PER_GBP, Currency, Price, price
 from larder_core.regions import local_price, region_for
@@ -109,6 +116,8 @@ SLOT_RULES: dict[Slot, tuple[bool, int, int, int | None]] = {
 # holds only while at least MIN_TIMED recipes within it suit the user.
 SLOT_MINUTES: dict[Slot, int] = {Slot.BREAKFAST: 30, Slot.LUNCH: 60, Slot.SNACK: 60}
 MIN_TIMED = 10
+# How far a main meal may stray from its share of the day before it starts to cost (ADR-0019).
+MEAL_SIZE_SPREAD = 0.35
 # Daily macro bands are looser than the weekly budget they add up to (PLAN §6).
 DAILY_MIN_FACTOR, DAILY_MAX_FACTOR = 0.8, 1.25
 # Without a protein maximum of the user's own, protein is capped at 35% of the calorie maximum
@@ -214,6 +223,7 @@ class RecipeFacts:
     """What the planner and the recipe page both derive from a recipe row."""
 
     slots: frozenset[Slot]
+    everyday: frozenset[Slot]
     tags: RecipeTags
     per_portion: Macros | None
 
@@ -236,6 +246,7 @@ def recipe_facts(
         kcal,
         oil_g / total_g if total_g else 0,
         recipe.sodium_mg if recipe.nutrition_complete else None,
+        recipe.protein_g if recipe.nutrition_complete else None,
     )
     lines = [
         make_line(
@@ -256,7 +267,9 @@ def recipe_facts(
         if recipe.nutrition_complete
         else None
     )
-    return RecipeFacts(slots, tags, per_portion)
+    return RecipeFacts(
+        slots, everyday_slots(recipe.source, recipe.source_id, slots), tags, per_portion
+    )
 
 
 def portion_grams(grams: float | None, servings: int, staple: bool) -> int:
@@ -291,6 +304,7 @@ def solver_recipe(
         text_allergens=facts.tags.allergens,
         text_animal=facts.tags.animal,
         cuisine=recipe.cuisine,
+        everyday=facts.everyday,
     )
 
 
@@ -538,6 +552,7 @@ def taste_of(preferences: db.Preferences) -> TastePrefs:
         disliked_food_ids=frozenset(preferences.disliked_food_ids),
         favourite_recipe_ids=frozenset(preferences.favourite_recipe_ids or ()),
         blocked_recipe_ids=frozenset(preferences.blocked_recipe_ids or ()),
+        meal_style=preferences.meal_style or "everyday",  # pyright: ignore[reportArgumentType]
     )
 
 
@@ -608,7 +623,7 @@ def weights_for(currency: Currency) -> Weights:
     """The objective weights with their money terms in `currency` minor units, so a repeat or a
     snack is worth about the same to a user whatever they pay in (GBP: the defaults)."""
     w, rate = Weights(), PER_GBP[currency]
-    money = ("preference", "pantry", "repeat", "optional_meal", "macro", "churn")
+    money = ("preference", "pantry", "repeat", "optional_meal", "macro", "balance", "churn")
     return replace(w, **{name: round(getattr(w, name) * rate) for name in money})
 
 
@@ -647,6 +662,21 @@ def own_meals(inputs: UserInputs) -> dict[Slot, Macros]:
             round(aim.carbs_g * share),
         )
         for slot, share in own_shares(meal_modes(inputs.preferences)).items()
+    }
+
+
+def meal_sizes(inputs: UserInputs) -> dict[Slot, Band]:
+    """The kcal each planned main meal should come to: its share of the day (of the meals
+    eaten), give or take MEAL_SIZE_SPREAD. Soft (`Weights.balance`): small eaters and big ones
+    can still get a plan from what the catalogue has."""
+    aim = day_aim(inputs.goals).kcal
+    shares = day_shares(meal_modes(inputs.preferences))
+    return {
+        slot: Band(
+            round(aim * share * (1 - MEAL_SIZE_SPREAD)),
+            round(aim * share * (1 + MEAL_SIZE_SPREAD)),
+        )
+        for slot, share in shares.items()
     }
 
 
@@ -727,6 +757,7 @@ def make_problem(
         k=k,
         seed=seed,
     )
+    sizes = meal_sizes(inputs)
     # A meal the user sorts out or skips keeps its slot, never filled (`constrain` keeps its
     # share of the day free for an "own" one).
     slots = tuple(
@@ -736,6 +767,7 @@ def make_problem(
             min_portions=SLOT_RULES[s.slot][1],
             max_portions=SLOT_RULES[s.slot][2],
             max_repeats=SLOT_RULES[s.slot][3],
+            kcal=sizes.get(s.slot),
         )
         for s in specs
     )
@@ -890,8 +922,14 @@ def quick_choices(
             and allowed(recipe, pool.catalog.foods, profile)
         )
 
-    def rank(rid: int) -> tuple[bool, float, int]:
-        return (rid not in problem.recipes, -preference(pool.catalog.recipes[rid], taste), rid)
+    def rank(rid: int) -> tuple[bool, bool, float, int]:
+        recipe = pool.catalog.recipes[rid]
+        return (
+            rid not in problem.recipes,
+            taste.meal_style != "adventurous" and Slot.DINNER not in recipe.everyday,
+            -preference(recipe, taste),
+            rid,
+        )
 
     ids = tuple(sorted(filter(quick, pool.catalog.recipes), key=rank)[:QUICK_CHOICES])
     if not ids:

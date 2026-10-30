@@ -123,8 +123,14 @@ def test_common_restrictions_still_fill_a_week(
     }
     breakfasts = sum(c == "Breakfast" for c in allowed.values())
     snacks = sum(c == "Snack" for c in allowed.values())
+    lunches = sum(c in ("Light meal", "Starter") for c in allowed.values())
+    dinners = sum(
+        c not in ("Breakfast", "Snack", "Light meal", "Starter") for c in allowed.values()
+    )
     assert breakfasts >= 6, f"only {breakfasts} breakfasts for {sorted(allergens)} {diet}"
     assert snacks >= 3, f"only {snacks} snacks for {sorted(allergens)} {diet}"
+    assert lunches >= 4, f"only {lunches} lunches for {sorted(allergens)} {diet}"
+    assert dinners >= 4, f"only {dinners} dinners for {sorted(allergens)} {diet}"
 
 
 def test_method_unwraps_lines_into_one_sentence_per_step() -> None:

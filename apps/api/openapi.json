@@ -585,6 +585,63 @@
         ]
       }
     },
+    "/me/preferences/meal-style": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Meal Style",
+        "description": "How far from everyday meals the planner goes. Applies from the next plan or change.",
+        "operationId": "putMealStyle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealStyleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "preferences not set up yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/allergies": {
       "get": {
         "tags": [
@@ -7144,6 +7201,25 @@
         ],
         "title": "MealOut"
       },
+      "MealStyleIn": {
+        "properties": {
+          "meal_style": {
+            "type": "string",
+            "enum": [
+              "everyday",
+              "mix",
+              "adventurous"
+            ],
+            "title": "Meal Style"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_style"
+        ],
+        "title": "MealStyleIn",
+        "description": "How far from everyday meals the planner goes: \"everyday\" (familiar meals, plus favourites\nand liked cuisines), \"mix\" (about half and half) or \"adventurous\" (the whole catalogue)."
+      },
       "MealsIn": {
         "properties": {
           "breakfast": {
@@ -7976,6 +8052,16 @@
           },
           "meals": {
             "$ref": "#/components/schemas/MealsIn"
+          },
+          "meal_style": {
+            "type": "string",
+            "enum": [
+              "everyday",
+              "mix",
+              "adventurous"
+            ],
+            "title": "Meal Style",
+            "default": "everyday"
           }
         },
         "type": "object",

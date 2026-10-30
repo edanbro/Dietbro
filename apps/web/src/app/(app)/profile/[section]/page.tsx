@@ -10,6 +10,7 @@ import { AllergiesForm } from "@/components/profile/allergies-form";
 import { BodyForm } from "@/components/profile/body-form";
 import { CalendarForm } from "@/components/profile/calendar-form";
 import { GoalsForm } from "@/components/profile/goals-form";
+import { MealStyleForm } from "@/components/profile/meal-style-form";
 import { MealsForm } from "@/components/profile/meals-form";
 import { PreferencesForm } from "@/components/profile/preferences-form";
 import { QuickNightsForm } from "@/components/profile/quick-nights-form";
@@ -24,7 +25,12 @@ const BODY: Record<SectionId, ReactNode> = {
   goals: <GoalsForm />,
   allergies: <AllergiesForm />,
   preferences: <PreferencesForm />,
-  meals: <MealsForm />,
+  meals: (
+    <div className="flex flex-col gap-6">
+      <MealStyleForm />
+      <MealsForm />
+    </div>
+  ),
   "busy-nights": <QuickNightsForm />,
   body: <BodyForm />,
   templates: <TemplatesForm />,

@@ -58,6 +58,7 @@ fdc_id,description,category,allergens,animal
 168609,"Beef, flank, steak, separable lean only, trimmed to 0"" fat, choice, raw",Beef Products,-,meat
 168746,"Alcoholic beverage, beer, regular, all",Beverages,gluten,-
 168756,"Candies, MARS SNACKFOOD US, MILKY WAY Bar",Sweets,eggs|gluten|milk|soy,dairy|egg
+168819,"Marmalade, orange",Sweets,-,-
 168820,Molasses,Sweets,-,-
 168833,"Sugars, brown",Sweets,-,-
 168837,"Syrups, corn, light",Sweets,-,-
@@ -75,6 +76,7 @@ fdc_id,description,category,allergens,animal
 168931,"Rice, white, short-grain, raw, unenriched",Cereal Grains and Pasta,-,-
 168936,"Wheat flour, white, all-purpose, enriched, unbleached",Cereal Grains and Pasta,gluten,-
 168944,"Wheat flour, whole-grain, soft wheat",Cereal Grains and Pasta,gluten,-
+169063,"Breakfast bars, oats, sugar, raisins, coconut (include granola bar)",Snacks,gluten|milk|peanuts|soy|sulphites|tree_nuts,dairy
 169064,"Pretzels, soft",Snacks,gluten,-
 169070,"Alcoholic beverage, wine, cooking",Beverages,sulphites,-
 169094,"Olives, ripe, canned (small-extra large)",Fruits and Fruit Juices,-,-
@@ -101,6 +103,7 @@ fdc_id,description,category,allergens,animal
 169247,"Lettuce, cos or romaine, raw",Vegetables and Vegetable Products,-,-
 169249,"Lettuce, green leaf, raw",Vegetables and Vegetable Products,-,-
 169251,"Mushrooms, white, raw",Vegetables and Vegetable Products,-,-
+169264,"Potatoes, french fried, all types, salt added in processing, frozen, home-prepared, oven heated",Vegetables and Vegetable Products,-,-
 169276,"Radishes, raw",Vegetables and Vegetable Products,-,-
 169279,"Sauerkraut, canned, solids and liquids",Vegetables and Vegetable Products,-,-
 169291,"Squash, summer, zucchini, includes skin, raw",Vegetables and Vegetable Products,-,-
@@ -273,6 +276,7 @@ fdc_id,description,category,allergens,animal
 171447,"Chicken, broilers or fryers, meat and skin, raw",Poultry Products,-,meat
 171505,"Turkey, Ground, raw",Poultry Products,-,meat
 171562,"Soup, chicken broth or bouillon, dry","Soups, Sauces, and Gravies",celery|gluten,meat
+171564,"Gravy, beef, canned, ready-to-serve","Soups, Sauces, and Gravies",celery|gluten,meat
 171583,"Soup, vegetable broth, ready to serve","Soups, Sauces, and Gravies",celery,-
 171589,"Gravy, instant beef, dry","Soups, Sauces, and Gravies",celery|gluten,meat
 171595,"Sauce, tomato chili sauce, bottled, with salt","Soups, Sauces, and Gravies",celery,-
@@ -350,6 +354,7 @@ fdc_id,description,category,allergens,animal
 172884,"Soup, stock, chicken, home-prepared","Soups, Sauces, and Gravies",celery,meat
 172885,"Soup, stock, fish, home-prepared","Soups, Sauces, and Gravies",celery|fish,fish
 172886,"Sauce, hoisin, ready-to-serve","Soups, Sauces, and Gravies",gluten|sesame|soy,-
+172934,"Pork sausage, link/patty, unprepared",Sausages and Luncheon Meats,gluten|sulphites,meat
 173110,"Beef, ground, 93% lean meat / 7% fat, raw",Beef Products,-,meat
 173176,"Alcoholic beverage, wine, dessert, sweet",Beverages,sulphites,-
 173180,"Beverages, Protein powder whey based",Beverages,milk,dairy
@@ -404,6 +409,7 @@ fdc_id,description,category,allergens,animal
 174146,"Beverages, AMBER, hard cider",Beverages,sulphites,-
 174183,"Fish, anchovy, european, canned in oil, drained solids",Finfish and Shellfish Products,fish,fish
 174190,"Fish, cod, Atlantic, dried and salted",Finfish and Shellfish Products,fish,fish
+174195,"Fish, fish sticks, frozen, prepared",Finfish and Shellfish Products,fish|gluten,fish
 174199,"Fish, haddock, smoked",Finfish and Shellfish Products,fish,fish
 174204,"Crustaceans, crab, blue, raw",Finfish and Shellfish Products,crustaceans,shellfish
 174208,"Crustaceans, lobster, northern, raw",Finfish and Shellfish Products,crustaceans,shellfish
@@ -415,6 +421,7 @@ fdc_id,description,category,allergens,animal
 174270,"Soybeans, mature seeds, raw",Legumes and Legume Products,soy,-
 174277,Soy sauce made from soy and wheat (shoyu),Legumes and Legume Products,gluten|soy,-
 174284,"Lentils, pink or red, raw",Legumes and Legume Products,-,-
+174285,"Beans, kidney, red, mature seeds, canned, drained solids",Legumes and Legume Products,-,-
 174286,"Beans, pinto, canned, drained solids",Legumes and Legume Products,-,-
 174288,Chickpea flour (besan),Legumes and Legume Products,-,-
 174289,"Hummus, commercial",Legumes and Legume Products,sesame,-
@@ -437,6 +444,7 @@ fdc_id,description,category,allergens,animal
 174817,"Alcoholic beverage, distilled, rum, 80 proof",Beverages,-,-
 174832,"Beverages, almond milk, unsweetened, shelf stable",Beverages,tree_nuts,-
 174837,"Alcoholic beverage, wine, table, white",Beverages,sulphites,-
+174899,"Bagels, plain, enriched, with calcium propionate (includes onion, poppy, sesame)",Baked Products,gluten|sesame,-
 174915,"Bread, pita, white, enriched",Baked Products,gluten,-
 174924,"Bread, white, commercially prepared (includes soft bread crumbs)",Baked Products,gluten|soy,-
 174925,"Bread, white, commercially prepared, toasted",Baked Products,gluten|soy,-
@@ -493,8 +501,16 @@ fdc_id,description,category,allergens,animal
 2515376,"Peanuts, raw",Legumes and Legume Products,peanuts,-
 2644281,"Beans, cannellini, dry",Legumes and Legume Products,-,-
 2644284,"Blackeye pea, dry",Legumes and Legume Products,-,-
+2644285,"Beans, black, canned, sodium added, drained and rinsed",Legumes and Legume Products,-,-
+2644287,"Beans, cannellini, canned, sodium added, drained and rinsed",Legumes and Legume Products,-,-
 2646169,"Pork, loin, tenderloin, boneless, raw",Pork Products,-,meat
 2647438,"Cheese, monterey jack, solid",Dairy and Egg Products,milk,dairy
+2708136,"Crackers, oatmeal",Baked Products,gluten,-
+2708219,"Popcorn, air-popped, no butter added",Snacks,-,-
+2708453,"Cereal, corn flakes, plain",Breakfast Cereals,gluten,-
+2708479,"Cereal, shredded wheat, plain",Breakfast Cereals,gluten,-
+2709422,"Potato chips, plain",Snacks,-,-
+2710175,Pesto sauce,"Soups, Sauces, and Gravies",milk|tree_nuts,dairy|rennet
 2710820,"Bulgur, dry, raw",Cereal Grains and Pasta,gluten,-
 2710838,"Rice, red, unenriched, dry, raw",Cereal Grains and Pasta,-,-
 2727568,"Chicken, wing, meat and skin, raw",Poultry Products,-,meat

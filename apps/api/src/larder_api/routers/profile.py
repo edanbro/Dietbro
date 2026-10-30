@@ -25,6 +25,7 @@ from larder_api.schemas import (
     GoalsOut,
     Me,
     MealsIn,
+    MealStyleIn,
     PreferencesIn,
     PreferencesOut,
     Problems,
@@ -445,6 +446,21 @@ async def put_meals(body: MealsIn, user: CurrentUser, session: Session) -> Prefe
     return await _preferences_out(session, row)
 
 
+@router.put(
+    "/preferences/meal-style",
+    operation_id="putMealStyle",
+    responses={409: {"model": Problems, "description": "preferences not set up yet"}},
+)
+async def put_meal_style(body: MealStyleIn, user: CurrentUser, session: Session) -> PreferencesOut:
+    """How far from everyday meals the planner goes. Applies from the next plan or change."""
+    row = await session.get(Preferences, user.id)
+    if row is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, ["Set your preferences first."])
+    row.meal_style = body.meal_style
+    await session.commit()
+    return await _preferences_out(session, row)
+
+
 async def _preferences_out(session: AsyncSession, row: Preferences) -> PreferencesOut:
     ids = {*row.liked_food_ids, *row.disliked_food_ids}
     foods = {f.id: f for f in await session.scalars(select(Food).where(Food.id.in_(ids)))}
@@ -459,6 +475,7 @@ async def _preferences_out(session: AsyncSession, row: Preferences) -> Preferenc
         quick_days=row.quick_days,
         quick_minutes=row.quick_minutes,
         meals=MealsIn.model_validate(row.meal_modes or {}),
+        meal_style=row.meal_style,  # pyright: ignore[reportArgumentType]
     )
 
 

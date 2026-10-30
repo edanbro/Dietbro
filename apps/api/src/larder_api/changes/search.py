@@ -244,8 +244,9 @@ def rank_recipes(
 ) -> list[RecipeHit]:
     """Recipes safe for the viewer (never ones they blocked), best first: by how well they
     match `words` (all of them when there are no words), then preference (favourites rank
-    up), then pantry use, then id. Without words, everyday meals come first: recipes that fill
-    a meal before snack-only ones (cakes, desserts), and those ready within SLOW_MINUTES before
+    up), then pantry use, then id. Without words, everyday meals come first: unless the viewer
+    asked for adventure, recipes everyday in the slot before others; then recipes that fill a
+    meal before snack-only ones (cakes, desserts), and those ready within SLOW_MINUTES before
     slower or untimed ones. `max_minutes` keeps those known to take at most that long.
     `from_pantry` keeps those using something in the pantry, fewest foods still to get first
     (store-cupboard staples and tap water never count), then most pantry foods used.
@@ -308,10 +309,14 @@ def rank_recipes(
                 planning.recipe_cost(recipe, pool.catalog.foods, pricer) if pricer else None
             ),
         )
+        unusual = taste.meal_style != "adventurous" and not (
+            slot in recipe.everyday if slot is not None else recipe.everyday
+        )
         everyday = (
-            (0, 0)
+            (0, 0, 0)
             if words
             else (
+                unusual,
                 recipe.meal_types <= {Slot.SNACK},
                 minutes is None or minutes > SLOW_MINUTES,
             )

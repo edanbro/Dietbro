@@ -194,6 +194,7 @@ def profile_scenario(seed: int, catalog: PlanningCatalog) -> Scenario:
             disliked_cuisines=[],
             liked_food_ids=[],
             disliked_food_ids=[],
+            meal_style="everyday",
         ),
     )
     start = date(2026, 10, 12)

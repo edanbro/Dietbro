@@ -100,7 +100,9 @@ async def planning_eligibility(
         total = sum(i.grams or 0.0 for i in r.ingredients)
         oil = sum(i.grams or 0.0 for i in r.ingredients if i.food_id in oils)
         share = oil / total if total else 0.0
-        slots = recipe_slots(r.source, r.source_id, r.category, r.kcal, share, r.sodium_mg)
+        slots = recipe_slots(
+            r.source, r.source_id, r.category, r.kcal, share, r.sodium_mg, r.protein_g
+        )
         per_slot.update(s.value for s in slots)
         if (o := overrides.get((r.source, r.source_id))) is not None:
             where = ", ".join(sorted(o.slots)) + " only" if o.slots else "not planned"
