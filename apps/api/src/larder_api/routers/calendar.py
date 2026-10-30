@@ -33,7 +33,14 @@ from larder_db import models as db
 router = APIRouter(tags=["calendar"])
 
 DEFAULT_TIMES = CalendarTimes()
-MINUTES = {"breakfast": 20, "lunch": 30, "dinner": 45, "snack": 10}
+MINUTES = {
+    "breakfast": 20,
+    "morning_snack": 10,
+    "lunch": 30,
+    "snack": 10,
+    "dinner": 45,
+    "evening_snack": 10,
+}
 DAYS_BEFORE, DAYS_AFTER = 7, 14
 _TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,32}$")
 _GONE: dict[int | str, dict[str, Any]] = {

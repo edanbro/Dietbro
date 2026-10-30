@@ -18,9 +18,11 @@ type Times = components["schemas"]["CalendarTimes"];
 const KEY = ["me", "calendar"] as const;
 const SLOTS = [
   ["breakfast", "Breakfast"],
+  ["morning_snack", "Morning snack"],
   ["lunch", "Lunch"],
-  ["dinner", "Dinner"],
   ["snack", "Snack"],
+  ["dinner", "Dinner"],
+  ["evening_snack", "Evening snack"],
 ] as const;
 
 /** The feed's full address, and the same as webcal:// (calendar apps open that to subscribe). */

@@ -922,7 +922,7 @@ async def test_goals_needing_review_fail_every_change_but_log_the_facts(
 
 async def test_at_most_three_planner_runs(make_world: MakeWorld) -> None:
     # (a) everything and (b) without the soft wish both fail on Thursday; (c) facts only works.
-    world = await make_world(kcal=(1500, 1700), protein=None)
+    world = await make_world(kcal=(1500, 1900), protein=None)
 
     out = await world.say(
         craving(THU, D, "feast"),

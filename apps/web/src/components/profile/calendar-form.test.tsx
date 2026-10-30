@@ -10,7 +10,14 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), message: v
 
 afterEach(() => vi.unstubAllGlobals());
 
-const TIMES = { breakfast: "08:00", lunch: "13:00", dinner: "19:00", snack: "16:00" };
+const TIMES = {
+  breakfast: "08:00",
+  lunch: "13:00",
+  dinner: "19:00",
+  snack: "16:00",
+  morning_snack: "10:30",
+  evening_snack: "21:00",
+};
 
 describe("feedUrls", () => {
   it("gives the https, webcal and Google subscribe addresses", () => {

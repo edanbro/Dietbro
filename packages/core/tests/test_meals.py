@@ -2,24 +2,35 @@ import pytest
 
 from larder_core.meals import (
     SLOT_ORDER,
+    SNACK_SHARE,
+    SNACK_SLOTS,
     Slot,
     day_shares,
+    default_mode,
     everyday_slots,
     load_everyday,
     load_overrides,
     meal_types,
+    own_shares,
     recipe_slots,
 )
 
 
 def test_slot_order_is_eating_order() -> None:
-    assert SLOT_ORDER == (Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER, Slot.SNACK)
+    assert SLOT_ORDER == (
+        Slot.BREAKFAST,
+        Slot.MORNING_SNACK,
+        Slot.LUNCH,
+        Slot.SNACK,
+        Slot.DINNER,
+        Slot.EVENING_SNACK,
+    )
 
 
 def test_mains_fill_lunch_and_dinner() -> None:
     assert meal_types("Chicken") == {Slot.LUNCH, Slot.DINNER}
     assert meal_types("Breakfast") == {Slot.BREAKFAST}
-    assert meal_types("Snack") == {Slot.SNACK}
+    assert meal_types("Snack") == SNACK_SLOTS
 
 
 def test_sides_and_unknown_categories_are_never_planned_alone() -> None:
@@ -54,7 +65,7 @@ def test_a_catalogue_recipe_must_be_big_enough_to_be_a_meal() -> None:
     assert recipe_slots("mealdb", "x", "Vegetarian", 300, 0.0, 100, 12) == mains
     assert recipe_slots("mealdb", "x", "Breakfast", 144, 0.0) == frozenset()  # grits alone
     assert recipe_slots("mealdb", "x", "Dessert", 420, 0.0) == frozenset()  # a slice of a big bake
-    assert recipe_slots("curated", "x", "Snack", 110, 0.0) == {Slot.SNACK}  # snacks can be small
+    assert recipe_slots("curated", "x", "Snack", 110, 0.0) == SNACK_SLOTS  # snacks can be small
 
 
 def test_a_users_own_recipe_keeps_its_slots_however_small() -> None:
@@ -64,7 +75,7 @@ def test_a_users_own_recipe_keeps_its_slots_however_small() -> None:
 
 def test_roasted_peanuts_are_a_snack() -> None:
     # What started all this: filed as a starter, so planned as a whole lunch.
-    assert recipe_slots("mealdb", "53429", "Starter", 410, 0.1, 100, 16) == {Slot.SNACK}
+    assert recipe_slots("mealdb", "53429", "Starter", 410, 0.1, 100, 16) == SNACK_SLOTS
 
 
 def test_everyday_slots() -> None:
@@ -90,7 +101,26 @@ def test_the_everyday_list_parses() -> None:
 
 
 def test_day_shares_are_of_the_meals_eaten() -> None:
-    modes = {Slot.BREAKFAST: "plan", Slot.LUNCH: "plan", Slot.DINNER: "plan", Slot.SNACK: "plan"}
+    modes = {Slot.BREAKFAST: "plan", Slot.LUNCH: "plan", Slot.DINNER: "plan", Slot.SNACK: "skip"}
     assert day_shares(modes) == {Slot.BREAKFAST: 0.25, Slot.LUNCH: 0.35, Slot.DINNER: 0.40}
     shares = day_shares(modes | {Slot.BREAKFAST: "skip", Slot.LUNCH: "own"})
     assert shares == pytest.approx({Slot.DINNER: 0.40 / 0.75})
+
+
+def test_snacks_leave_the_meals_a_little_less_of_the_day() -> None:
+    modes = {Slot.BREAKFAST: "plan", Slot.LUNCH: "plan", Slot.DINNER: "plan", Slot.SNACK: "plan"}
+    assert day_shares(modes)[Slot.DINNER] == pytest.approx(0.36)
+    all_three = modes | {Slot.MORNING_SNACK: "plan", Slot.EVENING_SNACK: "own"}
+    assert day_shares(all_three)[Slot.DINNER] == pytest.approx(0.28)
+
+
+def test_an_own_snack_keeps_its_share_free() -> None:
+    modes = {Slot.BREAKFAST: "plan", Slot.LUNCH: "plan", Slot.DINNER: "plan"}
+    assert own_shares(modes | {Slot.EVENING_SNACK: "own"}) == {Slot.EVENING_SNACK: SNACK_SHARE}
+    assert own_shares(modes | {Slot.EVENING_SNACK: "plan"}) == {}
+
+
+def test_one_snack_a_day_unless_the_user_says_otherwise() -> None:
+    assert default_mode(Slot.SNACK) == "plan"
+    assert default_mode(Slot.MORNING_SNACK) == default_mode(Slot.EVENING_SNACK) == "skip"
+    assert default_mode(Slot.LUNCH) == "plan"

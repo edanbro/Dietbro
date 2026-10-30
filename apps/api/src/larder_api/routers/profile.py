@@ -51,7 +51,7 @@ from larder_core.energy import (
     validate_body,
     validate_targets,
 )
-from larder_core.meals import Slot, meals_problem
+from larder_core.meals import Slot, default_mode, meals_problem
 from larder_core.regions import REGIONS, local_today, region_for, valid_timezone
 from larder_db.models import (
     Allergies,
@@ -441,7 +441,7 @@ async def put_meals(body: MealsIn, user: CurrentUser, session: Session) -> Prefe
     modes = body.model_dump()
     if (problem := meals_problem({Slot(s): m for s, m in modes.items()})) is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, [problem])
-    row.meal_modes = {s: m for s, m in modes.items() if m != "plan"}
+    row.meal_modes = {s: m for s, m in modes.items() if m != default_mode(Slot(s))}
     await session.commit()
     return await _preferences_out(session, row)
 

@@ -12,6 +12,9 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
   and notes, micronutrients, price watch, the weekly recap, meal prep, shared shopping lists,
   units, cheaper and favourite swaps. A design pass covered tokens, contrast, keyboard access
   and copy (PRs #64 to #67).
+- Plans default to everyday meals (ADR-0019), with snacks by setting (ADR-0020). What people eat, with
+  sources, is in `docs/research/normal-meals.md`. After changing `curated.toml`, run `larder-data
+  import-curated` then `resolve --aliases-only` under `with-db.sh`.
 - Next: a security review before hosting (share and calendar tokens, the recipe-import SSRF
   guard, rate limits), then M8 (deploy per `docs/deploy.md` and `render.yaml`, monitoring, load
   numbers), then M9 (beta users). Check with Eduard before anything with running costs.

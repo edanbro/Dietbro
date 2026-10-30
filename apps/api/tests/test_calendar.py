@@ -28,7 +28,14 @@ async def test_feed_lists_the_planned_meals(
     assert off == {
         "enabled": False,
         "path": None,
-        "times": {"breakfast": "08:00", "lunch": "13:00", "dinner": "19:00", "snack": "16:00"},
+        "times": {
+            "breakfast": "08:00",
+            "lunch": "13:00",
+            "dinner": "19:00",
+            "snack": "16:00",
+            "morning_snack": "10:30",
+            "evening_snack": "21:00",
+        },
     }
     on = (await api.post("/me/calendar", headers=auth)).json()
     assert on["enabled"] is True
@@ -41,7 +48,9 @@ async def test_feed_lists_the_planned_meals(
     assert feed.headers["content-type"].startswith("text/calendar")
     text = feed.text
     assert text.startswith("BEGIN:VCALENDAR\r\n")
-    assert text.count("BEGIN:VEVENT") == 7 * 3  # this week's breakfasts, lunches and dinners
+    assert (
+        text.count("BEGIN:VEVENT") == 7 * 4
+    )  # this week's breakfasts, lunches, snacks and dinners
     assert "UID:2026-10-14-dinner@localhost" in text
     assert "DTSTART:20261014T190000" in text
     assert "/recipes/" in text
@@ -59,7 +68,14 @@ async def test_times_can_change_and_reset_retires_the_old_address(
     auth = env.auth("user_a")
     first = (await api.post("/me/calendar", headers=auth)).json()["path"]
 
-    times = {"breakfast": "07:15", "lunch": "12:30", "dinner": "18:45", "snack": "15:00"}
+    times = {
+        "breakfast": "07:15",
+        "lunch": "12:30",
+        "dinner": "18:45",
+        "snack": "15:00",
+        "morning_snack": "10:00",
+        "evening_snack": "22:00",
+    }
     saved = await api.put("/me/calendar/times", json=times, headers=auth)
     assert saved.json()["times"] == times
     assert "DTSTART:20261014T184500" in (await api.get(first)).text
