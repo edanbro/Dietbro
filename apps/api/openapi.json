@@ -2486,7 +2486,7 @@
           "plans"
         ],
         "summary": "Stock Shopping Items",
-        "description": "Move bought lines into the pantry (default: every ticked line not moved yet), in grams,\nwith a suggested use-by date. Each line moves once; staples are never moved.",
+        "description": "Move bought lines into the pantry (default: every ticked line not moved yet), in grams,\nwith a suggested use-by date. Each line moves once; staples are never moved. A food sold in\npacks moves as the whole packs bought, so what the plan doesn't use stays in the pantry\nfor the next plan to use up.",
         "operationId": "stockShoppingItems",
         "security": [
           {
@@ -10162,6 +10162,36 @@
             ],
             "title": "Approx Units"
           },
+          "pack_g": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack G",
+            "description": "the usual pack (larder_core.packs); None: sold loose"
+          },
+          "packs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packs",
+            "description": "whole packs that hold `grams`"
+          },
+          "till_minor": {
+            "type": "integer",
+            "title": "Till Minor",
+            "description": "what the whole packs cost (cost_minor when sold loose)",
+            "default": 0
+          },
           "used_in": {
             "items": {
               "$ref": "#/components/schemas/UsedInOut"
@@ -10215,6 +10245,12 @@
             "type": "integer",
             "title": "Total Minor",
             "description": "estimated cost of every non-staple line (= plan cost)"
+          },
+          "till_minor": {
+            "type": "integer",
+            "title": "Till Minor",
+            "description": "estimated spend buying whole packs; the rest of each pack goes to the pantry",
+            "default": 0
           },
           "budget_minor": {
             "anyOf": [

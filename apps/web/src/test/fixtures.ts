@@ -119,6 +119,9 @@ export function item(
     stocked: false,
     staple: false,
     approx_units: null,
+    pack_g: null,
+    packs: null,
+    till_minor: overrides.cost_minor ?? 100,
     ...overrides,
   };
 }
@@ -128,6 +131,7 @@ export function makeShoppingList(overrides: Partial<ShoppingList> = {}): Shoppin
     plan_id: 7,
     currency: "GBP",
     total_minor: 1234,
+    till_minor: 1234,
     budget_minor: 5000,
     household: 1,
     items: [

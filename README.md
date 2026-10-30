@@ -54,7 +54,9 @@ flowchart LR
   (Nutri-Score method) from Open Food Facts.
 - **Cooks from what you have**: "What can I cook?" lists the safe recipes that use your pantry,
   fewest things to buy first, and names what's still needed.
-- **Shops and cooks**: an aisle-sorted shopping list that says which meals need each item,
+- **Shops and cooks**: an aisle-sorted shopping list in the packs shops sell ("1 pack (320 g)",
+  not "15 g" of tortillas), priced at the till, with the rest of each pack going into the pantry
+  for next week's plan; it says which meals need each item,
   works offline in the shop (or prints, with the week's meals as a table for the fridge) and
   moves ticked items into the pantry, and offers what your receipts say you buy most weeks;
   cook mode with scaled amounts, timers read from the method and the screen kept awake.

@@ -805,6 +805,13 @@ class ShoppingItemOut(BaseModel):
     staple: bool = Field(description="store-cupboard item to check you have; no grams or cost")
     # A friendlier amount when the food has a natural unit, e.g. "≈ 2 medium" onions.
     approx_units: str | None = None
+    pack_g: int | None = Field(
+        default=None, description="the usual pack (larder_core.packs); None: sold loose"
+    )
+    packs: int | None = Field(default=None, description="whole packs that hold `grams`")
+    till_minor: int = Field(
+        default=0, description="what the whole packs cost (cost_minor when sold loose)"
+    )
     used_in: list[UsedInOut] = Field(
         default_factory=list[UsedInOut], description="the plan's recipes that need it, by day"
     )
@@ -823,6 +830,10 @@ class ShoppingListOut(BaseModel):
     plan_id: int
     currency: Currency
     total_minor: int = Field(description="estimated cost of every non-staple line (= plan cost)")
+    till_minor: int = Field(
+        default=0,
+        description="estimated spend buying whole packs; the rest of each pack goes to the pantry",
+    )
     budget_minor: int | None
     household: int = Field(default=1, description="people the amounts are for")
     items: list[ShoppingItemOut]

@@ -55,6 +55,7 @@ from larder_api.schemas import (
 )
 from larder_api.settings import Settings, get_settings
 from larder_core.meals import SLOT_ORDER, Slot
+from larder_core.packs import pack_grams, packs_for
 from larder_core.quantities import Portion
 from larder_core.regions import local_today
 from larder_core.shelf_life import suggest_expiry
@@ -779,6 +780,11 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
 
     def item(s: ShoppingItem) -> ShoppingItemOut:
         food = foods[s.food_id]
+        pack = None if s.staple else pack_grams(food.id, food.description, food.category)
+        packs = packs_for(s.grams, pack) if pack and s.grams > 0 else None
+        till = s.cost_minor
+        if pack and packs and s.grams > 0:
+            till = round(s.cost_minor * packs * pack / s.grams)
         return ShoppingItemOut(
             food_id=s.food_id,
             name=food.description,
@@ -789,6 +795,9 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
             stocked=s.stocked_at is not None,
             staple=s.staple,
             approx_units=None if s.staple else approx_units(s.grams, portions.get(s.food_id, [])),
+            pack_g=pack if packs else None,
+            packs=packs,
+            till_minor=till,
             used_in=uses.get(s.food_id, []),
         )
 
@@ -800,6 +809,7 @@ async def shopping_out(session: AsyncSession, plan: MealPlan) -> ShoppingListOut
         plan_id=plan.id,
         currency=plan.currency,  # pyright: ignore[reportArgumentType]
         total_minor=stats.cost_minor,
+        till_minor=sum(i.till_minor for i in items),
         budget_minor=stats.budget_minor,
         household=stats.household,
         items=items,
@@ -841,7 +851,9 @@ async def stock_shopping_items(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> list[PantryItemOut]:
     """Move bought lines into the pantry (default: every ticked line not moved yet), in grams,
-    with a suggested use-by date. Each line moves once; staples are never moved."""
+    with a suggested use-by date. Each line moves once; staples are never moved. A food sold in
+    packs moves as the whole packs bought, so what the plan doesn't use stays in the pantry
+    for the next plan to use up."""
     plan = await _load_plan(session, user, plan_id)
     wanted = set(body.food_ids) if body.food_ids is not None else None
     lines = [
@@ -861,11 +873,13 @@ async def stock_shopping_items(
     added: list[PantryItem] = []
     for line in lines:
         food = foods[line.food_id]
+        pack = pack_grams(food.id, food.description, food.category)
+        grams = float(packs_for(line.grams, pack) * pack if pack else line.grams)
         item = PantryItem(
             user_id=user.id,
             food_id=food.id,
-            grams=float(line.grams),
-            quantity=float(line.grams),
+            grams=grams,
+            quantity=grams,
             unit="g",
             approx=False,
             expires_on=suggest_expiry(today, food.description, food.category),

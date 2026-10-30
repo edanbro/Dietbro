@@ -94,7 +94,8 @@ describe("ShoppingPage", () => {
     expect(dairy).toHaveTextContent("1.3 kg");
 
     const staples = screen.getByRole("region", { name: "Check you have" });
-    expect(within(staples).getByRole("checkbox", { name: "Salt" })).toBeInTheDocument();
+    expect(within(staples).getByText("Salt")).toBeInTheDocument();
+    expect(within(staples).queryByRole("checkbox")).toBeNull();
     expect(staples).not.toHaveTextContent("£");
 
     expect(screen.getByText("≈ £12.34")).toBeInTheDocument();
@@ -106,7 +107,7 @@ describe("ShoppingPage", () => {
   it("says who the list is for when the plan is for a household", async () => {
     setup({ "GET /plans/7/shopping": json(makeShoppingList({ household: 3 })) });
 
-    expect(await screen.findByText("Estimated total, for 3 people")).toBeInTheDocument();
+    expect(await screen.findByText("At the till, for 3 people")).toBeInTheDocument();
   });
 
   it("warns when the list costs more than the budget", async () => {
@@ -343,8 +344,39 @@ describe("what each line is for", () => {
     });
 
     expect(await screen.findByRole("checkbox", { name: "Onions" })).toHaveAccessibleDescription(
-      /For Chilli \(Mon, Thu\) and Fish pie \(Wed\)/,
+      /For Chilli \(Mon, Thu\) \+1/,
     );
+  });
+
+  it("buys food sold in packs as whole packs, priced at the till", async () => {
+    setup({
+      "GET /plans/7/shopping": json(
+        makeShoppingList({
+          total_minor: 1234,
+          till_minor: 1500,
+          items: [
+            item({
+              food_id: 1,
+              name: "Tortillas, flour",
+              category: "Baked Products",
+              grams: 15,
+              cost_minor: 9,
+              pack_g: 320,
+              packs: 1,
+              till_minor: 195,
+            }),
+          ],
+        }),
+      ),
+    });
+
+    const wraps = await screen.findByRole("checkbox", { name: "Tortillas" });
+    expect(wraps).toHaveAccessibleDescription(/^1 pack \(320 g\) · uses 15 g/);
+    expect(screen.getByText("£1.95")).toBeInTheDocument();
+    expect(screen.getByText("≈ £15.00")).toBeInTheDocument();
+    expect(
+      screen.getByText("The meals use ≈ £12.34; the rest stays in your pantry."),
+    ).toBeInTheDocument();
   });
 });
 
