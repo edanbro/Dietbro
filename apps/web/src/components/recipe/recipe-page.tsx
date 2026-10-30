@@ -28,6 +28,7 @@ import { allergenLabel, formatMinutes, formatMoney, formatNumber, humanize } fro
 import { APP_NAME } from "@/lib/brand";
 import { MoreNutrients } from "@/components/plan/macro-bars";
 import { AddToList } from "@/components/recipe/add-to-list";
+import { AddToPlan } from "@/components/recipe/add-to-plan";
 import { RecipeArt } from "@/components/recipe/recipe-art";
 import { Micronutrients } from "@/components/nutrients/micronutrients";
 import { RecipeNotes } from "@/components/recipe/recipe-notes";
@@ -339,6 +340,7 @@ export function RecipePage({ id }: { id: number }) {
         <ChefHatIcon aria-hidden />
         Start cooking{servings ? ` (${servings} ${servings === 1 ? "serving" : "servings"})` : ""}
       </Link>
+      <AddToPlan recipe={recipe} />
       <Feedback recipe={recipe} />
       <Allergens recipe={recipe} />
 
