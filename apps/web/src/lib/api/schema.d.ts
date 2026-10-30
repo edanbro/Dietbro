@@ -528,6 +528,26 @@ export interface paths {
         patch: operations["updatePantryItem"];
         trace?: never;
     };
+    "/pantry/{item_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Item
+         * @description The user says it's still there, as recorded: nothing else changes.
+         */
+        post: operations["confirmPantryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans": {
         parameters: {
             query?: never;
@@ -1928,6 +1948,12 @@ export interface components {
              * @enum {string}
              */
             storage: "fridge" | "freezer" | "cupboard";
+            /**
+             * Checked On
+             * Format: date
+             * @description when the user last added, changed or confirmed it (their stale-check clock)
+             */
+            checked_on: string;
             /** Days Left */
             days_left: number;
         };
@@ -2547,6 +2573,12 @@ export interface components {
              * @enum {string}
              */
             storage: "fridge" | "freezer" | "cupboard";
+            /**
+             * Checked On
+             * Format: date
+             * @description when the user last added, changed or confirmed it (their stale-check clock)
+             */
+            checked_on: string;
         };
         /** PantryItemPatch */
         PantryItemPatch: {
@@ -5047,6 +5079,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problems"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmPantryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PantryItemOut"];
                 };
             };
             /** @description Validation Error */

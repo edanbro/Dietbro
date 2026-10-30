@@ -163,3 +163,41 @@ async def test_me_counts_expiring_items(api: httpx.AsyncClient, auth: Auth) -> N
 
     assert me["profile"]["expiring_soon"] == 1
     assert me["profile"]["pantry_items"] == 2
+
+
+async def test_confirm_and_edit_restart_the_check_clock_only(
+    api: httpx.AsyncClient, auth: Auth, db_engine: AsyncEngine
+) -> None:
+    item = (await add(api, auth, expires_on="2026-11-20")).json()
+    url = f"/pantry/{item['id']}"
+    app.dependency_overrides[get_clock] = lambda: lambda: datetime(2031, 3, 4, tzinfo=UTC)
+    try:
+        confirmed = await api.post(f"{url}/confirm", headers=auth())
+        assert confirmed.status_code == 200
+        assert confirmed.json()["checked_on"] == "2031-03-04"
+        assert {k: v for k, v in confirmed.json().items() if k != "checked_on"} == {
+            k: v for k, v in item.items() if k != "checked_on"
+        }
+
+        # Marking a meal eaten changes the row too, but that isn't the user looking at it.
+        async with make_sessionmaker(db_engine)() as session:
+            await session.execute(
+                update(PantryItem).where(PantryItem.id == item["id"]).values(grams=100)
+            )
+            await session.commit()
+        app.dependency_overrides[get_clock] = lambda: lambda: datetime(2031, 5, 6, tzinfo=UTC)
+        listed = (await api.get("/pantry", headers=auth())).json()
+        assert listed[0]["checked_on"] == "2031-03-04"
+
+        edited = await api.patch(url, json={"approx": True}, headers=auth())
+        assert edited.json()["checked_on"] == "2031-05-06"
+    finally:
+        del app.dependency_overrides[get_clock]
+
+
+async def test_confirm_someone_elses_item_is_404(api: httpx.AsyncClient, auth: Auth) -> None:
+    item = (await add(api, auth)).json()
+
+    response = await api.post(f"/pantry/{item['id']}/confirm", headers=auth("user_b"))
+
+    assert response.status_code == 404

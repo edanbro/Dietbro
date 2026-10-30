@@ -379,6 +379,15 @@ export function useUpdatePantryItem() {
   );
 }
 
+export function useConfirmPantryItem() {
+  const api = useApi();
+  return useSave(
+    async (id: number) =>
+      unwrap(await api.POST("/pantry/{item_id}/confirm", { params: { path: { item_id: id } } })),
+    keys.pantry,
+  );
+}
+
 export function useDeletePantryItem() {
   const api = useApi();
   return useSave(

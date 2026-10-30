@@ -1590,6 +1590,54 @@
         }
       }
     },
+    "/pantry/{item_id}/confirm": {
+      "post": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "Confirm Item",
+        "description": "The user says it's still there, as recorded: nothing else changes.",
+        "operationId": "confirmPantryItem",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PantryItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/plans": {
       "post": {
         "tags": [
@@ -5741,6 +5789,12 @@
             "title": "Storage",
             "default": "cupboard"
           },
+          "checked_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Checked On",
+            "description": "when the user last added, changed or confirmed it (their stale-check clock)"
+          },
           "days_left": {
             "type": "integer",
             "title": "Days Left"
@@ -5757,6 +5811,7 @@
           "expires_on",
           "source",
           "created_at",
+          "checked_on",
           "days_left"
         ],
         "title": "ExpiringItem"
@@ -7365,6 +7420,12 @@
             ],
             "title": "Storage",
             "default": "cupboard"
+          },
+          "checked_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Checked On",
+            "description": "when the user last added, changed or confirmed it (their stale-check clock)"
           }
         },
         "type": "object",
@@ -7377,7 +7438,8 @@
           "approx",
           "expires_on",
           "source",
-          "created_at"
+          "created_at",
+          "checked_on"
         ],
         "title": "PantryItemOut"
       },

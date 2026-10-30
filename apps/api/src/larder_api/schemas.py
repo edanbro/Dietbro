@@ -237,6 +237,9 @@ class PantryItemOut(BaseModel):
     source: str
     created_at: datetime
     storage: Storage = "cupboard"  # where it's kept (the user's choice, else the usual place)
+    checked_on: date = Field(
+        description="when the user last added, changed or confirmed it (their stale-check clock)"
+    )
 
 
 class ExpiringItem(PantryItemOut):
