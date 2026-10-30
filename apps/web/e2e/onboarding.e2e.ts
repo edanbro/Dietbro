@@ -79,6 +79,7 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
 
     // GDPR: delete the account from the profile page.
     await page.getByRole("link", { name: "Profile" }).click();
+    await page.getByRole("link", { name: /^Your data/ }).click();
     await page.getByLabel('Type "delete" to confirm', { exact: true }).fill("delete");
     await page.getByRole("button", { name: "Delete my account" }).click();
     await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });

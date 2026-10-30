@@ -124,7 +124,7 @@ export function OwnCard({ own, today = false }: { own: OwnMeal; today?: boolean 
               {" · "}
             </>
           ) : null}
-          <Link href="/profile#meals" className="underline underline-offset-4">
+          <Link href="/profile/meals" className="underline underline-offset-4">
             Change
           </Link>
         </span>

@@ -103,8 +103,8 @@ describe("PlanPage states", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Only 3 breakfasts fit your allergies");
     expect(alert).toHaveTextContent("Try widening your calorie range");
-    const review = screen.queryByRole("link", { name: "Review your profile" });
-    if (status === 409) expect(review).toHaveAttribute("href", "/profile");
+    const review = screen.queryByRole("link", { name: "Review your goals" });
+    if (status === 409) expect(review).toHaveAttribute("href", "/profile/goals");
     else expect(review).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Plan my week" })).toBeEnabled();
   });
@@ -563,7 +563,7 @@ describe("meals the user sorts out or skips", () => {
     expect(rows[0]).toHaveTextContent("LunchYour ownAbout 700 kcal kept for it.");
     expect(within(rows[0]).getByRole("link", { name: "Change" })).toHaveAttribute(
       "href",
-      "/profile#meals",
+      "/profile/meals",
     );
     expect(screen.getByText("Totals include about 700 kcal kept for your own lunch.")).toBeVisible();
     // Not today: nothing to log yet.

@@ -13,7 +13,13 @@ import {
 } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { type GoalsIn, useBody, useGoals, useMe, useSaveGoals } from "@/lib/api/hooks";
+import {
+  type GoalsIn,
+  useBody,
+  useGoals,
+  useMe,
+  useSaveGoals,
+} from "@/lib/api/hooks";
 
 type Goal = NonNullable<GoalsIn["goal"]>;
 type FormState = {
@@ -60,7 +66,8 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
     carbs_g_min: fromNumber(saved?.carbs_g_min),
     carbs_g_max: fromNumber(saved?.carbs_g_max),
     weekly_budget:
-      saved?.weekly_budget_minor === null || saved?.weekly_budget_minor === undefined
+      saved?.weekly_budget_minor === null ||
+      saved?.weekly_budget_minor === undefined
         ? ""
         : String(saved.weekly_budget_minor / 100),
     currency: saved?.currency ?? me?.region.currency ?? "GBP",
@@ -69,7 +76,8 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
   };
   const set = (patch: Partial<FormState>) => setForm({ ...current, ...patch });
 
-  const suggestion = body && current.goal ? body.suggestions[current.goal] : undefined;
+  const suggestion =
+    body && current.goal ? body.suggestions[current.goal] : undefined;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -120,7 +128,9 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
         <div className="flex items-center justify-between gap-2 rounded-lg bg-muted p-3 text-sm">
           <span>
             Suggested: {suggestion.kcal_min}–{suggestion.kcal_max} kcal
-            {suggestion.protein_g_min ? `, ≥ ${Math.round(suggestion.protein_g_min)} g protein` : ""}
+            {suggestion.protein_g_min
+              ? `, ≥ ${Math.round(suggestion.protein_g_min)} g protein`
+              : ""}
           </span>
           <Button
             type="button"
@@ -131,7 +141,9 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
                 kcal_min: String(suggestion.kcal_min),
                 kcal_max: String(suggestion.kcal_max),
                 protein_g_min: fromNumber(
-                  suggestion.protein_g_min ? Math.round(suggestion.protein_g_min) : null,
+                  suggestion.protein_g_min
+                    ? Math.round(suggestion.protein_g_min)
+                    : null,
                 ),
               })
             }
@@ -183,7 +195,8 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
           ))}
         </NativeSelect>
         <p id="household-hint" className="text-xs text-muted-foreground">
-          Shopping, cost and recipe amounts cover everyone; calories and nutrition stay yours.
+          Shopping, cost and recipe amounts cover everyone; calories and
+          nutrition stay yours.
         </p>
       </div>
       <div className="grid grid-cols-[1fr_6rem] gap-3">
@@ -205,7 +218,9 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
           <NativeSelect
             id="currency"
             value={current.currency}
-            onChange={(e) => set({ currency: e.target.value as GoalsIn["currency"] })}
+            onChange={(e) =>
+              set({ currency: e.target.value as GoalsIn["currency"] })
+            }
           >
             <option>GBP</option>
             <option>EUR</option>
@@ -217,18 +232,19 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
         className="rounded-lg border px-3 py-2"
         open={Boolean(
           current.protein_g_max ||
-            current.fat_g_min ||
-            current.fat_g_max ||
-            current.carbs_g_min ||
-            current.carbs_g_max,
+          current.fat_g_min ||
+          current.fat_g_max ||
+          current.carbs_g_min ||
+          current.carbs_g_max,
         )}
       >
         <summary className="cursor-pointer py-1 text-sm font-medium">
-          Advanced: fat, carbs and a protein cap
+          Advanced: fat, carbs, a protein cap and the calorie floor
         </summary>
         <p className="mt-1 text-xs text-muted-foreground">
-          Grams a day; leave blank for no limit. These are aims the planner trades off, never
-          safety rules.
+          Grams a day; leave blank for no limit (protein stays under 35% of your
+          calories unless you set a cap). These are aims the planner trades off;
+          the calorie floor is a firm rule.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-3 pb-1">
           {(
@@ -251,16 +267,18 @@ export function GoalsForm({ onSaved }: { onSaved?: () => void }) {
             />
           ))}
         </div>
+        <div className="pt-2 pb-1">
+          <LabeledInput
+            id="floor"
+            label="Calorie floor"
+            hint="Plans never go below this. It can't be set under 1000 kcal."
+            type="number"
+            inputMode="numeric"
+            value={current.calorie_floor}
+            onChange={(e) => set({ calorie_floor: e.target.value })}
+          />
+        </div>
       </details>
-      <LabeledInput
-        id="floor"
-        label="Calorie floor"
-        hint="Plans never go below this. It can't be set under 1000 kcal."
-        type="number"
-        inputMode="numeric"
-        value={current.calorie_floor}
-        onChange={(e) => set({ calorie_floor: e.target.value })}
-      />
       <ErrorAlert error={save.error} />
       <Button type="submit" disabled={save.isPending}>
         Save goals

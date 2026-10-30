@@ -116,8 +116,8 @@ function CreateError({ error }: { error: unknown }) {
     <div className="flex flex-col gap-2">
       <ErrorAlert error={error} />
       {error instanceof ApiError && error.status === 409 ? (
-        <Link href="/profile" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-          Review your profile
+        <Link href="/profile/goals" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          Review your goals
         </Link>
       ) : null}
     </div>

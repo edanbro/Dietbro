@@ -199,7 +199,7 @@ Screens: landing → Clerk sign-up → 5-step setup (body stats optional, goals,
 preferences, first pantry items) → plan (day strip and week grid, meal cards, macro bars against
 the targets, cost against budget, "planned without" exclusions) → shopping list (by aisle, tick
 as you shop, staples to check) → recipe pages; plus pantry (search, per-food units like "large"
-or "clove", use-by badges), diary (quick-add, days against the goal, weight) and profile (edit everything, download data, delete account). App routes are guarded by
+or "clove", use-by badges), diary (quick-add, days against the goal, weight) and profile (a short list of sections, each on its own page: goals, allergies, preferences, meals, data export and account deletion...). App routes are guarded by
 Clerk's middleware for UX; the API is the security boundary.
 
 **Tests**: API tests mint JWTs with a local RSA key (bad signature, wrong issuer/origin, expired,
