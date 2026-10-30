@@ -14,6 +14,9 @@ import { foodName } from "@/lib/food-name";
 import { bodyUnit, bodyWeight, formatBodyWeight } from "@/lib/units";
 import { formatMoney, formatNumber } from "@/lib/format";
 
+import { PriceWatch } from "./price-watch";
+import { SpendingSection } from "./spending";
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="flex flex-col gap-1 rounded-2xl bg-muted/60 p-4">
@@ -97,6 +100,12 @@ function Summary({ recap }: { recap: Recap }) {
             first to last weigh-in
           </Small>
         </Card>
+      ) : recap.weight_kg != null ? (
+        // One weigh-in has no change to show, but it's why this week isn't empty.
+        <Card title="Weight">
+          <Big>{formatBodyWeight(recap.weight_kg, units)}</Big>
+          <Small>your only weigh-in this week</Small>
+        </Card>
       ) : null}
       {recap.top_recipes.length ? (
         <Card title="Eaten most">
@@ -121,7 +130,7 @@ function Summary({ recap }: { recap: Recap }) {
             {recap.price_rises.map((p) => (
               <li key={p.name} className="flex justify-between gap-2">
                 <span>{foodName(p.name).name}</span>
-                <span className="flex items-center gap-1 text-amber-700 tabular-nums dark:text-amber-400">
+                <span className="flex items-center gap-1 text-warning tabular-nums">
                   <TrendingUpIcon aria-hidden className="size-3.5" />+{p.change_pct}%
                 </span>
               </li>
@@ -192,6 +201,8 @@ export function RecapPage() {
           )}
         </>
       )}
+      <SpendingSection />
+      <PriceWatch />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { cn } from "cn";
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
-import Link from "next/link";
 
 import { ErrorAlert } from "@/components/form-bits";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,6 +103,8 @@ function Row({
 export function PriceWatch() {
   const prices = usePrices();
   const units = useUnits();
+  // Nothing to say yet: the spending section above already asks for receipts.
+  if (prices.data && !prices.data.items.length) return null;
   return (
     <section aria-labelledby="price-watch" className="flex flex-col gap-2">
       <h2 id="price-watch" className="text-xl font-semibold">
@@ -130,15 +131,7 @@ export function PriceWatch() {
             6 months.
           </p>
         </>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Once you&apos;ve bought something twice, with the receipt added, its price shows up here,
-          with any rise and a cheaper option you&apos;ve bought before.{" "}
-          <Link href="/pantry/receipts" className="text-foreground underline underline-offset-4">
-            Add a receipt
-          </Link>
-        </p>
-      )}
+      ) : null}
     </section>
   );
 }

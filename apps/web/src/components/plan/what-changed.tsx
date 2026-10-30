@@ -129,7 +129,7 @@ export function WhatChanged({
       {warnings.length ? (
         <ul
           aria-label="Warnings"
-          className="flex flex-col gap-1 text-amber-800 dark:text-amber-200"
+          className="flex flex-col gap-1 text-warning"
         >
           {warnings.map((w, i) => (
             <li key={`${i}-${w}`} className="flex gap-1.5">

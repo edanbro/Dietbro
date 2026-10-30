@@ -69,7 +69,7 @@ function CookView({ recipe, initial }: { recipe: Recipe; initial: number }) {
         {recipe.note?.note ? (
           <p
             role="note"
-            className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+            className="flex items-start gap-2 rounded-xl bg-warning-subtle px-3 py-2 text-sm text-warning-subtle-foreground"
           >
             <StickyNoteIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>

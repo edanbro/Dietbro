@@ -137,13 +137,13 @@ function TopAisles({ data }: { data: Spending }) {
   );
 }
 
-/** The diary's spending section: weekly bars and the top aisles, from confirmed receipts. */
+/** The week in review's longer view of spending: weekly bars and the top aisles, from confirmed receipts. */
 export function SpendingSection() {
   const spending = useSpending(12);
   return (
     <section aria-labelledby="spending" className="flex flex-col gap-3">
       <h2 id="spending" className="text-xl font-semibold">
-        Spending
+        Spending over time
       </h2>
       {spending.isPending ? (
         <Skeleton className="h-40" />

@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Prices } from "@/lib/api/hooks";
@@ -59,13 +59,10 @@ describe("PriceWatch", () => {
     expect(rows[1]).not.toHaveTextContent("Cheaper");
   });
 
-  it("explains what it needs when there's nothing yet", async () => {
-    mockApi({ "GET /insights/prices": json({ currency: "EUR", items: [] }) });
-    renderWithClient(<PriceWatch />);
-    expect(await screen.findByText(/bought something twice/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add a receipt" })).toHaveAttribute(
-      "href",
-      "/pantry/receipts",
-    );
+  it("stays out of the way when there's nothing yet", async () => {
+    const calls = mockApi({ "GET /insights/prices": json({ currency: "EUR", items: [] }) });
+    const { container } = renderWithClient(<PriceWatch />);
+    await waitFor(() => expect(calls.some((c) => c.path === "/insights/prices")).toBe(true));
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 });
