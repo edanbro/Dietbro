@@ -461,6 +461,8 @@ class PantryItem(Base):
     storage: Mapped[str | None] = mapped_column(String(8))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = _now()
+    # When the user last confirmed or edited it. Not updated_at: marking a meal eaten bumps that.
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     food: Mapped[Food] = relationship()
 

@@ -321,6 +321,12 @@ typed inputs where typing beats tapping, and it never writes a plan
 (`outcome`), the structured-output client behind a protocol (`client`), prices (`pricing`) and a
 scripted fake. `larder_api.changes` binds them to the signed-in user and the database.
 
+Logging by typing (`POST /diary/parse`, `changes/food_text.py`) is the one place a model runs
+today. It only splits a sentence into names and amounts, and nothing is logged until the user
+has checked the foods and grams in the form. Foods and weights come from the food data, with
+cooked foods preferred (`AS_EATEN`), since the ingredient aliases mean dry rice. Without a
+model, or for the demo account, a plain split does the same job.
+
 ### 9.1 Changes and the executor
 
 A change is `{intent, when: {date, slot?}, ...}`: *facts* - `ate_off_plan` (description, items)

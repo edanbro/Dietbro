@@ -528,6 +528,26 @@ export interface paths {
         patch: operations["updatePantryItem"];
         trace?: never;
     };
+    "/pantry/{item_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Item
+         * @description The user says it's still there, as recorded: nothing else changes.
+         */
+        post: operations["confirmPantryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans": {
         parameters: {
             query?: never;
@@ -1121,6 +1141,28 @@ export interface paths {
          *     plan rebalances around it; nutrition comes from the food data, never a guess.
          */
         post: operations["logFood"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/diary/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse Food Text
+         * @description Turn what someone typed into foods and grams for them to check. Logs nothing. Uses the
+         *     model while the user's budget allows (never for the shared demo account), else a plain
+         *     split on commas and "and"; either way foods and weights come from the food data.
+         */
+        post: operations["parseFoodText"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1928,6 +1970,12 @@ export interface components {
              * @enum {string}
              */
             storage: "fridge" | "freezer" | "cupboard";
+            /**
+             * Checked On
+             * Format: date
+             * @description when the user last added, changed or confirmed it (their stale-check clock)
+             */
+            checked_on: string;
             /** Days Left */
             days_left: number;
         };
@@ -2057,6 +2105,33 @@ export interface components {
             source: string;
             /** Image Url */
             image_url?: string | null;
+        };
+        /**
+         * FoodTextOut
+         * @description Foods to check and then log (POST /diary/log); nothing has been logged yet.
+         */
+        FoodTextOut: {
+            /** Items */
+            items: components["schemas"]["ParsedFoodOut"][];
+            /**
+             * Unmatched
+             * @description names that matched no food
+             */
+            unmatched: string[];
+        };
+        /**
+         * FoodTextRequest
+         * @description What someone typed that they ate: "two eggs, toast and a coffee".
+         */
+        FoodTextRequest: {
+            /** Text */
+            text: string;
+            /**
+             * Today
+             * Format: date
+             * @description the user's local date
+             */
+            today: string;
         };
         /**
          * FoodUnit
@@ -2547,6 +2622,12 @@ export interface components {
              * @enum {string}
              */
             storage: "fridge" | "freezer" | "cupboard";
+            /**
+             * Checked On
+             * Format: date
+             * @description when the user last added, changed or confirmed it (their stale-check clock)
+             */
+            checked_on: string;
         };
         /** PantryItemPatch */
         PantryItemPatch: {
@@ -2560,6 +2641,22 @@ export interface components {
             expires_on?: string | null;
             /** Storage */
             storage?: ("fridge" | "freezer" | "cupboard") | null;
+        };
+        /** ParsedFoodOut */
+        ParsedFoodOut: {
+            /**
+             * Name
+             * @description the user's words for it
+             */
+            name: string;
+            food: components["schemas"]["FoodSummary"];
+            /** Grams */
+            grams: number;
+            /**
+             * Estimated
+             * @description the amount is a typical portion, not what they said
+             */
+            estimated: boolean;
         };
         /** PlanOut */
         PlanOut: {
@@ -5060,6 +5157,37 @@ export interface operations {
             };
         };
     };
+    confirmPantryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PantryItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     createPlan: {
         parameters: {
             query?: never;
@@ -6454,6 +6582,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChangeProblem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parseFoodText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoodTextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoodTextOut"];
                 };
             };
             /** @description Validation Error */

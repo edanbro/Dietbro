@@ -8,6 +8,7 @@ import { BarcodeScan } from "@/components/pantry/barcode-scan";
 import { ExpiryAlerts } from "@/components/pantry/expiry-alerts";
 import { PantryAdd } from "@/components/pantry/pantry-add";
 import { PantryList } from "@/components/pantry/pantry-list";
+import { StillThere } from "@/components/pantry/still-there";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ export function PantryPage() {
         </Alert>
       ) : null}
       <ExpiryAlerts />
+      <StillThere />
       {pantry?.length ? (
         <Link
           href="/recipes?pantry=1"

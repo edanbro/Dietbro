@@ -379,6 +379,15 @@ export function useUpdatePantryItem() {
   );
 }
 
+export function useConfirmPantryItem() {
+  const api = useApi();
+  return useSave(
+    async (id: number) =>
+      unwrap(await api.POST("/pantry/{item_id}/confirm", { params: { path: { item_id: id } } })),
+    keys.pantry,
+  );
+}
+
 export function useDeletePantryItem() {
   const api = useApi();
   return useSave(
@@ -869,6 +878,15 @@ export function useLogFood() {
       return unwrap(result);
     },
     ...usePlanChangeHandlers(),
+  });
+}
+
+/** Foods and grams from what the user typed, for them to check; nothing is logged yet. */
+export function useParseFoodText() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (text: string) =>
+      unwrap(await api.POST("/diary/parse", { body: { text, today: localISODate() } })),
   });
 }
 

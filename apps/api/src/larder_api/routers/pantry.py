@@ -1,5 +1,11 @@
-"""Pantry CRUD and expiry alerts. Every query is filtered by the signed-in user; other users'
-items are 404s. Receipt intake (adding many items from a receipt) is routers/receipts.py."""
+"""Pantry CRUD, expiry alerts and the "still there?" check. Every query is filtered by the
+signed-in user; other users' items are 404s. Receipt intake (adding many items from a receipt)
+is routers/receipts.py.
+
+A pantry drifts from the kitchen: food gets eaten off-plan, binned or used up without anyone
+updating the app, and pantry-first plans then lean on food that isn't there. `checked_on` is
+when the user last touched an item (added, changed or confirmed); the web app asks about the
+oldest ones, and POST /pantry/{id}/confirm restarts that clock without changing anything."""
 
 from datetime import date, timedelta
 from typing import Annotated, Any
@@ -56,6 +62,7 @@ def out(item: PantryItem) -> PantryItemOut:
         source=item.source,
         created_at=item.created_at,
         storage=kept_in(item),
+        checked_on=(item.confirmed_at or item.created_at).date(),
     )
 
 
@@ -157,10 +164,15 @@ async def add_item(body: PantryItemIn, user: CurrentUser, session: Session) -> P
 
 @router.patch("/{item_id}", operation_id="updatePantryItem", responses=_BAD_UNIT)
 async def update_item(
-    item_id: int, body: PantryItemPatch, user: CurrentUser, session: Session
+    item_id: int,
+    body: PantryItemPatch,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
 ) -> PantryItemOut:
     item = await owned(session, user, item_id)
     changes = body.model_dump(exclude_unset=True)
+    item.confirmed_at = clock()  # editing it means they just looked at it
     if "quantity" in changes or "unit" in changes:
         item.quantity = body.quantity or item.quantity
         item.unit = body.unit or item.unit
@@ -171,6 +183,20 @@ async def update_item(
         item.expires_on = body.expires_on
     if "storage" in changes:
         item.storage = body.storage
+    await session.commit()
+    return out(await owned(session, user, item_id))
+
+
+@router.post("/{item_id}/confirm", operation_id="confirmPantryItem")
+async def confirm_item(
+    item_id: int,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> PantryItemOut:
+    """The user says it's still there, as recorded: nothing else changes."""
+    item = await owned(session, user, item_id)
+    item.confirmed_at = clock()
     await session.commit()
     return out(await owned(session, user, item_id))
 

@@ -1590,6 +1590,54 @@
         }
       }
     },
+    "/pantry/{item_id}/confirm": {
+      "post": {
+        "tags": [
+          "pantry"
+        ],
+        "summary": "Confirm Item",
+        "description": "The user says it's still there, as recorded: nothing else changes.",
+        "operationId": "confirmPantryItem",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PantryItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/plans": {
       "post": {
         "tags": [
@@ -3729,6 +3777,53 @@
         ]
       }
     },
+    "/diary/parse": {
+      "post": {
+        "tags": [
+          "diary"
+        ],
+        "summary": "Parse Food Text",
+        "description": "Turn what someone typed into foods and grams for them to check. Logs nothing. Uses the\nmodel while the user's budget allows (never for the shared demo account), else a plain\nsplit on commas and \"and\"; either way foods and weights come from the food data.",
+        "operationId": "parseFoodText",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FoodTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoodTextOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/diary/logs/{log_id}": {
       "delete": {
         "tags": [
@@ -5741,6 +5836,12 @@
             "title": "Storage",
             "default": "cupboard"
           },
+          "checked_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Checked On",
+            "description": "when the user last added, changed or confirmed it (their stale-check clock)"
+          },
           "days_left": {
             "type": "integer",
             "title": "Days Left"
@@ -5757,6 +5858,7 @@
           "expires_on",
           "source",
           "created_at",
+          "checked_on",
           "days_left"
         ],
         "title": "ExpiringItem"
@@ -6100,6 +6202,55 @@
           "kcal"
         ],
         "title": "FoodSummary"
+      },
+      "FoodTextOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedFoodOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "unmatched": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unmatched",
+            "description": "names that matched no food"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "unmatched"
+        ],
+        "title": "FoodTextOut",
+        "description": "Foods to check and then log (POST /diary/log); nothing has been logged yet."
+      },
+      "FoodTextRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today",
+            "description": "the user's local date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "today"
+        ],
+        "title": "FoodTextRequest",
+        "description": "What someone typed that they ate: \"two eggs, toast and a coffee\"."
       },
       "FoodUnit": {
         "properties": {
@@ -7365,6 +7516,12 @@
             ],
             "title": "Storage",
             "default": "cupboard"
+          },
+          "checked_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Checked On",
+            "description": "when the user last added, changed or confirmed it (their stale-check clock)"
           }
         },
         "type": "object",
@@ -7377,7 +7534,8 @@
           "approx",
           "expires_on",
           "source",
-          "created_at"
+          "created_at",
+          "checked_on"
         ],
         "title": "PantryItemOut"
       },
@@ -7451,6 +7609,35 @@
         },
         "type": "object",
         "title": "PantryItemPatch"
+      },
+      "ParsedFoodOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "the user's words for it"
+          },
+          "food": {
+            "$ref": "#/components/schemas/FoodSummary"
+          },
+          "grams": {
+            "type": "number",
+            "title": "Grams"
+          },
+          "estimated": {
+            "type": "boolean",
+            "title": "Estimated",
+            "description": "the amount is a typical portion, not what they said"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "food",
+          "grams",
+          "estimated"
+        ],
+        "title": "ParsedFoodOut"
       },
       "PlanOut": {
         "properties": {

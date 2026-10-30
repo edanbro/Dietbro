@@ -6,7 +6,9 @@ is copied to the body profile so the energy targets follow the user's weight.
 """
 
 import uuid
+from dataclasses import replace
 from datetime import date, timedelta
+from functools import partial
 from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -16,10 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from larder_api import planning, replans
 from larder_api.auth import CurrentUser
-from larder_api.changes import offplan
+from larder_api.changes import food_text, limits, offplan
 from larder_api.changes.foods import short_name
+from larder_api.changes.models import get_models
+from larder_api.changes.scope import Models
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session, get_sessionmaker
+from larder_api.demo import is_demo
 from larder_api.insights import monday, weekly_recap, weekly_spending
 from larder_api.price_watch import load_lines, watch
 from larder_api.ratelimit import per_user
@@ -31,8 +36,11 @@ from larder_api.schemas import (
     DiaryDayOut,
     DiaryOut,
     FoodLogRequest,
+    FoodTextOut,
+    FoodTextRequest,
     MacrosOut,
     OutcomeOut,
+    ParsedFoodOut,
     PriceItemOut,
     PricePointOut,
     PricesOut,
@@ -337,6 +345,64 @@ async def log_food(
     )
     response.headers["Server-Timing"] = timed.server_timing
     return OutcomeOut.model_validate(timed.outcome.model_dump())
+
+
+@router.post(
+    "/diary/parse",
+    operation_id="parseFoodText",
+    dependencies=[Depends(per_user("diary_parse"))],
+)
+async def parse_food_text(
+    body: FoodTextRequest,
+    user: CurrentUser,
+    session: Session,
+    sessionmaker: Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)],
+    cache: Annotated[planning.CatalogCache, Depends(get_catalog_cache)],
+    planner: Annotated[planning.Planner, Depends(get_replan_planner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    clock: Annotated[Clock, Depends(get_clock)],
+    models: Annotated[Models, Depends(get_models)],
+) -> FoodTextOut:
+    """Turn what someone typed into foods and grams for them to check. Logs nothing. Uses the
+    model while the user's budget allows (never for the shared demo account), else a plain
+    split on commas and "and"; either way foods and weights come from the food data."""
+    now = clock()
+    user_id = user.id
+    allowed = (
+        models.fast is not None
+        and not is_demo(user.auth_subject, settings.demo_auth_subject)
+        and await limits.model_allowed(session, user_id, settings, now)
+    )
+    await session.commit()  # no connection held while the model answers
+    scope = replace(
+        replans.app_scope(
+            user_id,
+            today=body.today,
+            local_time=None,
+            now=now,
+            sessionmaker=sessionmaker,
+            catalog=cache,
+            planner=planner,
+            settings=settings,
+        ),
+        models=models if allowed else Models(),
+        log_call=partial(limits.log_call, sessionmaker, user_id),
+    )
+    found, unmatched = await food_text.parse_text(scope, body.text)
+    rows = await session.scalars(select(Food).where(Food.id.in_({f.food_id for f in found})))
+    by_id = {f.id: f for f in rows}
+    return FoodTextOut(
+        items=[
+            ParsedFoodOut(
+                name=f.name,
+                food=summary(by_id[f.food_id]),
+                grams=round(f.grams, 1),
+                estimated=f.estimated,
+            )
+            for f in found
+        ],
+        unmatched=unmatched,
+    )
 
 
 @router.delete(
