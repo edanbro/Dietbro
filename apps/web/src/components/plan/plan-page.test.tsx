@@ -255,14 +255,14 @@ describe("loaded plan", () => {
       within(grid)
         .getAllByRole("columnheader")
         .map((th) => th.textContent),
-    ).toEqual(["Day", "Breakfast", "Lunch", "Snack", "Dinner"]);
+    ).toEqual(["Day", "Breakfast", "Lunch", "Afternoon snack", "Dinner"]);
     const rows = within(grid).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(7);
     expect(within(rows[2]).getByRole("link", { name: "Hummus and carrots" })).toHaveAttribute(
       "href",
       expect.stringMatching(/^\/recipes\/400(\?|$)/),
     );
-    expect(within(rows[0]).getByText("No snack")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("No afternoon snack")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("rowheader")).toHaveTextContent("Fri 91,900 kcal");
 
     fireEvent.click(within(rows[3]).getByRole("button", { name: "Open Mon 12" }));

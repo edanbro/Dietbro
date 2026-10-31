@@ -12,8 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
  * - Compare or update: `make visual` / `make visual-update` (scripts/visual.sh). They run in the
  *   Playwright Linux container, so fonts and anti-aliasing match CI; screenshots from Windows
  *   or macOS would differ by a few pixels everywhere.
- * - Record: `VISUAL_RECORD=1 pnpm e2e visual --project=setup --project=visual-phone` against the
- *   local stack (seeded). Signs in a fresh account, stocks a pantry, plans a week, visits every
+ * - Record: `sh scripts/visual.sh --record` against the local stack (seeded). Signs in a fresh account, stocks a pantry, plans a week, visits every
  *   page and saves the API's answers, sign-in headers removed. Re-record when an API response
  *   changes shape, then update the screenshots.
  */
@@ -46,6 +45,7 @@ const PAGES = (recipeId: number): [string, string][] => [
   ["recap", "/recap"],
   ["profile", "/profile"],
   ["profile-goals", "/profile/goals"],
+  ["profile-meals", "/profile/meals"],
   ["setup", "/setup"],
 ];
 
@@ -149,6 +149,11 @@ test("record the API for the visual comparison", async ({ browser }) => {
     });
     await api(page, "PUT", "/me/allergies", { allergens: ["peanuts"], avoid_food_ids: [] });
     await api(page, "PUT", "/me/preferences", {});
+    // Every snack, so the screenshots show all six slots of a day.
+    await api(page, "PUT", "/me/preferences/meals", {
+      morning_snack: "plan",
+      evening_snack: "plan",
+    });
     for (const q of ["chicken breast", "basmati rice", "broccoli", "eggs", "spinach", "carrots"]) {
       const [food] = await api(
         page,

@@ -6,6 +6,7 @@
 #
 #   sh scripts/visual.sh                      # compare (make visual)
 #   sh scripts/visual.sh --update-snapshots   # rewrite (make visual-update)
+#   sh scripts/visual.sh --record             # re-record the API; needs the whole stack, seeded
 #
 # Differences are written to test-results-visual/ (expected, actual and diff images).
 set -eu
@@ -23,6 +24,15 @@ if [ -z "$CLERK_SECRET_KEY" ]; then
   exit 1
 fi
 
+VISUAL_RECORD=
+projects="--project=setup --project=visual-phone --project=visual-desktop"
+if [ "${1:-}" = "--record" ]; then
+  shift
+  VISUAL_RECORD=1
+  projects="--project=setup --project=visual-phone"
+fi
+export VISUAL_RECORD projects
+
 # Updating rewrites every screenshot, not only those past the comparison's tolerance (a few
 # small labels can stay under it, and the baselines would drift from the pages).
 for a; do
@@ -36,7 +46,7 @@ done
 rm -rf test-results-visual
 # MSYS_NO_PATHCONV: Git Bash on Windows would otherwise rewrite the container paths.
 MSYS_NO_PATHCONV=1 docker run --rm --ipc=host --add-host=host.docker.internal:host-gateway \
-  -e CLERK_SECRET_KEY -e CLERK_PUBLISHABLE_KEY -e VISUAL=1 -e CI \
+  -e CLERK_SECRET_KEY -e CLERK_PUBLISHABLE_KEY -e VISUAL=1 -e VISUAL_RECORD -e projects -e CI \
   -v "$(pwd):/web" "$IMAGE" sh -euc '
     mkdir -p /tmp/v && cd /tmp/v
     cp -r /web/e2e /web/playwright.config.ts .
@@ -44,15 +54,15 @@ MSYS_NO_PATHCONV=1 docker run --rm --ipc=host --add-host=host.docker.internal:ho
     npm install --no-audit --no-fund --loglevel=error \
       @playwright/test@1.64.0 @clerk/testing@2.2.44 @clerk/backend@3.23.1
     # The browser must see the app at localhost:3000 (its origin for Clerk and the API recording),
-    # so pass that port through to the host.
-    node -e "require(\"net\").createServer((c) => {
-      const s = require(\"net\").connect(3000, \"host.docker.internal\");
+    # and a recording the API at localhost:8000, so pass those ports through to the host.
+    node -e "for (const port of [3000, 8000]) require(\"net\").createServer((c) => {
+      const s = require(\"net\").connect(port, \"host.docker.internal\");
       c.pipe(s).pipe(c); c.on(\"error\", () => s.destroy()); s.on(\"error\", () => c.destroy());
-    }).listen(3000)" &
+    }).listen(port)" &
     status=0
-    npx playwright test --project=setup --project=visual-phone --project=visual-desktop \
-      --reporter=list "$@" || status=$?
+    npx playwright test $projects --reporter=list "$@" || status=$?
     if [ -d test-results ]; then cp -r test-results /web/test-results-visual; fi
+    if [ -n "${VISUAL_RECORD:-}" ] && [ "$status" = 0 ]; then cp e2e/visual/* /web/e2e/visual/; fi
     case " $* " in *" --update-snapshots"*)
       rm -rf /web/e2e/__screenshots__ && cp -r e2e/__screenshots__ /web/e2e/ ;;
     esac
