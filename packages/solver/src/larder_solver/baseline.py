@@ -19,8 +19,8 @@ against. It plans one day at a time, in order, and never goes back:
    is left to the shopping list); minus a repeat for a recipe already planned; minus a snack;
    minus an unusual meal (those also rank last for the top 8); minus each kcal a meal is outside
    its slot's size (recipes that can reach it rank first among equally liked ones); plus a kept
-   slot when replanning (churn); plus half the macro weight per gram of protein, up
-   to the day's share of the protein target (the daily minimum, or what the weekly minimum still
+   slot when replanning (churn), whose price and size then aren't charged; plus half the macro
+   weight per gram of protein, up to the day's share of the protein target (the daily minimum, or what the weekly minimum still
    needs spread over the days left). The cost term is what keeps most plans within budget.
 4. Search: the day's open slots are split into two halves, keeping slots that share recipes
    (lunch and dinner) together. Each half's combinations are enumerated; the second half's are
@@ -463,11 +463,15 @@ class _Greedy:
             value -= 0 if spec.required else w.optional_meal
             value -= w.unusual if r.id in spec.unusual else 0
             value += w.churn if r.id == before else 0
-            cost = w.cost * self.cost(r)
+            # A meal kept in a replan isn't charged for its price or size: those were settled when
+            # it was planned, and bettering them would change a day the user didn't touch. This
+            # day-by-day search can't see the week CP-SAT weighs that against.
+            kept = r.id == before
+            cost = 0 if kept else w.cost * self.cost(r)
             for n in range(lo, hi + 1):
                 kcal, protein = r.per_portion.kcal * n, r.per_portion.protein_g * n
                 shared = choice is not None and r.id in shareable
-                off = w.balance * band.distance(kcal) if band is not None else 0
+                off = 0 if band is None or kept else w.balance * band.distance(kcal)
                 items.append(
                     _Item(spec.slot, r.id, n, kcal, protein, value - cost * n - off, shared)
                 )

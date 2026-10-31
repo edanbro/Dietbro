@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Awaitable, Callable, Coroutine
 from datetime import date, timedelta
 from typing import Any
+from unittest.mock import ANY
 
 import httpx
 import pytest
@@ -326,9 +327,10 @@ async def test_a_lunch_the_user_sorts_out_is_never_planned_by_a_change(
             "Lunch isn't planned: you sort it out yourself. You can change that in Profile, "
             "under Meals to plan.",
         ),
-        ("applied", "Thu dinner is now Chicken curry."),
+        ("applied", ANY),
         ("applied", "Skipped Thu lunch."),  # a fact: logged as said
     ]
+    assert out["results"][1]["message"].startswith("Thu dinner is now ")
     assert all(m["slot"] != "lunch" for d in plan["days"] for m in d["meals"])
     assert meal_at(plan, THU, "dinner") is not None
 

@@ -1057,7 +1057,8 @@ async def test_a_pinned_meal_that_is_no_longer_safe_is_dropped(world: World) -> 
         allergies.allergens = ["peanuts"]
         await session.commit()
 
-    out = await world.say(swap(FRI, D))
+    # First thing in the morning: no meal of today is over yet, so none stays as it was planned.
+    out = await world.say(swap(FRI, D), local_time=time(6))
 
     assert any("Satay rice" in note for note in out.notes)
     thu = meal(await world.plan(), THU, D)
