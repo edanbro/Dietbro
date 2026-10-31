@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 
+from larder_core.meals import slot_words
 from larder_core.tagging import FORBIDDEN
 from larder_solver.metrics import allocate, cost_millipence, day_totals, repeat_counts, to_minor
 from larder_solver.problem import (
@@ -139,7 +140,7 @@ def _meals(problem: Problem, plan: Plan) -> Iterator[Violation]:
     for meal in plan.meals:
         recipe = problem.recipes.get(meal.recipe_id)
         name = recipe.name if recipe else f"recipe {meal.recipe_id}"
-        where = f"{_day(problem, meal.day)} {meal.slot}"
+        where = f"{_day(problem, meal.day)} {slot_words(meal.slot)}"
         if not 0 <= meal.day < problem.days:
             yield _at(
                 Code.DAY_RANGE, meal, f"{where}: {name} is outside this {problem.days}-day plan"
@@ -156,7 +157,11 @@ def _meals(problem: Problem, plan: Plan) -> Iterator[Violation]:
             continue
         if meal.slot in planned and not _is_locked(problem, meal):
             if meal.slot not in recipe.meal_types:
-                yield _at(Code.NOT_ELIGIBLE, meal, f"{where}: {name} isn't a {meal.slot} recipe")
+                yield _at(
+                    Code.NOT_ELIGIBLE,
+                    meal,
+                    f"{where}: {name} isn't a {slot_words(meal.slot)} recipe",
+                )
             lo, hi = problem.portion_range(meal.slot)
             if not lo <= meal.portions <= hi:
                 yield _at(
@@ -209,10 +214,10 @@ def _slots(problem: Problem, plan: Plan) -> Iterator[Violation]:
             key = (day, spec.slot)
             fixed = key in problem.locked or key in problem.choices  # reported as LOCKED/CHOICE
             if spec.required and key not in at and not fixed:
-                where = f"{_day(problem, day)} {spec.slot}"
+                where = f"{_day(problem, day)} {slot_words(spec.slot)}"
                 yield Violation(Code.MISSING, f"{where}: no meal planned", day=day, slot=spec.slot)
     for (day, slot), ids in problem.choices.items():
-        where = f"{_day(problem, day)} {slot}"
+        where = f"{_day(problem, day)} {slot_words(slot)}"
         wanted = _either(problem, ids)
         meals = at.get((day, slot), [])
         if not meals:
@@ -225,7 +230,7 @@ def _slots(problem: Problem, plan: Plan) -> Iterator[Violation]:
                 yield Violation(Code.CHOICE, message, day=day, slot=slot, recipe_id=meal.recipe_id)
     for (day, slot), lock in problem.locked.items():
         meals = at.get((day, slot), [])
-        where = f"{_day(problem, day)} {slot}"
+        where = f"{_day(problem, day)} {slot_words(slot)}"
         if lock is None and meals:
             rid = meals[0].recipe_id
             message = f"{where}: should stay empty, but {_name(problem, rid)} is planned"

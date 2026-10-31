@@ -100,7 +100,7 @@ from larder_api import eaten, planning
 from larder_api.changes import offplan, search
 from larder_api.changes.scope import ChangeScope
 from larder_api.schemas import MacrosOut
-from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot
+from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot, slot_label, slot_words
 from larder_db import models as db
 from larder_llm.outcome import (
     ChangeReason,
@@ -459,7 +459,7 @@ def _target(scope: ChangeScope, items: list[_Item], read: _Read) -> _Target | No
             why = "you sort it out yourself" if modes[item.slot] == "own" else "you skip it"
             item.finish(
                 "failed",
-                f"{item.slot.capitalize()} isn't planned: {why}. You can change that in "
+                f"{slot_label(item.slot)} isn't planned: {why}. You can change that in "
                 "Profile, under Meals to plan.",
             )
     return target
@@ -473,7 +473,7 @@ def _conflicts(scope: ChangeScope, items: list[_Item]) -> None:
         if item.pending or (item.fact and item.status != "unchanged"):
             by_cell.setdefault(item.cell, []).append(item)
     for (on, slot), group in by_cell.items():
-        when = f"{day_label(on, scope.today)} {slot}"
+        when = f"{day_label(on, scope.today)} {slot_words(slot)}"
         ate = [i for i in group if isinstance(i.change, AteOffPlan)]
         skips = [i for i in group if isinstance(i.change, Skip)]
         if ate:
@@ -527,7 +527,7 @@ async def _decide(
     for item in items:
         if item.fact or not item.pending:
             continue
-        when = f"{day_label(item.on, scope.today)} {item.slot}"
+        when = f"{day_label(item.on, scope.today)} {slot_words(item.slot)}"
         if item.on == scope.today and item.slot in frozen:
             item.finish("failed", f"{when} is already over.")
             continue
@@ -562,7 +562,10 @@ async def _choose(scope: ChangeScope, item: _Item, when: str) -> None:
         return  # a swap to anything else: see _swap_choices
     hits = await search.search_recipes(scope, words, item.slot, limit=MAX_HITS)
     if not hits:
-        item.finish("failed", f"I couldn't find {words} that's safe for you and fits {item.slot}.")
+        item.finish(
+            "failed",
+            f"I couldn't find {words} that's safe for you and fits {slot_words(item.slot)}.",
+        )
         return
     item.choices = tuple(h.id for h in hits)
 
@@ -805,7 +808,7 @@ async def _pins(
         if reason is None:
             pins[cell] = meal.recipe_id
         else:
-            when = f"{day_label(on, scope.today)} {slot}"
+            when = f"{day_label(on, scope.today)} {slot_words(slot)}"
             decided.notes.append(f"I took your pinned meal off {when}: {reason}")
     return pins
 
@@ -912,7 +915,7 @@ def _log_plan(item: _Item, read: _Read, row: db.MealPlan | None) -> int | None:
 
 
 def _when(item: _Item, today: date) -> str:
-    return f"{day_label(item.on, today)} {item.slot}"
+    return f"{day_label(item.on, today)} {slot_words(item.slot)}"
 
 
 def _finish(scope: ChangeScope, items: list[_Item], decided: _Plan) -> None:
@@ -935,7 +938,7 @@ def _finish(scope: ChangeScope, items: list[_Item], decided: _Plan) -> None:
         elif item.pending:
             item.finish("applied", _fact_message(item, scope.today, decided.target))
         if item.assumed and item.status != "unchanged":
-            item.message += f" I took that as {item.slot}."
+            item.message += f" I took that as {slot_words(item.slot)}."
 
 
 def _before(decided: _Plan, item: _Item) -> int | None:

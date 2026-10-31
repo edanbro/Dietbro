@@ -38,7 +38,7 @@ from sqlalchemy.orm import selectinload
 from larder_api import planning
 from larder_api.routers.foods import food_portions
 from larder_api.schemas import EatenOut, PantryChangeOut
-from larder_core.meals import Slot
+from larder_core.meals import Slot, slot_words
 from larder_core.quantities import grams_for
 from larder_core.units import parse_measure
 from larder_db import models as db
@@ -343,7 +343,7 @@ async def mark(
     row = _row(plan, on, slot)
     if row is None:
         raise HTTPException(
-            status.HTTP_404_NOT_FOUND, [f"There's no meal planned for {on:%a} {slot}."]
+            status.HTTP_404_NOT_FOUND, [f"There's no meal planned for {on:%a} {slot_words(slot)}."]
         )
     active = await _active(session, user_id, on, slot)
     done = next((log for log in active if log.kind == "eaten"), None)

@@ -26,7 +26,7 @@ from larder_api.schemas import CalendarOut, CalendarTimes
 from larder_api.settings import Settings, get_settings
 from larder_core.brand import APP_NAME
 from larder_core.ical import CalendarMeal, calendar
-from larder_core.meals import SLOT_ORDER
+from larder_core.meals import SLOT_ORDER, slot_label
 from larder_core.regions import local_today
 from larder_db import models as db
 
@@ -164,7 +164,7 @@ async def calendar_feed(
                     slot=meal.slot,
                     starts=time.fromisoformat(times[meal.slot]),
                     minutes=MINUTES.get(meal.slot, 30),
-                    title=f"{meal.slot.capitalize()}: {recipe.name}",
+                    title=f"{slot_label(meal.slot)}: {recipe.name}",
                     description=_description(meal, recipe),
                     url=f"{web}/recipes/{recipe.id}/cook?servings={meal.portions / 2:g}"
                     if web

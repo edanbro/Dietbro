@@ -230,7 +230,7 @@ async def test_off_plan_estimate_falls_back_to_a_typical_meal(
     assert partly.estimated
     assert unknown.macros == offplan.TYPICAL_SNACK
     assert unknown.note is not None
-    assert "typical snack" in unknown.note
+    assert "typical afternoon snack" in unknown.note
 
 
 # --- create_recipe ----------------------------------------------------------------------------

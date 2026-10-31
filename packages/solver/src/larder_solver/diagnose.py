@@ -43,6 +43,7 @@ from datetime import timedelta
 from fractions import Fraction
 from itertools import combinations
 
+from larder_core.meals import slot_words
 from larder_solver.candidates import allowed
 from larder_solver.metrics import to_minor
 from larder_solver.problem import (
@@ -204,7 +205,7 @@ class _Diagnosis:
             recipe = self.p.recipes.get(meal.recipe_id)
             if recipe is None or self.safe(recipe):
                 continue
-            what = f"Your fixed {self.day_name(meal.day)} {meal.slot}, {recipe.name},"
+            what = f"Your fixed {self.day_name(meal.day)} {slot_words(meal.slot)}, {recipe.name},"
             yield f"{what} {self.unsafe(recipe)}"
 
     def no_candidates(self) -> Iterator[str]:
