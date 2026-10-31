@@ -175,6 +175,17 @@ def balance_distance(problem: Problem, plan: Plan) -> int:
     )
 
 
+def unusual_meals(problem: Problem, plan: Plan) -> int:
+    """Meals of a recipe in their slot's `SlotSpec.unusual`."""
+    unusual = {s.slot: s.unusual for s in problem.slots}
+    return sum(m.recipe_id in unusual.get(m.slot, ()) for m in plan.meals)
+
+
+def same_day_repeats(plan: Plan) -> int:
+    """Meals that repeat a recipe already in the plan on that day."""
+    return sum(n - 1 for n in Counter((m.day, m.recipe_id) for m in plan.meals).values())
+
+
 def staples(problem: Problem, plan: Plan) -> set[int]:
     """Foods the plan only ever uses at 0 g: store-cupboard items to check you have."""
     zero: set[int] = set()
@@ -206,5 +217,7 @@ def score(problem: Problem, plan: Plan, previous: Plan | None = None) -> Score:
         "macro": -w.macro * macro_distance(problem, plan),
         "balance": -w.balance * balance_distance(problem, plan),
         "churn": -w.churn * changed_slots(previous, plan),
+        "unusual": -w.unusual * unusual_meals(problem, plan),
+        "same_day": -w.same_day * same_day_repeats(plan),
     }
     return Score(terms, sum(terms.values()))

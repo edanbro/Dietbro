@@ -638,7 +638,17 @@ def weights_for(currency: Currency) -> Weights:
     """The objective weights with their money terms in `currency` minor units, so a repeat or a
     snack is worth about the same to a user whatever they pay in (GBP: the defaults)."""
     w, rate = Weights(), PER_GBP[currency]
-    money = ("preference", "pantry", "repeat", "optional_meal", "macro", "balance", "churn")
+    money = (
+        "preference",
+        "pantry",
+        "repeat",
+        "optional_meal",
+        "macro",
+        "balance",
+        "churn",
+        "unusual",
+        "same_day",
+    )
     return replace(w, **{name: round(getattr(w, name) * rate) for name in money})
 
 

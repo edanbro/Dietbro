@@ -19,8 +19,10 @@ seed and varies across seeds.
 
 `TastePrefs.meal_style` says how far from everyday meals to go (docs/adr/0019-everyday-meals.md):
 "everyday" keeps the pool to recipes everyday in the slot, favourites and liked cuisines, topped
-up by rank to MIN_EVERYDAY when allergies or a diet leave too few; "mix" gives other recipes at
-most half of the candidates; "adventurous" draws on them all.
+up to MIN_EVERYDAY when allergies or a diet leave too few: first recipes everyday in another slot
+(a chilli with rice is a fine lunch), then by rank. Top-ups everyday nowhere are marked
+`SlotSpec.unusual`, so the planner takes one only when nothing familiar fits. "mix" gives other
+recipes at most half of the candidates; "adventurous" draws on them all.
 """
 
 from collections import Counter
@@ -183,7 +185,8 @@ def select(
         if prefs.meal_style == "everyday":
             usual = [r for r in pool if familiar(r, slot)]
             others = sorted(
-                (r for r in pool if not familiar(r, slot)), key=lambda r: (rank(r), *tiebreak(r))
+                (r for r in pool if not familiar(r, slot)),
+                key=lambda r: (not r.everyday, rank(r), *tiebreak(r)),
             )
             pool = usual + others[: max(MIN_EVERYDAY - len(usual), 0)]
         picks: list[Recipe] = []
@@ -212,6 +215,11 @@ def select(
             else:
                 waiting.append(r)
         picks += waiting[: k - len(picks)]
-        specs.append(SlotSpec(slot, required, tuple(r.id for r in picks)))
+        unusual = frozenset(
+            r.id
+            for r in picks
+            if prefs.meal_style == "everyday" and not r.everyday and not familiar(r, slot)
+        )
+        specs.append(SlotSpec(slot, required, tuple(r.id for r in picks), unusual=unusual))
         chosen.update((r.id, r) for r in picks)
     return tuple(specs), chosen

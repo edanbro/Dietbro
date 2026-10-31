@@ -11,6 +11,7 @@ from typing import cast
 
 import pytest
 
+from larder_core.meals import SNACK_SLOTS
 from larder_solver.baseline import greedy
 from larder_solver.metrics import changed_slots, day_totals, repeat_counts, score
 from larder_solver.problem import (
@@ -263,6 +264,42 @@ def small_world(
         targets=Targets({Nutrient.KCAL: kcal or Band(1500, 2500)}, calorie_floor=floor),
         profile=Profile(allergens=frozenset({Allergen.PEANUTS})),
     )
+
+
+def test_unusual_meals_come_only_when_nothing_familiar_is_left() -> None:
+    world = small_world()
+    unusual = frozenset(range(101, 105))
+    slots = tuple(replace(s, unusual=unusual) if s.slot == L else s for s in world.slots)
+    plan = planned(greedy(replace(world, slots=slots)))
+    assert not unusual & {m.recipe_id for m in plan.meals if m.slot == L}
+
+    # Lunch alone on the unusual ones: they still fill it.
+    only = tuple(
+        replace(s, candidates=tuple(unusual), unusual=unusual) if s.slot == L else s
+        for s in world.slots
+    )
+    plan = planned(greedy(replace(world, slots=only)))
+    assert {m.recipe_id for m in plan.meals if m.slot == L} <= unusual
+
+
+def test_a_snack_never_comes_twice_in_a_day() -> None:
+    recipes = [rec(1 + i, SNACK_SLOTS, 200) for i in range(4)]
+    ids = tuple(r.id for r in recipes)
+    plan = planned(
+        greedy(
+            Problem(
+                start=START,
+                days=4,
+                slots=tuple(SlotSpec(s, True, ids, 1, 1, 4) for s in sorted(SNACK_SLOTS)),
+                recipes={r.id: r for r in recipes},
+                foods=FOODS,
+                targets=Targets({Nutrient.KCAL: Band(600, 600)}, calorie_floor=600),
+            )
+        )
+    )
+    for day in range(4):
+        today = [m.recipe_id for m in plan.meals if m.day == day]
+        assert len(today) == len(set(today)) == 3
 
 
 def test_unreachable_floor_means_no_plan() -> None:

@@ -17,7 +17,8 @@ against. It plans one day at a time, in order, and never goes back:
    room for all of them.
 3. Day score, in `Weights` units: preference; minus the shopping cost at full price (the pantry
    is left to the shopping list); minus a repeat for a recipe already planned; minus a snack;
-   plus a kept slot when replanning (churn); plus half the macro weight per gram of protein, up
+   minus an unusual meal (those also rank last for the top 8); plus a kept slot when replanning
+   (churn); plus half the macro weight per gram of protein, up
    to the day's share of the protein target (the daily minimum, or what the weekly minimum still
    needs spread over the days left). The cost term is what keeps most plans within budget.
 4. Search: the day's open slots are split into two halves, keeping slots that share recipes
@@ -216,7 +217,10 @@ class _Greedy:
         self.ok: dict[int, bool] = {}
         self.pool: dict[Slot, list[Recipe]] = {}  # allowed candidates fitting the slot, ranked
         for spec in self.specs:
-            self.pool[spec.slot] = self.fitting(spec.slot, spec.candidates)
+            # Stable: within the familiar and the unusual, the `fitting` order stands.
+            self.pool[spec.slot] = sorted(
+                self.fitting(spec.slot, spec.candidates), key=lambda r: r.id in spec.unusual
+            )
         self.ids = {slot: frozenset(r.id for r in rs) for slot, rs in self.pool.items()}
         # Chosen open cells -> the allowed recipes of the choice that fit the slot, ranked.
         self.chosen = {
@@ -445,6 +449,7 @@ class _Greedy:
             value = w.preference * r.preference
             value -= w.repeat if self.uses[r.id] else 0
             value -= 0 if spec.required else w.optional_meal
+            value -= w.unusual if r.id in spec.unusual else 0
             value += w.churn if r.id == before else 0
             cost = w.cost * self.cost(r)
             for n in range(lo, hi + 1):
