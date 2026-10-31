@@ -12,8 +12,8 @@ from typing import cast
 import pytest
 
 from larder_core.meals import SNACK_SLOTS
-from larder_solver.baseline import greedy
-from larder_solver.metrics import changed_slots, day_totals, repeat_counts, score
+from larder_solver.baseline import _Greedy, greedy  # pyright: ignore[reportPrivateUsage]
+from larder_solver.metrics import balance_distance, changed_slots, day_totals, repeat_counts, score
 from larder_solver.problem import (
     Allergen,
     Band,
@@ -136,7 +136,7 @@ def test_deterministic() -> None:
 
 
 _DIGEST = """
-from larder_solver.baseline import greedy
+from larder_solver.baseline import _Greedy, greedy  # pyright: ignore[reportPrivateUsage]
 from larder_solver.scenarios import planted
 print([greedy(planted(seed).problem).plan for seed in (3, 11)])
 """
@@ -280,6 +280,65 @@ def test_unusual_meals_come_only_when_nothing_familiar_is_left() -> None:
     )
     plan = planned(greedy(replace(world, slots=only)))
     assert {m.recipe_id for m in plan.meals if m.slot == L} <= unusual
+
+
+def _sized_day(n_light: int = 0) -> Problem:
+    """Lunch and dinner, each band 500-700, with whole meals of 100 kcal a portion or 300."""
+    light = [rec(1 + i, frozenset({L}), 100) for i in range(n_light)]
+    hearty = rec(100, frozenset({L}), 300)
+    dinners = [rec(200, frozenset({D}), 300), rec(201, frozenset({D}), 100)]
+    lunches = [*light, hearty]
+    return Problem(
+        start=START,
+        days=1,
+        slots=(
+            SlotSpec(L, True, tuple(r.id for r in lunches), 1, 4, kcal=Band(500, 700)),
+            SlotSpec(D, True, (200, 201), 1, 4, kcal=Band(500, 700)),
+        ),
+        recipes={r.id: r for r in (*lunches, *dinners)},
+        foods=FOODS,
+        targets=Targets({Nutrient.KCAL: Band(1200, 1200)}, calorie_floor=1200),
+    )
+
+
+def test_meals_come_at_their_size_when_the_day_allows_it() -> None:
+    problem = _sized_day()
+    plan = planned(greedy(problem))
+    kcal = [problem.recipes[m.recipe_id].per_portion.kcal * m.portions for m in plan.meals]
+    assert kcal == [600, 600]
+    assert balance_distance(problem, plan) == 0
+
+
+def test_a_recipe_that_can_reach_the_size_gets_a_place_in_the_top_few() -> None:
+    # Nine lunches rank above the hearty one and none reaches 500 kcal even at four portions.
+    problem = _sized_day(n_light=9)
+    plan = planned(greedy(problem))
+    assert plan.at(0, L).recipe_id == 100  # pyright: ignore[reportOptionalMemberAccess]
+
+
+def test_a_replan_keeps_a_meal_rather_than_tidy_its_size() -> None:
+    # The light lunch is 300+ kcal under its size at any portion count: not worth a changed slot
+    # by price alone, but a day nobody touched should still stay as it was.
+    problem = _sized_day(n_light=1)
+    problem = replace(
+        problem,
+        slots=(
+            replace(problem.slots[0], max_portions=2),
+            problem.slots[1],
+        ),
+        targets=Targets({Nutrient.KCAL: Band(600, 1600)}, calorie_floor=600),
+    )
+    previous = Plan((Meal(0, L, 1, 2), Meal(0, D, 200, 2)))
+    plan = planned(greedy(problem, previous))
+    assert plan.at(0, L).recipe_id == 1  # pyright: ignore[reportOptionalMemberAccess]
+
+
+def test_liking_a_recipe_still_beats_its_size_for_a_place() -> None:
+    problem = _sized_day(n_light=9)
+    favourite = replace(problem.recipes[1], preference=40)
+    problem = replace(problem, recipes={**problem.recipes, 1: favourite})
+    options = _Greedy(problem, None).options(problem.slots[0], 0, set())
+    assert 1 in {i.recipe_id for i in options}
 
 
 def test_a_snack_never_comes_twice_in_a_day() -> None:

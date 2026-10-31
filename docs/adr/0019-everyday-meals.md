@@ -53,8 +53,8 @@ starters fill lunch (ADR-0010). That was the visible end of three problems:
 - **Meals have a size.** `SlotSpec.kcal` is a soft band, a meal's share of the day ±35%; each kcal
   outside costs `Weights.balance` (1p). It goes straight on the choice variable, because a choice
   of recipe and portions fixes the meal's kcal, so the model gains no variables. Soft, because
-  a hard rule could make a small eater's week infeasible. The greedy fallback doesn't search on
-  it, only reports it through `metrics.score`.
+  a hard rule could make a small eater's week infeasible. The greedy fallback prices it the same
+  way, and among equally liked recipes tries those that can reach the size first.
 
 ## Consequences
 
