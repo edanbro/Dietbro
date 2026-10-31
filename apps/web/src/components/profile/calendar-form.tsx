@@ -20,7 +20,7 @@ const SLOTS = [
   ["breakfast", "Breakfast"],
   ["morning_snack", "Morning snack"],
   ["lunch", "Lunch"],
-  ["snack", "Snack"],
+  ["snack", "Afternoon snack"],
   ["dinner", "Dinner"],
   ["evening_snack", "Evening snack"],
 ] as const;

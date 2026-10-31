@@ -52,7 +52,8 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
 - The stack: `docker compose up -d --build` (web on :3000, api on :8000).
 - Screenshots: `sh apps/web/scripts/visual.sh [--update-snapshots]`. It needs the stack up and
   runs in the Playwright container. After an update, restore the unrelated drift with
-  `git checkout -- apps/web/e2e/__screenshots__/desktop/cook-dark.png`.
+  `git checkout -- apps/web/e2e/__screenshots__/desktop/cook-dark.png`. When an API response
+  changes shape, re-record first with `--record`, against a stack built from the branch.
 - Benches: `sh scripts/dev/with-db.sh uv run larder-bench` (or `... uv run larder-evals
   --catalog db --n 50`). It passes only `DATABASE_URL` from `.env`, pointed at localhost.
 
