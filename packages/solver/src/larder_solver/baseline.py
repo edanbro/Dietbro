@@ -20,8 +20,8 @@ against. It plans one day at a time, in order, and never goes back:
    minus an unusual meal (those also rank last for the top 8); minus each kcal a meal is outside
    its slot's size (recipes that can reach it rank first among equally liked ones); plus a kept
    slot when replanning (churn), whose price and size then aren't charged; plus half the macro
-   weight per gram of protein, up to the day's share of the protein target (the daily minimum, or what the weekly minimum still
-   needs spread over the days left). The cost term is what keeps most plans within budget.
+   weight per gram of protein, up to the day's share of the protein target (the daily minimum, or
+   what the weekly minimum still needs spread over the days left). The cost term is what keeps most plans within budget.
 4. Search: the day's open slots are split into two halves, keeping slots that share recipes
    (lunch and dinner) together. Each half's combinations are enumerated; the second half's are
    sorted by kcal, so for each first-half combination a bisect finds the ones that land the day
