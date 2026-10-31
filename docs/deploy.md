@@ -83,6 +83,25 @@ two-minute, one-use Clerk sign-in ticket (no public password). Its data resets e
 uv run python -c "import asyncio; from larder_api.demo import reset_demo; from larder_db.engine import make_engine, make_sessionmaker; asyncio.run(reset_demo(make_sessionmaker(make_engine()), 'user_...'))"
 ```
 
+## Updating the recipes
+
+Migrations run when the container starts, but recipes don't: a free-tier API sleeps and wakes all
+day, and it shouldn't re-import each time. The first deploy gets them from the dump in step 1. After
+a change to `curated.toml`, `aliases.csv` or `food_tags.csv`, run these on your machine with
+`DATABASE_URL` pointing at Neon:
+
+```sh
+uv run larder-data import-curated
+uv run larder-data resolve --aliases-only
+```
+
+Both are safe to run again, take seconds and need no model or API key. The API picks up the change
+within 10 minutes (its catalogue cache), and plans already made stay as they are.
+
+The import adds and updates but never deletes, because saved plans may point at a recipe. A recipe
+renamed in `curated.toml` under a new `slug` stays in the database under its old one and can still
+be planned, so keep slugs stable once deployed.
+
 ## Paid upgrades, when wanted
 
 - Always-on API and a separate worker (receipt photos, punctual reminders): a Render Starter
