@@ -63,5 +63,8 @@ starters fill lunch (ADR-0010). That was the visible end of three problems:
   someone lists them, which is the safe side to fail on.
 - The most restricted users (vegan and gluten-free together, say) can still see an unusual meal.
   More curated recipes fix that case by case; the alternative is failing to plan.
+- A gluten-free loaf is one food standing in for many, tagged with egg, milk and soya because any of
+  them may be in it. That keeps gluten-free bread from vegans and from dairy- or egg-free coeliacs,
+  some of whom could eat a particular brand: wrong on the safe side, as an allergy app should be.
 - 40% of a 2,000 kcal day is 800 kcal, and a 1,400 kcal dinner now costs about £2.80. Bigger eaters
   get bigger portions spread across meals rather than one huge dinner.

@@ -36,3 +36,4 @@ fdc_id,add_allergens,add_animal,remove_allergens,remove_animal,note
 174195,gluten,,,,Fish fingers are breaded
 2708219,,,milk,dairy,Air-popped with no butter: the description only says so
 169063,milk|soy|tree_nuts|peanuts,dairy,,,Cereal bars vary: assume the common ones
+168009,eggs|milk|soy,,,,"Stands in for any gluten-free loaf: many contain egg, milk or soya, so none is assumed safe"

@@ -3040,3 +3040,834 @@ ingredients = [
   ["lemon juice", "1 tbsp"],
   ["olive oil", "1 tbsp"],
 ]
+
+# --- light vegan breakfasts: a small eater needs room for the rest of the day -------------------
+
+[[recipe]]
+slug = "porridge-water-banana"
+name = "Porridge made with water, with banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the oats in the water for 4-5 minutes, stirring, until creamy. Slice the banana on top.
+"""
+ingredients = [
+  ["porridge oats", "40g"],
+  ["water", "250ml"],
+  ["banana", "100g"],
+]
+
+[[recipe]]
+slug = "sourdough-jam-orange"
+name = "Sourdough toast with jam and an orange"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Toast the bread and spread with jam. Peel the orange and have it on the side.
+"""
+ingredients = [
+  ["sourdough bread", "60g"],
+  ["jam", "15g"],
+  ["orange", "130g"],
+]
+
+[[recipe]]
+slug = "mushrooms-tomatoes-sourdough"
+name = "Mushrooms and tomatoes on sourdough toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Fry the sliced mushrooms and halved tomato in the oil for 5 minutes. Toast the bread and pile them
+on top.
+"""
+ingredients = [
+  ["sourdough bread", "60g"],
+  ["mushroom", "100g"],
+  ["tomato", "100g"],
+  ["olive oil", "1 tsp"],
+]
+
+[[recipe]]
+slug = "baked-beans-sourdough"
+name = "Baked beans on sourdough toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Warm the beans in a small pan. Toast the bread and spoon them over.
+"""
+ingredients = [
+  ["sourdough bread", "60g"],
+  ["baked bean", "150g"],
+]
+
+# --- vegan breakfasts with no gluten, soya or nuts -----------------------------------------------
+
+[[recipe]]
+slug = "fruit-salad-pumpkin-seeds"
+name = "Fruit salad with pumpkin seeds"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Chop the apple and banana, segment the orange and toss together. Scatter over the seeds.
+"""
+ingredients = [
+  ["apple", "120g"],
+  ["banana", "100g"],
+  ["orange", "130g"],
+  ["pumpkin seed", "10g"],
+]
+
+[[recipe]]
+slug = "banana-strawberry-smoothie"
+name = "Banana and strawberry smoothie with seeds"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Blend the banana, strawberries and rice milk until smooth. Pour out and scatter over the seeds.
+"""
+ingredients = [
+  ["banana", "120g"],
+  ["strawberry", "120g"],
+  ["rice milk", "200ml"],
+  ["pumpkin seed", "10g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-jam-banana"
+name = "Rice cakes with jam and banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Spread the rice cakes with jam and top with the sliced banana.
+"""
+ingredients = [
+  ["rice cake", "27g"],
+  ["jam", "20g"],
+  ["banana", "120g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-avocado-tomato"
+name = "Rice cakes with avocado and tomato"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Mash the avocado with a squeeze of lemon, spread on the rice cakes and top with sliced tomato.
+"""
+ingredients = [
+  ["rice cake", "27g"],
+  ["avocado", "70g"],
+  ["tomato", "100g"],
+  ["lemon juice", "1 tsp"],
+]
+
+[[recipe]]
+slug = "cornmeal-porridge-banana"
+name = "Cornmeal porridge with banana"
+category = "Breakfast"
+cuisine = "Caribbean"
+servings = 1
+instructions = """
+Whisk the cornmeal into the rice milk and simmer for 8 minutes, stirring, until thick. Add the
+cinnamon and top with the sliced banana.
+"""
+ingredients = [
+  ["cornmeal", "30g"],
+  ["rice milk", "200ml"],
+  ["cinnamon", "0.5 tsp"],
+  ["banana", "100g"],
+]
+
+[[recipe]]
+slug = "fried-potatoes-mushrooms-tomatoes"
+name = "Fried potatoes with mushrooms and tomatoes"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the cubed potato for 8 minutes and drain. Fry in the oil until golden, adding the mushrooms
+and tomato for the last 5 minutes.
+"""
+ingredients = [
+  ["potato", "200g"],
+  ["mushroom", "100g"],
+  ["tomato", "100g"],
+  ["olive oil", "2 tsp"],
+]
+
+[[recipe]]
+slug = "baked-beans-fried-potatoes"
+name = "Baked beans with fried potatoes"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the cubed potato for 8 minutes and drain. Fry in the oil until golden and serve with the
+warmed beans.
+"""
+ingredients = [
+  ["potato", "150g"],
+  ["baked bean", "150g"],
+  ["olive oil", "1 tsp"],
+]
+
+[[recipe]]
+slug = "avocado-tomato-corn-tortillas"
+name = "Avocado and tomato on corn tortillas"
+category = "Breakfast"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Warm the corn tortillas in a dry pan. Mash the avocado with the lime juice, spread over and top with the
+chopped tomato.
+"""
+ingredients = [
+  ["corn tortilla", "50g"],
+  ["avocado", "70g"],
+  ["tomato", "100g"],
+  ["lime juice", "1 tsp"],
+]
+
+[[recipe]]
+slug = "rice-cakes-seed-butter-apple"
+name = "Rice cakes with sunflower seed butter and apple"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Spread the rice cakes with the seed butter and top with the sliced apple.
+"""
+ingredients = [
+  ["rice cake", "27g"],
+  ["sunflower seed butter", "20g"],
+  ["apple", "120g"],
+]
+
+[[recipe]]
+slug = "creamy-rice-apple-cinnamon"
+name = "Creamy breakfast rice with apple and cinnamon"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the rice in the rice milk with the cinnamon for 20 minutes, stirring often, until creamy.
+Top with the chopped apple.
+"""
+ingredients = [
+  ["rice", "40g"],
+  ["rice milk", "300ml"],
+  ["cinnamon", "0.5 tsp"],
+  ["apple", "120g"],
+]
+
+# --- breakfasts and sandwiches on gluten-free bread -----------------------------------------------
+
+[[recipe]]
+slug = "gf-toast-butter-jam"
+name = "Gluten-free toast with butter and jam"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Toast the slices, then spread with butter and jam.
+"""
+ingredients = [
+  ["gluten-free bread", "80g"],
+  ["butter", "10g"],
+  ["jam", "20g"],
+]
+
+[[recipe]]
+slug = "gf-scrambled-eggs-toast"
+name = "Scrambled eggs on gluten-free toast"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Beat the eggs and stir in a pan with the butter over a low heat until just set. Toast the slices and
+spoon the eggs on top.
+"""
+ingredients = [
+  ["gluten-free bread", "60g"],
+  ["egg", "2"],
+  ["butter", "5g"],
+]
+
+[[recipe]]
+slug = "gf-toast-peanut-butter-banana"
+name = "Gluten-free toast with peanut butter and banana"
+category = "Breakfast"
+cuisine = "British"
+servings = 1
+instructions = """
+Toast the slices, spread with peanut butter and top with the sliced banana.
+"""
+ingredients = [
+  ["gluten-free bread", "60g"],
+  ["peanut butter", "15g"],
+  ["banana", "100g"],
+]
+
+[[recipe]]
+slug = "gf-cheese-tomato-sandwich"
+name = "Cheese and tomato sandwich on gluten-free bread"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Layer the sliced cheese, tomato and lettuce between the slices.
+"""
+ingredients = [
+  ["gluten-free bread", "80g"],
+  ["cheddar cheese", "40g"],
+  ["tomato", "100g"],
+  ["lettuce", "20g"],
+]
+
+[[recipe]]
+slug = "gf-egg-mayonnaise-sandwich"
+name = "Egg mayonnaise sandwich on gluten-free bread"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the eggs for 9 minutes, cool, peel and mash with the mayonnaise. Spread between the slices with
+the lettuce.
+"""
+ingredients = [
+  ["gluten-free bread", "80g"],
+  ["egg", "2"],
+  ["mayonnaise", "1 tbsp"],
+  ["lettuce", "20g"],
+]
+
+[[recipe]]
+slug = "gf-hummus-salad-sandwich"
+name = "Hummus and salad sandwich on gluten-free bread"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Spread the slices with hummus and fill with the sliced cucumber, tomato and lettuce.
+"""
+ingredients = [
+  ["gluten-free bread", "80g"],
+  ["hummus", "80g"],
+  ["cucumber", "50g"],
+  ["tomato", "80g"],
+  ["lettuce", "20g"],
+]
+
+# --- vegan lunches with no gluten, soya or nuts --------------------------------------------------
+
+[[recipe]]
+slug = "jacket-potato-baked-beans"
+name = "Jacket potato with baked beans"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Microwave the potato for 10 minutes, turning once, until soft. Warm the beans and spoon them over.
+"""
+ingredients = [
+  ["potato", "250g"],
+  ["baked bean", "200g"],
+]
+
+[[recipe]]
+slug = "tomato-white-bean-soup"
+name = "Tomato and white bean soup"
+category = "Light meal"
+cuisine = "Italian"
+servings = 2
+instructions = """
+Soften the chopped onion and garlic in the oil. Add the tomatoes, beans and water and simmer for 15
+minutes. Blend half and stir back in.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["garlic clove", "2"],
+  ["olive oil", "2 tsp"],
+  ["tinned tomato", "400g"],
+  ["tinned cannellini bean", "400g"],
+  ["water", "300ml"],
+]
+
+[[recipe]]
+slug = "pea-potato-soup"
+name = "Pea and potato soup"
+category = "Light meal"
+cuisine = "Irish"
+servings = 2
+instructions = """
+Soften the chopped onion in the oil, add the cubed potato and water and simmer for 12 minutes. Add
+the peas for 3 minutes more and blend.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["olive oil", "1 tsp"],
+  ["potato", "300g"],
+  ["frozen pea", "300g"],
+  ["water", "700ml"],
+]
+
+[[recipe]]
+slug = "carrot-lentil-soup"
+name = "Carrot and red lentil soup"
+category = "Light meal"
+cuisine = "British"
+servings = 3
+instructions = """
+Soften the chopped onion and grated carrot in the oil with the cumin. Add the lentils and water,
+simmer for 20 minutes and blend.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "400g"],
+  ["olive oil", "1 tbsp"],
+  ["cumin", "1 tsp"],
+  ["red lentil", "150g"],
+  ["water", "1000ml"],
+]
+
+[[recipe]]
+slug = "black-bean-sweetcorn-tacos"
+name = "Black bean and sweetcorn tacos"
+category = "Light meal"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Warm the beans and sweetcorn with the paprika. Warm the corn tortillas in a dry pan, fill and top with
+the chopped tomato and a squeeze of lime.
+"""
+ingredients = [
+  ["corn tortilla", "75g"],
+  ["tinned black bean", "120g"],
+  ["sweetcorn", "60g"],
+  ["smoked paprika", "0.5 tsp"],
+  ["tomato", "80g"],
+  ["lime juice", "1 tsp"],
+]
+
+[[recipe]]
+slug = "rice-cakes-hummus-salad"
+name = "Rice cakes with hummus and salad"
+category = "Light meal"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Spread the rice cakes with hummus and serve with the sliced cucumber, tomato and carrot.
+"""
+ingredients = [
+  ["rice cake", "36g"],
+  ["hummus", "100g"],
+  ["cucumber", "80g"],
+  ["tomato", "100g"],
+  ["carrot", "60g"],
+]
+
+[[recipe]]
+slug = "lentil-beetroot-salad"
+name = "Lentil and beetroot salad"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Simmer the lentils for 25 minutes, drain and cool. Toss with the chopped cooked beetroot, lettuce,
+lemon juice and oil.
+"""
+ingredients = [
+  ["lentil", "70g"],
+  ["beetroot", "100g"],
+  ["lettuce", "40g"],
+  ["lemon juice", "1 tbsp"],
+  ["olive oil", "2 tsp"],
+]
+
+[[recipe]]
+slug = "sweet-potato-black-beans"
+name = "Baked sweet potato with black beans"
+category = "Light meal"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Microwave the sweet potato for 8 minutes, turning once, until soft. Warm the beans and sweetcorn
+with the lime juice and spoon over.
+"""
+ingredients = [
+  ["sweet potato", "250g"],
+  ["tinned black bean", "120g"],
+  ["sweetcorn", "50g"],
+  ["lime juice", "1 tsp"],
+]
+
+[[recipe]]
+slug = "potato-chickpea-pea-salad"
+name = "Potato salad with chickpeas and peas"
+category = "Light meal"
+cuisine = "British"
+servings = 1
+instructions = """
+Boil the cubed potato for 10 minutes, adding the peas for the last 2. Drain, cool and toss with the
+chickpeas, lemon juice and oil.
+"""
+ingredients = [
+  ["potato", "200g"],
+  ["tinned chickpea", "100g"],
+  ["frozen pea", "60g"],
+  ["lemon juice", "1 tbsp"],
+  ["olive oil", "1 tsp"],
+]
+
+# --- vegan dinners with no gluten, soya or nuts --------------------------------------------------
+
+[[recipe]]
+slug = "lentil-tomato-sauce-gf"
+name = "Lentil and tomato sauce with gluten-free pasta"
+category = "Vegan"
+cuisine = "Italian"
+servings = 4
+instructions = """
+Soften the chopped onion, carrot and garlic in the oil. Add the lentils, tomatoes and water and
+simmer for 20 minutes. Cook the gluten-free pasta as the packet says and toss through the gluten-free pasta.
+"""
+ingredients = [
+  ["onion", "1"],
+  ["carrot", "2"],
+  ["garlic clove", "2"],
+  ["olive oil", "1 tbsp"],
+  ["red lentil", "200g"],
+  ["tinned tomato", "800g"],
+  ["water", "400ml"],
+  ["gluten-free pasta", "280g"],
+]
+
+[[recipe]]
+slug = "tomato-white-bean-pasta-gf"
+name = "Tomato and white bean gluten-free pasta"
+category = "Vegan"
+cuisine = "Italian"
+servings = 1
+instructions = """
+Cook the gluten-free pasta as the packet says. Fry the garlic in the oil, add the tomatoes and beans and simmer
+for 10 minutes. Wilt in the spinach and toss through the gluten-free pasta.
+"""
+ingredients = [
+  ["gluten-free pasta", "70g"],
+  ["garlic clove", "1"],
+  ["olive oil", "1 tsp"],
+  ["tinned tomato", "200g"],
+  ["tinned cannellini bean", "120g"],
+  ["spinach", "50g"],
+]
+
+[[recipe]]
+slug = "mushroom-pea-risotto"
+name = "Mushroom and pea risotto"
+category = "Vegan"
+cuisine = "Italian"
+servings = 1
+instructions = """
+Soften the chopped onion and mushrooms in the oil. Stir in the rice, then add the hot water a little
+at a time for 20 minutes, stirring. Add the peas for the last 3 minutes.
+"""
+ingredients = [
+  ["onion", "0.5"],
+  ["mushroom", "150g"],
+  ["olive oil", "1 tsp"],
+  ["rice", "70g"],
+  ["water", "350ml"],
+  ["frozen pea", "100g"],
+]
+
+[[recipe]]
+slug = "stuffed-peppers-rice-beans"
+name = "Stuffed peppers with rice and beans"
+category = "Vegan"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes. Mix with the beans, tomatoes and paprika, fill the halved peppers and
+bake at 200C/gas 6 for 25 minutes.
+"""
+ingredients = [
+  ["rice", "50g"],
+  ["tinned kidney bean", "100g"],
+  ["tinned tomato", "100g"],
+  ["smoked paprika", "0.5 tsp"],
+  ["red pepper", "2"],
+]
+
+[[recipe]]
+slug = "bean-potato-stew"
+name = "Bean and potato stew"
+category = "Vegan"
+cuisine = "British"
+servings = 1
+instructions = """
+Soften the chopped onion and carrot in the oil. Add the cubed potato, beans, tomatoes, paprika and
+water and simmer for 25 minutes.
+"""
+ingredients = [
+  ["onion", "0.5"],
+  ["carrot", "80g"],
+  ["olive oil", "1 tsp"],
+  ["potato", "200g"],
+  ["tinned cannellini bean", "120g"],
+  ["tinned tomato", "200g"],
+  ["smoked paprika", "0.5 tsp"],
+  ["water", "100ml"],
+]
+
+[[recipe]]
+slug = "chickpea-patties-potato-wedges"
+name = "Chickpea patties with potato wedges"
+category = "Vegan"
+cuisine = "British"
+servings = 1
+instructions = """
+Toss the potato wedges in half the oil and roast at 200C/gas 6 for 30 minutes. Mash the chickpeas
+with the cumin and corn flour, shape into patties and fry in the rest of the oil. Serve with the
+lettuce and tomato.
+"""
+ingredients = [
+  ["potato", "250g"],
+  ["olive oil", "2 tsp"],
+  ["tinned chickpea", "150g"],
+  ["cumin", "1 tsp"],
+  ["corn flour", "10g"],
+  ["lettuce", "40g"],
+  ["tomato", "100g"],
+]
+
+[[recipe]]
+slug = "rice-noodles-chickpeas-vegetables"
+name = "Rice noodles with chickpeas and vegetables"
+category = "Vegan"
+cuisine = "Asian"
+servings = 1
+instructions = """
+Soak the rice noodles as the packet says. Stir-fry the sliced pepper, carrot and ginger in the oil for 5
+minutes. Add the chickpeas, peas and rice noodles, toss until hot and finish with the lime juice.
+"""
+ingredients = [
+  ["rice noodle", "70g"],
+  ["red pepper", "1"],
+  ["carrot", "60g"],
+  ["ginger", "5g"],
+  ["olive oil", "1 tsp"],
+  ["tinned chickpea", "100g"],
+  ["frozen pea", "50g"],
+  ["lime juice", "1 tbsp"],
+]
+
+[[recipe]]
+slug = "sweet-potato-chickpea-stew"
+name = "Sweet potato and chickpea stew"
+category = "Vegan"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Simmer the cubed sweet potato, chickpeas, tomatoes and cumin for 20 minutes. Wilt in the spinach.
+"""
+ingredients = [
+  ["sweet potato", "200g"],
+  ["tinned chickpea", "120g"],
+  ["tinned tomato", "200g"],
+  ["cumin", "1 tsp"],
+  ["spinach", "50g"],
+]
+
+[[recipe]]
+slug = "mexican-rice-beans-sweetcorn"
+name = "Mexican rice with beans and sweetcorn"
+category = "Vegan"
+cuisine = "Mexican"
+servings = 1
+instructions = """
+Boil the rice for 12 minutes. Fry the chopped pepper with the paprika in the oil, add the beans,
+sweetcorn and tomato and warm through. Stir in the rice and the lime juice.
+"""
+ingredients = [
+  ["rice", "60g"],
+  ["red pepper", "1"],
+  ["smoked paprika", "1 tsp"],
+  ["olive oil", "1 tsp"],
+  ["tinned black bean", "120g"],
+  ["sweetcorn", "80g"],
+  ["tomato", "80g"],
+  ["lime juice", "1 tsp"],
+]
+
+# --- gluten-free vegetarian dinners ---------------------------------------------------------------
+
+[[recipe]]
+slug = "cheesy-tomato-pasta-gf"
+name = "Cheesy tomato gluten-free pasta"
+category = "Vegetarian"
+cuisine = "Italian"
+servings = 1
+instructions = """
+Cook the gluten-free pasta as the packet says. Simmer the tomatoes with the garlic and oil for 10 minutes, toss
+through the gluten-free pasta and top with the grated cheese.
+"""
+ingredients = [
+  ["gluten-free pasta", "80g"],
+  ["tinned tomato", "200g"],
+  ["garlic clove", "1"],
+  ["olive oil", "1 tsp"],
+  ["cheddar cheese", "40g"],
+]
+
+[[recipe]]
+slug = "spinach-mushroom-pasta-gf"
+name = "Creamy spinach and mushroom gluten-free pasta"
+category = "Vegetarian"
+cuisine = "Italian"
+servings = 1
+instructions = """
+Cook the gluten-free pasta as the packet says. Fry the sliced mushrooms in the oil, wilt in the spinach and melt
+in the cheese with a splash of its cooking water. Toss through the gluten-free pasta.
+"""
+ingredients = [
+  ["gluten-free pasta", "80g"],
+  ["mushroom", "150g"],
+  ["olive oil", "1 tsp"],
+  ["spinach", "80g"],
+  ["cheddar cheese", "40g"],
+]
+
+# --- snacks with no gluten, soya or nuts -----------------------------------------------------------
+
+[[recipe]]
+slug = "apple-pumpkin-seeds"
+name = "Apple and pumpkin seeds"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Slice the apple and have it with the seeds.
+"""
+ingredients = [
+  ["apple", "120g"],
+  ["pumpkin seed", "10g"],
+]
+
+[[recipe]]
+slug = "orange-raisins"
+name = "Orange and raisins"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Peel the orange and have it with the raisins.
+"""
+ingredients = [
+  ["orange", "130g"],
+  ["raisin", "20g"],
+]
+
+[[recipe]]
+slug = "banana-snack"
+name = "A banana"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Peel and eat.
+"""
+ingredients = [
+  ["banana", "120g"],
+]
+
+[[recipe]]
+slug = "pear-sunflower-seeds"
+name = "Pear and sunflower seeds"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Slice the pear and have it with the seeds.
+"""
+ingredients = [
+  ["pear", "150g"],
+  ["sunflower seed", "10g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-jam-snack"
+name = "Rice cakes with jam"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Spread the rice cakes with jam.
+"""
+ingredients = [
+  ["rice cake", "18g"],
+  ["jam", "15g"],
+]
+
+[[recipe]]
+slug = "rice-cakes-hummus-snack"
+name = "Rice cakes with hummus"
+category = "Snack"
+cuisine = "Mediterranean"
+servings = 1
+instructions = """
+Spread the rice cakes with hummus.
+"""
+ingredients = [
+  ["rice cake", "18g"],
+  ["hummus", "40g"],
+]
+
+[[recipe]]
+slug = "strawberries-grapes"
+name = "Strawberries and grapes"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Hull the strawberries and have them with the grapes.
+"""
+ingredients = [
+  ["strawberry", "150g"],
+  ["grape", "100g"],
+]
+
+[[recipe]]
+slug = "apple-seed-butter"
+name = "Apple slices with sunflower seed butter"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Slice the apple and dip it in the seed butter.
+"""
+ingredients = [
+  ["apple", "120g"],
+  ["sunflower seed butter", "15g"],
+]
+
+[[recipe]]
+slug = "mango-lime"
+name = "Mango with lime"
+category = "Snack"
+cuisine = "British"
+servings = 1
+instructions = """
+Cube the mango and squeeze over the lime juice.
+"""
+ingredients = [
+  ["mango", "200g"],
+  ["lime juice", "1 tsp"],
+]

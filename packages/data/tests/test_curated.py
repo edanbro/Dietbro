@@ -108,6 +108,11 @@ PROFILES: list[tuple[frozenset[Allergen], Diet | None]] = [
     (frozenset({Allergen.MILK, Allergen.EGGS, Allergen.GLUTEN}), None),
     (frozenset({Allergen.GLUTEN, Allergen.MILK}), None),
     (frozenset({Allergen.TREE_NUTS, Allergen.PEANUTS}), None),
+    (frozenset({Allergen.GLUTEN, Allergen.SOY, Allergen.TREE_NUTS, Allergen.PEANUTS}), Diet.VEGAN),
+    (
+        frozenset({Allergen.GLUTEN, Allergen.EGGS, Allergen.TREE_NUTS, Allergen.PEANUTS}),
+        Diet.VEGETARIAN,
+    ),
 ]
 
 
@@ -131,6 +136,21 @@ def test_common_restrictions_still_fill_a_week(
     assert snacks >= 3, f"only {snacks} snacks for {sorted(allergens)} {diet}"
     assert lunches >= 4, f"only {lunches} lunches for {sorted(allergens)} {diet}"
     assert dinners >= 4, f"only {dinners} dinners for {sorted(allergens)} {diet}"
+
+
+def test_gluten_free_recipes_stay_gluten_free_and_a_loaf_is_never_assumed_safe() -> None:
+    """Recipe text is scanned for gluten words ("the pasta"), so these must say what they use. Any
+    gluten-free loaf may hold egg, milk or soya, and the recipe can't say which."""
+    tags = _tags()
+    pasta = [slug for slug in tags if slug.endswith("-gf")]
+    assert len(pasta) >= 4
+    for slug in pasta:
+        assert Allergen.GLUTEN not in tags[slug][1].allergens, slug
+    assert diet_allows(Diet.VEGAN, tags["lentil-tomato-sauce-gf"][1].animal)
+    for slug in ("gf-toast-butter-jam", "gf-cheese-tomato-sandwich", "gf-hummus-salad-sandwich"):
+        allergens = tags[slug][1].allergens
+        assert Allergen.GLUTEN not in allergens, slug
+        assert {Allergen.EGGS, Allergen.MILK, Allergen.SOY} <= allergens, slug
 
 
 def test_method_unwraps_lines_into_one_sentence_per_step() -> None:

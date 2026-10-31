@@ -20,6 +20,7 @@ fdc_id,description,category,allergens,animal
 167976,"Candies, semisweet chocolate",Sweets,milk|soy,dairy
 167989,"Candies, gumdrops, starch jelly pieces",Sweets,-,gelatin
 167995,"Candies, marshmallows",Sweets,-,gelatin
+168009,"Schar, Gluten-Free, Wheat-Free, Classic White Bread",Baked Products,eggs|milk|soy,dairy|egg
 168092,"Ham, turkey, sliced, extra lean, prepackaged or deli",Sausages and Luncheon Meats,sulphites,meat
 168148,"Frog legs, raw",Finfish and Shellfish Products,-,meat
 168153,"Kiwifruit, green, raw",Fruits and Fruit Juices,-,-
@@ -71,6 +72,7 @@ fdc_id,description,category,allergens,animal
 168893,"Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",Cereal Grains and Pasta,gluten,-
 168895,"Wheat flour, white, all-purpose, self-rising, enriched",Cereal Grains and Pasta,gluten,-
 168898,"Rice flour, brown",Cereal Grains and Pasta,-,-
+168899,"Pasta, gluten-free, corn, dry",Cereal Grains and Pasta,-,-
 168908,"Noodles, japanese, somen, dry",Cereal Grains and Pasta,gluten,-
 168920,"Corn grain, white",Cereal Grains and Pasta,-,-
 168931,"Rice, white, short-grain, raw, unenriched",Cereal Grains and Pasta,-,-
@@ -167,6 +169,7 @@ fdc_id,description,category,allergens,animal
 170106,"Peppers, hot chili, red, raw",Vegetables and Vegetable Products,-,-
 170108,"Peppers, sweet, red, raw",Vegetables and Vegetable Products,-,-
 170150,"Seeds, sesame seeds, whole, dried",Nut and Seed Products,sesame,-
+170155,"Seeds, sunflower seed butter, without salt",Nut and Seed Products,-,-
 170160,"Nuts, almond paste",Nut and Seed Products,tree_nuts,-
 170162,"Nuts, cashew nuts, raw",Nut and Seed Products,tree_nuts,-
 170168,"Nuts, chestnuts, european, boiled and steamed",Nut and Seed Products,tree_nuts,-
@@ -300,6 +303,7 @@ fdc_id,description,category,allergens,animal
 171823,"Sauce, duck, ready-to-serve","Soups, Sauces, and Gravies",-,-
 171845,"Bread, naan, plain, commercially prepared, refrigerated",Baked Products,eggs|gluten|milk,dairy|egg
 171869,"Beverages, carbonated, tonic water",Beverages,-,-
+171942,"Beverages, rice milk, unsweetened",Beverages,-,-
 171955,"Fish, cod, Atlantic, raw",Finfish and Shellfish Products,fish,fish
 171964,"Fish, haddock, raw",Finfish and Shellfish Products,fish,fish
 172137,"Beef, plate steak, boneless, inside skirt, separable lean only, trimmed to 0"" fat, choice, raw",Beef Products,-,meat
