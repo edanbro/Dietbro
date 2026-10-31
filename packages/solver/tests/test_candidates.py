@@ -8,7 +8,14 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from larder_solver.candidates import MIN_EVERYDAY, TastePrefs, allowed, preference, select
+from larder_solver.candidates import (
+    MIN_EVERYDAY,
+    MealStyle,
+    TastePrefs,
+    allowed,
+    preference,
+    select,
+)
 from larder_solver.problem import (
     Allergen,
     AnimalTag,
@@ -430,6 +437,33 @@ def test_everyday_tops_up_when_allergies_leave_too_few() -> None:
     ids = lunch_ids(styled(5, 30), TastePrefs(meal_style="everyday"))
     assert len(ids) == MIN_EVERYDAY
     assert set(range(1, 6)) <= ids
+
+
+def test_a_top_up_is_marked_unusual_only_when_it_is_familiar_nowhere() -> None:
+    cat = catalog(
+        [
+            replace(rec(1, slots=MAINS), everyday=frozenset({L})),
+            replace(rec(2, slots=MAINS), everyday=frozenset({D})),  # a dinner: fine at lunch
+            rec(3, slots=MAINS),
+        ]
+    )
+    (spec,), _ = select(cat, OPEN, TastePrefs(meal_style="everyday"), (), [(L, True)])
+    assert set(spec.candidates) == {1, 2, 3}
+    assert spec.unusual == {3}
+
+
+def test_top_ups_take_what_is_everyday_elsewhere_first() -> None:
+    usual = [replace(rec(i, slots=MAINS), everyday=frozenset({L})) for i in range(1, 11)]
+    dinners = [replace(rec(100 + i, slots=MAINS), everyday=frozenset({D})) for i in range(10)]
+    odd = [rec(500 + i, slots=MAINS) for i in range(30)]
+    ids = lunch_ids(catalog([*odd, *dinners, *usual]), TastePrefs(meal_style="everyday"))
+    assert ids == {*range(1, 11), *range(100, 110)}
+
+
+@pytest.mark.parametrize("style", ["mix", "adventurous"])
+def test_nothing_is_unusual_to_someone_who_asked_for_range(style: MealStyle) -> None:
+    (spec,), _ = select(styled(5, 30), OPEN, TastePrefs(meal_style=style), (), [(L, True)])
+    assert spec.unusual == frozenset()
 
 
 def test_everyday_only_counts_the_slot_it_is_everyday_in() -> None:

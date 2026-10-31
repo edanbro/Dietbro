@@ -44,8 +44,12 @@ starters fill lunch (ADR-0010). That was the visible end of three problems:
 - **`preferences.meal_style`**, on the Meals settings page. `everyday` (the default) keeps
   candidates to everyday recipes, favourites and liked cuisines. `mix` caps other recipes at half
   the candidates. `adventurous` is the old behaviour.
-- **Top up, never fail.** With fewer than `MIN_EVERYDAY` (20) candidates, `everyday` tops up by
-  rank from other recipes, so a restrictive profile gets a plan with some less usual meals in it.
+- **Top up, never fail.** With fewer than `MIN_EVERYDAY` (20) candidates, `everyday` tops up from
+  other recipes, so a restrictive profile gets a plan: first recipes everyday in another slot (a
+  chilli with rice is a fine lunch), then by rank. A top-up that's everyday nowhere is
+  `SlotSpec.unusual` and each meal of it costs `Weights.unusual` (£2), more than a repeat (£1.50),
+  so it comes only when nothing familiar fits the caps, the calories or the budget. Soft, for the
+  reason the top-up exists: it must never turn into no plan.
 - **Meals have a size.** `SlotSpec.kcal` is a soft band, a meal's share of the day ±35%; each kcal
   outside costs `Weights.balance` (1p). It goes straight on the choice variable, because a choice
   of recipe and portions fixes the meal's kcal, so the model gains no variables. Soft, because
@@ -57,7 +61,7 @@ starters fill lunch (ADR-0010). That was the visible end of three problems:
 - The default plan looks like a normal week, and the catalogue's range is one setting away.
 - We maintain two reviewed lists. Recipes imported from TheMealDB in future aren't everyday until
   someone lists them, which is the safe side to fail on.
-- Vegan and multi-allergy users still see the odd unusual dinner from the top-up. More curated
-  recipes fix that case by case; the alternative is failing to plan.
+- The most restricted users (vegan and gluten-free together, say) can still see an unusual meal.
+  More curated recipes fix that case by case; the alternative is failing to plan.
 - 40% of a 2,000 kcal day is 800 kcal, and a 1,400 kcal dinner now costs about £2.80. Bigger eaters
   get bigger portions spread across meals rather than one huge dinner.

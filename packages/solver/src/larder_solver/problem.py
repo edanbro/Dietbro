@@ -147,7 +147,8 @@ class Recipe:
     cuisine: str | None = None
     preference: int = 0  # how much this user should like it, -100..100 (set by the prefilter)
     # The slots in which this is a normal, familiar meal (larder_core.meals.everyday_slots). Only
-    # the prefilter reads it: the planner and the validator go by `meal_types`.
+    # the prefilter reads it, which tells the planner through `SlotSpec.unusual`: the planner and
+    # the validator go by `meal_types`.
     everyday: frozenset[Slot] = frozenset()
 
 
@@ -155,7 +156,9 @@ class Recipe:
 class SlotSpec:
     """A slot planned every day. `candidates` are recipe ids (best first) the planner may use;
     an optional slot may be left empty. None fields fall back to the Problem defaults. `kcal` is
-    the size a meal here should be: going outside it costs `Weights.balance` per kcal."""
+    the size a meal here should be: going outside it costs `Weights.balance` per kcal. `unusual`
+    are the candidates here only because too few familiar ones suit the user: each meal of one
+    costs `Weights.unusual`."""
 
     slot: Slot
     required: bool
@@ -164,6 +167,7 @@ class SlotSpec:
     max_portions: int | None = None
     max_repeats: int | None = None
     kcal: Band | None = None
+    unusual: frozenset[int] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +226,8 @@ class Weights:
         - macro         * grams outside the protein/fat/carbs bands (daily and weekly)
         - balance       * kcal a meal is outside its slot's `SlotSpec.kcal`
         - churn         * slots whose recipe differs from the previous plan (replans)
+        - unusual       * meals of a recipe in their slot's `SlotSpec.unusual`
+        - same_day      * meals that repeat a recipe already eaten that day
 
     All weights are >= 0. `larder_solver.metrics.score` computes exactly this.
     """
@@ -235,6 +241,10 @@ class Weights:
     macro: int = 20_000  # 20p per gram outside a macro band
     balance: int = 1_000  # 1p per kcal outside a meal's size: lopsided days cost real money
     churn: int = 200_000  # £2 per changed slot
+    unusual: int = 200_000  # £2: seeing a familiar meal again (a repeat) beats an odd one
+    same_day: int = (
+        300_000  # £3, on top of the repeat: the same snack twice in a day reads as a bug
+    )
 
 
 @dataclass(frozen=True, slots=True)

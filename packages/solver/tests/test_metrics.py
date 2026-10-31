@@ -15,9 +15,11 @@ from larder_solver.metrics import (
     day_totals,
     macro_distance,
     repeat_counts,
+    same_day_repeats,
     score,
     staples,
     to_minor,
+    unusual_meals,
     usage,
     waste_millipence,
     week_totals,
@@ -326,6 +328,8 @@ def test_score_terms_on_a_hand_case() -> None:
         "macro": -20_000 * (8 + 12),  # day 1 protein 42 < 50; week protein 112 > 100
         "balance": 0,
         "churn": -200_000 * 2,  # (0, L) changed recipe, (1, B) is new
+        "unusual": 0,
+        "same_day": 0,
     }
     assert list(s.terms) == [
         "preference",
@@ -337,6 +341,8 @@ def test_score_terms_on_a_hand_case() -> None:
         "macro",
         "balance",
         "churn",
+        "unusual",
+        "same_day",
     ]
     assert s.total == sum(s.terms.values()) == -1_495_000
     assert score(p, plan).terms["churn"] == 0
@@ -381,3 +387,27 @@ def test_balance_counts_the_kcal_outside_a_slots_band() -> None:
     plan = Plan(tuple(Meal(d, Slot.LUNCH, 1, q) for d, q in enumerate((2, 1, 3))))
     assert balance_distance(problem, plan) == 400
     assert score(problem, plan).terms["balance"] == -1_000 * 400
+
+
+def test_unusual_counts_only_in_the_slot_it_is_unusual_in() -> None:
+    recipe = Recipe(1, "Stew", frozenset({Slot.LUNCH, Slot.DINNER}), Macros(kcal=300))
+    specs = (
+        SlotSpec(Slot.LUNCH, True, (1,), unusual=frozenset({1})),
+        SlotSpec(Slot.DINNER, True, (1,)),
+    )
+    problem = Problem(date(2026, 1, 5), 2, specs, {1: recipe}, {}, Targets({}))
+    plan = Plan((Meal(0, Slot.LUNCH, 1, 1), Meal(1, Slot.DINNER, 1, 1)))
+    assert unusual_meals(problem, plan) == 1
+    assert score(problem, plan).terms["unusual"] == -200_000
+
+
+def test_same_day_counts_a_recipe_again_that_day_not_on_another_day() -> None:
+    plan = Plan(
+        (
+            Meal(0, Slot.MORNING_SNACK, 1, 2),
+            Meal(0, Slot.SNACK, 1, 2),
+            Meal(0, Slot.EVENING_SNACK, 1, 2),
+            Meal(1, Slot.SNACK, 1, 2),
+        )
+    )
+    assert same_day_repeats(plan) == 2

@@ -37,11 +37,12 @@ Option 2: morning, afternoon and evening snack slots.
   of ADR-0019 are worked out.
 - **Not the same snack twice in a day, when there's choice.** With at least
   `MIN_SNACKS_PER_SLOT` (8) candidates per slot, they are dealt between the planned snacks by size
-  (`_deal_snacks`), so popcorn can't turn up three times and every slot has a light option. That
-  took no new solver constraint: disjoint candidates can't clash. With fewer they share and the
-  repeat cap grows with the snacks: a vegan on 1,200-1,400 kcal with three snacks a day needs the
-  light ones again and again, and a repeat is the lesser evil. One safe snack had daily likewise
-  beats refusing the week.
+  (`_deal_snacks`), so popcorn can't turn up three times and every slot has a light option. With
+  fewer they share and the repeat cap grows with the snacks, and a same-day repeat costs
+  `Weights.same_day` (£3, on top of the repeat), so it comes only when calories leave no other
+  choice. Soft, not a constraint: a vegan on 1,200-1,400 kcal with three snacks a day may need a
+  light one twice, and one safe snack had daily beats refusing the week. The greedy fallback never
+  repeats a recipe in a day unless a cell was chosen to.
 - **Unnamed food still goes to a meal everyone has.** Logged food with no meal never lands in an
   opt-in slot (`UNNAMED_FOOD_SLOTS`).
 

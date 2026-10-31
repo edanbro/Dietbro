@@ -215,6 +215,7 @@ class _Model:
 
         required = {s.slot for s in p.slots if s.required}
         bands = {s.slot: s.kcal for s in p.slots if s.kcal is not None}
+        unusual = {s.slot: s.unusual for s in p.slots}
 
         def off_balance(slot: Slot, rid: int, portions: int) -> int:
             band = bands.get(slot)
@@ -225,11 +226,14 @@ class _Model:
             objective.const += w.preference * p.recipes[meal.recipe_id].preference
             objective.const -= w.optional_meal * (meal.slot not in required)
             objective.const -= off_balance(meal.slot, meal.recipe_id, meal.portions)
+            objective.const -= w.unusual * (meal.recipe_id in unusual.get(meal.slot, ()))
         for (_, slot, rid, portions), var in self.y.items():
             value = w.preference * p.recipes[rid].preference
             value -= w.optional_meal * (slot not in required)
             value -= off_balance(slot, rid, portions)  # a meal's size is known from its choice
+            value -= w.unusual * (rid in unusual.get(slot, ()))
             objective.add(var, value)
+        self._same_day(objective)
         self._churn(objective)
         cp.maximize(objective.expr())
 
@@ -312,6 +316,30 @@ class _Model:
             cp.add(rep >= sum(variables) + locked[rid] - 1)
             self.slacks.append((rep, _Linear(locked[rid] - 1, [(v, 1) for v in variables]), 1, 0))
             objective.add(rep, -p.weights.repeat)
+
+    def _same_day(self, objective: _Linear) -> None:
+        """-w.same_day per meal repeating a recipe that day. Soft, like the rest of variety: a
+        small eater with one light snack that suits them still gets a plan. Only recipes two cells
+        of a day can hold get a variable; lunch and dinner candidates rarely overlap."""
+        p, cp = self.p, self.cp
+        day_uses: dict[tuple[int, int], list[tuple[cp_model.IntVar, _Cell]]] = {}
+        for (day, slot, rid, _), var in self.y.items():
+            day_uses.setdefault((day, rid), []).append((var, (day, slot)))
+        locked = Counter((m.day, m.recipe_id) for m in self.locked)
+        for (day, rid), n in locked.items():
+            if (day, rid) not in day_uses:
+                objective.const -= p.weights.same_day * (n - 1)
+        for (day, rid), uses in day_uses.items():
+            cells = len({cell for _, cell in uses}) + locked[day, rid]
+            if cells <= 1:
+                continue
+            variables = [var for var, _ in uses]
+            extra = cp.new_int_var(0, cells - 1, f"same_{day}_{rid}")
+            cp.add(extra >= sum(variables) + locked[day, rid] - 1)
+            self.slacks.append(
+                (extra, _Linear(locked[day, rid] - 1, [(v, 1) for v in variables]), 1, 0)
+            )
+            objective.add(extra, -p.weights.same_day)
 
     def _food(self, objective: _Linear) -> None:
         """Usage per (food, day) from the planned and locked meals, the pantry draws, cost,

@@ -176,6 +176,9 @@ Maximise exactly `metrics.score` (read it; it's 30 lines). With `w = problem.wei
 | `repeat` | `−w.repeat × Σ_r rep_r` with `rep_r ≥ uses_r − 1`, `rep_r ≥ 0` (uses include locked meals) |
 | `optional` | `−w.optional_meal ×` meals in slots that aren't required (locked ones included) |
 | `macro` | `−w.macro ×` grams outside each protein/fat/carbs band: every day's daily bands plus the weekly bands |
+| `balance` | `−w.balance ×` kcal a meal is outside its slot's `kcal` band: a constant on each choice variable, since a choice fixes the meal's kcal |
+| `unusual` | `−w.unusual ×` meals of a recipe in their slot's `unusual` set: also on the choice variable |
+| `same_day` | `−w.same_day × Σ_(d,r) e_dr` with `e_dr ≥ uses_dr − 1`, `e_dr ≥ 0`, only for recipes at least two cells of the day can hold |
 | `churn` | `−w.churn × changed_slots(previous, plan)` (below) |
 
 **Soft macro bands.** For a band `[lo, hi]` on a linear total `t`: `short ≥ lo − t`,

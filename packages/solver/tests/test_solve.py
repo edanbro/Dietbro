@@ -58,6 +58,8 @@ from larder_solver.solve import solve
 from larder_solver.validate import hard, validate
 
 B, L, D, S = Slot.BREAKFAST, Slot.LUNCH, Slot.DINNER, Slot.SNACK
+MS, ES = Slot.MORNING_SNACK, Slot.EVENING_SNACK
+SNACKS = (MS, S, ES)
 START = date(2026, 1, 5)  # a Monday
 LIMIT_MS = 2_000  # functional tests: time limit and search workers
 WORKERS = 4
@@ -575,4 +577,70 @@ def test_a_lopsided_day_costs_and_the_solver_avoids_it() -> None:
     plan = found(result)
     kcal = [problem.recipes[m.recipe_id].per_portion.kcal * m.portions for m in plan.meals]
     assert kcal == [600, 600]
+    assert result.objective == score(problem, plan).total
+
+
+def _lunches(unusual: frozenset[int]) -> Problem:
+    familiar = Recipe(1, "Cheese sandwich", frozenset({L}), Macros(kcal=300))
+    odd = Recipe(2, "Leblebi", frozenset({L}), Macros(kcal=300))
+    return Problem(
+        date(2026, 1, 5),
+        2,
+        (SlotSpec(L, True, (1, 2), 2, 2, 2, unusual=unusual),),
+        {1: familiar, 2: odd},
+        {},
+        Targets({Nutrient.KCAL: Band(600, 600)}, calorie_floor=600),
+    )
+
+
+def test_an_unusual_meal_loses_to_seeing_a_familiar_one_again() -> None:
+    problem = _lunches(frozenset({2}))
+    result = solve(problem)
+    plan = found(result)
+    assert [m.recipe_id for m in plan.meals] == [1, 1]
+    assert result.objective == score(problem, plan).total
+
+
+def test_an_unusual_meal_still_comes_when_nothing_familiar_is_left() -> None:
+    problem = _lunches(frozenset({2}))
+    problem = replace(problem, slots=(replace(problem.slots[0], max_repeats=1),))
+    plan = found(solve(problem))
+    assert sorted(m.recipe_id for m in plan.meals) == [1, 2]
+
+
+def _snacks(n: int, *, locked: dict[tuple[int, Slot], Meal | None] | None = None) -> Problem:
+    recipes = {
+        i: Recipe(i, f"Snack {i}", frozenset(SNACKS), Macros(kcal=100)) for i in range(1, n + 1)
+    }
+    return Problem(
+        date(2026, 1, 5),
+        1,
+        tuple(SlotSpec(s, True, tuple(recipes), 2, 2, 3) for s in SNACKS),
+        recipes,
+        {},
+        Targets({Nutrient.KCAL: Band(600, 600)}, calorie_floor=600),
+        locked=locked or {},
+    )
+
+
+def test_the_same_snack_twice_a_day_is_the_last_resort() -> None:
+    apart = _snacks(3)
+    result = solve(apart)
+    plan = found(result)
+    assert len({m.recipe_id for m in plan.meals}) == 3
+    assert result.objective == score(apart, plan).total
+
+    # One snack that suits the user: daily and three times over, rather than no plan.
+    alone = _snacks(1)
+    result = solve(alone)
+    plan = found(result)
+    assert [m.recipe_id for m in plan.meals] == [1, 1, 1]
+    assert result.objective == score(alone, plan).total
+
+
+def test_a_locked_snack_counts_towards_the_same_day_repeat() -> None:
+    problem = _snacks(2, locked={(0, MS): Meal(0, MS, 1, 2)})
+    result = solve(problem)
+    plan = found(result)
+    assert sorted(m.recipe_id for m in plan.meals) == [1, 1, 2]  # 3 cells, 2 recipes
     assert result.objective == score(problem, plan).total
