@@ -66,3 +66,4 @@ precise shares. The Irish NANS study and the national snacking surveys are the f
 | A main is protein and carbohydrate | The top ten dinners above added, with the starch in the recipe |
 | Most people snack, about a fifth of the day | Snacks are planned daily, with up to three a day by setting |
 | Snacks are fruit, yoghurt, biscuits | Plain snacks added: fruit and nuts, yoghurt, oatcakes, popcorn, a few biscuits, a small bag of crisps |
+| A restricted diet should get the same kinds of meal | 49 more: beans on toast, jacket potatoes, soups and pasta with no gluten, soya or nuts where it can be done, sandwiches on gluten-free bread, and light vegan breakfasts for small eaters |

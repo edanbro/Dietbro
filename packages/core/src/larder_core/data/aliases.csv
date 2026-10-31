@@ -148,6 +148,7 @@ coriander leaf,169997,"Coriander (cilantro) leaves, raw",
 corn flake,2708453,"Cereal, corn flakes, plain",
 corn flour,169698,Cornstarch,UK cornflour is cornstarch
 corn on the cob,169998,"Corn, sweet, yellow, raw",
+corn tortilla,175036,"Tortillas, ready-to-bake or -fry, corn",
 corned beef,170602,"Beef, cured, corned beef, canned",
 cornmeal,168867,"Cornmeal, degermed, enriched, yellow",
 cornstarch,169698,Cornstarch,
@@ -239,6 +240,8 @@ ghee,171314,"Butter, Clarified butter (ghee)",
 ginger,169231,"Ginger root, raw",
 ginger paste,169231,"Ginger root, raw",
 glace cherry,167781,Candied fruit,approximation
+gluten-free bread,168009,"Schar, Gluten-Free, Wheat-Free, Classic White Bread",stands in for any gluten-free loaf
+gluten-free pasta,168899,"Pasta, gluten-free, corn, dry","dry weight, as other pasta aliases"
 goats cheese,173435,"Cheese, goat, soft type",
 golden caster sugar,169655,"Sugars, granulated",
 golden syrup,168837,"Syrups, corn, light",approximation
@@ -476,6 +479,7 @@ redcurrant,173964,"Currants, red and white, raw",
 rice,168877,"Rice, white, long-grain, regular, raw, enriched",
 rice cake,170250,"Snacks, rice cakes, brown rice, plain, unsalted",
 rice flour,169714,"Rice flour, white, unenriched",
+rice milk,171942,"Beverages, rice milk, unsweetened",UK rice drink
 rice noodle,169742,"Rice noodles, dry",
 rice paper sheet,169714,"Rice flour, white, unenriched",approximation
 rice vermicelli,169742,"Rice noodles, dry",
@@ -569,6 +573,7 @@ sugar,169655,"Sugars, granulated",
 summer savoury,170936,"Spices, savory, ground",
 sunflower oil,171025,"Oil, sunflower, linoleic, (approx. 65%)",
 sunflower seed,170562,"Seeds, sunflower seed kernels, dried",
+sunflower seed butter,170155,"Seeds, sunflower seed butter, without salt",
 sushi rice,168931,"Rice, white, short-grain, raw, unenriched",
 swede,168454,"Rutabagas, raw",
 sweet chilli sauce,174066,"Sauce, sweet and sour, ready-to-serve",approximation
