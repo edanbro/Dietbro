@@ -22,6 +22,28 @@ class Slot(StrEnum):
 SLOT_ORDER: tuple[Slot, ...] = tuple(Slot)
 SNACK_SLOTS = frozenset({Slot.MORNING_SNACK, Slot.SNACK, Slot.EVENING_SNACK})
 
+# What a slot is called in anything a person reads: its value is a key ("morning_snack").
+_SLOT_WORDS: dict[str, str] = {
+    Slot.BREAKFAST: "breakfast",
+    Slot.MORNING_SNACK: "morning snack",
+    Slot.LUNCH: "lunch",
+    Slot.SNACK: "afternoon snack",
+    Slot.DINNER: "dinner",
+    Slot.EVENING_SNACK: "evening snack",
+}
+
+
+def slot_words(slot: str) -> str:
+    """The slot as it reads in a sentence: "Thu morning snack". Validation reports malformed plans
+    rather than raising, so an unknown slot comes back as it is."""
+    return _SLOT_WORDS.get(slot, slot)
+
+
+def slot_label(slot: str) -> str:
+    """The slot as it starts a sentence or names a field: "Morning snack"."""
+    return slot_words(slot).capitalize()
+
+
 # TheMealDB categories (plus our curated "Snack" and "Light meal") -> the slots a recipe can fill.
 # Sides are not a meal on their own; starters are light enough for lunch only.
 _MAINS = frozenset({Slot.LUNCH, Slot.DINNER})

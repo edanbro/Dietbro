@@ -7,6 +7,10 @@ from typing import Any
 
 import httpx
 from app_support import AppEnv
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from larder_db import models as db
+from larder_db.engine import make_sessionmaker
 
 NewUser = Callable[..., Awaitable[int]]
 MakePlan = Callable[[int, date], Coroutine[Any, Any, int]]
@@ -99,3 +103,27 @@ async def test_unknown_feeds(api: httpx.AsyncClient) -> None:
 
 async def test_settings_need_sign_in(api: httpx.AsyncClient) -> None:
     assert (await api.get("/me/calendar")).status_code == 401
+
+
+async def test_a_snack_is_named_in_words_in_the_feed(
+    api: httpx.AsyncClient,
+    env: AppEnv,
+    db_engine: AsyncEngine,
+    menu: dict[str, int],
+    new_user: NewUser,
+    make_plan: MakePlan,
+) -> None:
+    user_id = await new_user("user_a")
+    async with make_sessionmaker(db_engine)() as session:
+        prefs = await session.get(db.Preferences, user_id)
+        assert prefs is not None
+        prefs.meal_modes = {"morning_snack": "plan"}  # the test menu has two snacks
+        await session.commit()
+    await make_plan(user_id, MON)
+
+    on = (await api.post("/me/calendar", headers=env.auth("user_a"))).json()
+    text = (await api.get(on["path"])).text
+
+    assert "SUMMARY:Morning snack: " in text
+    assert "SUMMARY:Afternoon snack: " in text
+    assert "_snack:" not in text

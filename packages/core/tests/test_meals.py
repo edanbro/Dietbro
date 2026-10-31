@@ -13,6 +13,8 @@ from larder_core.meals import (
     meal_types,
     own_shares,
     recipe_slots,
+    slot_label,
+    slot_words,
 )
 
 
@@ -124,3 +126,13 @@ def test_one_snack_a_day_unless_the_user_says_otherwise() -> None:
     assert default_mode(Slot.SNACK) == "plan"
     assert default_mode(Slot.MORNING_SNACK) == default_mode(Slot.EVENING_SNACK) == "skip"
     assert default_mode(Slot.LUNCH) == "plan"
+
+
+def test_slots_read_as_words_never_as_their_keys() -> None:
+    for slot in Slot:
+        assert "_" not in slot_words(slot)
+        assert slot_label(slot)[0].isupper()
+    assert slot_words(Slot.MORNING_SNACK) == "morning snack"
+    assert slot_label(Slot.SNACK) == "Afternoon snack"
+    assert slot_words("evening_snack") == "evening snack"  # as a database row holds it
+    assert slot_words("brunch") == "brunch"  # a malformed plan is reported, never raised on

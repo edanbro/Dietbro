@@ -65,6 +65,7 @@ from fractions import Fraction
 from itertools import product
 from time import perf_counter
 
+from larder_core.meals import slot_words
 from larder_solver.candidates import allowed
 from larder_solver.metrics import score
 from larder_solver.problem import (
@@ -288,14 +289,18 @@ class _Greedy:
         for (day, slot), meal in sorted(self.locks.items(), key=lambda kv: _at(kv[0])):
             recipe = self.p.recipes.get(meal.recipe_id)
             if recipe is None or not self.safe(recipe):
-                self.notes.append(f"{self.day_name(day)} {slot}: the fixed meal isn't allowed")
+                self.notes.append(
+                    f"{self.day_name(day)} {slot_words(slot)}: the fixed meal isn't allowed"
+                )
                 return None
         for (day, slot), fit in self.chosen.items():
             if not fit:
                 ids = self.p.choices[(day, slot)]
                 eligible = any(slot in r.meal_types for i in ids if (r := self.p.recipes.get(i)))
-                why = "is allowed" if eligible else f"is a {slot} recipe"
-                self.notes.append(f"{self.day_name(day)} {slot}: none of the chosen recipes {why}")
+                why = "is allowed" if eligible else f"is a {slot_words(slot)} recipe"
+                self.notes.append(
+                    f"{self.day_name(day)} {slot_words(slot)}: none of the chosen recipes {why}"
+                )
                 return None
         if self.hall(-1, Counter()) is not None:
             self.notes.append("too few allowed recipes to fill every meal within the repeat limits")
@@ -368,7 +373,7 @@ class _Greedy:
                 continue
             items = self.options(spec, day, excluded, shareable)
             if not items:
-                what = "chosen recipe" if (day, spec.slot) in self.chosen else spec.slot
+                what = "chosen recipe" if (day, spec.slot) in self.chosen else slot_words(spec.slot)
                 return None, f"{name}: no {what} left within the repeat limits"
             options.append(items)
         fixed = self.fixed(day)

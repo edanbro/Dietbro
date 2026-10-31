@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from larder_api import planning
 from larder_api.changes.foods import tokens
 from larder_api.changes.scope import ChangeScope
-from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot
+from larder_core.meals import SLOT_ORDER, SNACK_SLOTS, Slot, slot_words
 from larder_db import models as db
 from larder_solver import Profile, Recipe
 from larder_solver.candidates import TastePrefs, allowed, preference
@@ -379,7 +379,7 @@ async def guard_recipe(scope: ChangeScope, recipe_id: int, slot: Slot) -> str | 
         return f"{recipe.name} can't be planned: we don't have its full nutrition."
     facts = planning.recipe_facts(recipe, foods, info)
     if slot not in facts.slots:
-        return f"{recipe.name} isn't a {slot} recipe."
+        return f"{recipe.name} isn't a {slot_words(slot)} recipe."
     planned = planning.solver_recipe(recipe, facts, info)
     if planned is None:
         return f"{recipe.name} can't be planned."

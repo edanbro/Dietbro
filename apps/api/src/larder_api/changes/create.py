@@ -35,6 +35,7 @@ from larder_core.meals import (
     MAX_OIL_SHARE,
     MAX_SODIUM_MG_PER_SERVING,
     Slot,
+    slot_words,
 )
 from larder_core.nutrition import MICROS, Nutrients, micro_totals
 from larder_core.quantities import grams_for
@@ -283,7 +284,7 @@ def _slot_problem(draft: CreateRecipeInput, row: db.Recipe, food_rows: dict[int,
         return "too much of it is oil or fat - use less"
     if (row.sodium_mg or 0) > MAX_SODIUM_MG_PER_SERVING:
         return "it has more than a day's salt in a serving - use less salt or more servings"
-    return f"it can't be a {draft.slot} recipe"
+    return f"it can't be a {slot_words(draft.slot)} recipe"
 
 
 def _unsafe(
