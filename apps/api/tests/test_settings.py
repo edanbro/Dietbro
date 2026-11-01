@@ -63,3 +63,11 @@ def test_the_blueprint_gives_a_slow_host_time_to_plan() -> None:
     assert re.search(r'key: PLAN_TIME_LIMIT_MS\s+value: "15000"', blueprint)
     assert re.search(r'key: REPLAN_TIME_LIMIT_MS\s+value: "3000"', blueprint)
     assert re.search(r'key: CATALOG_TTL_S\s+value: "86400"', blueprint)
+
+
+def test_the_blueprint_starts_without_shell_quoting() -> None:
+    """Render keeps quotes in dockerCommand literally, so a quoted command fails with status 127."""
+    root = Path(__file__).parents[3]
+    blueprint = (root / "render.yaml").read_text(encoding="utf-8")
+    assert "dockerCommand: sh /app/start.sh" in blueprint
+    assert (root / "apps/api/start.sh").is_file()
