@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from larder_api.main import app
 from larder_api.reminders import Gone, Reminder, generate_vapid_keys, reminder_for, send_due
+from larder_api.routers.push import is_push_service
 from larder_api.settings import Settings, get_settings
 from larder_db.engine import make_sessionmaker
 from larder_db.models import PantryItem, PushSubscription, User
@@ -164,7 +165,8 @@ async def test_push_is_off_without_keys(api: httpx.AsyncClient, auth: Auth) -> N
 
 @pytest.mark.usefixtures("push_enabled")
 async def test_subscribe_and_unsubscribe(api: httpx.AsyncClient, auth: Auth) -> None:
-    body = {"endpoint": "https://push.example/2", "keys": {"p256dh": "p" * 20, "auth": "a" * 16}}
+    endpoint = "https://fcm.googleapis.com/fcm/send/2"
+    body = {"endpoint": endpoint, "keys": {"p256dh": "p" * 20, "auth": "a" * 16}}
 
     assert (await api.put("/me/push", json=body, headers=auth())).status_code == 204
     assert (await api.put("/me/push", json=body, headers=auth())).status_code == 204  # again
@@ -181,4 +183,49 @@ async def test_subscribe_and_unsubscribe(api: httpx.AsyncClient, auth: Auth) -> 
         "/me/push/unsubscribe", json={"endpoint": body["endpoint"]}, headers=auth()
     )
     assert gone.status_code == 204
+    assert (await api.get("/me/push", headers=auth())).json()["subscribed"] == 0
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://fcm.googleapis.com/fcm/send/abc",
+        "https://updates.push.services.mozilla.com/wpush/v2/abc",
+        "https://web.push.apple.com/abc",
+        "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    ],
+)
+def test_real_push_services_are_allowed(endpoint: str) -> None:
+    assert is_push_service(endpoint)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://169.254.169.254/latest/meta-data/",
+        "https://localhost/",
+        "https://internal.example/",
+        "https://fcm.googleapis.com.evil.example/",
+        "https://evilpush.apple.com/",
+        "https://fcm.googleapis.com@evil.example/",
+        "https://user:pw@fcm.googleapis.com/",
+        "https://fcm.googleapis.com:8443/",
+        "https://fcm.googleapis.com:bad/",
+        "http://fcm.googleapis.com/",
+    ],
+)
+def test_other_addresses_are_not_push_services(endpoint: str) -> None:
+    assert not is_push_service(endpoint)
+
+
+@pytest.mark.usefixtures("push_enabled")
+async def test_a_subscription_to_any_other_address_is_refused(
+    api: httpx.AsyncClient, auth: Auth
+) -> None:
+    body = {
+        "endpoint": "https://internal.example/hook",
+        "keys": {"p256dh": "p" * 20, "auth": "a" * 16},
+    }
+    refused = await api.put("/me/push", json=body, headers=auth())
+    assert refused.status_code == 400
     assert (await api.get("/me/push", headers=auth())).json()["subscribed"] == 0

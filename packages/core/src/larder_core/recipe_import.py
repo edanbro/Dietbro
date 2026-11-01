@@ -26,10 +26,10 @@ class ImportedRecipe:
     image_url: str | None
 
 
-_SCRIPT_RE = re.compile(
-    r"<script[^>]*type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", re.I | re.S
-)
-_TAG_RE = re.compile(r"<[^>]+>")
+_SCRIPT_OPEN_RE = re.compile(r"<script\b", re.I)
+_SCRIPT_CLOSE_RE = re.compile(r"</script", re.I)
+_LD_JSON_RE = re.compile(r"type\s*=\s*[\"']application/ld\+json[\"']", re.I)
+_TAG_RE = re.compile(r"<[^<>]+>")  # not [^>]: a run of "<" with no ">" would go quadratic
 
 
 def _obj(value: object) -> dict[str, Any] | None:
@@ -47,6 +47,22 @@ def _text(value: object) -> str:
         return ""
     text = re.sub(r"\s+", " ", _TAG_RE.sub(" ", html.unescape(value))).strip()
     return re.sub(r"\s+([.,;:!?])", r"\1", text)
+
+
+def _json_ld_blocks(page: str) -> Iterator[str]:
+    """The contents of each JSON-LD script tag. The page comes from anywhere, so this always moves
+    forward: one regex over `<script[^>]*...` took minutes on a page of unclosed tags."""
+    position = 0
+    while (opening := _SCRIPT_OPEN_RE.search(page, position)) is not None:
+        tag_end = page.find(">", opening.end())
+        if tag_end < 0:
+            return
+        closing = _SCRIPT_CLOSE_RE.search(page, tag_end)
+        if closing is None:
+            return
+        if _LD_JSON_RE.search(page, opening.end(), tag_end) is not None:
+            yield page[tag_end + 1 : closing.start()]
+        position = closing.end()
 
 
 def _is_recipe(node: dict[str, Any]) -> bool:
@@ -102,12 +118,12 @@ def _image(value: object) -> str | None:
 
 def find_recipe(page: str) -> ImportedRecipe | None:
     """The first schema.org Recipe on a page with a name and ingredients, or None."""
-    for block in _SCRIPT_RE.findall(page):
+    for block in _json_ld_blocks(page):
         try:
-            data = json.loads(block)
-        except ValueError:
+            nodes = list(_nodes(json.loads(block)))
+        except (ValueError, RecursionError):  # not JSON, or nested too deep to read
             continue
-        for node in _nodes(data):
+        for node in nodes:
             if not _is_recipe(node):
                 continue
             name = _text(node.get("name"))

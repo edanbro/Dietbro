@@ -3,13 +3,15 @@ a URL a user typed, so it must not become a way to reach anything private.
 
 - http and https only, default ports only, no user:password@ in the URL.
 - Every address the host resolves to must be public (no loopback, private, link-local,
-  reserved or multicast ranges, nor IPv6 forms that carry one: mapped, NAT64, 6to4, Teredo);
+  site-local, reserved or multicast ranges, nor IPv6 forms that carry one: mapped, compatible,
+  NAT64, 6to4, Teredo);
   checked again for each redirect (at most 3).
 - The connection goes to the address that was checked, not to a fresh lookup of the name, so
   DNS can't answer "public" for the check and "private" for the connection (rebinding). The
   name still goes in the Host header and TLS SNI, and certificates are checked against it.
 - 10 s in total, at most 2 MB read (after decompression, counted as it inflates, so a small
   compressed reply can't expand into a huge one), HTML only, no cookies, a plain user agent.
+- The page is read in a worker thread, so a big one doesn't hold up other requests.
 """
 
 import asyncio
@@ -54,11 +56,12 @@ def public_address(ip: str) -> bool:
     if address.ipv4_mapped is not None:
         return _global(address.ipv4_mapped)
     embedded = address.sixtofour or (address.teredo[1] if address.teredo else None)
-    if address in _NAT64:
+    # NAT64, and the deprecated "IPv4-compatible" ::a.b.c.d, which `is_global` calls public.
+    if address in _NAT64 or int(address) >> 32 == 0:
         embedded = ipaddress.IPv4Address(int(address) & 0xFFFFFFFF)
     if embedded is not None and not _global(embedded):
         return False
-    return _global(address)
+    return _global(address) and not address.is_site_local
 
 
 async def resolve(host: str, port: int) -> set[str]:
@@ -70,25 +73,27 @@ async def resolve(host: str, port: int) -> set[str]:
 async def _check(url: str) -> tuple[str, str, str]:
     """(the URL with its host replaced by a checked public address, the Host header, the name
     for TLS), or ImportError_."""
-    parts = urlsplit(url)
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError as e:  # a bad port or a broken [address]
+        raise ImportError_("That address can't be used") from e
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise ImportError_("Use a web address starting with https://")
     if parts.username or parts.password:
         raise ImportError_("That address can't be used")
-    if parts.port not in (None, 80, 443):
+    if port not in (None, 80, 443):
         raise ImportError_("That address can't be used")
     try:
-        addresses = await resolve(
-            parts.hostname, parts.port or (443 if parts.scheme == "https" else 80)
-        )
-    except OSError as e:
+        addresses = await resolve(parts.hostname, port or (443 if parts.scheme == "https" else 80))
+    except (OSError, UnicodeError) as e:  # UnicodeError: a name DNS could never hold
         raise ImportError_("Couldn't find that website") from e
     if not addresses or not all(public_address(a) for a in addresses):
         raise ImportError_("That address can't be used")
     address = min(addresses)  # any of them: all are public
     host = f"[{address}]" if ":" in address else address
-    if parts.port is not None:
-        host += f":{parts.port}"
+    if port is not None:
+        host += f":{port}"
     pinned = urlunsplit((parts.scheme, host, parts.path or "/", parts.query, ""))
     return pinned, parts.netloc, parts.hostname
 
@@ -145,12 +150,12 @@ async def fetch_recipe(url: str, client: httpx.AsyncClient | None = None) -> Imp
             page = await fetch_page(url.strip(), client)
     except TimeoutError as e:
         raise ImportError_("The site took too long to answer") from e
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, httpx.InvalidURL, ValueError) as e:
         raise ImportError_("Couldn't reach that website") from e
     finally:
         if own:
             await client.aclose()
-    recipe = find_recipe(page)
+    recipe = await asyncio.to_thread(find_recipe, page)
     if recipe is None:
         raise ImportError_(
             "No recipe found on that page. Paste the ingredients and method instead."
