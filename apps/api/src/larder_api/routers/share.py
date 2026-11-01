@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
+from larder_api.demo import not_for_demo
 from larder_api.ratelimit import per_ip, per_path, per_user
 from larder_api.routers.plans import shopping_out
 from larder_api.routers.profile import units_of
@@ -53,7 +54,7 @@ def _out(link: ShareLink) -> ShareOut:
     "/share",
     operation_id="createShareLink",
     responses=_GONE,
-    dependencies=[Depends(per_user("share_create"))],
+    dependencies=[Depends(not_for_demo("Sharing")), Depends(per_user("share_create"))],
 )
 async def create_share_link(body: ShareIn, user: CurrentUser, session: Session) -> ShareOut:
     """A link to one of the user's recipes (or a catalogue one), or to a week of their plan or

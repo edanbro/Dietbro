@@ -20,6 +20,7 @@ from larder_api import planning
 from larder_api.auth import CurrentUser
 from larder_api.clock import Clock, get_clock
 from larder_api.db import Session
+from larder_api.demo import not_for_demo
 from larder_api.ratelimit import per_ip, per_path
 from larder_api.schemas import CalendarOut, CalendarTimes
 from larder_api.settings import Settings, get_settings
@@ -67,7 +68,11 @@ async def get_calendar(user: CurrentUser) -> CalendarOut:
     return _out(user)
 
 
-@router.post("/me/calendar", operation_id="resetCalendar")
+@router.post(
+    "/me/calendar",
+    operation_id="resetCalendar",
+    dependencies=[Depends(not_for_demo("A calendar feed"))],
+)
 async def reset_calendar(user: CurrentUser, session: Session) -> CalendarOut:
     """Turn the feed on with a new private address (the old one, if any, stops working)."""
     user.calendar_token = secrets.token_urlsafe(16)

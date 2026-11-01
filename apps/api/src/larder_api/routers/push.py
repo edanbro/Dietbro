@@ -9,6 +9,7 @@ from sqlalchemy import delete, func, select
 
 from larder_api.auth import CurrentUser
 from larder_api.db import Session
+from larder_api.demo import not_for_demo
 from larder_api.schemas import (
     AheadSettingIn,
     PushConfigOut,
@@ -76,7 +77,12 @@ async def put_ahead(body: AheadSettingIn, user: CurrentUser, session: Session) -
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.put("", status_code=status.HTTP_204_NO_CONTENT, operation_id="putPush")
+@router.put(
+    "",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="putPush",
+    dependencies=[Depends(not_for_demo("Reminders"))],
+)
 async def subscribe(
     body: PushSubscriptionIn,
     user: CurrentUser,
