@@ -1,5 +1,5 @@
 """Rate limits (larder_api.ratelimit): fixed windows per user, per address or per token; 429 with
-Retry-After over the limit; requests go ahead when Redis can't be reached."""
+Retry-After over the limit; each process counts for itself when Redis can't be reached."""
 
 from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
@@ -9,9 +9,15 @@ import pytest
 from fastapi import Request
 from redis.asyncio import Redis
 
-from larder_api import recipe_import
+from larder_api import ratelimit, recipe_import
 from larder_api.main import app
-from larder_api.ratelimit import MemoryCounter, RedisCounter, client_ip, get_counter
+from larder_api.ratelimit import (
+    MemoryCounter,
+    RedisCounter,
+    client_ip,
+    get_counter,
+    get_public_counter,
+)
 from larder_api.settings import Settings, get_settings
 
 Auth = Callable[..., dict[str, str]]
@@ -22,8 +28,10 @@ FEED = "/calendar/" + "a" * 32 + ".ics"  # well-formed, but nobody's feed
 def counter() -> Iterator[MemoryCounter]:
     counter = MemoryCounter()
     app.dependency_overrides[get_counter] = lambda: counter
+    app.dependency_overrides[get_public_counter] = lambda: counter
     yield counter
     app.dependency_overrides.pop(get_counter, None)
+    app.dependency_overrides.pop(get_public_counter, None)
 
 
 def limits(**overrides: int) -> None:
@@ -105,20 +113,88 @@ async def test_limits_can_be_turned_off(api: httpx.AsyncClient, counter: MemoryC
     assert (await api.get(FEED)).status_code == 404
 
 
-async def test_requests_go_ahead_when_redis_is_down(
-    api: httpx.AsyncClient, caplog: pytest.LogCaptureFixture
+async def test_limits_still_hold_when_redis_is_down(
+    api: httpx.AsyncClient,
+    auth: Auth,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class Down:
         async def hit(self, key: str, window_s: int) -> int:
             raise ConnectionError("redis is down")
 
+    async def fetch(url: str) -> Any:
+        raise recipe_import.ImportError_("no recipe on that page")
+
+    monkeypatch.setattr(recipe_import, "fetch_recipe", fetch)
+    monkeypatch.setattr(ratelimit, "_PROCESS", MemoryCounter())
     app.dependency_overrides[get_counter] = Down
     try:
-        limits(calendar_feed=0)
-        assert (await api.get(FEED)).status_code == 404
-        assert "not checked" in caplog.text
+        limits(import_read=1)
+        body = {"url": "https://example.com/stew"}
+        first = await api.post("/recipes/import/read", json=body, headers=auth())
+        assert first.status_code == 422
+        assert "counted locally" in caplog.text
+        second = await api.post("/recipes/import/read", json=body, headers=auth())
+        assert second.status_code == 429
     finally:
         app.dependency_overrides.pop(get_counter, None)
+
+
+async def test_public_routes_never_touch_redis(
+    api: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Forbidden:
+        async def hit(self, key: str, window_s: int) -> int:
+            raise AssertionError("a public route counted in Redis")
+
+    local = MemoryCounter()
+    app.dependency_overrides[get_counter] = Forbidden
+    app.dependency_overrides[get_public_counter] = lambda: local
+    try:
+        limits(share_view=1)
+        path = "/public/share/" + "a" * 22
+        assert (await api.get(path)).status_code == 404
+        assert (await api.get(path)).status_code == 429
+    finally:
+        app.dependency_overrides.pop(get_counter, None)
+        app.dependency_overrides.pop(get_public_counter, None)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/public/share/short",
+        "/public/share/" + "a" * 33,
+        "/public/share/has.a.dot.in.it.and.is.long",
+        "/calendar/short.ics",
+        "/calendar/" + "a" * 33 + ".ics",
+    ],
+)
+async def test_what_cant_be_a_token_isnt_counted(
+    api: httpx.AsyncClient, counter: MemoryCounter, path: str
+) -> None:
+    limits(share_view=0, calendar_feed=0)
+    assert (await api.get(path)).status_code == 404
+    assert not [key for key in counter.counts if ":share_view:" in key or ":calendar_feed:" in key]
+
+
+async def test_a_flood_from_one_address_stops_counting_against_tokens(
+    api: httpx.AsyncClient, counter: MemoryCounter
+) -> None:
+    limits(share_view_ip=1)
+    assert (await api.get("/public/share/" + "a" * 22)).status_code == 404
+    assert (await api.get("/public/share/" + "b" * 22)).status_code == 429
+    assert [key for key in counter.counts if ":share_view:" in key] == [
+        key for key in counter.counts if "aaaa" in key
+    ]
+
+
+async def test_the_process_counter_doesnt_grow_without_end() -> None:
+    counter = MemoryCounter()
+    for i in range(ratelimit._MAX_LOCAL_KEYS + 5):  # pyright: ignore[reportPrivateUsage]
+        await counter.hit(f"k{i}", 60)
+    assert len(counter.counts) <= ratelimit._MAX_LOCAL_KEYS  # pyright: ignore[reportPrivateUsage]
 
 
 def request(peer: str, *forwarded: str) -> Request:

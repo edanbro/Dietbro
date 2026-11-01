@@ -7,7 +7,6 @@ the plan in force on each day, so swaps and replans show up on the calendar's ne
 It holds meal names, kcal and ingredients only.
 """
 
-import re
 import secrets
 from datetime import UTC, time, timedelta
 from typing import Annotated, Any
@@ -42,7 +41,6 @@ MINUTES = {
     "evening_snack": 10,
 }
 DAYS_BEFORE, DAYS_AFTER = 7, 14
-_TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,32}$")
 _GONE: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {"description": "no such feed (turned off or reset)"}
 }
@@ -105,8 +103,8 @@ def _description(meal: db.PlanMeal, recipe: db.Recipe) -> str:
     "/calendar/{token}.ics",
     operation_id="getCalendarFeed",
     dependencies=[
-        Depends(per_path("calendar_feed", "token")),
         Depends(per_ip("calendar_feed_ip")),
+        Depends(per_path("calendar_feed", "token")),
     ],
     response_class=Response,
     responses={200: {"content": {"text/calendar": {}}}, **_GONE},
@@ -118,8 +116,6 @@ async def calendar_feed(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> Response:
     """The feed itself. No sign-in: the token in the address is the permission."""
-    if not _TOKEN.match(token):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "feed not found")
     user = await session.scalar(select(db.User).where(db.User.calendar_token == token))
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "feed not found")

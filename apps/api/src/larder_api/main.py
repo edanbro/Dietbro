@@ -1,9 +1,12 @@
+import logging
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from larder_api import __version__, health
+from larder_api.bodylimit import BodyLimit
+from larder_api.logs import HideTokens
 from larder_api.replans import ChangeRefused, problem_response
 from larder_api.resources import lifespan
 from larder_api.routers import (
@@ -36,6 +39,9 @@ SECURITY_HEADERS = {
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=f"{APP_NAME} API", version=__version__, lifespan=lifespan)
+    logging.getLogger("uvicorn.access").addFilter(HideTokens())
+    # Added first, so it runs inside the others: a refusal still gets CORS and security headers.
+    app.add_middleware(BodyLimit, max_bytes=settings.max_body_bytes)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

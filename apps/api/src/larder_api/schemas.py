@@ -111,10 +111,13 @@ class BodyOut(BodyIn):
     suggestions: dict[Goal, SuggestedTargets]
 
 
+CuisineName = Annotated[str, Field(max_length=100)]
+
+
 class PreferencesIn(BaseModel):
     diet: Diet | None = None
-    liked_cuisines: list[str] = Field(default_factory=list[str], max_length=50)
-    disliked_cuisines: list[str] = Field(default_factory=list[str], max_length=50)
+    liked_cuisines: list[CuisineName] = Field(default_factory=list[CuisineName], max_length=50)
+    disliked_cuisines: list[CuisineName] = Field(default_factory=list[CuisineName], max_length=50)
     liked_food_ids: list[int] = Field(default_factory=list[int], max_length=200)
     disliked_food_ids: list[int] = Field(default_factory=list[int], max_length=200)
 
@@ -170,7 +173,7 @@ class QuickNightsIn(BaseModel):
 
 
 class AllergiesIn(BaseModel):
-    allergens: list[Allergen] = Field(default_factory=list[Allergen])
+    allergens: list[Allergen] = Field(default_factory=list[Allergen], max_length=len(Allergen))
     avoid_food_ids: list[int] = Field(default_factory=list[int], max_length=200)
 
 
