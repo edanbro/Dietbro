@@ -4,11 +4,15 @@ import { clerkClient } from "@clerk/nextjs/server";
  * "Try the demo": a two-minute, one-use sign-in ticket for the shared demo user, minted with
  * the server's Clerk secret key (the browser never sees a password). Off unless
  * DEMO_CLERK_USER_ID is set. A small per-address limit keeps tickets from being farmed.
+ *
+ * Clerk would let anyone signed in as the demo user delete it, whatever our API says. Turning
+ * that off is per user, so it's done here rather than left as a step someone could miss.
  */
 
 const WINDOW_MS = 60 * 60 * 1000;
 const PER_WINDOW = 20;
 const recent = new Map<string, number[]>();
+let lockedDown = false;
 
 function allowed(key: string, now: number): boolean {
   const hits = (recent.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
@@ -30,6 +34,13 @@ export async function POST(request: Request): Promise<Response> {
   }
   try {
     const client = await clerkClient();
+    if (!lockedDown) {
+      await client.users.updateUser(userId, {
+        deleteSelfEnabled: false,
+        createOrganizationEnabled: false,
+      });
+      lockedDown = true;
+    }
     const token = await client.signInTokens.createSignInToken({ userId, expiresInSeconds: 120 });
     return Response.json({ ticket: token.token }, { headers: { "Cache-Control": "no-store" } });
   } catch {

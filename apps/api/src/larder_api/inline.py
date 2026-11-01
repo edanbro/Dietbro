@@ -4,7 +4,9 @@
 - Pasted receipts are read in an asyncio task right after they're queued (the same
   `process_upload` the worker runs). Receipt photos are refused: OCR stays in the worker image.
 - A minute ticker runs the periodic jobs: stale receipts every 5 minutes, expiry reminders on
-  the hour, the demo account's reset at 03:00 UTC.
+  the hour, and the demo account's reset, due at 03:00 UTC and caught up on waking: a free host
+  is seldom awake at that minute. On waking it's the first thing done, ahead of the visitor who
+  woke the server, so it doesn't wipe the plan they've just made.
 
 Nothing polls Redis, so a free Redis plan's command quota is left alone. On a host that sleeps
 when idle, periodic jobs only run while it's awake (reminders may be missed then).
@@ -18,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from larder_api.demo import reset_demo
+from larder_api.demo import last_reset_time, reset_if_stale
 from larder_api.receipts import ReceiptUnreadable, process_upload, sweep_stale
 from larder_api.reminders import send_ahead, send_due, send_recaps
 from larder_api.settings import Settings
@@ -45,6 +47,7 @@ class InlineWorker:
         self.clock = clock
         self._tasks: set[asyncio.Task[object]] = set()
         self._ticker: asyncio.Task[None] | None = None
+        self._demo_checked: datetime | None = None
 
     def _spawn(self, work: Awaitable[object]) -> None:
         task: asyncio.Task[object] = asyncio.ensure_future(work)
@@ -64,6 +67,15 @@ class InlineWorker:
         except Exception:
             logger.exception("reading receipt %d failed", upload_id)
 
+    async def _reset_demo(self, now: datetime) -> None:
+        """Look at most once per reset time, so a quiet server's database can go to sleep."""
+        subject = self.settings.demo_auth_subject
+        due = last_reset_time(now)
+        if subject and self._demo_checked != due:
+            if await reset_if_stale(self.sessionmaker, subject, now):
+                logger.info("demo account reset")
+            self._demo_checked = due
+
     async def tick(self, now: datetime) -> None:
         """The periodic jobs due at `now` (a minute boundary)."""
         if now.minute % 5 == 0:
@@ -79,11 +91,13 @@ class InlineWorker:
             ahead = await send_ahead(self.sessionmaker, now, self.settings)
             if ahead:
                 logger.info("sent %d prep-ahead reminders", ahead)
-        if self.settings.demo_auth_subject and now.hour == 3 and now.minute == 0:
-            await reset_demo(self.sessionmaker, self.settings.demo_auth_subject, now)
-            logger.info("demo account reset")
+        await self._reset_demo(now)
 
     async def _run(self) -> None:
+        try:
+            await self._reset_demo(self.clock())
+        except Exception:
+            logger.exception("demo account reset failed")
         while True:
             now = self.clock()
             await asyncio.sleep(60 - now.second - now.microsecond / 1e6)

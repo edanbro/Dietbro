@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createSignInToken = vi.fn(async () => ({ token: "ticket-123" }));
+const updateUser = vi.fn(async () => ({}));
 vi.mock("@clerk/nextjs/server", () => ({
-  clerkClient: async () => ({ signInTokens: { createSignInToken } }),
+  clerkClient: async () => ({ signInTokens: { createSignInToken }, users: { updateUser } }),
 }));
 
 import { POST } from "./route";
@@ -17,6 +18,17 @@ afterEach(() => {
 });
 
 describe("POST /api/demo", () => {
+  // First, since the lock-down happens once per process.
+  it("stops the demo user deleting itself, once per process", async () => {
+    await post();
+    await post();
+    expect(updateUser).toHaveBeenCalledTimes(1);
+    expect(updateUser).toHaveBeenCalledWith("user_demo", {
+      deleteSelfEnabled: false,
+      createOrganizationEnabled: false,
+    });
+  });
+
   it("mints a short ticket for the demo user", async () => {
     const response = await post();
     expect(await response.json()).toEqual({ ticket: "ticket-123" });

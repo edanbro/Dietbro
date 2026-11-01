@@ -3,7 +3,7 @@ demo account (larder_api.demo)."""
 
 import asyncio
 from collections.abc import Awaitable, Callable, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from larder_api.demo import reset_demo
+from larder_api.demo import last_reset_time, reset_demo, reset_if_stale
 from larder_api.inline import NO_PHOTOS, InlineWorker
 from larder_api.jobs import get_enqueue
 from larder_api.main import app
@@ -61,6 +61,33 @@ async def test_demo_reset_starts_over(db_engine: AsyncEngine) -> None:
     assert {p.food_id for p in pantry} >= {170000}  # foods the database has (onions)
     assert goals is not None
     assert (goals.kcal_min, goals.currency) == (1800, "EUR")
+
+
+@pytest.mark.usefixtures("inline_settings")
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("POST", "/share", {"kind": "recipe", "recipe_id": 1}),
+        ("POST", "/me/calendar", None),
+        (
+            "PUT",
+            "/me/push",
+            {
+                "endpoint": "https://fcm.googleapis.com/fcm/send/1",
+                "keys": {"p256dh": "p" * 20, "auth": "a" * 16},
+            },
+        ),
+    ],
+)
+async def test_nothing_the_demo_account_holds_reaches_outside_it(
+    api: httpx.AsyncClient, auth: Auth, method: str, path: str, body: dict[str, object] | None
+) -> None:
+    response = await api.request(method, path, json=body, headers=auth(DEMO))
+    assert response.status_code == 403
+    assert "isn't available in the demo account" in response.json()["detail"][0]
+    # The check is about the account, not the route.
+    other = await api.request(method, path, json=body, headers=auth("user_a"))
+    assert other.status_code != 403
 
 
 @pytest.mark.usefixtures("inline_settings")
@@ -121,14 +148,45 @@ async def test_ticker_runs_jobs_when_due(db_engine: AsyncEngine) -> None:
     with (
         patch("larder_api.inline.sweep_stale", AsyncMock(return_value=0)) as sweep,
         patch("larder_api.inline.send_due", AsyncMock(return_value=0)) as remind,
-        patch("larder_api.inline.reset_demo", AsyncMock(return_value=1)) as demo,
     ):
         await worker.tick(datetime(2026, 10, 14, 10, 7, tzinfo=UTC))
-        assert (sweep.await_count, remind.await_count, demo.await_count) == (0, 0, 0)
+        assert (sweep.await_count, remind.await_count) == (0, 0)
         await worker.tick(datetime(2026, 10, 14, 10, 0, tzinfo=UTC))
-        assert (sweep.await_count, remind.await_count, demo.await_count) == (1, 1, 0)
-        await worker.tick(datetime(2026, 10, 14, 3, 0, tzinfo=UTC))
-        assert demo.await_count == 1
+        assert (sweep.await_count, remind.await_count) == (1, 1)
+
+
+async def test_the_demo_reset_catches_up_after_sleeping(db_engine: AsyncEngine) -> None:
+    worker = InlineWorker(make_sessionmaker(db_engine), INLINE)
+    with patch("larder_api.inline.reset_if_stale", AsyncMock(return_value=True)) as reset:
+        # Woken at 10:07, never awake at 03:00: due, and looked at once until the next reset time.
+        await worker.tick(datetime(2026, 10, 14, 10, 7, tzinfo=UTC))
+        await worker.tick(datetime(2026, 10, 14, 10, 8, tzinfo=UTC))
+        assert reset.await_count == 1
+        await worker.tick(datetime(2026, 10, 15, 2, 59, tzinfo=UTC))
+        assert reset.await_count == 1
+        await worker.tick(datetime(2026, 10, 15, 3, 0, tzinfo=UTC))
+        assert reset.await_count == 2
+
+
+async def test_the_demo_reset_only_runs_when_its_stale(db_engine: AsyncEngine) -> None:
+    maker = make_sessionmaker(db_engine)
+    start = datetime.now(UTC)
+    assert await reset_if_stale(maker, DEMO, start)  # no row yet
+    assert not await reset_if_stale(maker, DEMO, start)  # just made
+    tomorrow = start.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    assert await reset_if_stale(maker, DEMO, tomorrow)
+
+
+@pytest.mark.parametrize(
+    ("now", "due"),
+    [
+        (datetime(2026, 10, 14, 3, 0, tzinfo=UTC), datetime(2026, 10, 14, 3, 0, tzinfo=UTC)),
+        (datetime(2026, 10, 14, 2, 59, tzinfo=UTC), datetime(2026, 10, 13, 3, 0, tzinfo=UTC)),
+        (datetime(2026, 10, 14, 23, 0, tzinfo=UTC), datetime(2026, 10, 14, 3, 0, tzinfo=UTC)),
+    ],
+)
+def test_the_last_reset_time(now: datetime, due: datetime) -> None:
+    assert last_reset_time(now) == due
 
 
 async def test_ticker_starts_and_stops(db_engine: AsyncEngine) -> None:
