@@ -72,6 +72,8 @@ FROM runtime AS api
 COPY --from=build-api --chown=app:app /app/.venv /app/.venv
 # For the one-shot `migrate` service: `alembic -c /app/alembic.ini upgrade head`.
 COPY --chown=app:app packages/db/alembic.ini /app/alembic.ini
+# For hosts with no `migrate` service (render.yaml).
+COPY --chown=app:app apps/api/start.sh /app/start.sh
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=10 \

@@ -10,9 +10,7 @@ services:
     dockerfilePath: apps/api/Dockerfile
     dockerContext: .
     # No separate worker on the free plan: migrate, then serve with background work in-process.
-    dockerCommand: >-
-      sh -c "alembic -c /app/alembic.ini upgrade head &&
-      uvicorn larder_api.main:app --host 0.0.0.0 --port $PORT --proxy-headers"
+    dockerCommand: sh /app/start.sh
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
