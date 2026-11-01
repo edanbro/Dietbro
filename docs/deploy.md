@@ -5,13 +5,37 @@ A public deploy for $0 a month:
 | Part | Host | Free tier notes |
 |---|---|---|
 | Web (Next.js) | Vercel | Hobby plan. |
-| API (FastAPI) | Render, `render.yaml` | Sleeps after 15 minutes idle; the first request after that takes ~30 s. No separate worker on the free plan, so `WORKER_IN_API=true`: pasted receipts are read in the API process, receipt **photos are off** (OCR lives in the worker image), and reminders only go out while the API is awake. |
-| Postgres + pgvector | Neon | 0.5 GB: the full local database is ~0.3 GB. |
-| Redis | Upstash | 10,000 commands a day; with the worker in the API nothing polls it. |
+| API (FastAPI) | Render, `render.yaml` | 0.1 CPU and 512 MB. Sleeps after 15 minutes idle, and takes about a minute to wake (see "Which Render plan" below). No separate worker on the free plan, so `WORKER_IN_API=true`: pasted receipts are read in the API process, receipt **photos are off** (OCR lives in the worker image), and reminders only go out while the API is awake. |
+| Postgres + pgvector | Neon | 0.5 GB and 100 compute-hours a month: the full local database is ~0.3 GB, and it sleeps when idle. |
+| Redis | Upstash | 500,000 commands a month; with the worker in the API nothing polls it, and public routes don't count in it. |
 | Sign-in | Clerk | Use a **production** instance on a domain you own, or keep the development instance (fine for a demo, with a "Development mode" badge). |
 
 You create the accounts and paste every secret into the providers' dashboards. Nothing
 secret goes into the repository.
+
+Before a deploy, run the dependency audit from the Actions tab (`audit.yml`).
+`docs/security-review.md` lists what was reviewed and what was accepted.
+
+## Which Render plan
+
+The free plan works, but it's the planner that suffers. Measured in the real API image, capped with
+Docker at each plan's CPU and memory, on 10 bench profiles with one worker:
+
+| Limits | Monthly | Plan, one snack (p50) | Plan, three snacks (p50) | Found by CP-SAT | Hard misses | Objective cost (one snack) | First catalogue load |
+|---|---|---|---|---|---|---|---|
+| 0.1 CPU, 512 MB (Free) | $0 | 3.8 s | 11.5 s | 8 of 20 | 2 | £42.59 | 26 s |
+| 0.5 CPU, 512 MB (Starter) | $7 | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.85 | 3.6 s |
+| 1 CPU, 2 GB (Standard) | $25 | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.34 | 1.8 s |
+
+So 0.1 CPU gives plans about twice as costly by the planner's own score, and with three snacks a day
+every plan came from the greedy fallback. **Starter is nearly as good as Standard, so it's the one
+worth paying for**, and it doesn't sleep. Peak memory in this test stayed under 256 MB at every size,
+and the API server idles at about 260 MB, so 512 MB should hold one plan at a time. Watch it after
+the first deploy, since the test didn't run the server itself.
+
+These ran on a development machine with a local database, so hosted plans will be somewhat slower.
+Replans weren't measured, and they get only 1 second per run, so expect the free plan to fall back
+to greedy for them too. To change plan, set `plan: starter` in `render.yaml`.
 
 ## 1. Database (Neon)
 
@@ -69,15 +93,18 @@ the header is then ignored, since anyone can send it. A limit can be raised by n
 ## 5. The demo account (optional)
 
 "Try the demo, no sign-up" on the landing page signs visitors into one shared account with a
-two-minute, one-use Clerk sign-in ticket (no public password). Its data resets every night at
-03:00 UTC, it never calls a model (no spend) and it can't be deleted.
+two-minute, one-use Clerk sign-in ticket (no public password). Its data resets every day at
+03:00 UTC, or when the API next wakes after that. It never calls a model (no spend), can't be
+deleted, and makes no share links, calendar feeds or reminders, because anyone can sign in as it.
 
-1. In Clerk, create a user (any email you control) and copy its **user id** (`user_...`).
+1. In Clerk, create a user (any email you control) and copy its **user id** (`user_...`). Leave
+   multi-factor authentication off on this instance: a visitor could otherwise enrol a second
+   factor on the shared user and lock everyone out.
 2. Set `DEMO_CLERK_USER_ID` (Vercel) and `DEMO_AUTH_SUBJECT` (Render) to that id, and
    `NEXT_PUBLIC_DEMO=1` on Vercel; redeploy the web app.
-3. Run the reset once to create its profile and pantry (after that it runs nightly; on the
-   free plan only if the API is awake at 03:00 UTC, so run it by hand whenever you want a fresh
-   start), on your machine with `DATABASE_URL` pointing at Neon:
+3. Nothing else is needed with `WORKER_IN_API=true`: the API creates the demo's profile and pantry
+   when it starts. With a separate worker that waits for 03:00 UTC. To start afresh by hand, run
+   this on your machine with `DATABASE_URL` pointing at Neon:
 
 ```sh
 uv run python -c "import asyncio; from larder_api.demo import reset_demo; from larder_db.engine import make_engine, make_sessionmaker; asyncio.run(reset_demo(make_sessionmaker(make_engine()), 'user_...'))"
