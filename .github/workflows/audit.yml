@@ -1,0 +1,30 @@
+name: Dependency audit
+
+# What ships, checked weekly against known vulnerabilities. A run that fails emails the repository
+# owner. On a schedule rather than on pull requests: an advisory published overnight shouldn't
+# block an unrelated change. Run it by hand from the Actions tab before deploying.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web (pnpm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - run: pnpm -C apps/web audit --prod --audit-level moderate
+
+  python:
+    name: Python (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: uv export --all-packages --no-dev --no-hashes --no-emit-workspace -o requirements.txt
+      - run: uvx pip-audit -r requirements.txt --no-deps --disable-pip
