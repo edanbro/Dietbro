@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     plan_workers: int = 4
     plan_concurrency: int = 2  # plans solved at once per process
     plan_candidates: int = 40  # recipes per slot after the prefilter
+    catalog_ttl_s: float = 600.0  # how long the plannable catalogue is kept before a rebuild
 
     # LLM layer (docs/adr/0013-llm-layer.md, 0018). Without a key (or with llm_mode=offline)
     # everything still works: the offline matchers stand in for the small structured calls.

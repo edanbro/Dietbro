@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Jobs for the worker (receipt reading); connects on first enqueue.
     app.state.queue = queue = make_queue(settings.redis_url)
     # Build the planning catalog in the background so the first plan doesn't pay for it.
-    app.state.catalog = CatalogCache()
+    app.state.catalog = CatalogCache(settings.catalog_ttl_s)
     warm = asyncio.create_task(_warm(app.state.catalog, app.state.sessionmaker))
     # No separate worker on this host: background work runs here (larder_api.inline).
     inline = InlineWorker(app.state.sessionmaker, settings) if settings.worker_in_api else None

@@ -82,7 +82,7 @@ describe("PlanPage states", () => {
 
     const busy = await screen.findByRole("button", { name: "Planning…" });
     expect(busy).toBeDisabled();
-    expect(screen.getByRole("status")).toHaveTextContent("takes a few seconds");
+    expect(screen.getByRole("status")).toHaveTextContent("can take up to a minute");
     fireEvent.click(busy);
     reply.resolve(Response.json(makePlan(), { status: 201 }));
     expect(await screen.findByText("Breakfast 1")).toBeInTheDocument();
