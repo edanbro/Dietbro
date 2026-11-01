@@ -53,8 +53,9 @@ Each of these would change with real users or a paying service.
   only one.
 - **Tokens are stored in plain text.** They have to be shown again, so they can't be hashed. Anyone
   with the database could open every link, but they could also read the data those links show.
-- **Solves queue without a limit.** A signed-in user gets 120 an hour, and several accounts could
-  make everyone wait. They could slow the planner but not break it.
+- **Solves queue without a limit.** A signed-in user gets 120 an hour, and on the free plan each
+  takes 15 s, so even one account could keep everyone else waiting. They could slow the planner but
+  not break it.
 - **Signed-in writes have no overall rate limit.** Plans keep their old versions, so one determined
   account could fill Neon's 0.5 GB, slowly, at up to 120 versions an hour.
 - **`TRUSTED_PROXY_HOPS=1` is unverified on Render.** Render doesn't document its forwarding chain.

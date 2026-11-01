@@ -22,6 +22,14 @@ services:
         value: "1"
       - key: PLAN_CONCURRENCY
         value: "1"
+      # 0.1 CPU gets through in 15 s what 0.5 CPU does in 3.5 s (docs/deploy.md).
+      - key: PLAN_TIME_LIMIT_MS
+        value: "15000"
+      - key: REPLAN_TIME_LIMIT_MS
+        value: "3000"
+      # Loading the catalogue takes about 25 s at 0.1 CPU, so once a run, not every 10 minutes.
+      - key: CATALOG_TTL_S
+        value: "86400"
       - key: TRUSTED_PROXY_HOPS # Render's proxy adds the client's address to X-Forwarded-For
         value: "1"
       - key: DATABASE_URL # Neon, asyncpg form: postgresql+asyncpg://...?ssl=require

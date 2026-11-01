@@ -18,24 +18,33 @@ Before a deploy, run the dependency audit from the Actions tab (`audit.yml`).
 
 ## Which Render plan
 
-The free plan works, but it's the planner that suffers. Measured in the real API image, capped with
-Docker at each plan's CPU and memory, on 10 bench profiles with one worker:
+**The free plan, as `render.yaml` sets it up, plans as well as a paid one. It just takes longer.**
+Measured in the real API image, capped with Docker at each plan's CPU and memory, on 10 bench
+profiles with one worker:
 
-| Limits | Monthly | Plan, one snack (p50) | Plan, three snacks (p50) | Found by CP-SAT | Hard misses | Objective cost (one snack) | First catalogue load |
-|---|---|---|---|---|---|---|---|
-| 0.1 CPU, 512 MB (Free) | $0 | 3.8 s | 11.5 s | 8 of 20 | 2 | £42.59 | 26 s |
-| 0.5 CPU, 512 MB (Starter) | $7 | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.85 | 3.6 s |
-| 1 CPU, 2 GB (Standard) | $25 | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.34 | 1.8 s |
+| Limits | Monthly | Planner time limit | Plan, one snack (p50) | Plan, three snacks (p50) | Found by CP-SAT | Hard misses | Objective cost (one snack) | First catalogue load |
+|---|---|---|---|---|---|---|---|---|
+| 0.1 CPU, 512 MB (Free) | $0 | **15 s, as set here** | 15.2 s | 15.2 s | 20 of 20 | 0 | £21.98 | 25 s |
+| 0.1 CPU, 512 MB (Free) | $0 | 8 s | 8.2 s | 8.2 s | 16 of 20 | 2 | £35.64 | 23 s |
+| 0.1 CPU, 512 MB (Free) | $0 | 3.5 s, the default | 3.8 s | 11.5 s | 8 of 20 | 2 | £42.59 | 26 s |
+| 0.5 CPU, 512 MB (Starter) | $7 | 3.5 s | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.85 | 3.6 s |
+| 1 CPU, 2 GB (Standard) | $25 | 3.5 s | 3.5 s | 3.5 s | 20 of 20 | 0 | £21.34 | 1.8 s |
 
-So 0.1 CPU gives plans about twice as costly by the planner's own score, and with three snacks a day
-every plan came from the greedy fallback. **Starter is nearly as good as Standard, so it's the one
-worth paying for**, and it doesn't sleep. Peak memory in this test stayed under 256 MB at every size,
+What the free plan costs is time: about a minute to wake, about 25 s to load the catalogue for the
+first plan or recipe search after that, and 15 s for each new plan. Only one plan runs at a time,
+so a second visitor waits for the first. Swapping a meal takes about 3 s: with `REPLAN_TIME_LIMIT_MS`
+at 3 s, CP-SAT made 5 of 6 swaps, with no hard misses and only the swapped meal changed (all 6 fell
+back to greedy at the default 1 s, also with no misses). The server stays responsive during a solve,
+with at most 0.05 s of delay to other requests, so Render's 5-second health check isn't at risk.
+
+If you send the link to someone who won't wait, open the site yourself first, or move to Starter
+(`plan: starter` in `render.yaml`, and drop the three limits below it), which doesn't sleep. Peak memory in this test stayed under 256 MB at every size,
 and the API server idles at about 260 MB, so 512 MB should hold one plan at a time. Watch it after
 the first deploy, since the test didn't run the server itself.
 
 These ran on a development machine with a local database, so hosted plans will be somewhat slower.
-Replans weren't measured, and they get only 1 second per run, so expect the free plan to fall back
-to greedy for them too. To change plan, set `plan: starter` in `render.yaml`.
+If plans come back worse there, or take longer than you'd like, `PLAN_TIME_LIMIT_MS` is the setting
+to change. Swaps were measured with the planner directly, not through the whole API.
 
 ## 1. Database (Neon)
 
@@ -122,8 +131,9 @@ uv run larder-data import-curated
 uv run larder-data resolve --aliases-only
 ```
 
-Both are safe to run again, take seconds and need no model or API key. The API picks up the change
-within 10 minutes (its catalogue cache), and plans already made stay as they are.
+Both are safe to run again, take seconds and need no model or API key. The API keeps its catalogue
+for a day on the free plan (`CATALOG_TTL_S`), so restart it in Render's dashboard to pick up the
+change at once. Plans already made stay as they are.
 
 The import adds and updates but never deletes, because saved plans may point at a recipe. A recipe
 renamed in `curated.toml` under a new `slug` stays in the database under its old one and can still

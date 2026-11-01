@@ -1,6 +1,10 @@
+import re
+from pathlib import Path
+
 import pytest
 
 from larder_api.changes.models import get_models
+from larder_api.planning import CATALOG_TTL_S, CatalogCache
 from larder_api.settings import Settings, issuer_from_publishable_key
 
 
@@ -45,3 +49,17 @@ def test_blank_anthropic_key_means_offline(monkeypatch: pytest.MonkeyPatch) -> N
 def test_blank_clerk_values_are_unset() -> None:
     s = Settings(clerk_issuer="", clerk_publishable_key="  ", _env_file=None)  # pyright: ignore[reportCallIssue]
     assert s.issuer is None
+
+
+def test_the_catalogue_is_kept_as_long_as_the_host_sets() -> None:
+    assert Settings().catalog_ttl_s == CATALOG_TTL_S
+    assert CatalogCache(Settings(catalog_ttl_s=86_400).catalog_ttl_s).ttl_s == 86_400
+
+
+def test_the_blueprint_gives_a_slow_host_time_to_plan() -> None:
+    """0.1 CPU needs 15 s to plan as well as 0.5 CPU does in 3.5 s (docs/deploy.md). Below that,
+    plans cost twice as much and miss hard limits, with nothing to say so."""
+    blueprint = (Path(__file__).parents[3] / "render.yaml").read_text(encoding="utf-8")
+    assert re.search(r'key: PLAN_TIME_LIMIT_MS\s+value: "15000"', blueprint)
+    assert re.search(r'key: REPLAN_TIME_LIMIT_MS\s+value: "3000"', blueprint)
+    assert re.search(r'key: CATALOG_TTL_S\s+value: "86400"', blueprint)

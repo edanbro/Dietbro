@@ -153,7 +153,7 @@ function PlanningStatus({ pending }: { pending: boolean }) {
   return (
     // Always mounted so screen readers announce the change; out of the layout when idle.
     <p role="status" className={pending ? "text-xs text-muted-foreground" : "sr-only"}>
-      {pending ? "Planning your week. This takes a few seconds." : ""}
+      {pending ? "Planning your week. This can take up to a minute." : ""}
     </p>
   );
 }
