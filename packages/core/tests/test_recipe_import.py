@@ -1,4 +1,5 @@
 import json
+from time import perf_counter
 
 import pytest
 
@@ -77,3 +78,46 @@ def test_no_recipe_on_the_page() -> None:
 )
 def test_splits_ingredient_lines(line: str, quantity: str, name: str) -> None:
     assert split_line(line) == (quantity, name)
+
+
+LIMIT = 2_000_000  # what the API reads of a page (larder_api.recipe_import.MAX_BYTES)
+LD = '<script type="application/ld+json">'
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        pytest.param("<script " * (LIMIT // 8), id="tags that never close"),
+        pytest.param(LD * (LIMIT // len(LD)), id="json-ld that never closes"),
+        pytest.param("<script>" * (LIMIT // 8), id="tags with no closing script"),
+        pytest.param(
+            LD + json.dumps({"@type": "Recipe", "name": "<" * LIMIT}) + "</script>",
+            id="a name of open brackets",
+        ),
+    ],
+)
+def test_a_hostile_page_is_read_in_linear_time(page: str) -> None:
+    """A page comes from anywhere. These took minutes when the search could go back over the page,
+    holding up every other request meanwhile."""
+    started = perf_counter()
+    find_recipe(page)
+    assert perf_counter() - started < 3
+
+
+def test_json_nested_too_deep_is_skipped_for_the_next_block() -> None:
+    fine = json.dumps({"@type": "Recipe", "name": "Stew", "recipeIngredient": ["1 onion"]})
+    page = f"{LD}{'[' * 200_000}</script>{LD}{fine}</script>"
+    recipe = find_recipe(page)
+    assert recipe is not None
+    assert recipe.name == "Stew"
+
+
+def test_finds_json_ld_whatever_the_tag_looks_like() -> None:
+    body = json.dumps({"@type": "Recipe", "name": "Stew", "recipeIngredient": ["1 onion"]})
+    for tag in (
+        '<SCRIPT TYPE="application/ld+json">',
+        "<script data-x='1' type='application/ld+json' id=\"y\">",
+        '<script type = "application/ld+json">',
+    ):
+        recipe = find_recipe(f"<script>var a = 1;</script>{tag}{body}</SCRIPT>")
+        assert recipe is not None, tag

@@ -2,6 +2,7 @@
 (larder_api.reminders sends)."""
 
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import delete, func, select
@@ -21,6 +22,25 @@ from larder_db.models import PushSubscription
 router = APIRouter(prefix="/me/push", tags=["reminders"])
 
 MAX_BROWSERS = 10
+# The server POSTs to whatever endpoint is stored here, so an endpoint must be a browser's real
+# push service: otherwise anyone could point this server at any address, inside or out.
+PUSH_HOSTS = frozenset({"fcm.googleapis.com", "updates.push.services.mozilla.com"})
+PUSH_DOMAINS = (".push.apple.com", ".push.services.mozilla.com", ".notify.windows.com")
+
+
+def is_push_service(endpoint: str) -> bool:
+    try:
+        parts = urlsplit(endpoint)
+        port = parts.port
+    except ValueError:
+        return False
+    host = (parts.hostname or "").lower()
+    return (
+        parts.scheme == "https"
+        and port in (None, 443)
+        and not (parts.username or parts.password)
+        and (host in PUSH_HOSTS or host.endswith(PUSH_DOMAINS))
+    )
 
 
 @router.get("", operation_id="getPush")
@@ -66,6 +86,10 @@ async def subscribe(
     """Send reminders to this browser (an endpoint moves to the user who subscribed last)."""
     if not (settings.vapid_public_key and settings.vapid_private_key):
         raise HTTPException(status.HTTP_409_CONFLICT, ["Reminders aren't set up on this server."])
+    if not is_push_service(body.endpoint):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, ["Reminders don't work with this browser's push service."]
+        )
     row = await session.scalar(
         select(PushSubscription).where(PushSubscription.endpoint == body.endpoint)
     )

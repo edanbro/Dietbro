@@ -90,6 +90,9 @@ def html(body: str) -> httpx.Response:
         ("2002:7f00:1::1", False),  # 6to4 around 127.0.0.1
         ("2002:c0a8:1::1", False),  # 6to4 around 192.168.0.1
         ("2001:0:4136:e378:8000:63bf:3fff:fdd2", False),  # Teredo, client 192.0.2.45
+        ("::127.0.0.1", False),  # IPv4-compatible: is_global alone says public
+        ("::a9fe:a9fe", False),  # the same around 169.254.169.254
+        ("fec0::1", False),  # site-local: is_global alone says public
     ],
 )
 def test_only_public_addresses(ip: str, public: bool) -> None:
@@ -105,11 +108,31 @@ def test_only_public_addresses(ip: str, public: bool) -> None:
         "https://user:secret@example.com/recipe",
         "https://example.com:8443/recipe",
         "https://nowhere.example/recipe",
+        "http://example.com:99999/",  # these three raise ValueError on the way: never a 500
+        "http://example.com:abc/",
+        "http://[bad/",
     ],
 )
 async def test_refuses_addresses_it_must_not_fetch(url: str) -> None:
     with pytest.raises(ImportError_):
         await fetch_recipe(url, client({}))
+
+
+async def test_a_name_dns_could_never_hold_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def too_long(host: str, port: int) -> set[str]:
+        raise UnicodeError("label empty or too long")
+
+    monkeypatch.setattr(recipe_import, "resolve", too_long)
+    with pytest.raises(ImportError_):
+        await fetch_recipe(f"http://{'a' * 70}.com/", client({}))
+
+
+async def test_a_redirect_to_a_broken_address_is_refused() -> None:
+    routes = {
+        "https://example.com/r": httpx.Response(302, headers={"location": "http://[bad/"}),
+    }
+    with pytest.raises(ImportError_):
+        await fetch_recipe("https://example.com/r", client(routes))
 
 
 async def test_reads_the_recipe_and_follows_a_public_redirect() -> None:
