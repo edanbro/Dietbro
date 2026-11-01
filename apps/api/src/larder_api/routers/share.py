@@ -129,8 +129,8 @@ async def revoke_share_link(token: str, user: CurrentUser, session: Session) -> 
     operation_id="getShared",
     responses=_GONE,
     dependencies=[
-        Depends(per_path("share_view", "token")),
         Depends(per_ip("share_view_ip")),
+        Depends(per_path("share_view", "token")),
     ],
 )
 async def get_shared(token: str, response: Response, session: Session) -> SharedOut:
@@ -244,7 +244,7 @@ async def _shared_list(session: AsyncSession, link: ShareLink) -> SharedListOut:
     )
 
 
-_TICK = [Depends(per_path("share_tick", "token")), Depends(per_ip("share_tick_ip"))]
+_TICK = [Depends(per_ip("share_tick_ip")), Depends(per_path("share_tick", "token"))]
 
 
 @router.patch(

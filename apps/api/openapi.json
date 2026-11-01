@@ -5021,6 +5021,7 @@
               "$ref": "#/components/schemas/Allergen"
             },
             "type": "array",
+            "maxItems": 14,
             "title": "Allergens"
           },
           "avoid_food_ids": {
@@ -5042,6 +5043,7 @@
               "$ref": "#/components/schemas/Allergen"
             },
             "type": "array",
+            "maxItems": 14,
             "title": "Allergens"
           },
           "avoid_food_ids": {
@@ -7979,7 +7981,8 @@
           },
           "liked_cuisines": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100
             },
             "type": "array",
             "maxItems": 50,
@@ -7987,7 +7990,8 @@
           },
           "disliked_cuisines": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100
             },
             "type": "array",
             "maxItems": 50,
@@ -8027,7 +8031,8 @@
           },
           "liked_cuisines": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100
             },
             "type": "array",
             "maxItems": 50,
@@ -8035,7 +8040,8 @@
           },
           "disliked_cuisines": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100
             },
             "type": "array",
             "maxItems": 50,

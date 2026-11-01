@@ -5,11 +5,17 @@ the receipt routes, larder_api.barcodes). These cover the rest: outbound page fe
 import), the solver (new plans and replans), quick-add, and the public share pages and calendar
 feeds.
 
-Each limit is a fixed window counted in Redis in one round trip: INCR, then EXPIRE NX so the
-window's first hit sets its end. Over the limit the request gets 429 with Retry-After. If Redis
-can't be reached the request goes ahead (logged): limits protect capacity, and a Redis outage
-shouldn't take the app down with it. Tests run without the app's Redis, so limits are off there
-unless a test overrides `get_counter`.
+Each limit is a fixed window. Over it the request gets 429 with Retry-After.
+
+- Signed-in routes count in Redis in one round trip: INCR, then EXPIRE NX so the window's first
+  hit sets its end. If Redis can't be reached, each process counts for itself (logged): limits
+  protect capacity, so an outage shouldn't lift them, nor take the app down.
+- Public routes count in the process alone, because anyone can call them. In Redis, a bot trying
+  random links would spend the free plan's commands and turn every limit into the fallback. With
+  several processes each has its own count: this is a capacity guard, so that's fine.
+
+Tests run without the app's Redis, so limits are off there unless a test overrides `get_counter`
+and `get_public_counter`.
 
 Client addresses: the socket peer, unless `trusted_proxy_hops` says how many of our own proxies
 sit in front. Then it is the X-Forwarded-For entry that many from the right: the address our
@@ -17,6 +23,7 @@ outermost proxy saw, which a client can't forge (entries further left are whatev
 """
 
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -36,6 +43,7 @@ __all__ = [
     "Rule",
     "client_ip",
     "get_counter",
+    "get_public_counter",
     "per_ip",
     "per_path",
     "per_user",
@@ -44,6 +52,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 MINUTE, HOUR, DAY = 60, 3600, 86_400
+# secrets.token_urlsafe(16) is 22 characters; a little room either side. Anything else was never
+# a link, so it's refused without counting it.
+_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,32}")
+_MAX_LOCAL_KEYS = 50_000  # a key holds its window, so old ones are only ever waste
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,13 +103,19 @@ class RedisCounter:
 
 @dataclass(slots=True)
 class MemoryCounter:
-    """For tests: the same counting in a dict (windows never expire)."""
+    """The same counting in a dict, for one process. A key holds its window, so a new window is
+    a new count; when too many pile up they all go, which at worst forgives a few requests."""
 
     counts: dict[str, int] = field(default_factory=dict[str, int])
 
     async def hit(self, key: str, window_s: int) -> int:
+        if len(self.counts) >= _MAX_LOCAL_KEYS:
+            self.counts.clear()
         self.counts[key] = self.counts.get(key, 0) + 1
         return self.counts[key]
+
+
+_PROCESS = MemoryCounter()
 
 
 def get_counter(request: Request) -> Counter | None:
@@ -106,6 +124,11 @@ def get_counter(request: Request) -> Counter | None:
     if resources is None:
         return None
     return RedisCounter(cast(Redis, resources.redis))
+
+
+def get_public_counter(request: Request) -> Counter | None:
+    """For routes anyone can call: this process's own count (see the module docstring)."""
+    return _PROCESS if getattr(request.app.state, "resources", None) is not None else None
 
 
 def client_ip(request: Request, settings: Settings) -> str:
@@ -121,6 +144,7 @@ def client_ip(request: Request, settings: Settings) -> str:
 
 
 Counted = Annotated[Counter | None, Depends(get_counter)]
+CountedPublic = Annotated[Counter | None, Depends(get_public_counter)]
 Configured = Annotated[Settings, Depends(get_settings)]
 
 
@@ -134,8 +158,8 @@ async def _take(counter: Counter | None, settings: Settings, name: str, subject:
     try:
         count = await counter.hit(f"rl:{name}:{subject}:{window}", rule.window_s)
     except Exception:
-        logger.warning("rate limit %s not checked (Redis unavailable)", name, exc_info=True)
-        return
+        logger.warning("rate limit %s counted locally (Redis unavailable)", name, exc_info=True)
+        count = await _PROCESS.hit(f"rl:{name}:{subject}:{window}", rule.window_s)
     if count > limit:
         retry = max(1, int((window + 1) * rule.window_s - now))
         raise HTTPException(
@@ -164,19 +188,21 @@ def per_ip(name: str) -> Callable[..., Awaitable[None]]:
     """A route dependency: at most RULES[name] requests per client address."""
     _known(name)
 
-    async def check(request: Request, counter: Counted, settings: Configured) -> None:
+    async def check(request: Request, counter: CountedPublic, settings: Configured) -> None:
         await _take(counter, settings, name, client_ip(request, settings))
 
     return check
 
 
 def per_path(name: str, param: str) -> Callable[..., Awaitable[None]]:
-    """A route dependency: at most RULES[name] requests per value of path parameter `param`
-    (a share link's or calendar feed's token)."""
+    """A route dependency: at most RULES[name] requests per value of path parameter `param`, a
+    share link's or calendar feed's token. Something that can't be a token is a plain 404."""
     _known(name)
 
-    async def check(request: Request, counter: Counted, settings: Configured) -> None:
-        value = str(request.path_params.get(param, ""))[:64]
+    async def check(request: Request, counter: CountedPublic, settings: Configured) -> None:
+        value = str(request.path_params.get(param, ""))
+        if _TOKEN.fullmatch(value) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
         await _take(counter, settings, name, value)
 
     return check

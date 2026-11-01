@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     off_rate_per_min: int = 12  # all users together (OFF allows 15 product reads per minute)
     barcode_lookups_per_hour: int = 30  # per user, lookups that reach OFF
 
+    # The biggest request body read: a receipt photo and the form around it. Bodies are read
+    # before sign-in is checked, so this is what stops anyone filling the server's memory.
+    max_body_bytes: int = 9_000_000
+
     # Rate limits (larder_api.ratelimit): on by default; a rule's limit can be changed by name,
     # e.g. RATE_LIMIT_OVERRIDES='{"import_read": 100}'. Behind our own proxies (Render, Fly...)
     # set TRUSTED_PROXY_HOPS to how many there are, so client addresses come from
