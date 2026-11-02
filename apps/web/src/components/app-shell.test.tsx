@@ -7,13 +7,17 @@ import { resetNavigation } from "@/test/navigation";
 
 import { AppShell } from "./app-shell";
 
+const clerk = vi.hoisted(() => ({ metadata: {} as Record<string, unknown> }));
 vi.mock("@clerk/nextjs", () => ({
-  UserButton: () => null,
+  UserButton: () => <button type="button">Account menu</button>,
+  SignOutButton: ({ children }: { children: React.ReactNode }) => children,
+  useUser: () => ({ user: { publicMetadata: clerk.metadata } }),
   useAuth: () => ({ getToken: async () => "t" }),
 }));
 vi.mock("next/navigation", () => import("@/test/navigation"));
 
 beforeEach(() => {
+  clerk.metadata = {};
   resetNavigation("/");
   mockApi({ "GET /me": json(ME) });
 });
@@ -87,6 +91,21 @@ describe("AppShell", () => {
       "href",
       "/profile",
     );
+  });
+
+  it("shows Clerk's account menu to a normal account", () => {
+    render(<AppShell>content</AppShell>);
+
+    expect(screen.getAllByRole("button", { name: "Account menu" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+  });
+
+  it("gives the demo account a plain sign-out, so no visitor sees its email", () => {
+    clerk.metadata = { demo: true };
+    render(<AppShell>content</AppShell>);
+
+    expect(screen.queryByRole("button", { name: "Account menu" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Sign out" })).toHaveLength(2); // header and rail
   });
 
   it("badges the Pantry tab with how much food expires soon", async () => {

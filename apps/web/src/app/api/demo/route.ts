@@ -6,7 +6,9 @@ import { clerkClient } from "@clerk/nextjs/server";
  * DEMO_CLERK_USER_ID is set. A small per-address limit keeps tickets from being farmed.
  *
  * Clerk would let anyone signed in as the demo user delete it, whatever our API says. Turning
- * that off is per user, so it's done here rather than left as a step someone could miss.
+ * that off is per user, so it's done here rather than left as a step someone could miss. The
+ * `demo` flag tells the app to show a plain sign-out instead of Clerk's account menu, which
+ * would show every visitor the email the demo user was made with.
  */
 
 const WINDOW_MS = 60 * 60 * 1000;
@@ -38,6 +40,7 @@ export async function POST(request: Request): Promise<Response> {
       await client.users.updateUser(userId, {
         deleteSelfEnabled: false,
         createOrganizationEnabled: false,
+        publicMetadata: { demo: true },
       });
       lockedDown = true;
     }
