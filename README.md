@@ -1,7 +1,11 @@
 # Mealwright
 
-**Plans your week of meals around what's already in your kitchen, and re-plans in real time
-when life happens.** LLM for language, constraint solver for guarantees.
+A meal planner that builds your week around what's already in your kitchen, and re-plans when
+the week doesn't go to plan.
+
+**Live demo: [the-mealwright.vercel.app](https://the-mealwright.vercel.app)**. Press "Try the
+demo" to sign in to a shared account, no sign-up needed. It runs on free hosting, so the first
+load after a quiet spell takes about a minute while the server wakes up.
 
 <p align="center">
   <img src="docs/images/walkthrough.gif" width="260" alt="Planning a week, opening a dinner, cook mode and ticking the shopping list on a phone">
@@ -14,27 +18,26 @@ when life happens.** LLM for language, constraint solver for guarantees.
   <img src="docs/images/diary.png" width="180" alt="The diary with quick-add, days against the goal and the weight trend">
 </p>
 
-## Why it's built this way
+## The idea
 
-Ask a language model to plan a week and it will happily return something that *looks* right:
-it may also put peanuts in a peanut-allergic person's lunch, invent a recipe, or land 600 kcal
-off target. Mealwright splits the job:
+A language model asked for a week of meals returns something that looks right. It can also put
+peanuts in an allergic person's lunch, make up a recipe, or miss the calorie target by 600 kcal.
+So Mealwright doesn't let a model make the plan:
 
-- **Claude handles language, only where typing beats tapping**: it picks which food an
-  ambiguous name means, among foods from the database. Plan changes are typed (skip, swap,
-  "had something else") and come from one tap on a meal.
-- **A planner handles the plan**: hard rules (allergens, diet, avoided foods, calorie floor,
-  daily kcal bands, portions, repeats, budget) and soft goals (pantry use, waste, cost,
-  preferences, little churn on a replan).
-- **An independent validator checks every plan** before anyone sees it, whichever planner made
-  it. It shares no code with the planner, so the planner never grades itself.
+- **A constraint solver (OR-Tools CP-SAT) makes the plan.** Allergens, diet, calorie floor,
+  daily calorie range, portions, repeats and budget are hard constraints. Using up the pantry,
+  cost, waste and preferences are scored.
+- **A separate validator checks every plan** before it's shown, whichever planner made it. It
+  shares no code with the solver, so the solver never marks its own homework.
+- **A model is used only for language:** when a food name is ambiguous, Claude picks which food
+  from the database it means. Without an API key, an offline matcher decides instead.
 
 ```mermaid
 flowchart LR
     U([Phone / browser<br/>Next.js PWA]) -->|REST + SSE| API[FastAPI]
-    API -->|typed inputs| LLM[Claude<br/>food matching]
+    API -->|typed inputs| LLM[LLM<br/>food matching]
     API --> PF[Prefilter<br/>safe candidates]
-    PF --> S[Planner<br/>CP-SAT · greedy baseline]
+    PF --> S[Planner<br/>CP-SAT · greedy fallback]
     S --> V{Validator}
     V -->|valid| DB[(Postgres + pgvector)]
     V -->|violations| X[Refused, never shown]
@@ -42,158 +45,92 @@ flowchart LR
     DB --- D[(USDA · CoFID ·<br/>Open Food Facts · recipes)]
 ```
 
-## What it does
-
-- **Plans a week** of breakfast, lunch, dinner (and snacks) for your calories, protein, fat,
-  carbs and budget, using up what's in your pantry before it expires.
-- **Re-plans when life happens**, from one tap on a meal: skip, swap (pick from safe options),
-  trade meals between two days, "had something else", rebuild a day, undo.
-  Replans keep the rest of the week calm (churn is penalised).
-- **Stocks the pantry fast**: scan a barcode, paste or photograph a receipt (offline OCR), or
-  search 200,000+ foods sold in Ireland and the UK. Product photos and nutrition grades
-  (Nutri-Score method) from Open Food Facts.
-- **Cooks from what you have**: "What can I cook?" lists the safe recipes that use your pantry,
-  fewest things to buy first, and names what's still needed.
-- **Shops and cooks**: an aisle-sorted shopping list in the packs shops sell ("1 pack (320 g)",
-  not "15 g" of tortillas), priced at the till, with the rest of each pack going into the pantry
-  for next week's plan; it says which meals need each item,
-  works offline in the shop (or prints, with the week's meals as a table for the fridge) and
-  moves ticked items into the pantry, and offers what your receipts say you buy most weeks;
-  cook mode with scaled amounts, timers read from the method and the screen kept awake.
-- **Learns your prices and tastes**: prices from your own receipts, and what each recipe costs
-  you a serving; favourite recipes, "never again", foods you love or hate.
-- **Tracks what you ate**: a food diary against your goals, a weight trend, and quick-add for
-  anything off the plan (search, scan or one of your recent foods, exact amounts; the rest of
-  the day rebalances).
-- **Vitamins and minerals**: iron, calcium, potassium, vitamins C and D, folate and B12 per
-  recipe and for an average day of the plan, against the reference intakes on food labels
-  (USDA and UK CoFID data; "no data" rather than a guess when a food has no value).
-- **Imports recipes from a link**: reads the recipe data most recipe sites publish, splits the
-  ingredients, lets you check them, then runs the same allergy and nutrition checks as every
-  other recipe. The fetch is SSRF-guarded (public addresses only, re-checked on redirects).
-- **Spending insights**: weekly grocery spend from your receipts beside what the plan expected,
-  and the aisles the money went on.
-- **Shares and syncs**: a read-only link to a recipe or a week (revocable, nothing personal in
-  it), a shopping list to tick off together in the shop (no account needed), and a private
-  calendar feed so meals show up in Google, Apple or Outlook Calendar.
-- **Cook once, eat twice**: cook extra tonight and tomorrow's lunch becomes the leftovers.
-- **Cooks for the household**: say how many you cook for; the shopping list, cost, budget,
-  pantry use and recipe amounts cover everyone, while calories and nutrition stay yours.
-- **Fits a busy week**: every recipe says about how long it takes (estimated from its method),
-  recipes filter to "under 30 min", and on the busy nights you pick, dinner stays quick.
-- **Thinks a day ahead**: "Tonight, for tomorrow" says what to take out of the freezer and what
-  to marinate or soak, on the plan and as an evening notification.
-- **Any recipe to the list**: a recipe's missing ingredients go on the shopping list in one tap,
-  scaled to the servings you'll cook.
-- **Only the meals you want**: plan every meal, or say you sort one out yourself (a lunch at
-  work: about its share of the day is kept free, and what you log replaces it) or skip it.
-- **Metric or US units**: grams and kilograms, or ounces, pounds, feet and inches (the default
-  in the US), for the shopping list, pantry, weigh-ins, body stats and prices per weight.
-- **Installable and offline**: PWA with a hand-written service worker; light, dark or system
-  theme; phone-first with a desktop layout.
-
-## Measured
+## Results
 
 | What | Result | Source |
 |---|---|---|
 | Plans with a safety violation (allergen, diet, avoided food, calorie floor) | **0 of 200** | [evals/REPORT.md](evals/REPORT.md) |
-| Plans with no hard violation at all (budget, kcal bands, repeats included) | **100%** (the greedy baseline: 92%) | [evals/REPORT.md](evals/REPORT.md) |
+| Plans with no hard violation at all | **100%** (greedy baseline: 92%) | [evals/REPORT.md](evals/REPORT.md) |
 | Share of the pantry the plans use up | 27% (baseline: 14%) | [evals/REPORT.md](evals/REPORT.md) |
-| Plan a week, end to end (p95) | 3.6 s (CP-SAT, 3.5 s limit) | [docs/solver-bench-cpsat.md](docs/solver-bench-cpsat.md) |
-| Replan through the API (p95) | 1.1 s | [docs/replan-bench-cpsat.md](docs/replan-bench-cpsat.md) |
-| Receipt lines read correctly, end to end (pasted text) | 98.1% | [docs/receipt-accuracy.md](docs/receipt-accuracy.md) |
+| Plan a week, end to end (p95) | 3.6 s | [docs/solver-bench-cpsat.md](docs/solver-bench-cpsat.md) |
+| Re-plan through the API (p95) | 1.1 s | [docs/replan-bench-cpsat.md](docs/replan-bench-cpsat.md) |
+| Receipt lines read correctly (pasted text) | 98.1% | [docs/receipt-accuracy.md](docs/receipt-accuracy.md) |
 
-The planner is a CP-SAT model ([packages/solver](packages/solver/README.md)) with the greedy
-baseline as its fallback. The LLM-only comparison (`larder-evals --llm`, paid) is wired up and
-runs on request.
+Timings are on a development machine. The free host has a tenth of a CPU, so it gets a longer
+solver time limit and takes about 15 s per plan for the same quality
+([docs/deploy.md](docs/deploy.md)).
+
+## Features
+
+- **Weekly plans** for calories, macros and budget, with optional snacks. Food that expires soon
+  gets used first.
+- **One-tap changes:** skip, swap, move a meal between days, "had something else", rebuild a
+  day, undo. A change keeps the rest of the week as it was where it can.
+- **Pantry** from barcode scans, pasted or photographed receipts, or a search of 200,000+ foods
+  sold in Ireland and the UK.
+- **Shopping list** by aisle, in the pack sizes shops sell, usable offline. It can be shared
+  with someone else in the shop.
+- **Cooking:** cook mode with timers, "what can I cook now?", leftovers for tomorrow's lunch,
+  and a reminder the night before to defrost or marinate.
+- **Tracking:** a food diary, a weight trend, vitamins and minerals, and grocery spend from your
+  receipts.
+- **Recipes** imported from a link and run through the same allergy and nutrition checks.
+- **Households, metric or US units, a calendar feed,** and an installable PWA with dark mode.
 
 ## Stack
 
-Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind v4 · TanStack Query ·
-FastAPI · SQLAlchemy 2 · Alembic · Postgres + pgvector · Redis + arq · OR-Tools CP-SAT ·
-Claude (Haiku for small structured calls) · Clerk · Docker Compose · uv ·
-pnpm · pytest + Hypothesis · Vitest + Testing Library · Playwright.
+Next.js 16 · TypeScript · Tailwind v4 · TanStack Query · FastAPI · SQLAlchemy 2 · Alembic ·
+Postgres + pgvector · Redis + arq · OR-Tools CP-SAT · Clerk · Docker Compose · uv · pnpm ·
+pytest + Hypothesis · Vitest · Playwright.
 
-Design: [docs/DESIGN.md](docs/DESIGN.md) and the [architecture decision records](docs/adr).
-Build plan: [PLAN.md](PLAN.md). Progress: [docs/progress.md](docs/progress.md).
+Hosted for free on Vercel (web), Render (API), Neon (Postgres) and Upstash (Redis). There's a
+security review in [docs/security-review.md](docs/security-review.md).
 
-> Formerly "Larder". The product name lives in `apps/web/src/lib/brand.ts` and
-> `packages/core/src/larder_core/brand.py`; internal identifiers (`larder_*` packages, commands,
-> Docker and database names) keep the old name so existing setups and data keep working.
+Design notes: [docs/DESIGN.md](docs/DESIGN.md) and the [decision records](docs/adr). The solver
+has its own guide in [packages/solver/README.md](packages/solver/README.md).
 
-## Run it
+## Run it locally
 
-Requires Docker and a free [Clerk](https://clerk.com) development instance (for sign-in).
+You need Docker and a free [Clerk](https://clerk.com) development instance for sign-in.
 
-1. In the Clerk dashboard, create an application and copy its **Publishable key** and
-   **Secret key**.
-2. `cp .env.example .env` and paste them into `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`.
-   Optionally add `ANTHROPIC_API_KEY`: it settles ambiguous food names; without it the offline
-   matcher decides.
-3. Start everything (migrations run automatically), then load foods and recipes:
+1. Copy `.env.example` to `.env` and add the Clerk **Publishable key** and **Secret key**.
+   `ANTHROPIC_API_KEY` is optional.
+2. Start everything (migrations run automatically), then load foods and recipes:
 
 ```sh
 docker compose up --build
-make seed            # needs uv; foods (USDA, survey foods, UK CoFID) and recipes, ~2 minutes
-make foods           # optional: Irish + UK packaged products from Open Food Facts (~15 min)
+make seed            # foods (USDA, survey foods, UK CoFID) and recipes, about 2 minutes
+make foods           # optional: Irish and UK packaged products from Open Food Facts (~15 min)
 ```
 
-Without `make`, run the same `uv run larder-data ...` steps listed in the Makefile.
+The web app is on http://localhost:3000 and the API on http://localhost:8000 (docs at `/docs`).
+Without `make`, run the `uv run larder-data ...` steps from the Makefile.
 
-Updating an existing database: migrations run by themselves, but new food data (such as the
-vitamins and minerals) arrives only when the importers run again: `make seed`, then
-`make foods` if you used it before. They update foods and recipes in place.
-
-Barcode scanning finds imported products offline. To also look up products that aren't imported
-yet, set `OFF_USER_AGENT` in `.env` (Open Food Facts asks for `AppName/Version (contact email)`;
-only the barcode is sent). The camera works on `localhost` or HTTPS.
-
-- Web: http://localhost:3000 (works on a phone on the same network via your machine's IP if you
-  add it to `CORS_ORIGINS` and rebuild with that `NEXT_PUBLIC_API_URL`)
-- API: http://localhost:8000 (docs at `/docs`, readiness at `/readyz`)
-
-To run the end-to-end test in CI, add the same two keys as repository secrets
-`CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
-
-To put it online for free (Vercel, Render, Neon, Upstash) with a public demo account, see
-[docs/deploy.md](docs/deploy.md).
+To deploy your own copy for free, follow [docs/deploy.md](docs/deploy.md).
 
 ## Develop
 
-Requires [uv](https://docs.astral.sh/uv/), Node 22 and pnpm (`corepack enable`).
+Needs [uv](https://docs.astral.sh/uv/), Node 22 and pnpm (`corepack enable`).
 
 ```sh
-make install          # Python + web deps, git hooks
-docker compose up db redis -d && make seed
-uv run uvicorn larder_api.main:app --reload    # API on :8000 (reads .env)
-pnpm -C apps/web dev                           # web on :3000; put NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-                                               # and CLERK_SECRET_KEY in apps/web/.env.local
-pnpm -C apps/web e2e                           # Playwright, needs CLERK_* keys exported
-SHOTS=1 pnpm -C apps/web e2e pages             # + accessibility check of every page, light/dark,
-                                               #   phone/desktop; screenshots in e2e-shots/
-MEDIA=1 pnpm -C apps/web e2e media --project=setup --project=phone &&   (cd apps/web && sh scripts/readme-media.sh)   # README screenshots and GIF (needs ffmpeg)
-make visual           # every page against its committed screenshot, in the Playwright Linux
-                      #   container (make visual-update after a deliberate UI change)
-make check            # lint, types, tests (what CI runs, minus Docker)
-make gen-api          # after changing API routes: regenerate OpenAPI + web types
-make migrate          # apply DB migrations
-make data             # import USDA + TheMealDB + curated recipes, resolve, write report (~4 min)
-make bench            # planner benchmark on the seeded catalog (PLANNER=auto|cpsat|greedy)
-uv run larder-evals --catalog db --n 50   # evals/REPORT.md (add --llm --yes for the paid baseline)
-uv run pytest packages/solver/tests/test_solve.py   # the CP-SAT spec
+make install          # Python and web dependencies, git hooks
+make check            # lint, types and tests (what CI runs, minus Docker)
+make visual           # every page against its committed screenshot
+make gen-api          # after changing API routes: regenerate OpenAPI and the web types
+make bench            # planner benchmark (PLANNER=auto|cpsat|greedy)
+uv run larder-evals --catalog db --n 50   # regenerate evals/REPORT.md
 ```
-
-## Layout
 
 ```
 apps/api        FastAPI app
 apps/web        Next.js app
-packages/core   units, measure parsing, nutrition math, allergen/diet tags, prices (pure)
-packages/db     SQLAlchemy models + Alembic migrations
-packages/data   importers, ingredient normaliser, embeddings, curated recipes (CLI: larder-data)
-packages/llm    Claude structured-output client, typed plan changes, replan outcomes
-packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT solve() (pure)
-                — modelling guide: packages/solver/README.md
-evals           seeded scenarios, LLM-only baseline, report (CLI: larder-evals)
-docs/           DESIGN.md, ADRs, progress notes, benchmark reports
+packages/core   units, nutrition maths, allergen and diet tags, prices
+packages/db     SQLAlchemy models and Alembic migrations
+packages/data   importers, ingredient matching, curated recipes (CLI: larder-data)
+packages/llm    the model client and typed plan changes
+packages/solver planning contract, validator, prefilter, greedy baseline, CP-SAT
+evals           seeded scenarios and the report (CLI: larder-evals)
+docs            design, decision records, benchmarks, deployment
 ```
+
+The code still uses the project's old name, Larder, for packages, commands and the database.
