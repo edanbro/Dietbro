@@ -17,8 +17,10 @@ that checks every plan. See README.md for the product and docs/DESIGN.md for the
   import-curated` then `resolve --aliases-only` under `with-db.sh`.
 - The security review before hosting is done: `docs/security-review.md` has the findings and the
   risks accepted.
-- Next: M8 (deploy per `docs/deploy.md` and `render.yaml`, monitoring, load numbers), then M9 (beta
-  users). Check with Eduard before anything with running costs.
+- Hosted for free since 2026-11-02 at https://the-mealwright.vercel.app (API:
+  https://mealwright-api.onrender.com), per `docs/deploy.md`, with the demo account on.
+- Next: the rest of M8 (monitoring, load numbers), then M9 (beta users). Check with Eduard before
+  anything with running costs.
 - The roadmap and its done criteria are in `PLAN.md` §9, and the decisions in `docs/adr/`. Add
   an ADR when choosing between real alternatives.
 
