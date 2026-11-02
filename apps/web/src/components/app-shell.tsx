@@ -1,6 +1,6 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { SignOutButton, UserButton, useUser } from "@clerk/nextjs";
 import { cn } from "cn";
 import {
   BookOpenIcon,
@@ -40,6 +40,20 @@ export function activeTab(pathname: string): string | undefined {
 
 /** Settings, set up once and rarely visited: the header (phone) and the rail's foot (desktop). */
 const PROFILE = { href: "/profile", label: "Profile", icon: UserIcon };
+
+/** Clerk's account menu, or for the shared demo account a plain sign-out: the menu would show
+ * every visitor the demo user's email and let them edit its sign-in details. */
+function AccountButton() {
+  const { user } = useUser();
+  if (user?.publicMetadata.demo !== true) return <UserButton />;
+  return (
+    <SignOutButton redirectUrl="/">
+      <button type="button" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+        Sign out
+      </button>
+    </SignOutButton>
+  );
+}
 
 /** The app's mark and name. */
 function Brand() {
@@ -89,7 +103,7 @@ function Rail({ pathname, expiring }: { pathname: string; expiring: number }) {
       </nav>
       <div className="flex items-center justify-between gap-2">
         <ThemeToggle compact />
-        <UserButton />
+        <AccountButton />
       </div>
     </aside>
   );
@@ -146,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <UserIcon aria-hidden />
           </Link>
-          <UserButton />
+          <AccountButton />
         </div>
       </header>
       <div className="print:hidden">

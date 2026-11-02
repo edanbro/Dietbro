@@ -26,6 +26,7 @@ describe("POST /api/demo", () => {
     expect(updateUser).toHaveBeenCalledWith("user_demo", {
       deleteSelfEnabled: false,
       createOrganizationEnabled: false,
+      publicMetadata: { demo: true },
     });
   });
 
