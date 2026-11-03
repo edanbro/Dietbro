@@ -87,7 +87,12 @@ export function DraftForm({
       {draft.image_url ? (
         // The page's own photo, shown as the site serves it.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={draft.image_url} alt="" className="aspect-[3/1] w-full rounded-xl object-cover" />
+        <img
+          src={draft.image_url}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="aspect-[3/1] w-full rounded-xl object-cover"
+        />
       ) : null}
       <LabeledInput
         id="import-name"

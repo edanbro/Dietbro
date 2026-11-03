@@ -79,9 +79,13 @@ test("main pages pass accessibility checks in light and dark", async ({ page }, 
   try {
     await page.goto("/");
     await visit("landing", "/");
+    for (const path of ["/privacy", "/terms", "/cookies", "/attributions"]) {
+      await visit(path.slice(1), path);
+    }
 
     await setupClerkTestingToken({ page });
     await clerk.signIn({ page, emailAddress: email });
+    await api(page, "PUT", "/me/consent", { terms: true, health_data: true });
     await api(page, "PUT", "/me/goals", {
       goal: "maintain",
       kcal_min: 1800,

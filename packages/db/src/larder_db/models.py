@@ -332,6 +332,11 @@ class User(Base):
     weekly_recap: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     # The evening heads-up for tomorrow's meals (defrost, marinate; larder_api.prep_ahead).
     prep_reminders: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    # When the user agreed to the terms, and when they gave the explicit consent GDPR Article 9
+    # asks for before health data (body, weight, goals, allergies, what they ate) is kept. Both
+    # are given at the start of setup; a record of when is how consent is shown (Article 7(1)).
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    health_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Goals(Base):

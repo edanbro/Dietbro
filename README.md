@@ -84,7 +84,8 @@ Postgres + pgvector · Redis + arq · OR-Tools CP-SAT · Clerk · Docker Compose
 pytest + Hypothesis · Vitest · Playwright.
 
 Hosted for free on Vercel (web), Render (API), Neon (Postgres) and Upstash (Redis). There's a
-security review in [docs/security-review.md](docs/security-review.md).
+security review in [docs/security-review.md](docs/security-review.md), and a privacy and legal
+one in [docs/legal-review.md](docs/legal-review.md).
 
 Design notes: [docs/DESIGN.md](docs/DESIGN.md) and the [decision records](docs/adr). The solver
 has its own guide in [packages/solver/README.md](packages/solver/README.md).

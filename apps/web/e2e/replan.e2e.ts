@@ -52,6 +52,7 @@ test("marks a meal eaten, undoes it, and skips a later meal from the plan", asyn
     await page.goto("/");
     await clerk.signIn({ page, emailAddress: email });
 
+    await apiPut(page, "/me/consent", { terms: true, health_data: true });
     await apiPut(page, "/me/goals", {
       goal: "maintain",
       kcal_min: 1800,

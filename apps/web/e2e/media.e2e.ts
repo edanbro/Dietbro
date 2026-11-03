@@ -52,6 +52,7 @@ test("README screenshots and walkthrough", async ({ page }, info) => {
     await setupClerkTestingToken({ page });
     await clerk.signIn({ page, emailAddress: `e2e+clerk_test+media${stamp}@example.com` });
     await api(page, "PUT", "/me/region", { country: "IE", timezone: "Europe/Dublin", locale: "en-IE" });
+    await api(page, "PUT", "/me/consent", { terms: true, health_data: true });
     await api(page, "PUT", "/me/goals", {
       goal: "maintain",
       kcal_min: 1900,

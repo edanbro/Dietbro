@@ -41,6 +41,7 @@ test("set-up user plans a week, opens a recipe and ticks the shopping list", asy
     await page.goto("/");
     await clerk.signIn({ page, emailAddress: email });
 
+    await apiPut(page, "/me/consent", { terms: true, health_data: true });
     await apiPut(page, "/me/goals", {
       goal: "maintain",
       kcal_min: 1800,

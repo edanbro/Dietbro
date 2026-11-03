@@ -64,6 +64,14 @@ async def test_demo_reset_starts_over(db_engine: AsyncEngine) -> None:
 
 
 @pytest.mark.usefixtures("inline_settings")
+async def test_the_demo_needs_no_health_data_consent(api: httpx.AsyncClient, auth: Auth) -> None:
+    demo = (await api.get("/me", headers=auth(DEMO))).json()
+    visitor = (await api.get("/me", headers=auth("user_someone"))).json()
+
+    assert (demo["consented"], visitor["consented"]) == (True, False)
+
+
+@pytest.mark.usefixtures("inline_settings")
 @pytest.mark.parametrize(
     ("method", "path", "body"),
     [

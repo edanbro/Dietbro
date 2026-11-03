@@ -137,6 +137,7 @@ test("record the API for the visual comparison", async ({ browser }) => {
       timezone: "Europe/Dublin",
       locale: "en-IE",
     });
+    await api(page, "PUT", "/me/consent", { terms: true, health_data: true });
     await api(page, "PUT", "/me/goals", {
       goal: "maintain",
       kcal_min: 1900,

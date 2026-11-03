@@ -8,11 +8,11 @@ import {
   ShieldCheckIcon,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { HomeActions } from "@/components/home-actions";
+import { LegalLinks } from "@/components/legal-page";
 import { APP_NAME } from "@/lib/brand";
 import { Logo } from "@/components/logo";
 
@@ -25,7 +25,8 @@ const FEATURES = [
   {
     icon: ShieldCheckIcon,
     title: "Allergies are hard rules",
-    text: "Every plan is checked against your allergies and diet before you see it. Always.",
+    // The plan is checked; the data under it can still be wrong, so labels have the last word.
+    text: "Every plan is checked against your allergies and diet before you see it. Still check labels: product data can be wrong.",
   },
   {
     icon: CalendarDaysIcon,
@@ -188,11 +189,9 @@ export default function Home() {
         </ul>
       </section>
 
-      <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-6 text-xs text-muted-foreground">
+      <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t pt-6 text-xs text-muted-foreground">
         <span>Not medical advice. Check labels for allergens.</span>
-        <Link href="/attributions" className="underline-offset-4 hover:underline">
-          Data sources and licences
-        </Link>
+        <LegalLinks />
       </footer>
     </main>
   );

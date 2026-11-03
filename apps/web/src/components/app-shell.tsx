@@ -55,6 +55,18 @@ function AccountButton() {
   );
 }
 
+/** Signed in as the shared demo: whatever is typed here, the next visitor sees. */
+function DemoNotice() {
+  const { user } = useUser();
+  if (user?.publicMetadata.demo !== true) return null;
+  return (
+    <p className="bg-info-subtle px-4 py-1.5 text-center text-xs text-info-subtle-foreground">
+      Shared demo: anyone can see what&apos;s entered here, so don&apos;t add anything personal.
+      It resets every day.
+    </p>
+  );
+}
+
 /** The app's mark and name. */
 function Brand() {
   return (
@@ -164,6 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <div className="print:hidden">
+        <DemoNotice />
         <OfflineBanner />
       </div>
       <main

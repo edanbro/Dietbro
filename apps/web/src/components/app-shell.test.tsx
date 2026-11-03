@@ -108,6 +108,15 @@ describe("AppShell", () => {
     expect(screen.getAllByRole("button", { name: "Sign out" })).toHaveLength(2); // header and rail
   });
 
+  it("tells the demo's visitors that what they enter is shared", () => {
+    render(<AppShell>content</AppShell>);
+    expect(screen.queryByText(/Shared demo/)).not.toBeInTheDocument();
+
+    clerk.metadata = { demo: true };
+    render(<AppShell>content</AppShell>);
+    expect(screen.getByText(/Shared demo: anyone can see what's entered here/)).toBeInTheDocument();
+  });
+
   it("badges the Pantry tab with how much food expires soon", async () => {
     mockApi({ "GET /me": json({ ...ME, profile: { ...ME.profile, expiring_soon: 3 } }) });
     render(<AppShell>content</AppShell>);

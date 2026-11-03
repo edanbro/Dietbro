@@ -18,6 +18,7 @@ BODY: dict[str, Any] = {
     "weight_kg": 80,
     "activity": "moderate",
 }
+CONSENT: dict[str, Any] = {"terms": True, "health_data": True}
 
 
 async def test_goals_round_trip(api: httpx.AsyncClient, auth: Auth) -> None:
@@ -107,17 +108,40 @@ async def test_allergen_list(api: httpx.AsyncClient) -> None:
     assert {"code": "peanuts", "label": "Peanuts"} in response.json()
 
 
-async def test_setup_complete_after_goals_allergies_preferences(
+async def test_setup_complete_after_consent_goals_allergies_preferences(
     api: httpx.AsyncClient, auth: Auth
 ) -> None:
     await api.put("/me/goals", json=GOALS, headers=auth())
     await api.put("/me/allergies", json={"allergens": []}, headers=auth())
     await api.put("/me/preferences", json={}, headers=auth())
+    before = (await api.get("/me", headers=auth())).json()
 
+    consent = await api.put("/me/consent", json=CONSENT, headers=auth())
     me = (await api.get("/me", headers=auth())).json()
 
+    # An account from before consent was asked for has to give it before planning again.
+    assert (before["consented"], before["setup_complete"]) == (False, False)
+    assert consent.status_code == 200
+    assert consent.json()["consented"] is True
     assert me["setup_complete"] is True
     assert me["profile"]["has_body"] is False
+
+
+@pytest.mark.parametrize("missing", ["terms", "health_data"])
+async def test_consent_needs_both(api: httpx.AsyncClient, auth: Auth, missing: str) -> None:
+    response = await api.put("/me/consent", json=CONSENT | {missing: False}, headers=auth())
+
+    assert response.status_code == 422
+    assert (await api.get("/me", headers=auth())).json()["consented"] is False
+
+
+async def test_consent_is_recorded_with_its_time(api: httpx.AsyncClient, auth: Auth) -> None:
+    await api.put("/me/consent", json=CONSENT, headers=auth())
+
+    user = (await api.get("/me/export", headers=auth())).json()["user"]
+
+    assert user["terms_accepted_at"] is not None
+    assert user["health_consent_at"] is not None
 
 
 async def test_profiles_are_per_user(api: httpx.AsyncClient, auth: Auth) -> None:
