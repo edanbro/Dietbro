@@ -103,6 +103,53 @@
         ]
       }
     },
+    "/me/consent": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Put Consent",
+        "description": "Agree to the terms and to keeping health data (GDPR Article 9(2)(a)). Agreeing again\nrecords the new time. Consent is withdrawn by deleting the account.",
+        "operationId": "putConsent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/me/region": {
       "put": {
         "tags": [
@@ -5462,6 +5509,27 @@
         ],
         "title": "CheaperOut"
       },
+      "ConsentIn": {
+        "properties": {
+          "terms": {
+            "type": "boolean",
+            "const": true,
+            "title": "Terms"
+          },
+          "health_data": {
+            "type": "boolean",
+            "const": true,
+            "title": "Health Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "terms",
+          "health_data"
+        ],
+        "title": "ConsentIn",
+        "description": "Both are required: the planner can't work without the health data it's consent for."
+      },
       "Craving": {
         "properties": {
           "intent": {
@@ -7066,6 +7134,10 @@
           "profile": {
             "$ref": "#/components/schemas/ProfileStatus"
           },
+          "consented": {
+            "type": "boolean",
+            "title": "Consented"
+          },
           "setup_complete": {
             "type": "boolean",
             "title": "Setup Complete"
@@ -7079,6 +7151,7 @@
           "id",
           "created_at",
           "profile",
+          "consented",
           "setup_complete",
           "region"
         ],

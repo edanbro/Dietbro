@@ -26,6 +26,14 @@ test("new user sets up goals, allergies, preferences and pantry on a phone", asy
     await clerk.signIn({ page, emailAddress: email });
     await page.goto("/setup");
 
+    // First the terms, then the health-data consent: two boxes, both needed.
+    await expect(page.getByRole("heading", { name: "Before you start" })).toBeVisible();
+    const agree = page.getByRole("button", { name: "Agree and continue" });
+    await page.getByRole("checkbox", { name: /18 or over/ }).click();
+    await expect(agree).toBeDisabled();
+    await page.getByRole("checkbox", { name: /health information/ }).click();
+    await agree.click();
+
     // 0. Region: pick one explicitly (the guess depends on the test machine).
     await expect(page.getByRole("heading", { name: "Where are you?" })).toBeVisible();
     await page.getByLabel("Country", { exact: true }).selectOption("IE");

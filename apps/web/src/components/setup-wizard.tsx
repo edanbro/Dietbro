@@ -5,6 +5,7 @@ import { LoaderCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ConsentForm } from "@/components/consent-form";
 import { ErrorAlert } from "@/components/form-bits";
 import { PantryAdd } from "@/components/pantry/pantry-add";
 import { PantryList } from "@/components/pantry/pantry-list";
@@ -18,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Me, useCreatePlan, useCurrentPlan, useMe } from "@/lib/api/hooks";
 
 export const STEPS = [
+  { key: "consent", title: "Before you start", short: "Start", optional: false },
   { key: "region", title: "Where are you?", short: "Where", optional: false },
   { key: "body", title: "About you", short: "You", optional: true },
   { key: "goals", title: "Your goals", short: "Goals", optional: false },
@@ -30,6 +32,8 @@ type StepKey = (typeof STEPS)[number]["key"];
 
 function done(me: Me, key: StepKey): boolean {
   switch (key) {
+    case "consent":
+      return me.consented;
     case "region":
       return me.region.saved;
     case "body":
@@ -101,7 +105,7 @@ function Wizard({ start }: { start: number }) {
           Step {index + 1} of {STEPS.length}
         </p>
         {/* Each step named under its bar; steps already done can be opened again. */}
-        <ol className="grid grid-cols-6 gap-1" aria-label="Steps">
+        <ol className="grid grid-cols-7 gap-1" aria-label="Steps">
           {STEPS.map((s, i) => {
             const bar = (
               <>
@@ -143,6 +147,12 @@ function Wizard({ start }: { start: number }) {
         <h1 className="text-2xl font-semibold tracking-tight">{step.title}</h1>
       </div>
 
+      {step.key === "consent" && (
+        // An account that was set up before consent was asked for goes straight back.
+        <ConsentForm
+          onSaved={(me) => (me.setup_complete ? router.push("/plan") : setIndex(resumeAt(me)))}
+        />
+      )}
       {step.key === "region" && <RegionForm onSaved={next} />}
       {step.key === "body" && <BodyForm onSaved={next} />}
       {step.key === "goals" && <GoalsForm onSaved={next} />}

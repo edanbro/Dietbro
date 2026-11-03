@@ -59,6 +59,7 @@ test("quick-add, import, share, calendar, leftovers and templates", async ({
       timezone: "Europe/Dublin",
       locale: "en-IE",
     });
+    await api(page, "PUT", "/me/consent", { terms: true, health_data: true });
     await api(page, "PUT", "/me/goals", {
       goal: "maintain",
       kcal_min: 1800,

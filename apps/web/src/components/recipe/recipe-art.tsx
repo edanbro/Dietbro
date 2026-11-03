@@ -60,6 +60,7 @@ export function RecipeArt({
         alt={alt}
         loading={eager ? "eager" : "lazy"}
         decoding="async"
+        referrerPolicy="no-referrer"
         className={cn("bg-muted object-cover", className)}
       />
     );

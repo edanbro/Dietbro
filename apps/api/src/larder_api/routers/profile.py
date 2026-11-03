@@ -21,6 +21,7 @@ from larder_api.schemas import (
     AllergiesOut,
     BodyIn,
     BodyOut,
+    ConsentIn,
     GoalsIn,
     GoalsOut,
     Me,
@@ -135,16 +136,43 @@ async def _status(session: AsyncSession, user: User, today: date) -> ProfileStat
 
 @router.get("", operation_id="getMe")
 async def get_me(
-    user: CurrentUser, session: Session, clock: Annotated[Clock, Depends(get_clock)]
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> Me:
     s = await _status(session, user, local_today(user.timezone, clock()))
+    # The shared demo holds made-up data and is reset daily, so there's no one's health data in
+    # it to consent for; visitors are told not to add any.
+    consented = is_demo(user.auth_subject, settings.demo_auth_subject) or (
+        user.terms_accepted_at is not None and user.health_consent_at is not None
+    )
     return Me(
         id=user.id,
         created_at=user.created_at,
         profile=s,
-        setup_complete=s.has_goals and s.has_allergies and s.has_preferences,
+        consented=consented,
+        setup_complete=consented and s.has_goals and s.has_allergies and s.has_preferences,
         region=region_out(user),
     )
+
+
+@router.put("/consent", operation_id="putConsent")
+async def put_consent(
+    body: ConsentIn,
+    user: CurrentUser,
+    session: Session,
+    clock: Annotated[Clock, Depends(get_clock)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Me:
+    """Agree to the terms and to keeping health data (GDPR Article 9(2)(a)). Agreeing again
+    records the new time. Consent is withdrawn by deleting the account."""
+    now = clock()
+    user.terms_accepted_at = now
+    user.health_consent_at = now
+    await session.commit()
+    await session.refresh(user)
+    return await get_me(user, session, clock, settings)
 
 
 def units_of(user: User) -> Units:

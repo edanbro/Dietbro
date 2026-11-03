@@ -25,6 +25,7 @@ export const ME: Me = {
     pantry_items: 2,
     expiring_soon: 0,
   },
+  consented: true,
   setup_complete: true,
   region: {
     country: "GB",

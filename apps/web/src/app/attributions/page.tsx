@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { LegalPage } from "@/components/legal-page";
 import { APP_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = { title: "Data sources" };
@@ -28,24 +28,25 @@ const SOURCES = [
   },
   {
     name: "TheMealDB",
-    what: "Recipes.",
-    licence: "Used through its free API.",
+    what: "Recipes and their photos.",
+    // Its terms: credit it as the source, and don't pass its artwork off as our own.
+    licence:
+      "From TheMealDB's free API, credited here as its terms ask. Most photos were added by TheMealDB's users and remain theirs.",
     href: "https://www.themealdb.com/",
   },
 ];
 
 export default function AttributionsPage() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Data sources</h1>
-      <p className="text-sm text-muted-foreground">
+    <LegalPage title="Data sources" current="/attributions" dated={false}>
+      <p className="text-muted-foreground">
         {APP_NAME} plans with food and nutrition data from these sources. Thank you to everyone
         who makes them.
       </p>
       <ul className="flex flex-col gap-4">
         {SOURCES.map((s) => (
           <li key={s.name} className="flex flex-col gap-1">
-            <a href={s.href} className="font-medium underline-offset-4 hover:underline">
+            <a href={s.href} className="font-medium">
               {s.name}
             </a>
             <p className="text-sm">{s.what}</p>
@@ -53,13 +54,10 @@ export default function AttributionsPage() {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Nutrition and allergen information is for planning only, not medical advice. Product
         data can be out of date or wrong.
       </p>
-      <Link href="/" className="text-sm underline-offset-4 hover:underline">
-        Back
-      </Link>
-    </main>
+    </LegalPage>
   );
 }

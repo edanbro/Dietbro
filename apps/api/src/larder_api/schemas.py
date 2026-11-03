@@ -60,8 +60,16 @@ class Me(BaseModel):
     id: int
     created_at: datetime
     profile: ProfileStatus
-    setup_complete: bool
+    consented: bool  # the terms and the health-data consent are both agreed to
+    setup_complete: bool  # consented, with goals, allergies and preferences saved
     region: RegionOut
+
+
+class ConsentIn(BaseModel):
+    """Both are required: the planner can't work without the health data it's consent for."""
+
+    terms: Literal[True]
+    health_data: Literal[True]
 
 
 class GoalsIn(BaseModel):

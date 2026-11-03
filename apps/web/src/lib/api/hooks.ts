@@ -364,6 +364,17 @@ export function useSaveRegion() {
   });
 }
 
+/** Agree to the terms and to keeping health data; the answer is the updated account. */
+export function useConsent() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(await api.PUT("/me/consent", { body: { terms: true, health_data: true } })),
+    onSuccess: (me) => qc.setQueryData(keys.me, me),
+  });
+}
+
 export function useSaveAllergies() {
   const api = useApi();
   return useSave(

@@ -66,6 +66,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Consent
+         * @description Agree to the terms and to keeping health data (GDPR Article 9(2)(a)). Agreeing again
+         *     records the new time. Consent is withdrawn by deleting the account.
+         */
+        put: operations["putConsent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/region": {
         parameters: {
             query?: never;
@@ -1788,6 +1809,22 @@ export interface components {
             last_bought: string;
         };
         /**
+         * ConsentIn
+         * @description Both are required: the planner can't work without the health data it's consent for.
+         */
+        ConsentIn: {
+            /**
+             * Terms
+             * @constant
+             */
+            terms: true;
+            /**
+             * Health Data
+             * @constant
+             */
+            health_data: true;
+        };
+        /**
          * Craving
          * @description The user wants something particular at a meal ("something spicy tonight").
          */
@@ -2415,6 +2452,8 @@ export interface components {
              */
             created_at: string;
             profile: components["schemas"]["ProfileStatus"];
+            /** Consented */
+            consented: boolean;
             /** Setup Complete */
             setup_complete: boolean;
             region: components["schemas"]["RegionOut"];
@@ -4170,6 +4209,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    putConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

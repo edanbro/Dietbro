@@ -74,6 +74,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           signInFallbackRedirectUrl="/plan"
           signUpFallbackRedirectUrl="/setup"
           afterSignOutUrl="/"
+          // Off: SDK usage events to clerk-telemetry.com aren't needed to sign anyone in, so
+          // under the ePrivacy rules they'd need consent (the cookie policy lists what's left).
+          telemetry={false}
         >
           {children}
         </ClerkProvider>
